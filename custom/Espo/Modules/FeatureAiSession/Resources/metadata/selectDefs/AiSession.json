@@ -1,0 +1,6 @@
+{
+    "aclAttributeList": ["assignedUserId", "tenantId", "chatwootAccountId"],
+    "accessControlFilterClassNameMap": {
+        "mandatory": "Espo\\Modules\\FeatureAiSession\\Classes\\OwnerFilter"
+    }
+}

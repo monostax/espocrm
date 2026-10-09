@@ -75,7 +75,8 @@ export default class extends MainView {
         if (render) await this.reRender();
         try {
             const data = await Espo.Ajax.getRequest('AiUsage', {
-                tenantId: this.state.tenantId, month: this.state.month, view: this.state.view,
+                // Analytics uses the overview aggregate, including the previous-month comparison.
+                tenantId: this.state.tenantId, month: this.state.month, view: this.state.view === 'analytics' ? 'overview' : this.state.view,
                 dimension: this.state.dimension, offset: this.state.offset, limit: 25, ...this.state.filters,
             });
             if (version !== this.requestVersion || this.disposed) return;
@@ -98,6 +99,7 @@ export default class extends MainView {
         return {
             ...present(this.payload, this.state, this.format, key => this.t(key)),
             loading: this.loading, error: this.error, hasData: !!this.payload,
+            showTokenUsage: this.getUser().isAdmin(),
             noAccess: this.context && !this.context.tenants.length,
             tenants: (this.context?.tenants || []).map(t => ({...t, selected: t.id === this.state.tenantId})),
             month: this.state.month, maxMonth: this.context?.currentMonth, selectedView: this.state.view,
@@ -126,6 +128,8 @@ export default class extends MainView {
     }
 
     selectView(view) {
+        if (!['overview', 'breakdown', 'activity', 'analytics'].includes(view)) return;
+        if (view === 'analytics' && !this.getUser().isAdmin()) return;
         this.state.view = view;
         this.state.offset = 0;
         // Overview always describes the complete tenant-month.

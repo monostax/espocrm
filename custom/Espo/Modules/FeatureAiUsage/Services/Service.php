@@ -58,6 +58,16 @@ class Service
             'usage' => $this->dataset->stats($ledger['runs']), 'filteredUsage' => $this->dataset->stats($filtered),
             'generatedAt' => gmdate(DATE_ATOM),
         ];
+        if ($this->projection->canViewAnalytics()) {
+            $result['analytics'] = [
+                'totals' => Analytics::summarize($ledger['runs']),
+                'filtered' => Analytics::summarize($filtered),
+                'models' => Analytics::grouped($filtered, 'model'),
+                'outcomes' => Analytics::grouped($filtered, 'outcome'),
+                'daily' => Analytics::grouped($filtered, 'day'),
+            ];
+            usort($result['analytics']['daily'], static fn ($a, $b) => strcmp($a['key'], $b['key']));
+        }
         if ($view === 'overview') {
             $result['daily'] = array_map(fn ($day) => $this->amounts($day), array_values($ledger['daily']));
             unset($filtered, $ledger); // Do not keep two full tenant-month ledgers in memory.
@@ -67,13 +77,19 @@ class Service
                 'period' => $previous->toArray(), 'usage' => $this->dataset->stats($previousLedger['runs']),
                 'billing' => $this->amounts($previousLedger['summary']),
             ];
+            if ($this->projection->canViewAnalytics()) {
+                $result['analytics']['previous'] = Analytics::summarize($previousLedger['runs']);
+            }
         } elseif ($view === 'breakdown') {
             $dimension = $this->text($query, 'dimension') ?: 'kind';
             $breakdown = $this->dataset->breakdown($filtered, $ledger['groups'], $dimension, $offset, $limit);
+            $analytics = $this->projection->canViewAnalytics()
+                ? array_column(Analytics::grouped($filtered, $dimension, array_fill_keys(array_column($breakdown['list'], 'key'), true)), null, 'key') : [];
             $scopes = ['agent' => 'ChatwootAccountUserMembership', 'account' => 'ChatwootAccount', 'conversation' => 'ChatwootConversation', 'opportunity' => 'Opportunity'];
             foreach ($breakdown['list'] as &$row) {
                 $row['record'] = isset($scopes[$dimension]) ? $this->projection->record($scopes[$dimension], $row['key']) : null;
                 $row['billing'] = $row['billing'] !== null ? $this->amounts($row['billing']) : null;
+                if ($this->projection->canViewAnalytics()) $row['analytics'] = $analytics[$row['key']] ?? null;
             }
             unset($row);
             $result['breakdown'] = $breakdown;
@@ -126,7 +142,8 @@ class Service
     private function runs(string $tenantId, Period $period): \Generator
     {
         // Explicit tenant admin gate precedes this aggregate read. No relationship joins can multiply runs.
-        $rows = $this->entityManager->getRDBRepository('ChatwootAiAgentRun')->select(self::FIELDS)
+        $fields = $this->projection->canViewAnalytics() ? array_unique(array_merge(self::FIELDS, Analytics::FIELDS)) : self::FIELDS;
+        $rows = $this->entityManager->getRDBRepository('ChatwootAiAgentRun')->select(array_values($fields))
             ->where(['tenantId' => $tenantId, 'runAt>=' => $period->utcStart(), 'runAt<' => $period->utcCutoff()])
             ->order('runAt')->limit(0, self::MAX_RUNS + 1)->sth()->find();
         $count = 0;
@@ -135,7 +152,7 @@ class Service
                 throw new BadRequest('This tenant-month exceeds the usage query limit. No partial billing total was returned.');
             }
             $values = [];
-            foreach (self::FIELDS as $field) {
+            foreach ($fields as $field) {
                 $values[$field] = $row->get($field);
             }
             yield $values;

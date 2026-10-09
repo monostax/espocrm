@@ -20,7 +20,7 @@ function load(file, imports = {}) {
     vm.runInNewContext(outputText, {exports, require: key => imports[key], Intl, Date, console}, {filename: file});
     return exports;
 }
-const {allowance, present} = load(client + 'src/helpers/presentation.js');
+const {allowance, present, presentMetrics} = load(client + 'src/helpers/presentation.js');
 const Format = load(client + 'src/helpers/format.js').default;
 const f = new Format('en_US');
 const t = key => en[key] || key;
@@ -48,6 +48,8 @@ test('allowance states distinguish empty usage, approaching limit, overage, pay-
 test('formatting keeps currencies separate, exact money accessible and unknown distinct from zero', () => {
     assert.equal(f.number(null), '—');
     assert.equal(f.number(0), '0');
+    assert.equal(f.number(12.34, 2), '12.34');
+    assert.equal(new Format('pt_BR').number(12.34, 2), '12,34');
     assert.equal(f.charges(null), '—');
     assert.match(f.charges([{currency: 'BRL', amount: 12.25}, {currency: 'USD', amount: 3}]), /12\.25.*3\.00/);
     const ui = present(fixture(), state, f, t);
@@ -149,6 +151,96 @@ test('waived and pending usage have distinct neutral customer explanations', () 
         assert.ok(html.includes(labels.pendingExplanation));
         assert.ok(!html.includes('alert-warning'));
     }
+});
+
+test('token columns and detail values are admin-only and distinguish missing counts from zero', () => {
+    const data = fixture();
+    data.activity = {total: 1, list: [{id: 'r', actions: [], inputTokens: 1234, outputTokens: 0, cachedInputTokens: null}]};
+    const ui = present(data, {...state, view: 'activity'}, f, t);
+    assert.equal(ui.activities[0].inputTokensText, '1,234');
+    assert.equal(ui.activities[0].outputTokensText, '0');
+    assert.equal(ui.activities[0].cachedTokensText, '—');
+    const Page = load(client + 'src/views/page.js', {
+        'views/main': class {}, 'feature-ai-usage:helpers/index': {present},
+    }).default;
+    const Detail = load(client + 'src/views/detail.js', {'views/modal': class {}, 'feature-ai-usage:helpers/index': {presentMetrics}}).default;
+    for (const isAdmin of [false, true]) {
+        const page = new Page();
+        Object.assign(page, {payload: data, state, format: f, t, getUser: () => ({isAdmin: () => isAdmin})});
+        assert.equal(page.data().showTokenUsage, isAdmin);
+        const detail = new Detail();
+        Object.assign(detail, {payload: {activity: data.activity.list[0]}, options: {format: f},
+            translate: t, getUser: () => ({isAdmin: () => isAdmin})});
+        assert.equal(detail.data().showTokenUsage, isAdmin);
+        for (const labels of [en, pt]) {
+            handlebars.registerHelper('translate', key => labels[key] || key);
+            const html = handlebars.compile(read(client + 'res/templates/page.tpl'))({...ui, hasData: true, showTokenUsage: isAdmin});
+            const detailHtml = handlebars.compile(read(client + 'res/templates/detail.tpl'))(detail.data());
+            for (const key of ['inputTokens', 'outputTokens', 'cachedTokens']) {
+                assert.equal(html.includes(labels[key]), isAdmin);
+                assert.equal(detailHtml.includes(labels[key]), isAdmin);
+            }
+        }
+    }
+});
+
+test('internal dashboard renders filtered metrics, sources and grouped intelligence only for admins', () => {
+    const data = fixture();
+    const metrics = {runs: 2, totalTokens: 1100, inputTokens: 1000, outputTokens: 100, cachedInputTokens: 100,
+        uncachedInputTokens: 900, tokenCacheHitPct: 10, requestCacheHitPct: 25, reasoningTokens: null,
+        sources: {main: {requests: 4, measuredRequests: 4, knownRuns: 2, inputTokens: 1000}, search: {requests: 0}}};
+    data.analytics = {totals: {...metrics, totalTokens: 2200}, filtered: metrics, previous: {...metrics, totalTokens: 1000},
+        models: [{key: '<script>model</script>', ...metrics}], outcomes: [{key: 'failed', ...metrics}], daily: [{key: '2026-09-01', ...metrics}]};
+    const ui = present(data, state, f, t);
+    assert.equal(ui.analytics.monthTotal, '2,200');
+    assert.equal(ui.analytics.cards[0].value, '1,100');
+    assert.equal(ui.analytics.change, '+120%');
+    assert.equal(ui.analytics.cards.find(card => card.key === 'tokenCacheHitPct').value, '10%');
+    assert.equal(ui.analytics.cards.find(card => card.key === 'reasoningTokens').value, '—');
+    for (const labels of [en, pt]) {
+        const translate = key => { assert.ok(labels[key], `Missing analytics label: ${key}`); return labels[key]; };
+        const localized = present(data, {...state, view: 'analytics'}, f, translate);
+        handlebars.registerHelper('translate', key => labels[key] || key);
+        const page = handlebars.compile(read(client + 'res/templates/page.tpl'));
+        const admin = page({...localized, hasData: true, showTokenUsage: true});
+        assert.ok(admin.includes(labels.internalAnalytics));
+        assert.ok(admin.includes(labels.outcome_failed));
+        assert.ok(admin.includes('data-au-day="2026-09-01"'));
+        assert.ok(admin.includes('&lt;script&gt;model&lt;/script&gt;'));
+        assert.ok(admin.includes(labels.previousTokens));
+        assert.ok(admin.includes(labels.adminOnly));
+        assert.ok(!admin.includes('EspoCRM'));
+        assert.ok(!admin.includes('au-allowance panel'));
+        assert.ok(!admin.includes('au-activity-table'));
+        assert.ok(admin.includes('data-au-filter="from"'));
+        for (const view of ['overview', 'breakdown', 'activity']) {
+            const other = page({...present(data, {...state, view}, f, translate), hasData: true, showTokenUsage: true});
+            assert.ok(!other.includes(labels.internalAnalytics));
+            assert.ok(other.includes('data-au-view="analytics"'));
+        }
+        assert.ok(!page({...localized, hasData: true, showTokenUsage: false}).includes(labels.internalAnalytics));
+        assert.ok(!page({...localized, hasData: true, showTokenUsage: false}).includes('data-au-view="analytics"'));
+    }
+});
+
+test('analytics navigation preserves filters and daily drill-down opens activity', () => {
+    const Page = load(client + 'src/views/page.js', {'views/main': class {}}).default;
+    const page = new Page();
+    let loads = 0;
+    Object.assign(page, {state: {...state, filters: {kind: 'private-mention'}, filterLabels: {}, offset: 25},
+        getUser: () => ({isAdmin: () => true}), load: () => loads++});
+    page.selectView('analytics');
+    assert.equal(page.state.view, 'analytics');
+    assert.equal(page.state.offset, 0);
+    assert.equal(page.state.filters.kind, 'private-mention');
+    page.openDay('2026-09-01');
+    assert.equal(page.state.view, 'activity');
+    assert.equal(page.state.filters.from, '2026-09-01');
+    assert.equal(page.state.filters.to, '2026-09-01');
+    page.getUser = () => ({isAdmin: () => false});
+    page.selectView('analytics');
+    assert.equal(page.state.view, 'activity');
+    assert.equal(loads, 2);
 });
 
 test('the production transpiler emits loadable AMD for every usage module', () => {

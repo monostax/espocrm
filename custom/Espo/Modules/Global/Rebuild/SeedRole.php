@@ -297,6 +297,9 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                'AiSession' => [
+                    'create' => 'yes', 'read' => 'own', 'edit' => 'own', 'delete' => 'own', 'stream' => 'own',
+                ],
                 // Initiatives: operators manage work; tenant admins configure types and stages.
                 'InitiativeRelation' => [
                     'create' => 'yes',

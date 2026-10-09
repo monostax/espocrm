@@ -1,0 +1,24 @@
+{
+    "fields": {
+        "name": { "type": "varchar", "required": true, "default": "New chat", "maxLength": 255, "trim": true },
+        "assignedUser": { "type": "link", "readOnly": true },
+        "tenant": { "type": "link", "readOnly": true },
+        "chatwootAccount": { "type": "link", "required": true, "readOnlyAfterCreate": true },
+        "aiAgentMembership": { "type": "link", "required": true },
+        "titleInitialized": { "type": "bool", "default": false, "readOnly": true },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true },
+        "createdBy": { "type": "link", "readOnly": true },
+        "modifiedBy": { "type": "link", "readOnly": true }
+    },
+    "links": {
+        "assignedUser": { "type": "belongsTo", "entity": "User" },
+        "tenant": { "type": "belongsTo", "entity": "Tenant" },
+        "chatwootAccount": { "type": "belongsTo", "entity": "ChatwootAccount" },
+        "aiAgentMembership": { "type": "belongsTo", "entity": "ChatwootAccountUserMembership" },
+        "createdBy": { "type": "belongsTo", "entity": "User" },
+        "modifiedBy": { "type": "belongsTo", "entity": "User" }
+    },
+    "collection": { "orderBy": "modifiedAt", "order": "desc" },
+    "indexes": { "ownerAccount": { "columns": ["assignedUserId", "chatwootAccountId", "deleted", "modifiedAt"] } }
+}

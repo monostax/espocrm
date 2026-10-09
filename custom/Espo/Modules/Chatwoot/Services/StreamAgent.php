@@ -30,7 +30,62 @@ class StreamAgent
         private StreamAgentProgress $progress,
         private AclManager $aclManager,
         private UserTenantResolver $tenants,
+        private \Espo\Modules\FeatureAiSession\Services\Execution $sessions,
+        private \Espo\Core\FileStorage\Manager $files,
     ) {}
+
+    /** Runtime-only media transport: never embed bytes/URLs in workflow context. */
+    public function attachments(string $noteId, string $membershipId, string $postHash, string $runId,
+        string $postId, ?string $attachmentId): object
+    {
+        $source = $this->entityManager->getEntityById('Note', $noteId);
+        $target = $source instanceof Note ? $this->validate($source, $membershipId, $postHash) : null;
+        if (!$source instanceof Note || !$target || ($source->getData()->opportunityAiExecutions->{$membershipId} ?? null) !== $runId) {
+            throw new Forbidden('An active claimed stream execution is required.');
+        }
+        $reply = $this->existingReply($noteId, $membershipId);
+        if ($reply && !StreamAgentProgress::isPending($reply)) throw new Forbidden('Execution has finished.');
+        $initiatorId = $source->getData()->opportunityAiInitiatorUserId ?? null;
+        $humanId = $this->delegatedInitiator($source, $target);
+        if ($initiatorId !== null && !$humanId) throw new Forbidden('Source access was revoked.');
+        $reader = $humanId ? $this->entityManager->getEntityById('User', $humanId) : $this->user;
+        $post = $this->entityManager->getEntityById('Note', $postId);
+        if (!$reader instanceof User || !$post instanceof Note || $post->getType() !== Note::TYPE_POST ||
+            $post->get('opportunityPostDeleted') || $post->getParentType() !== $source->getParentType() ||
+            $post->getParentId() !== $source->getParentId() ||
+            ($postId !== $noteId && (int) $post->get('number') >= (int) $source->get('number')) ||
+            ($source->getParentType() !== 'AiSession' && $postId !== $source->get('opportunityThreadRootId') &&
+                $post->get('opportunityThreadRootId') !== $source->get('opportunityThreadRootId')) ||
+            !$this->aclManager->checkEntityRead($reader, $post) || !$this->aclManager->checkField($reader, 'Note', 'attachments')) {
+            throw new Forbidden('Attachment source is outside the readable discussion.');
+        }
+        $items = [];
+        foreach ($this->entityManager->getRDBRepository('Note')->getRelation($post, 'attachments')->find() as $attachment) {
+            if (!$attachment instanceof \Espo\Entities\Attachment || !$this->aclManager->checkEntityRead($reader, $attachment) ||
+                !$this->aclManager->checkField($reader, 'Attachment', 'type') ||
+                !$this->aclManager->checkField($reader, 'Attachment', 'size')) continue;
+            $item = ['id' => $attachment->getId(),
+                'name' => $this->aclManager->checkField($reader, 'Attachment', 'name') ? $attachment->get('name') : null,
+                'type' => $attachment->get('type'), 'size' => (int) $attachment->get('size')];
+            if ($attachmentId === $attachment->getId()) {
+                $maxBytes = 12 * 1024 * 1024;
+                if ($item['size'] <= 0 || $item['size'] > $maxBytes) throw new Forbidden('Attachment exceeds media limit.');
+                $stream = $this->files->getStream($attachment);
+                $bytes = '';
+                while (!$stream->eof() && strlen($bytes) <= $maxBytes) {
+                    $chunk = $stream->read(min(65536, $maxBytes + 1 - strlen($bytes)));
+                    if ($chunk === '') break;
+                    $bytes .= $chunk;
+                }
+                if (strlen($bytes) !== $item['size'] || strlen($bytes) > $maxBytes) throw new Forbidden('Attachment size changed.');
+                return (object) [...$item, 'revision' => hash('sha256', $bytes), 'data' => base64_encode($bytes)];
+            }
+            $items[] = (object) $item;
+            if ($attachmentId === null && count($items) >= 20) break;
+        }
+        if ($attachmentId !== null) throw new Forbidden('Attachment is not linked to the readable source.');
+        return (object) ['list' => $items];
+    }
 
     public function context(string $noteId, string $membershipId, string $postHash): object
     {
@@ -53,7 +108,8 @@ class StreamAgent
             'chatwootAccountCrmId' => $target->chatwootAccountCrmId,
             'executionRunId' => $note->getData()->opportunityAiExecutions->{$membershipId} ?? null,
             'initiatorUserId' => $this->delegatedInitiator($note, $target),
-            'trigger' => (object) [
+            ...($note->getParentType() === 'AiSession' ? $this->sessions->context($note) : []),
+            'trigger' => $note->getParentType() === 'AiSession' ? $this->sessions->post($note) : (object) [
                 'id' => $note->getId(),
                 'post' => $note->getPost(),
                 'number' => $note->get('number'),
@@ -79,14 +135,18 @@ class StreamAgent
                 return (object) ['published' => false, 'noteId' => $existing->getId(), 'reason' => 'Already replied'];
             }
             $owner = $source->getData()->opportunityAiExecutions->{$membershipId} ?? null;
+            if ($source->getParentType() === 'AiSession' && $owner !== $runId) {
+                throw new Forbidden('Claim the session turn before publishing.');
+            }
             if ($owner !== null && $owner !== $runId) {
                 throw new Forbidden('Another workflow owns this request.');
             }
             if ($existing) {
                 if ($owner !== $runId) throw new Forbidden('Claim the request before completing it.');
-                if (!$this->acl->check($existing, 'create')) throw new Forbidden('No permission to post in this stream.');
+                if ($source->getParentType() !== 'AiSession' && !$this->acl->check($existing, 'create')) throw new Forbidden('No permission to post in this stream.');
                 $data = $existing->getData();
                 $data->opportunityStreamAgent->status = 'completed';
+                $data->opportunityStreamAgent->finishedAt = gmdate('Y-m-d\TH:i:s\Z');
                 $existing->setData($data);
                 $existing->set('createdById', $this->user->getId());
                 $existing->setPost($post);
@@ -115,7 +175,7 @@ class StreamAgent
                     ],
                 ],
             ]);
-            if (!$this->acl->check($reply, 'create')) {
+            if ($source->getParentType() !== 'AiSession' && !$this->acl->check($reply, 'create')) {
                 throw new Forbidden('No permission to post in this stream.');
             }
             $this->noteUtil->handlePostText($reply);
@@ -145,7 +205,7 @@ class StreamAgent
                 'parentId' => $source->getParentId(), 'isInternal' => true,
                 'createdById' => $this->user->getId(),
             ]);
-            if (!$this->acl->check($reply, 'create')) {
+            if ($source->getParentType() !== 'AiSession' && !$this->acl->check($reply, 'create')) {
                 throw new Forbidden('No permission to report results in this stream.');
             }
             $data->opportunityAiExecutions ??= (object) [];
@@ -158,6 +218,10 @@ class StreamAgent
                 $replyData = $existing->getData();
                 $replyData->opportunityStreamAgent->status = 'running';
                 $replyData->opportunityStreamAgent->workflowRunId = $runId;
+                $replyData->opportunityStreamAgent->startedAt = gmdate('Y-m-d\TH:i:s\Z');
+                $replyData->opportunityStreamAgent->phase = 'preparing';
+                $replyData->opportunityStreamAgent->sequence = 0;
+                $replyData->opportunityStreamAgent->activities = [];
                 $existing->setData($replyData);
                 // Repair placeholders created before explicit ORM attribution.
                 $existing->set('createdById', $this->user->getId());
@@ -176,7 +240,9 @@ class StreamAgent
             $source = $this->entityManager->getRDBRepository('Note')->where(['id' => $noteId])->forUpdate()->findOne();
             $reply = $this->existingReply($noteId, $membershipId);
             if (!StreamAgentProgress::isPending($reply)) return (object) ['updated' => false];
-            if ($reply->getCreatedById() !== $this->user->getId() || !$this->user->isActive() || !$this->acl->check($reply, 'read')) {
+            $sessionAccess = $source instanceof Note && $source->getParentType() === 'AiSession'
+                ? $this->sessions->authorized($source, $membershipId, $this->user) : $this->acl->check($reply, 'read');
+            if ($reply->getCreatedById() !== $this->user->getId() || !$this->user->isActive() || !$sessionAccess) {
                 throw new Forbidden('Authenticate as the mentioned AI profile.');
             }
             $data = $reply->getData();
@@ -189,9 +255,36 @@ class StreamAgent
                 default => throw new \InvalidArgumentException('Invalid stream agent status.'),
             };
             $data->opportunityStreamAgent->status = $status;
+            $data->opportunityStreamAgent->finishedAt = gmdate('Y-m-d\TH:i:s\Z');
             $reply->setData($data);
             $reply->setPost($post);
             $this->entityManager->saveEntity($reply);
+            return (object) ['updated' => true];
+        });
+    }
+
+    public function updateProgress(string $noteId, string $membershipId, string $runId, object $snapshot): object
+    {
+        return $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $runId, $snapshot): object {
+            // Serialize with claim, publication, cancellation and expiry; terminal states never regress.
+            $source = $this->entityManager->getRDBRepository('Note')->where(['id' => $noteId])->forUpdate()->findOne();
+            $reply = $this->existingReply($noteId, $membershipId);
+            if (!$source instanceof Note || !StreamAgentProgress::isPending($reply)) return (object) ['updated' => false];
+            $data = $reply->getData();
+            $progress = $data->opportunityStreamAgent;
+            if (($source->getData()->opportunityAiExecutions->{$membershipId} ?? null) !== $runId ||
+                ($progress->workflowRunId ?? null) !== $runId || $progress->status !== 'running' ||
+                $snapshot->sequence <= ($progress->sequence ?? 0)) return (object) ['updated' => false];
+            $sessionAccess = $source->getParentType() === 'AiSession'
+                ? $this->sessions->authorized($source, $membershipId, $this->user) : $this->acl->check($reply, 'read');
+            if ($reply->getCreatedById() !== $this->user->getId() || !$this->user->isActive() || !$sessionAccess) {
+                throw new Forbidden('Authenticate as the mentioned AI profile.');
+            }
+            $progress->sequence = $snapshot->sequence;
+            $progress->phase = $snapshot->phase;
+            $progress->activities = $snapshot->activities;
+            $reply->setData($data);
+            $this->entityManager->saveEntity($reply, [SaveOption::SKIP_MODIFIED_BY => true]);
             return (object) ['updated' => true];
         });
     }
@@ -229,6 +322,9 @@ class StreamAgent
         }
         if (!$target) {
             return null;
+        }
+        if ($note->getParentType() === 'AiSession') {
+            return $this->sessions->authorized($note, $membershipId, $this->user) ? $target : null;
         }
         $membership = $this->entityManager->getEntityById('ChatwootAccountUserMembership', $membershipId);
         if (!$membership?->get('isAI') || $membership->get('chatwootAccountId') !== $target->chatwootAccountCrmId) {

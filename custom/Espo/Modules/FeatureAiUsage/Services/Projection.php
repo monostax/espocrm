@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureAiUsage\Services;
 use Espo\Core\Acl;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
+use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -18,6 +19,7 @@ class Projection
         private EntityManager $entityManager,
         private Acl $acl,
         private SelectBuilderFactory $selectBuilderFactory,
+        private User $user,
     ) {}
 
     public function record(string $scope, ?string $id): ?array
@@ -67,7 +69,13 @@ class Projection
     public function activity(array $row, ?array $group = null): array
     {
         $result = ['id' => $row['id']];
-        foreach (['runAt', 'kind', 'model', 'durationMs', 'usageMetricsVersion', 'modelRequestCount', 'inputTokens', 'outputTokens', 'cachedInputTokens'] as $field) {
+        $fields = ['runAt', 'kind', 'model', 'durationMs', 'usageMetricsVersion', 'modelRequestCount'];
+        // Tenant administrators are not necessarily EspoCRM instance administrators.
+        // Omit token fields entirely for non-admins in both list and detail responses.
+        if ($this->canViewAnalytics()) {
+            $fields = array_merge($fields, Analytics::FIELDS);
+        }
+        foreach ($fields as $field) {
             $result[$field] = $this->acl->checkField('ChatwootAiAgentRun', $field) ? ($row[$field] ?? null) : null;
         }
         foreach ([
@@ -87,7 +95,15 @@ class Projection
         $result['actions'] = Dataset::actions($safeActions);
         $result['day'] = $row['day'];
         $result['billingStatus'] = Ledger::exemption($row) ?? Ledger::billingStatus($group);
+        if ($this->canViewAnalytics()) {
+            $result['analytics'] = Analytics::summarize([$result]);
+        }
         return $result;
+    }
+
+    public function canViewAnalytics(): bool
+    {
+        return $this->user->isAdmin();
     }
 
     public function canRead(Entity $entity): bool

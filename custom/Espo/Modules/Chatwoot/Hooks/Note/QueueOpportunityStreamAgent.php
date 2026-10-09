@@ -28,12 +28,19 @@ class QueueOpportunityStreamAgent implements AfterSave
             return;
         }
         assert($entity instanceof Note);
+        $this->enqueue($entity);
+    }
+
+    public function enqueue(Note $entity): void
+    {
         foreach ($entity->getData()->opportunityAiMentionTargets ?? [] as $target) {
             $this->progress->queue($entity, $target);
+            $job = $entity->getParentType() === 'AiSession'
+                ? \Espo\Modules\FeatureAiSession\Services\Dispatch::class : DispatchOpportunityStreamAgent::class;
             // Like PublishOpportunityUpdate: consumed only after commit, discarded on rollback.
             $this->entityManager->createEntity('Job', [
-                'name' => DispatchOpportunityStreamAgent::class,
-                'className' => DispatchOpportunityStreamAgent::class,
+                'name' => $job,
+                'className' => $job,
                 'queue' => QueueName::Q0,
                 'attempts' => 3,
                 'data' => (object) [

@@ -18,6 +18,7 @@ class BroadcastFeedMention implements Job
     {
         $note = $this->em->getEntityById('Note', $data->get('noteId'));
         if (!$note) return;
+        if ($note->get('parentType') === 'AiSession') return;
         $parent = $this->em->getEntityById($note->get('parentType'), $note->get('parentId'));
         if (!$parent?->get('tenantId')) return;
         $recipients = array_values(array_intersect($data->get('userIds'), $note->get('opportunityMentionUserIds') ?? []));

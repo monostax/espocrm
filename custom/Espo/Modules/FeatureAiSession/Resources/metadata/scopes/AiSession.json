@@ -1,0 +1,5 @@
+{
+    "entity": true, "object": true, "type": "Base", "module": "FeatureAiSession",
+    "acl": "team", "aclPortal": false, "stream": true,
+    "tab": false, "layouts": false, "customizable": false, "importable": false
+}

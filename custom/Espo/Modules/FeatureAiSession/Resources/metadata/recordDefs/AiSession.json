@@ -1,0 +1,4 @@
+{
+    "beforeLinkHookClassNameList": ["Espo\\Modules\\FeatureAiSession\\Classes\\BlockRelationshipMutation"],
+    "beforeUnlinkHookClassNameList": ["Espo\\Modules\\FeatureAiSession\\Classes\\BlockRelationshipMutation"]
+}

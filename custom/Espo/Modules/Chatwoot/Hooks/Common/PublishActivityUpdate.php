@@ -69,6 +69,8 @@ class PublishActivityUpdate implements AfterSave, BeforeRemove
             $record = $this->em->getEntityById($entity->get('parentType'), $entity->get('parentId'));
         } elseif (!in_array($type, ActivityDiscussion::PARENT_TYPES, true)) return;
         if (!$record) return;
+        // Private sessions must never enter account-wide activity broadcasts.
+        if ($record->getEntityType() === 'AiSession') return;
         $teams = $record->getEntityType() === 'Initiative' ? []
             : $this->em->getRDBRepository($record->getEntityType())->getRelation($record, 'teams')->find();
         $ids = $record->get('tenantId') ? [$record->get('tenantId')] : $this->tenants->resolveAllFromTeamIds(array_map(fn ($team) => $team->getId(), [...$teams]));

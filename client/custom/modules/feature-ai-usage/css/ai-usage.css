@@ -55,7 +55,8 @@
 .au-explanation summary, .au-daily-table summary { cursor: pointer; padding: 6px 0; }
 .au-explanation p { max-width: 900px; margin-top: 10px; opacity: .75; }
 .au-rate { display: flex; gap: 15px; flex-wrap: wrap; padding: 7px 0; }
-.au-tabs { display: flex; gap: 26px; border-bottom: 1px solid var(--au-border); margin: 0 0 20px; }
+.au-tabs { display: flex; gap: 26px; border-bottom: 1px solid var(--au-border); margin: 0 0 20px; overflow-x: auto; }
+.au-tabs button { white-space: nowrap; }
 .au-tabs button { padding: 12px 1px; background: none; border: 0; border-bottom: 2px solid transparent; opacity: .65; font-weight: 500; }
 .au-tabs button.active { border-bottom-color: var(--au-primary); color: var(--au-primary); opacity: 1; }
 .au-chart-panel { padding: 20px 24px; }
@@ -79,6 +80,23 @@
 .au-impact-value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .au-footnote { font-size: 11px; margin: 14px 0; }
 .au-explorer { padding: 18px 20px; }
+.au-internal { padding: 18px 20px; }
+.au-internal > .au-section-heading { flex-wrap: wrap; }
+.au-analytics-intro { margin: 8px 0 20px; font-size: 13px; }
+.au-analytics-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; padding: 20px; margin-bottom: 24px; background: var(--au-soft); border-radius: 8px; }
+.au-analytics-summary > div { display: flex; flex-direction: column; gap: 8px; }
+.au-analytics-summary span { font-size: 12px; }
+.au-analytics-summary strong { font-size: 26px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.au-internal .au-explanation { border-top: 1px solid var(--au-border); margin: 18px 0 0; padding-top: 10px; }
+.au-internal .au-explanation summary { font-size: 13px; font-weight: 500; }
+.au-internal .au-explanation p { line-height: 1.65; opacity: 1; }
+.au-token-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.au-token-grid > div { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--au-border); border-radius: 6px; }
+.au-token-grid span { font-size: 12px; }
+.au-token-grid strong { font-size: 22px; overflow-wrap: anywhere; }
+.au-metrics-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 16px; }
+.au-metrics-list dt { font-size: 12px; font-weight: 400; opacity: .7; }
+.au-metrics-list dd { margin: 5px 0 0; font-variant-numeric: tabular-nums; }
 .au-filterbar { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .au-filterbar label { font-size: 11px; font-weight: 500; display: flex; flex-direction: column; gap: 5px; }
 .au-filterbar .form-control { font-size: 12px; }

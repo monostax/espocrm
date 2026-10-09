@@ -50,6 +50,17 @@
                     ]
                 }
             },
+            "aiCrmOperations": {
+                "visible": {
+                    "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }]
+                }
+            },
+            "aiCanExecute": {
+                "visible": { "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }] }
+            },
+            "aiCanSend": {
+                "visible": { "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }] }
+            },
             "aiMessageVisibility": {
                 "visible": {
                     "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }]

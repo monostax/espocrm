@@ -44,6 +44,9 @@ class OpportunityStreamAgentTest extends TestCase
     private array $sourceSaveOptions = [];
     private bool $humanAccess = true;
     private bool $humanTenant = true;
+    private bool $attachmentFields = true;
+    private array $attachments = [];
+    private \Espo\Core\FileStorage\Manager $files;
 
     private function note(array $values = []): Note
     {
@@ -120,6 +123,12 @@ class OpportunityStreamAgentTest extends TestCase
             return $select;
         });
         $em->method('getRDBRepository')->with('Note')->willReturn($repo);
+        $repo->method('getRelation')->willReturnCallback(function ($note, $name) {
+            self::assertSame('attachments', $name);
+            $relation = $this->createMock(\Espo\ORM\Repository\RDBRelation::class);
+            $relation->method('find')->willReturn(new \Espo\ORM\EntityCollection($this->attachments[$note->getId()] ?? []));
+            return $relation;
+        });
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn('ai-user');
         $user->method('isActive')->willReturn(true);
@@ -137,10 +146,71 @@ class OpportunityStreamAgentTest extends TestCase
         $aclManager = $this->createMock(AclManager::class);
         $aclManager->method('checkEntityRead')->willReturnCallback(fn () => $this->humanAccess);
         $aclManager->method('checkEntityStream')->willReturnCallback(fn () => $this->humanAccess);
+        $aclManager->method('checkField')->willReturnCallback(fn () => $this->attachmentFields);
         $tenants = $this->createMock(UserTenantResolver::class);
         $tenants->method('canActForTenant')->willReturnCallback(fn () => $this->humanTenant);
         $this->service = new OpportunityStreamAgent($em, $user, $acl, $access, $this->createMock(NoteUtil::class), $activities,
-            $this->createMock(StreamAgentProgress::class), $aclManager, $tenants);
+            $this->createMock(StreamAgentProgress::class), $aclManager, $tenants, $this->createMock(\Espo\Modules\FeatureAiSession\Services\Execution::class),
+            $this->files = $this->createMock(\Espo\Core\FileStorage\Manager::class));
+    }
+
+    private function mediaAttachment(string $postId = 'source'): void
+    {
+        $attachment = $this->createMock(\Espo\Entities\Attachment::class);
+        $attachment->method('getId')->willReturn('image');
+        $attachment->method('get')->willReturnCallback(fn ($field) => ['name' => 'image.png', 'type' => 'image/png', 'size' => 5][$field] ?? null);
+        $this->attachments[$postId] = [$attachment];
+    }
+
+    public function testAttachmentTransportRequiresClaimAndDoesNotReturnUnrelatedIds(): void
+    {
+        $this->mediaAttachment();
+        $this->files->expects(self::never())->method('getStream');
+        try {
+            $this->service->attachments('source', 'ai', $this->postHash, 'run', 'source', null);
+            self::fail('Unclaimed runs must not read attachments.');
+        } catch (Forbidden) {}
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $this->expectException(Forbidden::class);
+        $this->service->attachments('source', 'ai', $this->postHash, 'run', 'source', 'foreign-file');
+    }
+
+    public function testAttachmentManifestAndBoundedBytesUseTheNoteRelation(): void
+    {
+        $this->mediaAttachment();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $manifest = $this->service->attachments('source', 'ai', $this->postHash, 'run', 'source', null);
+        self::assertSame('image', $manifest->list[0]->id);
+        self::assertFalse(isset($manifest->list[0]->data));
+        $stream = $this->createMock(\Psr\Http\Message\StreamInterface::class);
+        $stream->method('eof')->willReturnOnConsecutiveCalls(false, true);
+        $stream->method('read')->willReturn('bytes');
+        $this->files->expects(self::once())->method('getStream')->willReturn($stream);
+        $result = $this->service->attachments('source', 'ai', $this->postHash, 'run', 'source', 'image');
+        self::assertSame(base64_encode('bytes'), $result->data);
+        self::assertSame(hash('sha256', 'bytes'), $result->revision);
+    }
+
+    public function testHistoricalThreadRootIsReadableButOtherThreadsAreNot(): void
+    {
+        $this->source->set('opportunityThreadRootId', 'root');
+        $this->records['Note/root'] = $this->note(['id' => 'root', 'type' => 'Post', 'parentType' => 'Opportunity', 'parentId' => 'opp', 'number' => '5']);
+        $this->mediaAttachment('root');
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        self::assertCount(1, $this->service->attachments('source', 'ai', $this->postHash, 'run', 'root', null)->list);
+        $this->records['Note/other'] = $this->note(['id' => 'other', 'type' => 'Post', 'parentType' => 'Opportunity', 'parentId' => 'opp', 'number' => '6']);
+        $this->expectException(Forbidden::class);
+        $this->service->attachments('source', 'ai', $this->postHash, 'run', 'other', null);
+    }
+
+    public function testAttachmentReadsRecheckHumanFieldAccess(): void
+    {
+        $this->mediaAttachment();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $this->attachmentFields = false;
+        $this->files->expects(self::never())->method('getStream');
+        $this->expectException(Forbidden::class);
+        $this->service->attachments('source', 'ai', $this->postHash, 'run', 'source', 'image');
     }
 
     public function testDelegationRequiresCapturedHumanAndCurrentAccess(): void
@@ -313,6 +383,58 @@ class OpportunityStreamAgentTest extends TestCase
         self::assertFalse($this->service->reply('source', 'ai', $this->postHash, 'Duplicate', 'run')->published);
         self::assertFalse($this->service->status('source', 'ai', 'run', 'failed')->updated);
         self::assertSame('Final answer', $reply->getPost());
+    }
+
+    public function testProgressIsOrderedOwnedAndPreservedOnCompletion(): void
+    {
+        $reply = $this->queuedReply();
+        $snapshot = (object) ['sequence' => 2, 'phase' => 'thinking', 'activities' => [(object) [
+            'id' => 'call', 'kind' => 'send', 'status' => 'accepted',
+            'startedAt' => '2026-10-09T02:33:53.000Z', 'finishedAt' => '2026-10-09T02:33:54.000Z',
+        ]]];
+        self::assertFalse($this->service->updateProgress('source', 'ai', 'run', $snapshot)->updated);
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $startedAt = $reply->getData()->opportunityStreamAgent->startedAt;
+        self::assertNotEmpty($startedAt);
+        self::assertFalse($this->service->updateProgress('source', 'ai', 'other', $snapshot)->updated);
+        self::assertTrue($this->service->updateProgress('source', 'ai', 'run', $snapshot)->updated);
+        self::assertFalse($this->service->updateProgress('source', 'ai', 'run', $snapshot)->updated);
+        $older = clone $snapshot;
+        $older->sequence = 1;
+        self::assertFalse($this->service->updateProgress('source', 'ai', 'run', $older)->updated);
+        self::assertTrue($this->service->reply('source', 'ai', $this->postHash, 'Final answer', 'run')->published);
+        $snapshot->sequence = 3;
+        self::assertFalse($this->service->updateProgress('source', 'ai', 'run', $snapshot)->updated);
+        $progress = $reply->getData()->opportunityStreamAgent;
+        self::assertSame('completed', $progress->status);
+        self::assertSame($startedAt, $progress->startedAt);
+        self::assertNotEmpty($progress->finishedAt);
+        self::assertSame('accepted', $progress->activities[0]->status);
+        self::assertSame('Final answer', $reply->getPost());
+    }
+
+    public function testProgressCannotReviveCancelledOrDeletedReplies(): void
+    {
+        $reply = $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $snapshot = (object) ['sequence' => 1, 'phase' => 'thinking', 'activities' => []];
+        $reply->set('opportunityPostDeleted', true);
+        self::assertFalse($this->service->updateProgress('source', 'ai', 'run', $snapshot)->updated);
+        $reply->set('opportunityPostDeleted', false);
+        $this->service->status('source', 'ai', 'run', 'cancelled');
+        self::assertFalse($this->service->updateProgress('source', 'ai', 'run', $snapshot)->updated);
+        self::assertNotEmpty($reply->getData()->opportunityStreamAgent->finishedAt);
+    }
+
+    public function testProgressRequiresTheAuthenticatedReplyAuthor(): void
+    {
+        $reply = $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $reply->set('createdById', 'other-ai');
+        $this->expectException(Forbidden::class);
+        $this->service->updateProgress('source', 'ai', 'run', (object) [
+            'sequence' => 1, 'phase' => 'thinking', 'activities' => [],
+        ]);
     }
 
     public function testOnlyTheOwningRunCanStopARunningReplyEvenAfterTheSourceIsEdited(): void

@@ -4,10 +4,10 @@ export default class Format {
         this.locale = locale.replace('_', '-');
     }
 
-    number(value) {
+    number(value, maximumFractionDigits = 0) {
         if (value === null || value === undefined) return '—';
         return new Intl.NumberFormat(this.locale, {
-            notation: 'standard', maximumFractionDigits: 0,
+            notation: 'standard', maximumFractionDigits,
         }).format(value);
     }
 

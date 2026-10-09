@@ -27,7 +27,7 @@ class OpportunityAccess
 
     public function canReadNote(User $user, Entity $note): bool
     {
-        if (!in_array($note->get('parentType'), ['Opportunity', 'Initiative', 'Contact', 'Account'], true) || $user->isAdmin()) {
+        if (!in_array($note->get('parentType'), ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession'], true) || $user->isAdmin()) {
             return true;
         }
 
@@ -100,8 +100,8 @@ class OpportunityAccess
             return [];
         }
 
-        $conditions = [['parentType!=' => ['Opportunity', 'Initiative', 'Contact', 'Account']], ['parentType' => null]];
-        foreach (['Opportunity', 'Initiative', 'Contact', 'Account'] as $type) {
+        $conditions = [['parentType!=' => ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession']], ['parentType' => null]];
+        foreach (['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession'] as $type) {
             $parents = $this->readableParents($user, $type);
             if ($parents) {
                 $conditions[] = ['parentType' => $type, 'parentId=s' => $parents];

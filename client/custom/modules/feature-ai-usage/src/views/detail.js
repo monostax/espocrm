@@ -1,5 +1,5 @@
 import ModalView from 'views/modal';
-import {recordName, link} from 'feature-ai-usage:helpers/index';
+import {recordName, link, presentMetrics} from 'feature-ai-usage:helpers/index';
 
 export default class extends ModalView {
     template = 'feature-ai-usage:detail';
@@ -36,6 +36,8 @@ export default class extends ModalView {
                 overage: f.number(group.billing?.overage), charges: f.charges(group.billing?.charges),
             } : null,
             metered: row.usageMetricsVersion === 1,
+            showTokenUsage: this.getUser().isAdmin(),
+            analytics: this.getUser().isAdmin() ? presentMetrics(row.analytics, f, t) : null,
             model: row.model || '—', requests: f.number(row.modelRequestCount),
             input: f.number(row.inputTokens), output: f.number(row.outputTokens), cached: f.number(row.cachedInputTokens),
             duration: row.durationMs !== null ? (row.durationMs / 1000).toFixed(1) + ' s' : '—',

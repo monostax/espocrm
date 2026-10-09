@@ -396,8 +396,9 @@ class ChatwootInboxIntegration
                 'inboxIdentifier' => $inboxResult['inbox_identifier'] ?? '',
                 'templates' => new \stdClass(),
                 'commands' => [
-                    'server' => true,
-                    'queue' => true,
+                    // These control shared WAHA infrastructure, not this inbox's session.
+                    'server' => false,
+                    'queue' => false,
                 ],
                 'conversations' => [
                     'sort' => 'created_newest',

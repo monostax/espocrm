@@ -42,6 +42,16 @@
             ],
             [
                 {
+                    "name": "aiCrmOperations",
+                    "fullWidth": true
+                }
+            ],
+            [
+                { "name": "aiCanExecute" },
+                { "name": "aiCanSend" }
+            ],
+            [
+                {
                     "name": "calendarsToManage",
                     "fullWidth": true
                 }

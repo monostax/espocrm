@@ -314,6 +314,11 @@ class JourneyPublishService
                 'allowReEnrollment' => (bool) $journey->get('allowReEnrollment'),
             ],
             'sideEffects' => $sideEffects,
+            // The complete active-action set, not the caller's potentially filtered collection view.
+            'hasExecutableFormula' => count(array_filter(
+                $actions,
+                static fn (Entity $action): bool => trim((string) ($action->get('formula') ?? '')) !== ''
+            )) > 0,
             'stages' => [
                 'entryCount' => $entryCount,
                 'successCount' => $successCount,

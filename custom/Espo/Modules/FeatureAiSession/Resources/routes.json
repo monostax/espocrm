@@ -1,0 +1,11 @@
+[
+    { "route": "/AiSession/action/inbox", "method": "get", "params": { "controller": "AiSessionInbox", "action": "list" } },
+    { "route": "/AiSession/action/inbox", "method": "post", "params": { "controller": "AiSessionInbox", "action": "create" } },
+    { "route": "/AiSession/action/agents", "method": "get", "params": { "controller": "AiSessionInbox", "action": "agents" } },
+    { "route": "/AiSession/:id/inbox", "method": "get", "params": { "controller": "AiSessionInbox", "action": "read" } },
+    { "route": "/AiSession/:id/inbox", "method": "put", "params": { "controller": "AiSessionInbox", "action": "update" } },
+    { "route": "/AiSession/:id/discussion", "method": "get", "params": { "controller": "AiSessionInbox", "action": "stream" } },
+    { "route": "/AiSession/:id/posts", "method": "post", "params": { "controller": "AiSessionInbox", "action": "post" } },
+    { "route": "/AiSession/:id/recipient", "method": "post", "params": { "controller": "AiSessionInbox", "action": "recipient" } },
+    { "route": "/AiSession/:id/readState", "method": "post", "params": { "controller": "AiSessionInbox", "action": "readState" } }
+]

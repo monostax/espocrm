@@ -13,6 +13,8 @@ class NoteHookProcessor extends \Espo\Tools\Notification\NoteHookProcessor
 {
     public function afterSave(Note $note, Params $params): void
     {
+        // Mentioning a human never shares a private session or leaks its content in notifications.
+        if ($note->getParentType() === 'AiSession') return;
         if (in_array($note->getType(), OpportunityStreamEvents::EVENT_TYPES, true)) {
             return;
         }

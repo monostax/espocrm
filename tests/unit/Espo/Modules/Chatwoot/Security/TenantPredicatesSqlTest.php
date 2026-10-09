@@ -44,6 +44,7 @@ class TenantPredicatesSqlTest extends TestCase
     private EntityManager $em;
     private AclManager $acl;
     private SelectBuilderFactory $selects;
+    private InjectableFactory $accessFactory;
     private OpportunityAccess $parents;
     private OpportunityEventAccess $events;
     private OpportunityAttachmentAccess $attachments;
@@ -54,6 +55,8 @@ class TenantPredicatesSqlTest extends TestCase
     private string $streamLevel = 'all';
     private bool $portal = false;
     private bool $admin = false;
+    private bool $api = false;
+    private bool $attachmentFieldAllowed = true;
     private array $enabledParents = ['Opportunity'];
 
     protected function setUp(): void
@@ -67,6 +70,10 @@ class TenantPredicatesSqlTest extends TestCase
             'Initiative' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
             'Contact' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
             'Account' => ['id', 'tenantId', 'assignedUserId', 'teamId', 'accountId', 'contactId', 'readable', 'deleted'],
+            'AiSession' => ['id', 'tenantId', 'assignedUserId', 'chatwootAccountId', 'readable', 'deleted'],
+            'ChatwootAccount' => ['id', 'tenantId', 'platformId', 'readable', 'deleted'],
+            'ChatwootUser' => ['id', 'assignedUserId', 'platformId', 'deleted'],
+            'ChatwootAccountUserMembership' => ['id', 'chatwootAccountId', 'chatwootUserId', 'isAI', 'deleted'],
             'Note' => ['id', 'parentType', 'parentId', 'type', 'relatedType', 'relatedId', 'createdById', 'number', 'isPinned', 'isInternal', 'readable', 'deleted'],
             'Attachment' => ['id', 'parentType', 'parentId', 'relatedType', 'relatedId', 'createdById', 'deleted'],
             'ChatwootConversation' => ['id', 'readable', 'deleted'],
@@ -78,7 +85,7 @@ class TenantPredicatesSqlTest extends TestCase
         foreach ($tables as $type => $fields) {
             $columns = [];
             foreach ($fields as $field) {
-                $numeric = in_array($field, ['number', 'isPinned', 'isInternal', 'readable', 'deleted'], true);
+                $numeric = in_array($field, ['number', 'isPinned', 'isInternal', 'readable', 'deleted', 'isAI'], true);
                 $columns[] = $this->sqlName($field) . ($numeric ? ' INTEGER DEFAULT 0' : ' TEXT');
                 $defs[$type]['attributes'][$field] = ['type' => $numeric ? 'int' : 'varchar'];
             }
@@ -96,24 +103,26 @@ class TenantPredicatesSqlTest extends TestCase
 
         $this->user = $this->createMock(User::class);
         $this->user->method('getId')->willReturn('agent');
+        $this->user->method('isActive')->willReturn(true);
         $this->user->method('isAdmin')->willReturnCallback(fn () => $this->admin);
         $this->user->method('isPortal')->willReturnCallback(fn () => $this->portal);
-        $this->user->method('isRegular')->willReturnCallback(fn () => !$this->portal && !$this->admin);
+        $this->user->method('isRegular')->willReturnCallback(fn () => !$this->portal && !$this->admin && !$this->api);
         $this->tenants = $this->createMock(UserTenantResolver::class);
         $this->tenants->method('resolveTenantIds')->with($this->user)->willReturnCallback(fn () => $this->tenantIds);
         $this->acl = $this->createMock(AclManager::class);
+        $this->acl->method('checkField')->willReturnCallback(fn () => $this->attachmentFieldAllowed);
         $this->acl->method('checkScope')->willReturnCallback(fn ($user, $scope, $action) =>
-            (!in_array($scope, ['Contact', 'Initiative', 'Account'], true) || in_array($scope, $this->enabledParents, true)) &&
+            (!in_array($scope, ['Contact', 'Initiative', 'Account', 'AiSession'], true) || in_array($scope, $this->enabledParents, true)) &&
             !in_array("$scope:$action", $this->deniedScopes, true));
         $this->acl->method('getLevel')->willReturnCallback(function ($user, $scope, $action) {
             self::assertSame($this->user, $user);
-            self::assertContains($scope, ['Opportunity', 'Initiative', 'Contact', 'Account']);
+            self::assertContains($scope, ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession']);
             self::assertSame('stream', $action);
             return $this->streamLevel;
         });
         $this->em = $this->createMock(EntityManager::class);
         $this->em->method('getQueryBuilder')->willReturn(new QueryBuilder());
-        $factory = $this->createMock(InjectableFactory::class);
+        $factory = $this->accessFactory = $this->createMock(InjectableFactory::class);
         $this->selects = $this->createMock(SelectBuilderFactory::class);
         $factory->method('createWith')->with(SelectBuilderFactory::class, ['user' => $this->user])->willReturn($this->selects);
         $this->selects->method('create')->willReturnCallback(function () {
@@ -140,6 +149,9 @@ class TenantPredicatesSqlTest extends TestCase
                 $query = SelectBuilder::create()->from($scope)->order('id', 'DESC');
                 // Fixture stock read ACL. Tenant, parent, event and attachment predicates are production code.
                 $query->where(['readable' => 1]);
+                if ($scope === 'AiSession') {
+                    (new \Espo\Modules\FeatureAiSession\Classes\OwnerFilter($this->user, $this->tenants, $this->accessFactory))->apply($query);
+                }
                 if (in_array($scope, ['Opportunity', 'Initiative', 'Contact', 'Account'], true)) {
                     (new Tenant($this->user, $this->tenants))->apply($query);
                 }
@@ -155,7 +167,7 @@ class TenantPredicatesSqlTest extends TestCase
         });
         $filters = $this->createMock(FilterFactory::class);
         $filters->method('create')->willReturnCallback(function ($scope, $user, $name) {
-            self::assertContains($scope, ['Opportunity', 'Initiative', 'Contact', 'Account']);
+            self::assertContains($scope, ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession']);
             self::assertSame($this->user, $user);
             $this->streamFilters[] = $name;
             $where = match ($name) {
@@ -200,6 +212,39 @@ class TenantPredicatesSqlTest extends TestCase
     private function sqlName(string $name): string
     {
         return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
+    }
+
+    public function testPrivateSessionsFilterRecordsNotesAndFilesDespiteBroadRoleAccess(): void
+    {
+        $this->enabledParents[] = 'AiSession';
+        $this->insert('ChatwootAccount', ['id' => 'workspace', 'tenantId' => 'tenant-a', 'platformId' => 'platform', 'readable' => 1]);
+        $this->insert('ChatwootUser', ['id' => 'identity', 'assignedUserId' => 'agent', 'platformId' => 'platform']);
+        $this->insert('ChatwootAccountUserMembership', ['id' => 'membership', 'chatwootAccountId' => 'workspace', 'chatwootUserId' => 'identity']);
+        foreach (['agent', 'someone-else'] as $owner) {
+            $this->insert('AiSession', ['id' => $owner, 'assignedUserId' => $owner, 'tenantId' => 'tenant-a', 'chatwootAccountId' => 'workspace', 'readable' => 1]);
+            $this->insertNote("session-$owner", 30, ['parentType' => 'AiSession', 'parentId' => $owner]);
+            $this->insert('Attachment', ['id' => "file-$owner", 'parentType' => 'Note', 'parentId' => "session-$owner"]);
+            $this->insert('Attachment', ['id' => "direct-$owner", 'parentType' => 'AiSession', 'parentId' => $owner]);
+        }
+        $this->assertRows(['agent'], SelectBuilder::create()->from('AiSession')->select('id')->where(['id=s' => $this->parents->readableParents($this->user, 'AiSession')]));
+        $this->assertRows(['session-agent'], SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => 'AiSession'])->where($this->parents->where($this->user))->limit(0, 1));
+        $this->assertRows(['direct-agent', 'file-agent'], SelectBuilder::create()->from('Attachment')->select('id')->where($this->attachments->where($this->user))->order('id'));
+        $this->attachmentFieldAllowed = false;
+        $this->assertRows([], SelectBuilder::create()->from('Attachment')->select('id')->where($this->attachments->where($this->user)));
+        $this->attachmentFieldAllowed = true;
+        $this->api = true;
+        $this->assertRows([], SelectBuilder::create()->from('AiSession')->select('id')->where(['id=s' => $this->parents->readableParents($this->user, 'AiSession')]));
+        $this->api = false;
+        $this->pdo->exec("UPDATE chatwoot_user SET deleted = 1");
+        $this->assertRows([], SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => 'AiSession'])->where($this->parents->where($this->user)));
+        $this->pdo->exec("UPDATE chatwoot_user SET deleted = 0");
+        $this->pdo->exec("UPDATE chatwoot_account SET tenant_id = 'tenant-b'");
+        $this->tenantIds = ['tenant-a', 'tenant-b'];
+        $this->assertRows([], SelectBuilder::create()->from('AiSession')->select('id')->where(['id=s' => $this->parents->readableParents($this->user, 'AiSession')]));
+        $this->pdo->exec("UPDATE chatwoot_account SET tenant_id = 'tenant-a'");
+        $this->pdo->exec("UPDATE chatwoot_account_user_membership SET deleted = 1");
+        $this->assertRows([], SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => 'AiSession'])->where($this->parents->where($this->user)));
+        $this->assertRows([], SelectBuilder::create()->from('Attachment')->select('id')->where($this->attachments->where($this->user)));
     }
 
     public static function nativeParents(): iterable

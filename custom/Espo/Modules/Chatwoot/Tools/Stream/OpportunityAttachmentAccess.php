@@ -30,17 +30,19 @@ class OpportunityAttachmentAccess
         $hasParent = $attachment->get('parentType') && $attachment->get('parentId');
         $type = $attachment->get($hasParent ? 'parentType' : 'relatedType');
         $id = $attachment->get($hasParent ? 'parentId' : 'relatedId');
-        if (!$id || !in_array($type, ['Note', 'Opportunity', 'Initiative', 'Contact', 'Account'], true)) {
+        if (!$id || !in_array($type, ['Note', 'Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession'], true)) {
             return null;
         }
         $parent = $this->entityManager->getEntityById($type, $id);
         if (!$parent) {
             return false;
         }
-        if ($type === 'Note' && in_array($parent->get('parentType'), ['Opportunity', 'Initiative', 'Contact', 'Account'], true)) {
+        if ($type === 'AiSession' && !$this->aclManager->checkField($user, 'Note', 'attachments')) return false;
+        if ($type === 'Note' && in_array($parent->get('parentType'), ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession'], true)) {
+            if ($parent->get('parentType') === 'AiSession' && !$this->aclManager->checkField($user, 'Note', 'attachments')) return false;
             return $this->access->canReadNote($user, $parent) && $this->aclManager->checkEntityRead($user, $parent);
         }
-        if (in_array($type, ['Opportunity', 'Initiative', 'Contact', 'Account'], true) && !$this->aclManager->checkEntityRead($user, $parent)) {
+        if (in_array($type, ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession'], true) && !$this->aclManager->checkEntityRead($user, $parent)) {
             return false;
         }
 
@@ -57,6 +59,12 @@ class OpportunityAttachmentAccess
         $notes = $this->aclManager->checkScope($user, 'Note', 'read')
             ? $factory->create()->from('Note')->withStrictAccessControl()->buildQueryBuilder()->select('id')->order([])->build()
             : SelectBuilder::create()->from('Note')->select('id')->where(['id' => []])->build();
+        $sessionFilesAllowed = $this->aclManager->checkField($user, 'Note', 'attachments');
+        if (!$sessionFilesAllowed) {
+            $notes = SelectBuilder::create()->clone($notes)->where(['OR' => [
+                ['parentType!=' => 'AiSession'], ['parentType' => null],
+            ]])->build();
+        }
         $opportunities = $this->aclManager->checkScope($user, 'Opportunity', 'read')
             ? $factory->create()->from('Opportunity')->withStrictAccessControl()->buildQueryBuilder()->select('id')->order([])->build()
             : SelectBuilder::create()->from('Opportunity')->select('id')->where(['id' => []])->build();
@@ -71,8 +79,10 @@ class OpportunityAttachmentAccess
             ? $factory->create()->from('Account')->withStrictAccessControl()->buildQueryBuilder()->select('id')->order([])->build()
             : SelectBuilder::create()->from('Account')->select('id')->where(['id' => []])->build();
 
+        $sessions = ($sessionFilesAllowed ? $this->access->readableParents($user, 'AiSession') : null) ??
+            SelectBuilder::create()->from('AiSession')->select('id')->where(['id' => []])->build();
         $allowed = static fn (string $type, string $id) => ['OR' => [
-            [$type . '!=' => ['Note', 'Opportunity', 'Initiative', 'Contact', 'Account']],
+            [$type . '!=' => ['Note', 'Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession']],
             [$type => null],
             [$id => null],
             [$id => ['', '0']],
@@ -81,6 +91,7 @@ class OpportunityAttachmentAccess
             [$type => 'Initiative', $id . '=s' => $initiatives],
             [$type => 'Contact', $id . '=s' => $contacts],
             [$type => 'Account', $id . '=s' => $accounts],
+            [$type => 'AiSession', $id . '=s' => $sessions],
         ]];
 
         return ['OR' => [

@@ -1,6 +1,47 @@
 const DIMENSIONS = ['kind', 'action', 'conversation', 'opportunity', 'agent', 'account'];
 const BILLING_STATUSES = ['billed', 'partiallyBilled', 'included', 'notBilled', 'excluded', 'unavailable', 'failed', 'waived', 'pending'];
-export const KINDS = ['customer-message', 'private-mention', 'public-mention', 'scheduled-message', 'followup-trigger', 'opportunity-mention'];
+export const KINDS = ['customer-message', 'private-mention', 'public-mention', 'scheduled-message', 'followup-trigger', 'opportunity-mention', 'stream-mention'];
+
+export function presentMetrics(metrics, format, t) {
+    if (!metrics) return null;
+    const value = key => metrics[key] == null ? '—' : key.endsWith('Pct') ? format.number(metrics[key], 2) + '%'
+        : key.endsWith('Ms') ? format.number(metrics[key] / 1000, 2) + ' s' : format.number(metrics[key], 2);
+    const item = key => ({key, label: t(key), value: value(key)});
+    return {
+        cards: ['totalTokens', 'inputTokens', 'outputTokens', 'cachedInputTokens', 'uncachedInputTokens', 'tokenCacheHitPct', 'requestCacheHitPct', 'reasoningTokens'].map(item),
+        diagnostics: ['runs', 'tokenRuns', 'cacheRuns', 'meteredRuns', 'tokenCoveragePct', 'telemetryCoveragePct', 'requests', 'measuredRequests', 'requestsWithoutUsage', 'requestCoveragePct',
+            'avgTokensPerRun', 'avgTokensPerRequest', 'stepCount', 'durationRuns', 'avgDurationMs', 'p50DurationMs', 'p95DurationMs', 'maxDurationMs'].map(item)
+            .concat(['inputTokens', 'outputTokens', 'cachedInputTokens', 'reasoningTokens'].map(key => ({label: t(key) + ' · ' + t('counterCoverage'),
+                value: format.number(metrics.knownRuns?.[key]) + ' / ' + format.number(metrics.runs)}))),
+        total: value('totalTokens'), uncached: value('uncachedInputTokens'), cacheHit: value('tokenCacheHitPct'),
+        requestCacheHit: value('requestCacheHitPct'), requests: value('requests'),
+        sources: Object.entries(metrics.sources || {}).map(([key, source]) => ({label: t('source_' + key),
+            metrics: ['knownRuns', 'requests', 'measuredRequests', 'requestCoveragePct', 'inputTokens', 'outputTokens', 'cachedInputTokens', 'tokenCacheHitPct', 'requestCacheHitPct', 'avgInputTokens', 'maxInputTokens']
+                .map(field => ({label: t(field), value: source[field] == null ? '—' : format.number(source[field], 2) + (field.endsWith('Pct') ? '%' : '')})),
+        })),
+    };
+}
+
+function presentAnalytics(analytics, format, t) {
+    if (!analytics) return null;
+    const fields = ['runs', 'totalTokens', 'inputTokens', 'outputTokens', 'cachedInputTokens', 'tokenCacheHitPct', 'requests', 'requestCacheHitPct', 'requestCoveragePct', 'avgDurationMs'];
+    const tables = ['models', 'outcomes', 'daily'].map(dimension => ({
+        label: t('analytics_' + dimension), headers: fields.map(t),
+        rows: analytics[dimension].map(row => ({
+            name: dimension === 'daily' ? format.date(row.key) : dimension === 'outcomes' ? t('outcome_' + (row.key || 'unknown')) : row.key || t('unattributed'),
+            day: dimension === 'daily' ? row.key : null,
+            cells: fields.map(key => row[key] == null ? '—' : key.endsWith('Ms') ? format.number(row[key] / 1000, 2) + ' s'
+                : format.number(row[key], 2) + (key.endsWith('Pct') ? '%' : '')),
+        })),
+    }));
+    const previous = analytics.previous?.totalTokens;
+    const current = analytics.totals.totalTokens;
+    return {...presentMetrics(analytics.filtered, format, t), tables,
+        monthTotal: format.number(current),
+        previousTotal: previous == null ? null : format.number(previous),
+        change: previous > 0 && current != null ? (current > previous ? '+' : '') + format.number(100 * (current - previous) / previous, 2) + '%' : null,
+    };
+}
 
 export function allowance(billing) {
     if (billing.status !== 'ready') return {ready: false, state: 'configurationRequired', percentage: null, coveredWidth: 0, overageWidth: 0};
@@ -68,6 +109,7 @@ export function present(payload, state, format, t) {
         consumedText: format.number(row.billing?.consumed), chargesText: format.charges(row.billing?.charges),
         coveredText: format.number(row.billing?.covered), overageText: format.number(row.billing?.overage),
         width: Math.min(100, row.share), href: link(row.record),
+        metrics: presentMetrics(row.analytics, format, t),
     }));
     const activities = (payload.activity?.list || []).map(row => {
         const status = BILLING_STATUSES.includes(row.billingStatus) ? row.billingStatus : 'unavailable';
@@ -76,6 +118,9 @@ export function present(payload, state, format, t) {
             agentText: recordName(row.agent, t), source: row.opportunity || row.conversation,
             sourceText: recordName(row.opportunity || row.conversation, t),
             actionsText: row.actions.map(t).join(' · ') || '—',
+            inputTokensText: format.number(row.inputTokens), outputTokensText: format.number(row.outputTokens),
+            cachedTokensText: format.number(row.cachedInputTokens),
+            metrics: presentMetrics(row.analytics, format, t),
             billingText: t('billing_' + status), billingHint: t('billingHint_' + status),
             billingClass: ['billed', 'partiallyBilled'].includes(status) ? 'au-state-overLimit' : status === 'included' ? 'au-state-withinPlan' : '',
         };
@@ -83,6 +128,7 @@ export function present(payload, state, format, t) {
     const total = payload.breakdown?.total ?? payload.activity?.total ?? 0;
     return {
         ready: progress.ready, progress,
+        analytics: presentAnalytics(payload.analytics, format, t),
         showBreakdownBilling: ['conversation', 'opportunity'].includes(state.dimension),
         stateText: t(progress.state), configurationText: t(b.reason || 'missingRate'),
         modelText: t('model_' + (b.model || 'unknown')), unit, period, cards, daily, rows, activities,
@@ -116,6 +162,7 @@ export function present(payload, state, format, t) {
         dimensions: DIMENSIONS.map(value => ({value, label: t(value), selected: value === state.dimension})),
         kinds: KINDS.map(value => ({value, label: t(value), selected: value === state.filters.kind})),
         overview: state.view === 'overview', breakdown: state.view === 'breakdown', activity: state.view === 'activity',
+        analyticsView: state.view === 'analytics',
         previousDisabled: !state.offset, nextDisabled: state.offset + 25 >= total,
         pagination: total ? `${format.number(state.offset + 1)}–${format.number(Math.min(state.offset + 25, total))} / ${format.number(total)}` : '0',
         hasRows: rows.length > 0, hasActivities: activities.length > 0,

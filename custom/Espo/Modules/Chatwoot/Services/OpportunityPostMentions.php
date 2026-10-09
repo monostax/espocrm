@@ -111,6 +111,8 @@ class OpportunityPostMentions
     /** Capture explicit, authorized AI targets while the human author is the API actor. */
     public function resolveAiTargets(Note $note): array
     {
+        // Personal chats trigger only through the explicit authenticated submission API.
+        if ($note->getParentType() === 'AiSession') return [];
         if ($note->getData()->opportunityStreamAgent ?? null) {
             return [];
         }

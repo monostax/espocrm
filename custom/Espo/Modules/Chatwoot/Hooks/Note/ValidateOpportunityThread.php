@@ -20,7 +20,7 @@ class ValidateOpportunityThread implements BeforeSave
 {
     public static int $order = 1;
 
-    public function __construct(private EntityManager $entityManager, private Acl $acl, private User $user, private OpportunityAccess $access) {}
+    public function __construct(private EntityManager $entityManager, private Acl $acl, private User $user, private OpportunityAccess $access, private \Espo\Modules\FeatureAiSession\Services\Execution $sessions) {}
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
@@ -43,8 +43,9 @@ class ValidateOpportunityThread implements BeforeSave
             $entity->get('parentId') !== $root->getParentId() || $root->get('opportunityThreadRootId')) {
             throw new BadRequest('The thread root must be a top-level post on the same record.');
         }
-        if ((!$this->user->isRegular() && !$this->user->isAdmin()) ||
-            !$this->access->canReadNote($this->user, $root) || !$this->acl->checkEntityRead($root)) {
+        $sessionExecution = $entity instanceof Note && $entity->getParentType() === 'AiSession' && $this->sessions->generated($entity);
+        if (!$sessionExecution && ((!$this->user->isRegular() && !$this->user->isAdmin()) ||
+            !$this->access->canReadNote($this->user, $root) || !$this->acl->checkEntityRead($root))) {
             throw new Forbidden();
         }
         $entity->set('isInternal', $root->get('isInternal'));

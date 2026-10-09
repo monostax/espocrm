@@ -18,7 +18,7 @@ use Espo\Tools\Stream\MassNotePreparator;
 /** Reuses the Note discussion wire fields introduced for Opportunities. Cursors are activity-specific. */
 class ActivityDiscussion
 {
-    public const PARENT_TYPES = ['Task', 'Call', 'Meeting', 'Initiative', 'Contact', 'Account'];
+    public const PARENT_TYPES = ['Task', 'Call', 'Meeting', 'Initiative', 'Contact', 'Account', 'AiSession'];
 
     public function __construct(
         private EntityManager $em,

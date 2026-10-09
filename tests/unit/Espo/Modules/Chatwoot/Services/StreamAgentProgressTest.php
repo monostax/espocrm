@@ -73,7 +73,7 @@ class StreamAgentProgressTest extends TestCase
         });
         $acl = $this->createMock(AclManager::class);
         $acl->method('check')->with($user, $this->isInstanceOf(Note::class), 'create')->willReturn(true);
-        $service = new StreamAgentProgress($em, $acl);
+        $service = new StreamAgentProgress($em, $acl, $this->createMock(\Espo\Modules\FeatureAiSession\Services\Execution::class));
         $service->queue($source, (object) ['aiAgentMembershipId' => 'ai']);
         self::assertSame('ai-user', $saved[0]->getCreatedById());
         self::assertSame('Task', $saved[0]->getParentType());

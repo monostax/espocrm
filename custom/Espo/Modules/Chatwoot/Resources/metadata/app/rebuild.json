@@ -18,6 +18,7 @@
         "Espo\\Modules\\Chatwoot\\Rebuild\\RotateAutomationToConcierge",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedWahaPlatform",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillMembershipGlobalAdmin",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillAiCrmOperations",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillManagedAgentCrmUsers"
     ]
 }
