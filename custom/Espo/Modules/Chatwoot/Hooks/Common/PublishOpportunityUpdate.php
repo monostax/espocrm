@@ -123,7 +123,7 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
         $this->entityManager->createEntity('Job', [
             'name' => BroadcastOpportunityUpdate::class,
             'className' => BroadcastOpportunityUpdate::class,
-            'queue' => QueueName::Q0,
+            'queue' => \Espo\Modules\Chatwoot\Tools\Stream\DispatchQueue::notification($entity),
             'attempts' => 3,
             'data' => (object) [
                 'opportunityId' => $opportunity->getId(),

@@ -57,7 +57,7 @@ class SeedScheduledJobs implements RebuildAction
         [
             'name' => 'Sync Conversation Episodes from Chatwoot',
             'job' => 'SyncConversationEpisodesFromChatwoot',
-            'scheduling' => '* * * * *',
+            'scheduling' => '*/1 * * * *',
         ],
         [
             'name' => 'Post Overdue Opportunity Activities',
@@ -67,17 +67,17 @@ class SeedScheduledJobs implements RebuildAction
         [
             'name' => 'Sync Inboxes from Chatwoot',
             'job' => 'SyncInboxesFromChatwoot',
-            'scheduling' => '* * * * *',
+            'scheduling' => '*/1 * * * *',
         ],
         [
             'name' => 'Sync Contacts from Chatwoot',
             'job' => 'SyncContactsFromChatwoot',
-            'scheduling' => '* * * * *',
+            'scheduling' => '*/1 * * * *',
         ],
         [
             'name' => 'Sync Conversations from Chatwoot',
             'job' => 'SyncConversationsFromChatwoot',
-            'scheduling' => '* * * * *',
+            'scheduling' => '*/1 * * * *',
         ],
         [
             'name' => 'Auto-Pending Conversations',
@@ -87,7 +87,7 @@ class SeedScheduledJobs implements RebuildAction
         [
             'name' => 'Sync Account User Memberships from Chatwoot',
             'job' => 'SyncAccountUserMembershipsFromChatwoot',
-            'scheduling' => '* * * * *',
+            'scheduling' => '*/1 * * * *',
         ],
         [
             'name' => 'Sync Inbox Members from Chatwoot',
@@ -97,12 +97,12 @@ class SeedScheduledJobs implements RebuildAction
         [
             'name' => 'Sync Teams from Chatwoot',
             'job' => 'SyncTeamsFromChatwoot',
-            'scheduling' => '* * * * *',
+            'scheduling' => '*/1 * * * *',
         ],
         [
             'name' => 'Sync Labels from Chatwoot',
             'job' => 'SyncLabelsFromChatwoot',
-            'scheduling' => '* * * * *',
+            'scheduling' => '*/1 * * * *',
         ],
         [
             'name' => 'Repair Account User Membership Invariants',

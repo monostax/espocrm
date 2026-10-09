@@ -32,7 +32,7 @@ class StreamAgent
         private UserTenantResolver $tenants,
         private \Espo\Modules\FeatureAiSession\Services\Execution $sessions,
         private \Espo\Core\FileStorage\Manager $files,
-        private ?StreamAgentLive $live = null,
+        private StreamAgentLive $live,
     ) {}
 
     /** Runtime-only media transport: never embed bytes/URLs in workflow context. */
@@ -198,7 +198,7 @@ class StreamAgent
             $this->entityManager->saveEntity($reply);
             return (object) ['published' => true, 'noteId' => $reply->getId(), 'reason' => 'Replied'];
         });
-        if ($result->published) $this->live?->publish($this->existingReply($noteId, $membershipId));
+        if ($result->published) $this->live->publish($this->existingReply($noteId, $membershipId));
         return $result;
     }
 
@@ -280,7 +280,7 @@ class StreamAgent
             $this->entityManager->saveEntity($reply);
             return (object) ['updated' => true];
         });
-        if ($result->updated) $this->live?->publish($this->existingReply($noteId, $membershipId));
+        if ($result->updated) $this->live->publish($this->existingReply($noteId, $membershipId));
         return $result;
     }
 
@@ -322,7 +322,7 @@ class StreamAgent
                 SaveOption::SKIP_HOOKS => true]);
             return (object) ['updated' => true];
         });
-        if ($result->updated) $this->live?->publish($this->existingReply($noteId, $membershipId));
+        if ($result->updated) $this->live->publish($this->existingReply($noteId, $membershipId));
         return $result;
     }
 
@@ -330,7 +330,7 @@ class StreamAgent
     {
         $this->preview($noteId); // Reauthorize on every short-lived grant renewal.
         $reply = $this->entityManager->getEntityById('Note', $noteId);
-        if (!$reply instanceof Note || !$this->live) throw new Forbidden('Live replies are unavailable.');
+        if (!$reply instanceof Note) throw new Forbidden('Live replies are unavailable.');
         return $this->live->ticket($reply, $accountId, $userId, $pubsubToken);
     }
 

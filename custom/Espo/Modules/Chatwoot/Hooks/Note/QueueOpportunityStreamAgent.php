@@ -41,7 +41,7 @@ class QueueOpportunityStreamAgent implements AfterSave
             $this->entityManager->createEntity('Job', [
                 'name' => $job,
                 'className' => $job,
-                'queue' => QueueName::Q0,
+                'queue' => \Espo\Modules\Chatwoot\Tools\Stream\DispatchQueue::execution(),
                 'attempts' => 3,
                 'data' => (object) [
                     'noteId' => $entity->getId(),

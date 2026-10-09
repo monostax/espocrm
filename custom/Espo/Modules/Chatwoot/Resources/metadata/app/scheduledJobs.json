@@ -2,7 +2,7 @@
     "SyncConversationEpisodesFromChatwoot": {
         "name": "Sync Conversation Episodes from Chatwoot",
         "isSystem": true,
-        "scheduling": "* * * * *",
+        "scheduling": "*/1 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncConversationEpisodesFromChatwoot"
     },
     "PostOverdueOpportunityActivities": {
@@ -14,31 +14,31 @@
     "SyncInboxesFromChatwoot": {
         "name": "Sync Inboxes from Chatwoot",
         "isSystem": false,
-        "scheduling": "* * * * *",
+        "scheduling": "*/1 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncInboxesFromChatwoot"
     },
     "SyncContactsFromChatwoot": {
         "name": "Sync Contacts from Chatwoot",
         "isSystem": false,
-        "scheduling": "* * * * *",
+        "scheduling": "*/1 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncContactsFromChatwoot"
     },
     "SyncConversationsFromChatwoot": {
         "name": "Sync Conversations from Chatwoot",
         "isSystem": false,
-        "scheduling": "* * * * *",
+        "scheduling": "*/1 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncConversationsFromChatwoot"
     },
     "SyncAccountUserMembershipsFromChatwoot": {
         "name": "Sync Account User Memberships from Chatwoot",
         "isSystem": false,
-        "scheduling": "* * * * *",
+        "scheduling": "*/1 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncAccountUserMembershipsFromChatwoot"
     },
     "SyncTeamsFromChatwoot": {
         "name": "Sync Teams from Chatwoot",
         "isSystem": false,
-        "scheduling": "* * * * *",
+        "scheduling": "*/1 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncTeamsFromChatwoot"
     },
     "SyncInboxMembersFromChatwoot": {
@@ -50,7 +50,7 @@
     "SyncLabelsFromChatwoot": {
         "name": "Sync Labels from Chatwoot",
         "isSystem": false,
-        "scheduling": "* * * * *",
+        "scheduling": "*/1 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\SyncLabelsFromChatwoot"
     },
     "RepairAccountUserMembershipInvariants": {

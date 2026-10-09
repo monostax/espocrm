@@ -78,7 +78,8 @@ class PublishActivityUpdate implements AfterSave, BeforeRemove
         $ids = array_values(array_unique(array_filter([...$ids, ...$this->tenants->resolveAllFromTeamIds($oldTeams), $record->getFetched('tenantId')])));
         if (!$ids) return;
         $this->em->createEntity('Job', [
-            'name' => BroadcastActivityUpdate::class, 'className' => BroadcastActivityUpdate::class, 'queue' => QueueName::Q0, 'attempts' => 3,
+            'name' => BroadcastActivityUpdate::class, 'className' => BroadcastActivityUpdate::class,
+            'queue' => \Espo\Modules\Chatwoot\Tools\Stream\DispatchQueue::notification($entity), 'attempts' => 3,
             'data' => (object) ['type' => $record->getEntityType(), 'id' => $record->getId(), 'tenantIds' => $ids,
                 'affectedRecords' => $this->affectedRecords($record, $affected)],
         ]);

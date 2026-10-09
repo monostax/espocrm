@@ -151,7 +151,8 @@ class OpportunityStreamAgentTest extends TestCase
         $tenants->method('canActForTenant')->willReturnCallback(fn () => $this->humanTenant);
         $this->service = new OpportunityStreamAgent($em, $user, $acl, $access, $this->createMock(NoteUtil::class), $activities,
             $this->createMock(StreamAgentProgress::class), $aclManager, $tenants, $this->createMock(\Espo\Modules\FeatureAiSession\Services\Execution::class),
-            $this->files = $this->createMock(\Espo\Core\FileStorage\Manager::class));
+            $this->files = $this->createMock(\Espo\Core\FileStorage\Manager::class),
+            $this->createMock(\Espo\Modules\Chatwoot\Services\StreamAgentLive::class));
     }
 
     private function mediaAttachment(string $postId = 'source'): void

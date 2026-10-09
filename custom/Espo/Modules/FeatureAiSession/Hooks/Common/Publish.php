@@ -20,7 +20,8 @@ class Publish implements AfterSave
         $this->em->createEntity('Job', [
             'name' => \Espo\Modules\FeatureAiSession\Services\Broadcast::class,
             'className' => \Espo\Modules\FeatureAiSession\Services\Broadcast::class,
-            'queue' => QueueName::Q0, 'attempts' => 3, 'data' => (object) ['id' => $id],
+            'queue' => \Espo\Modules\Chatwoot\Tools\Stream\DispatchQueue::notification($entity),
+            'attempts' => 3, 'data' => (object) ['id' => $id],
         ]);
     }
 }
