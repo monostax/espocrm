@@ -297,8 +297,17 @@ class SeedRole implements RebuildAction
                     'edit' => 'no',
                     'delete' => 'no',
                 ],
+                // FeatureAiSession — private human-owned chats. Tenant-admin
+                // inherits owner-only access; AccessChecker/OwnerFilter also
+                // enforce ownership and workspace membership. Related Chatwoot
+                // scopes are granted above; Note/Attachment use parent ACL,
+                // and AiSessionInbox is a controller scope without its own ACL.
                 'AiSession' => [
-                    'create' => 'yes', 'read' => 'own', 'edit' => 'own', 'delete' => 'own', 'stream' => 'own',
+                    'create' => 'yes',
+                    'read' => 'own',
+                    'edit' => 'own',
+                    'delete' => 'own',
+                    'stream' => 'own',
                 ],
                 // Initiatives: operators manage work; tenant admins configure types and stages.
                 'InitiativeRelation' => [
@@ -1056,6 +1065,7 @@ class SeedRole implements RebuildAction
                 'TrackingEventType' => (object)[],
                 'TrackingSource' => (object)[],
                 'TrackingLink' => (object)[],
+                'AiSession' => (object)[],
                 'Journey' => (object)[],
                 'InitiativeType' => (object)[],
                 'InitiativeStage' => (object)[],

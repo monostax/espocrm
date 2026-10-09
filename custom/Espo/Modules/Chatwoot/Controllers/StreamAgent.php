@@ -138,6 +138,8 @@ class StreamAgent
             throw new BadRequest('Invalid stream thinking summary.');
         }
         $ids = [];
+        $thinkingOffset = 0;
+        $thinkingLength = strlen(mb_convert_encoding($thinking, 'UTF-16LE', 'UTF-8')) / 2;
         foreach ($body->activities as $activity) {
             if (!is_object($activity) || !is_string($activity->id ?? null) ||
                 !preg_match('/^[a-zA-Z0-9_-]{1,128}$/D', $activity->id) || isset($ids[$activity->id]) ||
@@ -149,6 +151,23 @@ class StreamAgent
             // Explicit projection prevents tool arguments, results or arbitrary text being persisted.
             $entry = (object) ['id' => $activity->id, 'kind' => $activity->kind, 'status' => $activity->status,
                 'startedAt' => $this->timestamp($activity->startedAt ?? null)];
+            if (isset($activity->entity)) {
+                if (!in_array($activity->entity, ['Opportunity', 'Initiative', 'Account', 'Contact', 'Task', 'Meeting', 'Call',
+                    'Journey', 'JourneyRecord', 'JourneyStage', 'JourneyStageAction', 'JourneyTransition', 'Document',
+                    'KnowledgeBaseArticle', 'KnowledgeBaseCategory', 'Automation', 'AutomationRun', 'Email', 'EmailTemplate',
+                    'TargetList', 'EmailCampaign', 'WhatsAppCampaign', 'Report', 'AiUsage'], true)) {
+                    throw new BadRequest('Invalid stream activity entity.');
+                }
+                $entry->entity = $activity->entity;
+            }
+            if (isset($activity->thinkingOffset)) {
+                // Offsets use JavaScript UTF-16 code units, not PHP character or byte counts.
+                if (!is_int($activity->thinkingOffset) || $activity->thinkingOffset < $thinkingOffset ||
+                    $activity->thinkingOffset > $thinkingLength) {
+                    throw new BadRequest('Invalid stream thinking offset.');
+                }
+                $entry->thinkingOffset = $thinkingOffset = $activity->thinkingOffset;
+            }
             if ($activity->status !== 'running') $entry->finishedAt = $this->timestamp($activity->finishedAt ?? null);
             $activities[] = $entry;
         }

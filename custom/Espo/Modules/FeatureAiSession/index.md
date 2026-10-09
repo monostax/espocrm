@@ -22,4 +22,4 @@ Sessions are private to their human owner in Chatwoot. CRM instance administrato
 - Rebuild CRM metadata/schema and seeded roles for the new entity.
 - Deploy Chatwoot with short Rails routes and private invalidation handling, plus backend API/worker registration for `chatwoot-agent-on-ai-session`.
 - Reuse the existing signed stream-agent webhook configuration and AI credential provisioning.
-- Personal execution requires `AI_CODE_MODE_ENABLED=1` and the existing Code Mode deployment configuration. Missing or revoked human delegation blocks the turn; private chats never fall back to AI-credential tools. The Code Mode write-enable flag remains authoritative.
+- Personal execution uses Code Mode and its configured service origins and workspace infrastructure. Missing or revoked human delegation blocks the turn; private chats never fall back to AI-credential tools. Agent membership grants control writes, execution and sending.
