@@ -193,6 +193,13 @@ class EditorReferences
                     $results[References::url($ref)] = [
                         ...$ref, 'available' => true, 'label' => $entity->get('name'), ...$this->visual($entity),
                     ];
+                    if ($type === 'ChatwootConversation') {
+                        foreach (['chatwootAccountIdExternal', 'chatwootConversationId'] as $field) {
+                            if ($this->acl->checkField($type, $field)) {
+                                $results[References::url($ref)][$field] = $entity->get($field);
+                            }
+                        }
+                    }
                 }
             } catch (Forbidden) { continue; }
         }

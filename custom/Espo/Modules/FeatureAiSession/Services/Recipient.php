@@ -3,7 +3,6 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureAiSession\Services;
 
 use Espo\Core\Exceptions\BadRequest;
-use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Utils\Markdown\Markdown;
 use Espo\Entities\User;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\References;
@@ -12,7 +11,7 @@ use Espo\ORM\EntityManager;
 
 class Recipient
 {
-    public function __construct(private EntityManager $em, private Access $access, private \Espo\Core\AclManager $acl) {}
+    public function __construct(private EntityManager $em, private Access $access) {}
 
     /** Markdown is the saved projection. Quotes and code never select an agent. */
     public function resolve(User $user, Entity $session, string $post): Entity
@@ -45,10 +44,6 @@ class Recipient
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previous);
-        }
-        if ($selected !== $session->get('aiAgentMembershipId') &&
-            (!$this->acl->checkEntityEdit($user, $session) || !$this->acl->checkField($user, 'AiSession', 'aiAgentMembership', 'edit'))) {
-            throw new Forbidden('No permission to change the session agent.');
         }
         return $this->access->agent($user, $session, $selected);
     }

@@ -87,11 +87,18 @@ class AiSessionInbox
     public function putActionUpdate(Request $request): object
     {
         $session = $this->record($request);
-        $patch = (object) array_intersect_key((array) $request->getParsedBody(), array_flip(['name', 'aiAgentMembershipId']));
+        $patch = (object) array_intersect_key((array) $request->getParsedBody(), array_flip(['name', 'aiAgentMembershipId', 'isPinned']));
         return $this->em->getTransactionManager()->run(function () use ($session, $patch): object {
             $this->em->getRDBRepository('AiSession')->where(['id' => $session->getId()])->forUpdate()->findOne();
             return $this->present($this->records->get('AiSession')->update($session->getId(), $patch)->getEntity());
         });
+    }
+
+    public function deleteActionDelete(Request $request): bool
+    {
+        $session = $this->record($request);
+        $this->records->get('AiSession')->delete($session->getId());
+        return true;
     }
 
     public function getActionStream(Request $request): object
@@ -128,7 +135,6 @@ class AiSessionInbox
         return $this->em->getTransactionManager()->run(function () use ($session, $body): object {
             $session = $this->em->getRDBRepository('AiSession')->where(['id' => $session->getId()])->forUpdate()->findOne();
             $agent = $this->recipient->resolve($this->user, $session, $body->post);
-            $session->set('aiAgentMembershipId', $agent->getId());
             if (!$session->get('titleInitialized')) {
                 $title = preg_replace('/\s+/u', ' ', trim(strip_tags(preg_replace('~\[([^\]]+)\]\([^)]*\)~', '$1', $body->post))));
                 if ($this->acl->checkEntityEdit($session) && $this->acl->checkField('AiSession', 'name', 'edit')) {
@@ -181,6 +187,9 @@ class AiSessionInbox
             $this->acl->checkField('Note', 'post') && $this->acl->checkField('Note', 'post', 'edit') &&
             $this->acl->checkField('AiSession', 'aiAgentMembership');
         $data->canEdit = $canEdit && $this->acl->checkField('AiSession', 'name', 'edit');
+        $data->canDelete = $this->acl->checkEntityDelete($session);
+        $data->canPin = $canEdit && $this->acl->checkField('AiSession', 'isPinned') &&
+            $this->acl->checkField('AiSession', 'isPinned', 'edit');
         $data->canChangeAgent = $canEdit && $this->acl->checkField('AiSession', 'aiAgentMembership') &&
             $this->acl->checkField('AiSession', 'aiAgentMembership', 'edit');
         return $data;

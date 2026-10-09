@@ -14,7 +14,7 @@ require_once __DIR__ . '/../Chatwoot/Support/EntityDouble.php';
 
 class RecipientTest extends TestCase
 {
-    private function resolve(string $post, bool $canSwitch = true): string
+    private function resolve(string $post): string
     {
         $agents = [
             'first' => new EntityDouble(['id' => 'first', 'isAI' => true]),
@@ -29,11 +29,13 @@ class RecipientTest extends TestCase
             if ($id === 'foreign') throw new Forbidden();
             return $agents[$id];
         });
-        $acl = $this->createMock(\Espo\Core\AclManager::class);
-        $acl->method('checkEntityEdit')->willReturn(true);
-        $acl->method('checkField')->willReturn($canSwitch);
-        return (new Recipient($em, $access, $acl))->resolve($this->createMock(User::class),
-            new EntityDouble(['aiAgentMembershipId' => 'first']), $post)->getId();
+        $session = new EntityDouble(['aiAgentMembershipId' => 'first']);
+        $recipient = new Recipient($em, $access);
+        $user = $this->createMock(User::class);
+        $resolved = $recipient->resolve($user, $session, $post)->getId();
+        self::assertSame('first', $session->get('aiAgentMembershipId'));
+        self::assertSame('first', $recipient->resolve($user, $session, 'Next message')->getId());
+        return $resolved;
     }
 
     public function testPlainMessageKeepsSelection(): void
@@ -65,9 +67,8 @@ class RecipientTest extends TestCase
         $this->resolve('[Foreign](#crm-reference/v1/record/ChatwootAccountUserMembership/foreign)');
     }
 
-    public function testMentionCannotBypassAgentFieldWritePermission(): void
+    public function testMentionOnlySelectsTheRecipientForThisMessage(): void
     {
-        $this->expectException(Forbidden::class);
-        $this->resolve('[B](#crm-reference/v1/record/ChatwootAccountUserMembership/second)', false);
+        self::assertSame('second', $this->resolve('[B](#crm-reference/v1/record/ChatwootAccountUserMembership/second)'));
     }
 }
