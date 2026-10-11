@@ -1,0 +1,21 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true},
+        "usage": {"type": "link", "notNull": true},
+        "requestKey": {"type": "varchar", "maxLength": 128, "notNull": true},
+        "intent": {"type": "jsonObject", "notNull": true},
+        "request": {"type": "link"},
+        "createdAt": {"type": "datetime", "notNull": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "usage": {"type": "belongsTo", "entity": "CreditUsage"},
+        "request": {"type": "belongsTo", "entity": "CreditRequest"}
+    },
+    "indexes": {
+        "usageKey": {"columns": ["usageId", "requestKey"], "unique": true},
+        "request": {"columns": ["requestId"], "unique": true},
+        "recovery": {"columns": ["tenantId", "createdAt", "id"]}
+    }
+}

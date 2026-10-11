@@ -1,0 +1,29 @@
+{
+    "controllerMiddlewareClassNameListMap": {
+        "CreditConfiguration": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "CreditDispatch": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "CreditExecution": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "Credits": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "CreditOperationSource": [
+            "Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"
+        ],
+        "CreditOperations": [
+            "Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"
+        ],
+        "CreditRequests": [
+            "Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"
+        ],
+        "CreditReservations": [
+            "Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"
+        ],
+        "CreditGrants": [
+            "Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"
+        ],
+        "CreditHistory": [
+            "Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"
+        ],
+        "CreditBalance": [
+            "Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"
+        ]
+    }
+}

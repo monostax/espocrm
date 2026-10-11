@@ -209,6 +209,15 @@ class EditorReferences
     private function visual(Entity $entity): array
     {
         $type = $entity->getEntityType();
+        if ($type === 'ChatwootConversation') {
+            $visual = [];
+            foreach (['contactAvatarUrl' => 'avatarUrl', 'inboxName' => 'inboxName', 'inboxChannelType' => 'inboxChannelType'] as $field => $attribute) {
+                if ($this->acl->checkField($type, $field)) {
+                    $visual[$attribute] = $entity->get($field);
+                }
+            }
+            return $visual;
+        }
         $iconAttribute = $this->metadata->get(['clientDefs', $type, 'recordIconAttribute']);
         $avatarReadable = $this->metadata->get(['entityDefs', $type, 'fields', 'avatar']) &&
             $this->acl->checkField($type, 'avatar');

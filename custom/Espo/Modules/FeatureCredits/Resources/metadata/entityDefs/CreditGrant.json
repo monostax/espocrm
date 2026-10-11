@@ -1,0 +1,26 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "required": true, "notNull": true},
+        "sourceType": {"type": "enum", "options": ["purchase", "subscription", "migration"], "notNull": true},
+        "sourceKey": {"type": "varchar", "maxLength": 128, "notNull": true},
+        "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "grantTransaction": {"type": "link", "notNull": true},
+        "grantedCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},
+        "remainingCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},
+        "reservedCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true, "default": "0.0000"},
+        "expiresAt": {"type": "datetime"},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "sourceSnapshot": {"type": "jsonObject", "notNull": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "grantTransaction": {"type": "belongsTo", "entity": "CreditTransaction"}
+    },
+    "indexes": {
+        "sourceUnique": {"columns": ["tenantId", "sourceType", "sourceKey"], "unique": true},
+        "transactionUnique": {"columns": ["grantTransactionId"], "unique": true},
+        "tenantExpiry": {"columns": ["tenantId", "expiresAt", "id"]},
+        "tenantCreated": {"columns": ["tenantId", "createdAt", "id"]}
+    }
+}

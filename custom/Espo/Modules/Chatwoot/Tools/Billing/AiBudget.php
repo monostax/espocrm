@@ -9,6 +9,8 @@ use DateTimeZone;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Utils\Config;
+use Espo\Modules\FeatureCredits\Accounting\ExecutionIdentity;
+use Espo\Modules\FeatureCredits\Accounting\ExecutionRouting;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Condition as Cond;
 use Espo\ORM\Query\Part\Expression as Expr;
@@ -49,7 +51,7 @@ final class AiBudget
             return (object) ['allowed' => false, 'reason' => 'ai_budget_scope_unavailable'];
         }
 
-        return $this->entityManager->getTransactionManager()->run(function () use ($input, $operation, $tenantId): object {
+        $result = $this->entityManager->getTransactionManager()->run(function () use ($input, $operation, $tenantId): object {
             // Serializes all accounts/agents in this tenant, on both supported DB dialects.
             $tenant = $this->entityManager->getRDBRepository('Tenant')
                 ->where(['id' => $tenantId])->forUpdate()->findOne();
@@ -57,7 +59,13 @@ final class AiBudget
             $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
             $period = self::period($now, $this->config->get('timeZone', 'UTC'));
 
-            if ($operation === 'status') return (object) $this->status($tenantId, $period);
+            $pdo = $this->entityManager->getPDO();
+            if ($operation === 'status') {
+                $selection = ExecutionRouting::tenantLocked($pdo, $tenantId, $now->format('Y-m-d H:i:s'));
+                return $selection['billingRegime'] === ExecutionRouting::UNIFIED ? (object) [
+                    ...$selection, 'allowed' => false, 'reason' => 'ai_credit_execution_required',
+                ] : (object) [...$selection, ...$this->status($tenantId, $period)];
+            }
 
             foreach (['runId', 'workflowRunId'] as $key) {
                 if (!is_string($input->$key ?? null) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $input->$key)) {
@@ -72,14 +80,43 @@ final class AiBudget
                 return (object) ['allowed' => false, 'reason' => 'ai_engagement_already_claimed'];
             }
 
+            $route = ExecutionRouting::findLocked($pdo, $tenantId, $input->runId, $input->workflowRunId);
+            if ($route && (($reservation !== null) !== ($route['billing_regime'] === ExecutionRouting::LEGACY))) {
+                throw new Conflict('Execution route and legacy reservation disagree.');
+            }
+            if ($operation === 'settle' && !$reservation && !$route) {
+                // An old event is not a new admission. Tenant cutover cannot assign
+                // it a regime or prevent telemetry persistence by demanding credit settlement.
+                return (object) ['settled' => false, 'admittedAt' => null, 'billingRegime' => null, 'reason' => 'ai_budget_not_admitted'];
+            }
+            $selection = $reservation ? ['billingRegime' => ExecutionRouting::LEGACY, 'cutoverAt' => $route['cutover_at'] ?? null] :
+                ($route ? ['billingRegime' => $route['billing_regime'], 'cutoverAt' => $route['cutover_at']] :
+                    ExecutionRouting::tenantLocked($pdo, $tenantId, $now->format('Y-m-d H:i:s')));
+            if ($selection['billingRegime'] === ExecutionRouting::UNIFIED) {
+                // The boolean legacy protocol can neither authorize nor settle credit usage.
+                return (object) [...$selection, 'allowed' => false, 'reason' => 'ai_credit_execution_required',
+                    ...($operation === 'settle' ? ['settled' => false, 'admittedAt' => null] : [])];
+            }
+            if (isset($input->billingRegime) && $input->billingRegime !== ExecutionRouting::LEGACY) {
+                throw new Conflict('Execution billing regime mismatch.');
+            }
+            if ($route && $route['execution_id'] !== $reservation->get('executionId')) {
+                throw new Conflict('Execution route ownership mismatch.');
+            }
+
             if ($operation === 'settle') {
                 // Legacy events/backfills have no reservation. Never invent a new debit.
-                if (!$reservation) return (object) ['settled' => false, 'admittedAt' => null];
+                if (isset($input->executionId) && $input->executionId !== $reservation->get('executionId')) {
+                    throw new Conflict('Execution does not own the legacy admission.');
+                }
                 if (!is_bool($input->billable ?? null)) throw new BadRequest('A terminal billing outcome is required.');
                 $state = $input->billable && !$reservation->get('auxiliary') ? 'consumed' : 'released';
                 if ($reservation->get('state') !== 'reserved' && $reservation->get('state') !== $state) {
                     throw new Conflict('The engagement already has a different terminal outcome.');
                 }
+                if (!$route) ExecutionRouting::recordLocked($pdo, $tenantId,
+                    new ExecutionIdentity($input->runId, $input->workflowRunId, $reservation->get('executionId')),
+                    ExecutionRouting::LEGACY, $reservation->get('admittedAt'), null, null);
                 $reservation->set(['state' => $state, 'settledAt' => $now->format('Y-m-d H:i:s')]);
                 $this->entityManager->saveEntity($reservation);
                 return (object) ['settled' => true, 'admittedAt' => $reservation->get('admittedAt')];
@@ -93,6 +130,9 @@ final class AiBudget
                 if ($reservation->get('executionId') !== $input->executionId) {
                     return (object) ['allowed' => false, 'reason' => 'ai_engagement_already_claimed'];
                 }
+                if (!$route) ExecutionRouting::recordLocked($pdo, $tenantId,
+                    new ExecutionIdentity($input->runId, $input->workflowRunId, $input->executionId),
+                    ExecutionRouting::LEGACY, $reservation->get('admittedAt'), null, null);
                 // HTTP retries may recover the same authorization; terminal executions cannot restart.
                 return (object) [
                     'allowed' => $reservation->get('state') === 'reserved',
@@ -113,8 +153,12 @@ final class AiBudget
                 'admittedAt' => $now->format('Y-m-d H:i:s'),
             ]);
             $this->entityManager->saveEntity($reservation);
+            ExecutionRouting::recordLocked($pdo, $tenantId,
+                new ExecutionIdentity($input->runId, $input->workflowRunId, $input->executionId),
+                ExecutionRouting::LEGACY, $reservation->get('admittedAt'), $selection['cutoverAt'], null);
             return (object) [...$status, 'admittedAt' => $reservation->get('admittedAt')];
         });
+        return (object) ['billingRegime' => ExecutionRouting::LEGACY, ...(array) $result];
     }
 
     private function resolveTenant(object $input): ?string

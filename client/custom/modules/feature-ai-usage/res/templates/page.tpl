@@ -2,6 +2,7 @@
     <header class="au-header">
         <div><div class="au-eyebrow">{{translate 'workspaceUsage' scope='AiUsage'}}</div><h2>{{translate 'title' scope='AiUsage'}}</h2><p class="text-muted">{{translate 'subtitle' scope='AiUsage'}}</p></div>
         <div class="au-controls">
+            {{#if creditsUrl}}<a class="btn btn-default" href="{{creditsUrl}}">{{creditsLabel}}</a>{{/if}}
             <label><span class="sr-only">{{translate 'tenant' scope='AiUsage'}}</span><select class="form-control" data-au-tenant {{#if loading}}disabled{{/if}}>{{#each tenants}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
             <label><span class="sr-only">{{translate 'period' scope='AiUsage'}}</span><input class="form-control" type="text" autocomplete="off" placeholder="YYYY-MM" value="{{month}}" data-date-min-view-mode="1" data-date-end-date="{{maxMonth}}" data-au-month {{#if loading}}disabled{{/if}}></label>
             <button class="btn btn-default" data-au-refresh title="{{translate 'refresh' scope='AiUsage'}}" aria-label="{{translate 'refresh' scope='AiUsage'}}" {{#if loading}}disabled{{/if}}><span class="fas fa-sync-alt" aria-hidden="true"></span></button>

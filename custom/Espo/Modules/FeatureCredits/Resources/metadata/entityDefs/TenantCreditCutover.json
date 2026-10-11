@@ -1,0 +1,12 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "required": true, "notNull": true},
+        "cutoverAt": {"type": "datetime", "notNull": true},
+        "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "evidence": {"type": "jsonObject", "notNull": true},
+        "createdAt": {"type": "datetime", "notNull": true}
+    },
+    "links": {"tenant": {"type": "belongsTo", "entity": "Tenant"}},
+    "indexes": {"tenant": {"columns": ["tenantId"], "unique": true}}
+}

@@ -166,7 +166,7 @@ test('token columns and detail values are admin-only and distinguish missing cou
     const Detail = load(client + 'src/views/detail.js', {'views/modal': class {}, 'feature-ai-usage:helpers/index': {presentMetrics}}).default;
     for (const isAdmin of [false, true]) {
         const page = new Page();
-        Object.assign(page, {payload: data, state, format: f, t, getUser: () => ({isAdmin: () => isAdmin})});
+        Object.assign(page, {payload: data, state, format: f, t, translate: t, getUser: () => ({isAdmin: () => isAdmin})});
         assert.equal(page.data().showTokenUsage, isAdmin);
         const detail = new Detail();
         Object.assign(detail, {payload: {activity: data.activity.list[0]}, options: {format: f},

@@ -1,0 +1,23 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true},
+        "attempt": {"type": "link", "notNull": true},
+        "phase": {"type": "int", "notNull": true},
+        "facts": {"type": "jsonObject", "notNull": true},
+        "receipt": {"type": "jsonObject"},
+        "state": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "attempts": {"type": "int", "notNull": true},
+        "leaseToken": {"type": "varchar", "maxLength": 48},
+        "dueAt": {"type": "datetime", "notNull": true},
+        "createdAt": {"type": "datetime", "notNull": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "attempt": {"type": "belongsTo", "entity": "CreditExecutionAttempt"}
+    },
+    "indexes": {
+        "attemptPhase": {"columns": ["attemptId", "phase"], "unique": true},
+        "due": {"columns": ["tenantId", "state", "dueAt", "id"]}
+    }
+}

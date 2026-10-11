@@ -1,0 +1,30 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "required": true, "notNull": true},
+        "grant": {"type": "link", "notNull": true},
+        "reservation": {"type": "link", "notNull": true},
+        "allocationKey": {"type": "varchar", "maxLength": 128, "notNull": true},
+        "request": {"type": "link"},
+        "reservedCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},
+        "consumedCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true, "default": "0.0000"},
+        "releasedCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true, "default": "0.0000"},
+        "expiredCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true, "default": "0.0000"},
+        "debitTransaction": {"type": "link"},
+        "expirationTransaction": {"type": "link"},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "settledAt": {"type": "datetime"}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "grant": {"type": "belongsTo", "entity": "CreditGrant"},
+        "reservation": {"type": "belongsTo", "entity": "CreditReservation"},
+        "request": {"type": "belongsTo", "entity": "CreditRequest"},
+        "debitTransaction": {"type": "belongsTo", "entity": "CreditTransaction"},
+        "expirationTransaction": {"type": "belongsTo", "entity": "CreditTransaction"}
+    },
+    "indexes": {
+        "allocationUnique": {"columns": ["reservationId", "allocationKey", "grantId"], "unique": true},
+        "tenantGrant": {"columns": ["tenantId", "grantId"]}
+    }
+}

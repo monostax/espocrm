@@ -1,0 +1,31 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "required": true, "notNull": true},
+        "type": {"type": "enum", "options": ["grant", "debit", "expiration", "reversal", "nativeSearchOverrun", "searchDebtPayment", "searchDebtRecovery"], "notNull": true},
+        "idempotencyKey": {"type": "varchar", "maxLength": 128, "notNull": true},
+        "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "credits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},
+        "usage": {"type": "link"},
+        "grant": {"type": "link"},
+        "allocation": {"type": "link"},
+        "reversalOf": {"type": "link"},
+        "actor": {"type": "link"},
+        "occurredAt": {"type": "datetime", "notNull": true},
+        "postedAt": {"type": "datetime", "notNull": true},
+        "evidence": {"type": "jsonObject", "notNull": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "usage": {"type": "belongsTo", "entity": "CreditUsage"},
+        "grant": {"type": "belongsTo", "entity": "CreditGrant"},
+        "allocation": {"type": "belongsTo", "entity": "CreditAllocation"},
+        "reversalOf": {"type": "belongsTo", "entity": "CreditTransaction"},
+        "actor": {"type": "belongsTo", "entity": "User"}
+    },
+    "indexes": {
+        "postingUnique": {"columns": ["tenantId", "type", "idempotencyKey"], "unique": true},
+        "tenantPosted": {"columns": ["tenantId", "postedAt", "id"]},
+        "reversalOf": {"columns": ["reversalOfId"]}
+    }
+}

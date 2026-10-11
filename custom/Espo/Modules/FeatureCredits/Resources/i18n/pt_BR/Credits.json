@@ -1,0 +1,29 @@
+{
+    "labels": {
+        "title": "Créditos e uso",
+        "description": "Créditos pré-pagos compartilhados do ambiente. Estes saldos são separados da cobrança legada por engajamento e não autorizam a execução de IA.",
+        "tenant": "Ambiente", "selectTenant": "Selecione um ambiente", "refresh": "Atualizar / tentar novamente", "legacyUsage": "Uso legado de IA",
+        "forbidden": "É necessário acesso de administrador financeiro deste ambiente.", "loading": "Carregando créditos…",
+        "loadError": "Informações de créditos indisponíveis. Atualize para tentar novamente.", "sessionExpired": "Sua sessão expirou. Entre novamente.",
+        "walletMissing": "Este ambiente ainda não possui carteira pré-paga.", "exhausted": "Não há créditos disponíveis para novas operações.",
+        "availableCredits": "Créditos disponíveis", "reservedCredits": "Créditos reservados", "pendingExpirationCredits": "Expiração pendente", "balance": "Saldo contabilizado",
+        "balanceObserved": "Saldo consultado em", "pageObserved": "Relatório consultado em",
+        "reports": "Relatórios de créditos", "operations": "Operações", "grants": "Concessões", "reservations": "Reservas", "requests": "Requisições de IA", "history": "Transações",
+        "amountNotice": "Os valores são quantidades exatas de créditos. Preços acumulados e por requisição não são débitos contabilizados; requisições isentas não são cobradas. Um valor “Não finalizado” não equivale a zero.",
+        "livePages": "Cada página é uma consulta atual. Atualizar retorna aos registros mais recentes; não some páginas como se fossem uma única consulta.",
+        "empty": "Nenhum registro nesta página.", "source": "Origem", "openSource": "Abrir origem", "sourceUnavailable": "Origem indisponível ou sem permissão de acesso.",
+        "pagination": "Páginas do relatório", "previous": "Anterior", "next": "Próxima",
+        "admittedAt": "Admitida em (UTC)", "createdAt": "Criada em (UTC)", "authorizedAt": "Autorizada em (UTC)", "postedAt": "Contabilizada em (UTC)",
+        "operationType": "Recurso", "state": "Estado", "accruedCreditsExact": "Créditos acumulados conhecidos", "settledCredits": "Cobrança final",
+        "sourceType": "Tipo de concessão", "grantedCredits": "Créditos originais", "remainingCredits": "Créditos restantes", "expiresAt": "Expira em (UTC)",
+        "outcome": "Resultado", "meteringState": "Medição", "billingState": "Cobrança", "waiverReason": "Motivo da isenção", "authorizedCredits": "Reserva original da requisição", "pricedCreditsExact": "Preço exato da requisição", "type": "Tipo de lançamento", "credits": "Créditos contabilizados",
+        "notFinal": "Não finalizado", "neverExpires": "Sem expiração", "unavailable": "—",
+        "ai": "IA", "apollo": "Apollo", "admitted": "Admitida", "held": "Reservada", "settled": "Liquidada", "released": "Liberada", "pendingReconciliation": "Conciliação pendente",
+        "purchase": "Compra", "subscription": "Assinatura", "migration": "Migração",
+        "inFlight": "Em andamento", "success": "Sucesso", "cancelled": "Cancelada", "superseded": "Substituída", "infrastructureFailure": "Falha de infraestrutura",
+        "pending": "Pendente", "unknown": "Desconhecida", "measured": "Medida", "unrecoverable": "Irrecuperável", "billable": "Cobrável", "waived": "Isenta",
+        "infrastructure_failure": "Falha de infraestrutura", "unrecoverable_cancellation": "Uso cancelado irrecuperável",
+        "grant": "Concessão", "debit": "Consumo", "expiration": "Expiração", "reversal": "Estorno",
+        "nativeSearchOverrun": "Excedente da busca nativa", "searchDebtPayment": "Créditos aplicados à dívida de busca", "searchDebtRecovery": "Dívida de busca paga (contrapartida)"
+    }
+}

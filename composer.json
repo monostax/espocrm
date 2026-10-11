@@ -44,6 +44,7 @@
         "openspout/openspout": "^5.0",
         "dompdf/dompdf": "^3.1",
         "brick/phonenumber": "^0.5.0",
+        "brick/math": "^0.14.8",
         "picqer/php-barcode-generator": "^3.2",
         "chillerlan/php-qrcode": "^5.0",
         "tholu/php-cidr-match": "^0.5",

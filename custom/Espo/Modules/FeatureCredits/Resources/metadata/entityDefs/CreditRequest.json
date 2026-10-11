@@ -1,0 +1,38 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "required": true, "notNull": true},
+        "usage": {"type": "link", "notNull": true},
+        "reservation": {"type": "link", "notNull": true},
+        "requestKey": {"type": "varchar", "maxLength": 128, "notNull": true},
+        "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "provider": {"type": "varchar", "maxLength": 64},
+        "model": {"type": "varchar", "maxLength": 128},
+        "providerRequestId": {"type": "varchar", "maxLength": 128},
+        "action": {"type": "varchar", "maxLength": 64},
+        "pricingSnapshot": {"type": "jsonObject", "notNull": true},
+        "authorizedCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},
+        "pricedCreditsExact": {"type": "varchar", "maxLength": 128},
+        "outcome": {"type": "enum", "options": ["inFlight", "success", "noMatch", "cancelled", "superseded", "infrastructureFailure"], "notNull": true},
+        "meteringState": {"type": "enum", "options": ["unknown", "measured", "unrecoverable"], "notNull": true},
+        "billingState": {"type": "enum", "options": ["pending", "billable", "waived"], "notNull": true},
+        "waiverReason": {"type": "varchar", "maxLength": 128},
+        "metering": {"type": "jsonObject"},
+        "evidence": {"type": "jsonObject"},
+        "outcomeRecord": {"type": "jsonObject"},
+        "reconciliationRecord": {"type": "jsonObject"},
+        "authorizedAt": {"type": "datetime", "notNull": true},
+        "completedAt": {"type": "datetime"}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "usage": {"type": "belongsTo", "entity": "CreditUsage"},
+        "reservation": {"type": "belongsTo", "entity": "CreditReservation"}
+    },
+    "indexes": {
+        "requestUnique": {"columns": ["usageId", "requestKey"], "unique": true},
+        "tenantHistory": {"columns": ["tenantId", "authorizedAt", "id"]},
+        "tenantPending": {"columns": ["tenantId", "billingState", "authorizedAt"]},
+        "recoveryScan": {"columns": ["tenantId", "billingState", "meteringState", "id"]}
+    }
+}

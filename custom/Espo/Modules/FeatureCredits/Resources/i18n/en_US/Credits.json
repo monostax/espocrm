@@ -1,0 +1,29 @@
+{
+    "labels": {
+        "title": "Credits & Usage",
+        "description": "Shared prepaid tenant credits. These balances are separate from legacy engagement billing and do not authorize AI execution.",
+        "tenant": "Tenant", "selectTenant": "Select a tenant", "refresh": "Refresh / retry", "legacyUsage": "Legacy AI usage",
+        "forbidden": "Financial administrator access is required for this tenant.", "loading": "Loading credits…",
+        "loadError": "Credit information is unavailable. Refresh to retry.", "sessionExpired": "Your session has expired. Sign in again.",
+        "walletMissing": "This tenant has no prepaid wallet yet.", "exhausted": "No credits are currently available for new operations.",
+        "availableCredits": "Available credits", "reservedCredits": "Held credits", "pendingExpirationCredits": "Pending expiration", "balance": "Posted balance",
+        "balanceObserved": "Balance observed at", "pageObserved": "Report observed at",
+        "reports": "Credit reports", "operations": "Operations", "grants": "Grants", "reservations": "Reservations", "requests": "AI requests", "history": "Transactions",
+        "amountNotice": "Amounts are exact credit quantities. Accrued/request prices are not posted charges; waived requests are not billable. A charge marked “Not final” is not zero.",
+        "livePages": "Each page is a live snapshot. Refresh starts at the newest records; do not sum pages as a single snapshot.",
+        "empty": "No records on this page.", "source": "Source", "openSource": "Open source", "sourceUnavailable": "Source unavailable or not accessible.",
+        "pagination": "Report pages", "previous": "Previous", "next": "Next",
+        "admittedAt": "Admitted at (UTC)", "createdAt": "Created at (UTC)", "authorizedAt": "Authorized at (UTC)", "postedAt": "Posted at (UTC)",
+        "operationType": "Feature", "state": "Status", "accruedCreditsExact": "Known accrued credits", "settledCredits": "Final charge",
+        "sourceType": "Grant type", "grantedCredits": "Original credits", "remainingCredits": "Remaining credits", "expiresAt": "Expires at (UTC)",
+        "outcome": "Outcome", "meteringState": "Metering", "billingState": "Billing", "waiverReason": "Waiver reason", "authorizedCredits": "Original request reservation", "pricedCreditsExact": "Exact request price", "type": "Posting type", "credits": "Posted credits",
+        "notFinal": "Not final", "neverExpires": "Never expires", "unavailable": "—",
+        "ai": "AI", "apollo": "Apollo", "admitted": "Admitted", "held": "Held", "settled": "Settled", "released": "Released", "pendingReconciliation": "Pending reconciliation",
+        "purchase": "Purchase", "subscription": "Subscription", "migration": "Migration",
+        "inFlight": "In flight", "success": "Success", "cancelled": "Cancelled", "superseded": "Superseded", "infrastructureFailure": "Infrastructure failure",
+        "pending": "Pending", "unknown": "Unknown", "measured": "Measured", "unrecoverable": "Unrecoverable", "billable": "Billable", "waived": "Waived",
+        "infrastructure_failure": "Infrastructure failure", "unrecoverable_cancellation": "Unrecoverable cancellation usage",
+        "grant": "Grant", "debit": "Consumption", "expiration": "Expiration", "reversal": "Reversal",
+        "nativeSearchOverrun": "Native search overrun", "searchDebtPayment": "Grant applied to search debt", "searchDebtRecovery": "Search debt paid (transfer offset)"
+    }
+}

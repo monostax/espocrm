@@ -1,0 +1,31 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "required": true, "notNull": true},
+        "operationType": {"type": "varchar", "maxLength": 32, "notNull": true},
+        "operationKey": {"type": "varchar", "maxLength": 128, "notNull": true},
+        "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "executionId": {"type": "varchar", "maxLength": 128, "notNull": true},
+        "billingRegime": {"type": "enum", "options": ["unified-prepaid-v1"], "notNull": true},
+        "billingRate": {"type": "link", "notNull": true},
+        "state": {"type": "enum", "options": ["admitted", "pendingReconciliation", "settled", "released"], "notNull": true},
+        "actor": {"type": "link"},
+        "sourceType": {"type": "varchar", "maxLength": 64},
+        "sourceId": {"type": "varchar", "maxLength": 128},
+        "settledCredits": {"type": "decimal", "precision": 14, "scale": 4},
+        "admittedAt": {"type": "datetime", "notNull": true},
+        "settledAt": {"type": "datetime"},
+        "settlementHash": {"type": "varchar", "maxLength": 64},
+        "evidence": {"type": "jsonObject"}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "billingRate": {"type": "belongsTo", "entity": "TenantCreditBillingRate"},
+        "actor": {"type": "belongsTo", "entity": "User"}
+    },
+    "indexes": {
+        "operationUnique": {"columns": ["tenantId", "operationType", "operationKey"], "unique": true},
+        "tenantState": {"columns": ["tenantId", "state", "admittedAt"]},
+        "tenantAdmission": {"columns": ["tenantId", "admittedAt", "id"]}
+    }
+}

@@ -103,6 +103,9 @@ export default class extends MainView {
             noAccess: this.context && !this.context.tenants.length,
             tenants: (this.context?.tenants || []).map(t => ({...t, selected: t.id === this.state.tenantId})),
             month: this.state.month, maxMonth: this.context?.currentMonth, selectedView: this.state.view,
+            creditsUrl: this.state.tenantId && this.context?.tenants.some(t => t.id === this.state.tenantId)
+                ? '#Credits/index/' + new URLSearchParams({tenantId: this.state.tenantId}).toString() : null,
+            creditsLabel: this.translate('title', 'labels', 'Credits'),
             filters: this.state.filters,
             chips: Object.entries(this.state.filters).map(([key, value]) => ({key, label: this.t(key), value: this.state.filterLabels[key] || (['kind', 'action'].includes(key) ? this.t(value) : value)})),
             hasFilters: Object.keys(this.state.filters).length > 0,

@@ -1,0 +1,13 @@
+[
+    {"route": "/CreditConfiguration", "method": "post", "params": {"controller": "CreditConfiguration", "action": "publish"}},
+    {"route": "/CreditDispatch", "method": "post", "noAuth": true, "params": {"controller": "CreditDispatch", "action": "execute"}},
+    {"route": "/CreditExecution", "method": "post", "noAuth": true, "params": {"controller": "CreditExecution", "action": "execute"}},
+    {"route": "/Credits/context", "method": "get", "params": {"controller": "Credits", "action": "context"}},
+    {"route": "/CreditBalance", "method": "get", "params": {"controller": "CreditBalance", "action": "status"}},
+    {"route": "/CreditHistory", "method": "get", "params": {"controller": "CreditHistory", "action": "list"}},
+    {"route": "/CreditGrants", "method": "get", "params": {"controller": "CreditGrants", "action": "list"}},
+    {"route": "/CreditReservations", "method": "get", "params": {"controller": "CreditReservations", "action": "list"}},
+    {"route": "/CreditRequests", "method": "get", "params": {"controller": "CreditRequests", "action": "list"}},
+    {"route": "/CreditOperations", "method": "get", "params": {"controller": "CreditOperations", "action": "list"}},
+    {"route": "/CreditOperationSource", "method": "get", "params": {"controller": "CreditOperationSource", "action": "read"}}
+]

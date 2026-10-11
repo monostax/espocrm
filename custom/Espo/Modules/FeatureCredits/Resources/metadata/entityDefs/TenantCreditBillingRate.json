@@ -1,0 +1,31 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "required": true, "notNull": true},
+        "version": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "effectiveFrom": {"type": "datetime", "notNull": true},
+        "effectiveUntil": {"type": "datetime"},
+        "currency": {"type": "varchar", "maxLength": 3, "notNull": true},
+        "creditUnitPrice": {"type": "decimal", "precision": 18, "scale": 8, "notNull": true},
+        "targetMarginPercent": {"type": "decimal", "precision": 5, "scale": 2},
+        "monthlyCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},
+        "renewalTerms": {"type": "jsonObject"},
+        "featureRestrictions": {"type": "jsonObject"},
+        "aiModelCreditRate": {"type": "link"},
+        "aiNativeSearchModelCreditRate": {"type": "link"},
+        "aiMaxRequests": {"type": "int", "min": 1, "max": 100},
+        "configurationHash": {"type": "varchar", "maxLength": 64, "readOnly": true},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "createdBy": {"type": "link"}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "aiModelCreditRate": {"type": "belongsTo", "entity": "AiModelCreditRate"},
+        "aiNativeSearchModelCreditRate": {"type": "belongsTo", "entity": "AiModelCreditRate"},
+        "createdBy": {"type": "belongsTo", "entity": "User"}
+    },
+    "indexes": {
+        "tenantVersion": {"columns": ["tenantId", "version"], "unique": true},
+        "tenantWindow": {"columns": ["tenantId", "effectiveFrom", "effectiveUntil"]}
+    }
+}

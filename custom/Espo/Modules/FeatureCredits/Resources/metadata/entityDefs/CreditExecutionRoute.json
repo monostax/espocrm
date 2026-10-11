@@ -1,0 +1,26 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "required": true, "notNull": true},
+        "runId": {"type": "varchar", "maxLength": 17, "notNull": true},
+        "workflowRunId": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "executionId": {"type": "varchar", "maxLength": 36, "notNull": true},
+        "billingRegime": {"type": "varchar", "maxLength": 32, "notNull": true},
+        "usage": {"type": "link"},
+        "cutoverAt": {"type": "datetime"},
+        "admittedAt": {"type": "datetime", "notNull": true},
+        "completionRequestedAt": {"type": "datetime"},
+        "completionFinishedAt": {"type": "datetime"},
+        "completionDueAt": {"type": "datetime"},
+        "completionLeaseToken": {"type": "varchar", "maxLength": 48}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "usage": {"type": "belongsTo", "entity": "CreditUsage"}
+    },
+    "indexes": {
+        "run": {"columns": ["runId"], "unique": true},
+        "usage": {"columns": ["usageId"], "unique": true},
+        "completionDue": {"columns": ["tenantId", "completionFinishedAt", "completionDueAt", "id"]}
+    }
+}

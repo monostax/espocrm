@@ -1,0 +1,7 @@
+{
+    "beforeCreateHookClassNameList": ["Espo\\Modules\\FeatureCredits\\Classes\\RecordHooks\\DenyMutation"],
+    "beforeUpdateHookClassNameList": ["Espo\\Modules\\FeatureCredits\\Classes\\RecordHooks\\DenyMutation"],
+    "beforeDeleteHookClassNameList": ["Espo\\Modules\\FeatureCredits\\Classes\\RecordHooks\\DenyMutation"],
+    "beforeLinkHookClassNameList": ["Espo\\Modules\\FeatureCredits\\Classes\\RecordHooks\\DenyMutation"],
+    "beforeUnlinkHookClassNameList": ["Espo\\Modules\\FeatureCredits\\Classes\\RecordHooks\\DenyMutation"]
+}

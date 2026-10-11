@@ -155,10 +155,17 @@ class StreamAgent
                 if (!in_array($activity->entity, ['Opportunity', 'Initiative', 'Account', 'Contact', 'Task', 'Meeting', 'Call',
                     'Journey', 'JourneyRecord', 'JourneyStage', 'JourneyStageAction', 'JourneyTransition', 'Document',
                     'KnowledgeBaseArticle', 'KnowledgeBaseCategory', 'Automation', 'AutomationRun', 'Email', 'EmailTemplate',
-                    'TargetList', 'EmailCampaign', 'WhatsAppCampaign', 'Report', 'AiUsage'], true)) {
+                    'TargetList', 'EmailCampaign', 'WhatsAppCampaign', 'Report', 'AiUsage',
+                    'ChatwootConversation', 'ChatwootMessage'], true)) {
                     throw new BadRequest('Invalid stream activity entity.');
                 }
                 $entry->entity = $activity->entity;
+            }
+            if (isset($activity->context)) {
+                if (!in_array($activity->context, ['crmDocumentation', 'chatDocumentation', 'workspace'], true)) {
+                    throw new BadRequest('Invalid stream activity context.');
+                }
+                $entry->context = $activity->context;
             }
             if (isset($activity->thinkingOffset)) {
                 // Offsets use JavaScript UTF-16 code units, not PHP character or byte counts.

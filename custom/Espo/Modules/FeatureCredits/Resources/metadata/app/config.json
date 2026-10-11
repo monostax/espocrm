@@ -1,0 +1,8 @@
+{
+    "params": {
+        "featureCreditsAiCatalog": {
+            "level": "system",
+            "readOnly": true
+        }
+    }
+}

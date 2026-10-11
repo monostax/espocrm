@@ -1,0 +1,26 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "required": true, "notNull": true},
+        "usage": {"type": "link", "notNull": true},
+        "executionId": {"type": "varchar", "maxLength": 128, "notNull": true},
+        "state": {"type": "enum", "options": ["held", "pendingReconciliation", "settled", "released"], "notNull": true},
+        "reservedCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},
+        "accruedCreditsExact": {"type": "varchar", "maxLength": 128, "notNull": true, "default": "0"},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "modifiedAt": {"type": "datetime", "notNull": true},
+        "settledAt": {"type": "datetime"},
+        "reconcileAfter": {"type": "datetime"},
+        "reconciliationEvidence": {"type": "jsonObject"}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "usage": {"type": "belongsTo", "entity": "CreditUsage"}
+    },
+    "indexes": {
+        "tenantCreated": {"columns": ["tenantId", "createdAt", "id"]},
+        "usageUnique": {"columns": ["usageId"], "unique": true},
+        "tenantState": {"columns": ["tenantId", "state"]},
+        "reconciliation": {"columns": ["state", "reconcileAfter"]}
+    }
+}
