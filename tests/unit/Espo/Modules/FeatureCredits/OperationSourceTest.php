@@ -40,7 +40,7 @@ class OperationSourceTest extends TestCase
             'bad-id', 'empty-id', 'missing-id'] as $case) {
             yield $case => ['ChatwootAiAgentRun', $case];
         }
-        foreach (['User', 'CreditUsage', 'Note', 'Unknown', null] as $scope) {
+        foreach (['User', 'CreditUsage', 'Unknown', null] as $scope) {
             yield 'unsupported ' . ($scope ?? 'null') => [$scope, 'unsupported'];
         }
     }

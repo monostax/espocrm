@@ -18,6 +18,24 @@ use ReflectionClass;
 
 class CreditExecutionTest extends TestCase
 {
+    public function testSourceAdmissionInputIsStrictAndDetachedFromTelemetry(): void
+    {
+        $command = ExecutionFixtures::admission();
+        $command->source = (object) ['type' => 'ChatwootConversation', 'id' => 'conversation', 'requestId' => str_repeat('a', 64)];
+        $input = new \Espo\Modules\FeatureCredits\Accounting\AuthorizationInput($command);
+        $command->source->id = 'changed';
+        $this->assertSame('conversation', $input->source->id);
+        $this->assertSame(str_repeat('a', 64), $input->source->requestId);
+        foreach ([null, [], (object) [], (object) ['type' => 'User', 'id' => 'user'],
+            (object) ['type' => 'Opportunity', 'id' => 'deal', 'tenantId' => 'other'],
+            (object) ['type' => 'Opportunity', 'id' => 'deal', 'requestId' => null],
+            (object) ['type' => 'Note', 'id' => 'post', 'requestId' => str_repeat('a', 64)]] as $source) {
+            $command->source = $source;
+            try { new \Espo\Modules\FeatureCredits\Accounting\AuthorizationInput($command); $this->fail('Invalid source accepted.'); }
+            catch (InvalidArgumentException) { $this->addToAssertionCount(1); }
+        }
+    }
+
     public static function command(): object
     {
         return ExecutionFixtures::outcome();

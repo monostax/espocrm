@@ -23,6 +23,10 @@ trait ConversationCallerCases
         }
         $this->executionDatabase($dialect, function (PDO $pdo): void {
             $this->reservations($pdo);
+            $pdo->exec('CREATE TABLE chatwoot_account (id VARCHAR(24) PRIMARY KEY, tenant_id VARCHAR(24), deleted BOOLEAN NOT NULL DEFAULT FALSE)');
+            $pdo->exec('CREATE TABLE chatwoot_conversation (id VARCHAR(24) PRIMARY KEY, chatwoot_account_id VARCHAR(24), deleted BOOLEAN NOT NULL DEFAULT FALSE)');
+            $pdo->exec("INSERT INTO chatwoot_account (id, tenant_id) VALUES ('account', 'tenant'), ('other-account', 'other')");
+            $pdo->exec("INSERT INTO chatwoot_conversation (id, chatwoot_account_id) VALUES ('conversation', 'account'), ('other-conversation', 'other-account')");
             $pdo->exec("INSERT INTO tenant_credit_billing_rate
                 (id, tenant_id, version, effective_from, currency, credit_unit_price, monthly_credits, created_at)
                 VALUES ('other-rate', 'other', 'v1', '2026-10-01 00:00:00', 'USD', '1.00000000', '0.0000', '2026-10-01 00:00:00')");
@@ -51,6 +55,7 @@ trait ConversationCallerCases
             $server = stream_socket_server('tcp://0.0.0.0:18880', $errno, $error);
             $this->assertNotFalse($server, $error);
             $finished = false;
+            $recovery = getenv('FEATURE_CREDITS_CALLER_RECOVERY') === '1';
             try {
                 while (!$finished && ($client = stream_socket_accept($server, 90))) {
                     stream_set_timeout($client, 15);
@@ -66,12 +71,15 @@ trait ConversationCallerCases
                     while (strlen($raw) < $length) $raw .= fread($client, $length - strlen($raw));
                     $status = 200;
                     try {
+                        if ($recovery) $this->now = gmdate('Y-m-d H:i:s');
                         if ($path === '/fixture') {
-                            $result = ['modelRateId' => $id, 'native' => $native];
+                            $result = ['modelRateId' => $id, 'native' => $native, 'recovery' => $recovery, 'billingRateId' => 'rate'];
                         } elseif ($path === '/views') {
                             $result = ['balance' => $this->balanceStatus($pdo)->inspect('tenant'),
                                 'operations' => $this->operationHistory($pdo)->inspect(new OperationHistoryQuery('tenant')),
-                                'debits' => (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type='debit'")->fetchColumn()];
+                                'debits' => (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type='debit'")->fetchColumn(),
+                                'sources' => $pdo->query('SELECT source_type, source_id FROM credit_usage ORDER BY id')->fetchAll(PDO::FETCH_ASSOC)];
+                            if ($recovery) $result['requests'] = $pdo->query('SELECT usage_id, outcome, metering_state, billing_state FROM credit_request ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
                         } elseif ($path === '/stop') {
                             $finished = true; $result = ['stopped' => true];
                         } else {
@@ -97,11 +105,18 @@ trait ConversationCallerCases
                     fclose($client);
                 }
                 $this->assertTrue($finished, 'Backend client did not complete acceptance before the bridge deadline.');
-                $this->assertSame($native ? 4 : 1, (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type='debit'")->fetchColumn());
-                $this->assertConsistent($pdo, $native ? '9.9606' : '9.9906');
-                $this->assertHeld($pdo, '0.0000');
+                $this->assertSame($recovery ? 2 : ($native ? 4 : 1), (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type='debit'")->fetchColumn());
+                $this->assertConsistent($pdo, $recovery ? '9.9812' : ($native ? '9.9606' : '9.9906'));
+                $this->assertHeld($pdo, $recovery ? '1.1340' : '0.0000');
+                if ($recovery) {
+                    $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM credit_request WHERE billing_state='waived'")->fetchColumn());
+                    $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM credit_request WHERE billing_state='pending'")->fetchColumn());
+                    $this->assertSame(3, (int) $pdo->query('SELECT COUNT(*) FROM credit_execution_route WHERE terminal_workflow_evidence IS NOT NULL')->fetchColumn());
+                }
             } finally {
                 fclose($server);
+                $pdo->exec('DROP TABLE chatwoot_conversation');
+                $pdo->exec('DROP TABLE chatwoot_account');
             }
         });
     }

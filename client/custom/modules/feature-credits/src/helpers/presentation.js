@@ -36,7 +36,7 @@ export function present(balance, page, tab, t) {
 export function sourceRoute(payload, tenantId, usageId) {
     const source = payload?.source;
     if (payload?.tenantId !== tenantId || payload?.id !== usageId || !source ||
-        !['ChatwootAiAgentRun', 'Opportunity'].includes(source.scope) ||
+        !['ChatwootAiAgentRun', 'Opportunity', 'ChatwootConversation', 'Note', 'ChatwootAccountUserMembership'].includes(source.scope) ||
         typeof source.id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(source.id)) return null;
     return source.scope + '/view/' + encodeURIComponent(source.id);
 }

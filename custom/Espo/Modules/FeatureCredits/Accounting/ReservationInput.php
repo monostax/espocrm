@@ -51,6 +51,7 @@ final readonly class ReservationInput
         if ($source !== null) {
             $identity[0] = 'reservation-v2';
             $identity[] = [$source->type, $source->id];
+            if ($source->requestId !== null) $identity[] = ['summary-request', $source->requestId];
         }
         if ($execution !== null) {
             $identity[0] = 'reservation-v3';

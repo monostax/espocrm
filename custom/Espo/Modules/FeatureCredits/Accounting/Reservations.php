@@ -69,11 +69,12 @@ final class Reservations
             $usageId = RecordId::generate();
             $reservationId = RecordId::generate();
             $pdo->prepare('INSERT INTO credit_usage
-                (id, tenant_id, operation_type, operation_key, input_hash, execution_id, billing_regime, billing_rate_id, state, admitted_at, source_type, source_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([
+                (id, tenant_id, operation_type, operation_key, input_hash, execution_id, billing_regime, billing_rate_id, state, admitted_at, source_type, source_id, evidence)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([
                     $usageId, $input->tenantId, $input->operationType, $input->operationKey, $input->hash,
                     $input->executionId, 'unified-prepaid-v1', $input->billingRateId, 'admitted', $now,
                     $input->source?->type, $input->source?->id,
+                    $input->source?->requestId === null ? null : json_encode(['sourceRequestId' => $input->source->requestId], JSON_THROW_ON_ERROR),
                 ]);
             $pdo->prepare('INSERT INTO credit_reservation
                 (id, tenant_id, usage_id, execution_id, state, reserved_credits, accrued_credits_exact, created_at, modified_at)

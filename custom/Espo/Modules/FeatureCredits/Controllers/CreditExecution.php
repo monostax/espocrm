@@ -56,7 +56,7 @@ final class CreditExecution
             if ($input->operation === 'admit') {
                 $bound = $policy->request($input->tenantId, 'initial-bound', $execution->executionId, 'initial-bound')->credits;
                 $receipt = $this->reservations->reserve(new ReservationInput($input->tenantId, 'ai', $execution->operationKey(),
-                    $execution->executionId, $input->billingRateId, $bound, execution: $execution, modelPolicyId: $input->modelRateId));
+                    $execution->executionId, $input->billingRateId, $bound, source: $input->source, execution: $execution, modelPolicyId: $input->modelRateId));
             } else {
                 $receipt = $this->requests->authorize($policy->request($input->tenantId, $input->usageId,
                     $execution->executionId, $input->requestKey), $execution);
