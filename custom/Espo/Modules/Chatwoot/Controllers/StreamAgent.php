@@ -57,11 +57,15 @@ class StreamAgent
         $body = $request->getParsedBody();
         $runId = $body->workflowRunId ?? null;
         $status = $body->status ?? null;
+        $reason = $body->reason ?? null;
+        if ($reason !== null && ($reason !== 'insufficient_credits' || $status !== 'blocked')) {
+            throw new BadRequest('Invalid stream budget reason.');
+        }
         if (!is_string($runId) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $runId) ||
             !in_array($status, ['failed', 'cancelled', 'blocked'], true)) {
             throw new BadRequest('A workflow run ID and terminal status are required.');
         }
-        return $this->service->status($this->id($request, 'id'), $this->id($request, 'membershipId'), $runId, $status);
+        return $this->service->status($this->id($request, 'id'), $this->id($request, 'membershipId'), $runId, $status, $reason);
     }
 
     public function getActionPreview(Request $request): object

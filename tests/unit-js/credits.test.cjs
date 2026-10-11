@@ -186,6 +186,8 @@ test('explicit unauthorized tenant does not silently display another tenant', as
 });
 
 test('production transpiler emits loadable AMD for the credit page and helpers', () => {
+    const metadata = JSON.parse(read('custom/Espo/Modules/FeatureCredits/Resources/module.json'));
+    assert.equal(metadata.jsTranspiled, true, 'Espo must discover and load the transpiled credit module');
     const dir = mkdtempSync('/tmp/opencode/credits-amd-');
     try {
         new Transpiler({path: path.resolve(root, client), destDir: dir}).process();

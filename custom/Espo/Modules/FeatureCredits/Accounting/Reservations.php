@@ -43,7 +43,7 @@ final class Reservations
             $held = Amount::fromString($wallet['reserved_credits']);
             $amount = Amount::fromString($input->credits);
             if ($balance->minus($held)->compareTo($amount) < 0) {
-                throw new Conflict('Insufficient eligible credits.');
+                throw Conflict::createWithBody('Insufficient eligible credits.', '{"reason":"insufficient_credits"}');
             }
             $query = $pdo->prepare('SELECT * FROM credit_grant WHERE tenant_id = ?
                 AND (expires_at IS NULL OR expires_at > ?)

@@ -525,6 +525,17 @@ class OpportunityStreamAgentTest extends TestCase
         self::assertFalse($this->service->status('source', 'ai', 'run', 'failed')->updated);
     }
 
+    public function testInsufficientCreditsFeedbackIsTerminalAndReplaySafe(): void
+    {
+        $reply = $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        self::assertTrue($this->service->status('source', 'ai', 'run', 'blocked', 'insufficient_credits')->updated);
+        self::assertStringContainsString('not enough AI credits', $reply->getPost());
+        self::assertStringContainsString('Completed AI work remains billable', $reply->getPost());
+        self::assertFalse($this->service->status('source', 'ai', 'run', 'failed')->updated);
+        self::assertStringContainsString('not enough AI credits', $reply->getPost());
+    }
+
     public function testPostingPermissionIsRecheckedWhenCompletingAPendingReply(): void
     {
         $this->queuedReply();

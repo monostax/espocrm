@@ -1,5 +1,6 @@
 {
     "name": "FeatureCredits",
     "description": "Shared tenant credit accounting",
-    "order": 81
+    "order": 81,
+    "jsTranspiled": true
 }

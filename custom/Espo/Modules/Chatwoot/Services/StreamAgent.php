@@ -252,9 +252,9 @@ class StreamAgent
     }
 
     /** Terminal feedback may outlive an edited trigger, but must belong to this AI/run. */
-    public function status(string $noteId, string $membershipId, string $runId, string $status): object
+    public function status(string $noteId, string $membershipId, string $runId, string $status, ?string $reason = null): object
     {
-        $result = $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $runId, $status): object {
+        $result = $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $runId, $status, $reason): object {
             $source = $this->entityManager->getRDBRepository('Note')->where(['id' => $noteId])->forUpdate()->findOne();
             $reply = $this->existingReply($noteId, $membershipId);
             if (!StreamAgentProgress::isPending($reply)) return (object) ['updated' => false];
@@ -268,7 +268,9 @@ class StreamAgent
             if ($owner !== null && $owner !== $runId) return (object) ['updated' => false];
             $post = match ($status) {
                 'cancelled' => 'This request was stopped or replaced by a newer mention.',
-                'blocked' => 'This request could not start because the AI budget is unavailable.',
+                'blocked' => $reason === 'insufficient_credits'
+                    ? 'This request was stopped because there are not enough AI credits. Completed AI work remains billable. Ask a tenant administrator to add credits before trying again.'
+                    : 'This request could not start because the AI budget is unavailable.',
                 'failed' => 'This request could not finish. Check the workflow before requesting another execution.',
                 default => throw new \InvalidArgumentException('Invalid stream agent status.'),
             };

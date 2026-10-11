@@ -113,7 +113,7 @@ final class Requests
             $bound = Amount::fromString($input->credits);
             $needed = $buffer->compareTo($bound) > 0 ? $buffer : $bound;
             if ($balance->minus($walletHeld)->compareTo($needed) < 0) {
-                throw new Conflict('Insufficient eligible credits for request.');
+                throw Conflict::createWithBody('Insufficient eligible credits for request.', '{"reason":"insufficient_credits"}');
             }
             $requestId = RecordId::generate();
             $pdo->prepare('INSERT INTO credit_request
