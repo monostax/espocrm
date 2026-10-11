@@ -1,0 +1,16 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "required": true, "notNull": true},
+        "requestKey": {"type": "varchar", "maxLength": 128, "notNull": true},
+        "requestHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "scope": {"type": "jsonObject", "notNull": true},
+        "purpose": {"type": "varchar", "maxLength": 32, "notNull": true},
+        "state": {"type": "varchar", "maxLength": 32, "notNull": true},
+        "facts": {"type": "jsonObject"},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "completedAt": {"type": "datetime"}
+    },
+    "links": {"tenant": {"type": "belongsTo", "entity": "Tenant"}},
+    "indexes": {"requestUnique": {"columns": ["tenantId", "requestKey"], "unique": true}}
+}

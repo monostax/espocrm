@@ -366,7 +366,7 @@ class SyncAccountUserMembershipsFromChatwoot implements JobDataLess
      *
      * IMPORTANT: Never overwrites user-configured fields (isAI, aiPrompt,
      * timeZone, ignoreGroups, transferScenarios, knowledgeBaseCategories,
-     * calendarsToManage, followupsEnabled, delegateEnabled,
+     * calendarsToManage, followupsEnabled,
      * whatsappMessageTemplates).
      *
      * @param Entity $membership ChatwootAccountUserMembership entity

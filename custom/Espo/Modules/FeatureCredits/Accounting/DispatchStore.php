@@ -28,7 +28,21 @@ final class DispatchStore
         if ($d->operation === 'deliver') return $this->deliver($input->tenantId, $d->leaseMs, $d->retryMs);
         if ($d->operation === 'recover') return $this->recover($d->scope);
         if ($d->operation === 'recoverOne') return $this->recoverOne($input->tenantId, $d->leaseMs, $d->retryMs);
+        if ($d->operation === 'discoverUnsealed') return $this->discoverUnsealed($input->tenantId, $d->leaseMs, $d->retryMs);
         return $this->locked($input->tenantId, function (PDO $pdo, string $now) use ($d): mixed {
+            if (in_array($d->operation, ['claimTranscription', 'finishTranscription'], true)) {
+                return $this->transcription($pdo, $now, $d);
+            }
+            if ($d->operation === 'sealTerminal') {
+                $this->owner($pdo, $d->scope);
+                if ($d->evidence->observedAt > $now) throw new Conflict('Terminal observation is in the future.');
+                // The same tenant lock fences every new claim/authorization/bind.
+                // Previously authorized but unobserved provider work remains held.
+                $pdo->prepare('UPDATE credit_execution_route SET completion_requested_at=?,completion_due_at=?,terminal_workflow_evidence=?
+                    WHERE usage_id=? AND completion_requested_at IS NULL')
+                    ->execute([$now, $now, DispatchInput::json($d->evidence), $d->scope->usageId]);
+                return null;
+            }
             if ($d->operation === 'seal') {
                 $this->owner($pdo, $d->scope);
                 $pdo->prepare('UPDATE credit_execution_route SET completion_requested_at=?,completion_due_at=?
@@ -90,6 +104,59 @@ final class DispatchStore
         });
     }
 
+    /** Lease one unsealed route for an authoritative orchestrator lookup. A due
+     * date only schedules another check; it never seals or releases an operation. */
+    private function discoverUnsealed(string $tenantId, int $leaseMs, int $retryMs): ?stdClass
+    {
+        return $this->locked($tenantId, function (PDO $pdo, string $now) use ($tenantId, $leaseMs, $retryMs): ?stdClass {
+            $row = $this->one($pdo, 'SELECT * FROM credit_execution_route WHERE tenant_id=? AND deleted=FALSE
+                AND billing_regime=? AND completion_requested_at IS NULL
+                AND (completion_due_at IS NULL OR completion_due_at<=?)
+                ORDER BY COALESCE(completion_due_at, admitted_at),id LIMIT 1', [$tenantId, ExecutionRouting::UNIFIED, $now]);
+            if (!$row) return null;
+            $scope = (object) ['billingRegime' => $row['billing_regime'], 'tenantId' => $tenantId, 'usageId' => $row['usage_id'],
+                'runId' => $row['run_id'], 'workflowRunId' => $row['workflow_run_id'], 'executionId' => $row['execution_id']];
+            DispatchInput::scope($scope); $this->owner($pdo, $scope);
+            $pdo->prepare('UPDATE credit_execution_route SET completion_due_at=? WHERE id=?')
+                ->execute([$this->after($now, max($leaseMs, $retryMs)), $row['id']]);
+            return $scope;
+        });
+    }
+
+    /** Transcription is waived by policy before dispatch, irrespective of usage.
+     * This is an execution receipt, not a financial hold or a zero-token outcome.
+     * Retain abandoned claims indefinitely; no TTL permits duplicate dispatch. */
+    private function transcription(PDO $pdo, string $now, stdClass $d): array
+    {
+        $scope = DispatchInput::json($d->scope);
+        $row = $this->one($pdo, 'SELECT * FROM credit_waived_request WHERE tenant_id=? AND request_key=?', [$d->scope->tenantId, $d->requestKey]);
+        if ($row && ($row['deleted'] || $row['request_hash'] !== $d->requestHash || $row['purpose'] !== 'transcription')) {
+            throw new Conflict('Conflicting waived transcription identity.');
+        }
+        if ($d->operation === 'claimTranscription') {
+            if ($row) return ['dispatchAllowed' => false, 'state' => $row['state'], 'billingState' => 'waived'];
+            if (ExecutionRouting::tenantLocked($pdo, $d->scope->tenantId, $now)['billingRegime'] !== ExecutionRouting::UNIFIED) {
+                throw new Conflict('Unified transcription requires the persisted tenant regime.');
+            }
+            $route = ExecutionRouting::findLocked($pdo, $d->scope->tenantId, $d->scope->runId, $d->scope->workflowRunId);
+            if ($route) {
+                if ($route['billing_regime'] !== ExecutionRouting::UNIFIED || $route['execution_id'] !== $d->scope->executionId) throw new Conflict('Transcription does not own the parent execution.');
+                ExecutionRouting::requireDispatchOpenLocked($pdo, $route['usage_id']);
+            }
+            $pdo->prepare('INSERT INTO credit_waived_request (id,tenant_id,request_key,request_hash,scope,purpose,state,created_at) VALUES (?,?,?,?,?,?,?,?)')
+                ->execute([RecordId::generate(), $d->scope->tenantId, $d->requestKey, $d->requestHash, $scope, 'transcription', 'claimed', $now]);
+            return ['dispatchAllowed' => true, 'state' => 'claimed', 'billingState' => 'waived'];
+        }
+        if (!$row || DispatchInput::json($this->decode($row['scope'])) !== $scope) throw new Conflict('Transcription completion requires the original owner.');
+        $facts = DispatchInput::json($d->facts);
+        if ($row['facts'] !== null && DispatchInput::json($this->decode($row['facts'])) !== $facts) throw new Conflict('Conflicting transcription outcome replay.');
+        if ($row['facts'] === null) {
+            $pdo->prepare('UPDATE credit_waived_request SET state=?,facts=?,completed_at=? WHERE id=?')
+                ->execute([$d->facts->outcome, $facts, $now, $row['id']]);
+        }
+        return ['dispatchAllowed' => false, 'state' => $d->facts->outcome, 'billingState' => 'waived'];
+    }
+
     /** Only explicitly sealed operations can be resumed. No timeout infers that a
      * provider stopped, no new authorization is issued, and no missing fact is zero. */
     private function recover(stdClass $scope): array
@@ -134,11 +201,18 @@ final class DispatchStore
                         ->execute([$saved['id'], $attempt['id']]);
                     $attempt['request_id'] = $saved['id'];
                 }
-                $this->request($pdo, $intent, $attempt['request_id']);
+                $accountingRequest = $this->request($pdo, $intent, $attempt['request_id']);
                 $covered[$attempt['request_id']] = true;
                 $query = $pdo->prepare('SELECT * FROM credit_outcome_delivery WHERE attempt_id=? ORDER BY phase LIMIT 3');
                 $query->execute([$attempt['id']]); $deliveries = $query->fetchAll(PDO::FETCH_ASSOC);
-                if (!$deliveries) { $missing = true; continue; }
+                if (!$deliveries) {
+                    // A request may already have authoritative Outcomes evidence
+                    // even if its delivery mailbox was never saved. Reuse that
+                    // service's record; Settlements still validates all pricing,
+                    // ownership, metering and allocations under its existing lock.
+                    if (!$this->recordedTerminal($accountingRequest)) $missing = true;
+                    continue;
+                }
                 if (count($deliveries) > 2) throw new Conflict('Invalid completion delivery count.');
                 $group = [];
                 foreach ($deliveries as $phase => $delivery) {
@@ -153,7 +227,7 @@ final class DispatchStore
             }
             foreach ($requests as $request) {
                 if ($request['deleted'] || $request['tenant_id'] !== $scope->tenantId) throw new Conflict('Invalid completion accounting request.');
-                if (!isset($covered[$request['id']])) $missing = true;
+                if (!isset($covered[$request['id']]) && !$this->recordedTerminal($request)) $missing = true;
             }
             return ['action' => !$requests ? 'release' : 'settle', 'groups' => $groups, 'missing' => $missing];
         });
@@ -192,7 +266,7 @@ final class DispatchStore
     {
         $job = $this->locked($tenantId, function (PDO $pdo, string $now) use ($tenantId, $leaseMs): ?array {
             $row = $this->one($pdo, 'SELECT * FROM credit_execution_route WHERE tenant_id=? AND deleted=FALSE
-                AND completion_finished_at IS NULL AND completion_due_at<=? ORDER BY completion_due_at,id LIMIT 1', [$tenantId, $now]);
+                AND completion_requested_at IS NOT NULL AND completion_finished_at IS NULL AND completion_due_at<=? ORDER BY completion_due_at,id LIMIT 1', [$tenantId, $now]);
             if (!$row) return null;
             if ($row['billing_regime'] !== ExecutionRouting::UNIFIED || $row['completion_requested_at'] === null) {
                 throw new Conflict('Invalid completion schedule.');
@@ -294,7 +368,13 @@ final class DispatchStore
         return $row;
     }
 
-    private function request(PDO $pdo, stdClass $intent, ?string $id): void
+    private function recordedTerminal(array $request): bool
+    {
+        return $request['outcome_record'] !== null && $request['completed_at'] !== null &&
+            in_array($request['billing_state'], ['billable', 'waived'], true);
+    }
+
+    private function request(PDO $pdo, stdClass $intent, ?string $id): array
     {
         if ($id === null) throw new Conflict('Missing request binding.');
         $row = $this->one($pdo, 'SELECT * FROM credit_request WHERE id=?', [$id]);
@@ -310,6 +390,7 @@ final class DispatchStore
             'outputTokenLimit' => 'outputTokenLimit', 'boundProfile' => 'boundProfile'] as $key => $field) {
             if (($snapshot->$field ?? null) !== $intent->policy->$key) throw new Conflict('Request policy differs from prepared policy.');
         }
+        return $row;
     }
 
     private function locked(string $tenantId, callable $callback): mixed

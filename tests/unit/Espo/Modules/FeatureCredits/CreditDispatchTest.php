@@ -62,6 +62,9 @@ class CreditDispatchTest extends TestCase
         yield 'seal missing scope' => [(object) ['operation' => 'seal']];
         yield 'recover caller facts' => [(object) ['operation' => 'recover', 'scope' => (object) [], 'facts' => (object) []]];
         yield 'recovery missing timing' => [(object) ['operation' => 'recoverOne', 'tenantId' => 'tenant', 'leaseMs' => 1000]];
+        yield 'terminal seal without proof' => [(object) ['operation' => 'sealTerminal', 'scope' => (object) []]];
+        yield 'unsealed discovery cannot supply status' => [(object) ['operation' => 'discoverUnsealed', 'tenantId' => 'tenant', 'leaseMs' => 1000, 'retryMs' => 1000, 'status' => 'FAILED']];
+        yield 'transcription cannot supply a price' => [(object) ['operation' => 'claimTranscription', 'scope' => (object) [], 'requestKey' => 'audio', 'requestHash' => str_repeat('a', 64), 'credits' => '0']];
     }
 
     #[DataProvider('malformed')]

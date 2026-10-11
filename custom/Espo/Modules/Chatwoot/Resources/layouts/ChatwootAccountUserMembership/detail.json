@@ -95,11 +95,9 @@
             ],
             [
                 {
-                    "name": "delegateEnabled"
-                },
-                {
                     "name": "aiDebounceSeconds"
-                }
+                },
+                false
             ],
             [
                 {

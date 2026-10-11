@@ -1,6 +1,7 @@
 {
     "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
     "fields": {
+        "terminalWorkflowEvidence": {"type": "jsonObject"},
         "tenant": {"type": "link", "required": true, "notNull": true},
         "runId": {"type": "varchar", "maxLength": 17, "notNull": true},
         "workflowRunId": {"type": "varchar", "maxLength": 64, "notNull": true},

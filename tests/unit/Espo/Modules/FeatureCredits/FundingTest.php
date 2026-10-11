@@ -47,6 +47,7 @@ require_once __DIR__ . '/CompletionCases.php';
 require_once __DIR__ . '/ConversationCallerCases.php';
 require_once __DIR__ . '/ConfigurationCases.php';
 require_once __DIR__ . '/NativeSearchDebtCases.php';
+require_once __DIR__ . '/WaivedTranscriptionCases.php';
 
 class FundingTest extends TestCase
 {
@@ -65,6 +66,7 @@ class FundingTest extends TestCase
     use ConversationCallerCases;
     use ConfigurationCases;
     use NativeSearchDebtCases;
+    use WaivedTranscriptionCases;
 
     private string $now = '2026-10-10 12:00:00';
 

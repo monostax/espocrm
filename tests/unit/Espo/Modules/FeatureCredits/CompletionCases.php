@@ -14,6 +14,86 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 trait CompletionCases
 {
+    private function terminalProof(object $scope): object
+    {
+        return (object) ['source' => 'hatchet-runs-get-v1', 'workflowRunId' => $scope->workflowRunId,
+            'hatchetTenantId' => '11111111-1111-4111-8111-111111111111', 'status' => 'FAILED',
+            'finishedAt' => $this->now, 'observedAt' => $this->now];
+    }
+
+    #[DataProvider('dialects')]
+    public function testPreSealDeathConcurrentSealAndBindingNeverReleaseAnAuthorizedUnknownRequest(string $dialect): void
+    {
+        $this->executionDatabase($dialect, function (PDO $pdo) use ($dialect): void {
+            [$intent, $binding] = $this->dispatchFixture($pdo);
+            $this->dispatch($pdo, 'claimIntent', ['intent' => $intent]);
+            $seal = base64_encode(json_encode(['operation' => 'sealTerminal', 'scope' => $intent->scope, 'evidence' => $this->terminalProof($intent->scope)]));
+            $bind = base64_encode(json_encode(['operation' => 'bind', 'binding' => $binding]));
+            $results = $this->race($pdo, $dialect, [['dispatch', $seal, '', ''], ['dispatch', $bind, '', '']]);
+            $this->assertArrayHasKey('result', $results[0]);
+            if (isset($results[1]['error'])) $this->assertSame(Conflict::class, $results[1]['error']);
+            $this->assertSame(['state' => 'pending', 'reason' => 'request_recovery'], $this->dispatch($pdo, 'recover', ['scope' => $intent->scope]));
+            try { $this->dispatch($pdo, 'bind', ['binding' => $binding]); $this->fail('Post-seal dispatch acknowledged.'); } catch (Conflict) {}
+            $this->assertSame('held', $pdo->query('SELECT state FROM credit_reservation')->fetchColumn());
+            $this->assertConsistent($pdo, '10.0000');
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testPreSealDeathDiscoveryNeverInfersCompletionFromElapsedTime(string $dialect): void
+    {
+        $this->executionDatabase($dialect, function (PDO $pdo): void {
+            [$intent] = $this->dispatchFixture($pdo);
+            $poll = fn () => $this->dispatch($pdo, 'discoverUnsealed', ['tenantId' => 'tenant', 'leaseMs' => 1000, 'retryMs' => 2000]);
+            $this->assertEquals($intent->scope, $poll());
+            $this->assertNull($poll());
+            $this->now = '2027-10-10 12:00:00';
+            $this->assertSame('empty', $this->pollCompletion($pdo));
+            $this->assertEquals($intent->scope, $poll());
+            $this->assertNull($pdo->query('SELECT completion_requested_at FROM credit_execution_route')->fetchColumn());
+            $this->assertSame('held', $pdo->query('SELECT state FROM credit_reservation')->fetchColumn());
+            $this->assertConsistent($pdo, '10.0000');
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testPreSealDeathTerminalEvidenceFencesDispatchAndRecoversSuccessfulChargesOnce(string $dialect): void
+    {
+        $this->executionDatabase($dialect, function (PDO $pdo): void {
+            [$intent, $binding, $facts] = $this->dispatchFixture($pdo);
+            $this->dispatch($pdo, 'claimIntent', ['intent' => $intent]); $this->dispatch($pdo, 'bind', ['binding' => $binding]);
+            $this->dispatch($pdo, 'enqueue', ['binding' => $binding, 'facts' => $facts, 'phase' => 0]);
+            $proof = $this->terminalProof($intent->scope);
+            $this->dispatch($pdo, 'sealTerminal', ['scope' => $intent->scope, 'evidence' => $proof]);
+            $saved = $pdo->query('SELECT terminal_workflow_evidence FROM credit_execution_route')->fetchColumn();
+            $this->assertEquals($proof, json_decode($saved));
+            $this->dispatch($pdo, 'sealTerminal', ['scope' => $intent->scope, 'evidence' => $proof]);
+            try { $this->dispatch($pdo, 'bind', ['binding' => $binding]); $this->fail('Late bind acknowledged.'); } catch (Conflict) {}
+            $next = clone $intent; $next->requestKey = 'next';
+            try { $this->dispatch($pdo, 'claimIntent', ['intent' => $next]); $this->fail('Late claim accepted.'); } catch (Conflict) {}
+            $receipt = $this->dispatch($pdo, 'recover', ['scope' => $intent->scope]);
+            $this->assertSame('settled', $receipt['state']);
+            $this->assertSame($receipt, $this->dispatch($pdo, 'recover', ['scope' => $intent->scope]));
+            $this->assertSame('9.9998', $pdo->query('SELECT balance FROM tenant_credit_balance')->fetchColumn());
+            $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type='debit'")->fetchColumn());
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testPreSealDeathMissingProviderFactsStayPendingEvenWithTerminalEvidence(string $dialect): void
+    {
+        $this->executionDatabase($dialect, function (PDO $pdo): void {
+            [$intent, $binding] = $this->dispatchFixture($pdo);
+            $this->dispatch($pdo, 'claimIntent', ['intent' => $intent]); $this->dispatch($pdo, 'bind', ['binding' => $binding]);
+            $this->dispatch($pdo, 'sealTerminal', ['scope' => $intent->scope, 'evidence' => $this->terminalProof($intent->scope)]);
+            $this->assertSame(['state' => 'pending', 'reason' => 'request_recovery'], $this->dispatch($pdo, 'recover', ['scope' => $intent->scope]));
+            $this->now = '2027-10-10 12:00:00';
+            $this->assertSame('pending', $this->pollCompletion($pdo));
+            $this->assertSame('held', $pdo->query('SELECT state FROM credit_reservation')->fetchColumn());
+            $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type='debit'")->fetchColumn());
+        });
+    }
+
     private function emptyCompletion(PDO $pdo, string $runId = 'bbbbbbbbbbbbbbbbb'): object
     {
         $command = ExecutionFixtures::admission(); $command->runId = $runId;
@@ -21,6 +101,25 @@ trait CompletionCases
         $scope = clone $command; unset($scope->operation, $scope->billingRateId, $scope->modelRateId);
         $scope->usageId = $result['receipt']['usageId'];
         return $scope;
+    }
+
+    #[DataProvider('dialects')]
+    public function testPreSealDeathReusesAuthoritativeAccountingOutcomeWithoutMailboxOrDuplicateBilling(string $dialect): void
+    {
+        foreach ([false, true] as $claimed) $this->executionDatabase($dialect, function (PDO $pdo) use ($claimed): void {
+            [$intent, $binding, $facts] = $this->dispatchFixture($pdo);
+            if ($claimed) {
+                $this->dispatch($pdo, 'claimIntent', ['intent' => $intent]);
+                $this->dispatch($pdo, 'bind', ['binding' => $binding]);
+            }
+            $this->terminalCommand($pdo, (object) [...get_object_vars($intent->scope), ...get_object_vars($facts), 'operation' => 'outcome']);
+            $this->dispatch($pdo, 'sealTerminal', ['scope' => $intent->scope, 'evidence' => $this->terminalProof($intent->scope)]);
+            $receipt = $this->dispatch($pdo, 'recover', ['scope' => $intent->scope]);
+            $this->assertSame('settled', $receipt['state']);
+            $this->assertSame($receipt, $this->dispatch($pdo, 'recover', ['scope' => $intent->scope]));
+            $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM credit_outcome_delivery')->fetchColumn());
+            $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type='debit'")->fetchColumn());
+        });
     }
 
     private function pollCompletion(PDO $pdo): string

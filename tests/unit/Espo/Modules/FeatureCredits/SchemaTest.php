@@ -113,7 +113,7 @@ class SchemaTest extends TestCase
     public function testGeneratedFinancialSchema(string $dialect): void
     {
         $schema = $this->schema($dialect);
-        $this->assertCount(13, $schema->getTables());
+        $this->assertCount(14, $schema->getTables());
         foreach ($schema->getTables() as $table) {
             if ($table->getName() !== 'ai_model_credit_rate') {
                 $this->assertTrue($table->getColumn('tenant_id')->getNotnull(), $table->getName());
@@ -138,6 +138,7 @@ class SchemaTest extends TestCase
             'credit_execution_route' => ['run_id'],
             'credit_execution_attempt' => ['usage_id', 'request_key'],
             'credit_outcome_delivery' => ['attempt_id', 'phase'],
+            'credit_waived_request' => ['tenant_id', 'request_key'],
             'credit_usage' => ['tenant_id', 'operation_type', 'operation_key'],
             'credit_reservation' => ['usage_id'],
             'credit_request' => ['usage_id', 'request_key'],

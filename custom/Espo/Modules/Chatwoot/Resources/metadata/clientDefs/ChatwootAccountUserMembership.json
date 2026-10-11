@@ -123,16 +123,6 @@
                     ]
                 }
             },
-            "delegateEnabled": {
-                "visible": {
-                    "conditionGroup": [
-                        {
-                            "type": "isTrue",
-                            "attribute": "isAI"
-                        }
-                    ]
-                }
-            },
             "aiDebounceSeconds": {
                 "visible": {
                     "conditionGroup": [

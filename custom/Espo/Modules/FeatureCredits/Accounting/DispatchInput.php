@@ -25,10 +25,30 @@ final readonly class DispatchInput
             'deliver' => ['operation', 'tenantId', 'leaseMs', 'retryMs'],
             'seal', 'recover' => ['operation', 'scope'],
             'recoverOne' => ['operation', 'tenantId', 'leaseMs', 'retryMs'],
+            'discoverUnsealed' => ['operation', 'tenantId', 'leaseMs', 'retryMs'],
+            'sealTerminal' => ['operation', 'scope', 'evidence'],
+            'claimTranscription' => ['operation', 'scope', 'requestKey', 'requestHash'],
+            'finishTranscription' => ['operation', 'scope', 'requestKey', 'requestHash', 'facts'],
             default => throw new InvalidArgumentException('Unsupported credit dispatch command.'),
         };
         self::fields($d, $fields);
-        if (in_array($d->operation, ['deliver', 'recoverOne'], true)) {
+        if (in_array($d->operation, ['claimTranscription', 'finishTranscription'], true)) {
+            self::fields($d->scope, ['billingRegime', 'tenantId', 'runId', 'workflowRunId', 'executionId']);
+            self::id($d->scope->tenantId);
+            if ($d->scope->billingRegime !== ExecutionRouting::UNIFIED || !is_string($d->scope->runId) ||
+                !is_string($d->scope->workflowRunId) || !is_string($d->scope->executionId)) throw new InvalidArgumentException('Unified transcription scope required.');
+            new ExecutionIdentity($d->scope->runId, $d->scope->workflowRunId, $d->scope->executionId);
+            self::key($d->requestKey);
+            if (!is_string($d->requestHash) || !preg_match('/^[a-f0-9]{64}$/D', $d->requestHash)) throw new InvalidArgumentException('Transcription content digest required.');
+            if ($d->operation === 'finishTranscription') {
+                self::fields($d->facts, ['outcome', 'provider', 'model']);
+                if (!in_array($d->facts->outcome, ['success', 'failed', 'cancelled', 'unknown'], true) ||
+                    $d->facts->provider !== 'openai' || $d->facts->model !== 'whisper-1') throw new InvalidArgumentException('Only waived transcription outcomes are accepted.');
+            }
+            $this->tenantId = $d->scope->tenantId;
+            return;
+        }
+        if (in_array($d->operation, ['deliver', 'recoverOne', 'discoverUnsealed'], true)) {
             self::id($d->tenantId);
             foreach ([$d->leaseMs, $d->retryMs] as $ms) {
                 if (!is_int($ms) || $ms < 1000 || $ms > 3600000) throw new InvalidArgumentException('Explicit bounded retry timings required.');
@@ -36,8 +56,18 @@ final readonly class DispatchInput
             $this->tenantId = $d->tenantId;
             return;
         }
-        if (in_array($d->operation, ['load', 'seal', 'recover'], true)) {
+        if (in_array($d->operation, ['load', 'seal', 'recover', 'sealTerminal'], true)) {
             self::scope($d->scope);
+            if ($d->operation === 'sealTerminal') {
+                self::fields($d->evidence, ['source', 'workflowRunId', 'hatchetTenantId', 'status', 'finishedAt', 'observedAt']);
+                $e = $d->evidence;
+                if ($e->source !== 'hatchet-runs-get-v1' || $e->workflowRunId !== $d->scope->workflowRunId ||
+                    !is_string($e->hatchetTenantId) || !preg_match('/^[a-f0-9-]{36}$/D', $e->hatchetTenantId) ||
+                    !in_array($e->status, ['COMPLETED', 'FAILED', 'CANCELLED'], true) || !is_string($e->finishedAt) ||
+                    !is_string($e->observedAt)) throw new InvalidArgumentException('Authoritative terminal workflow evidence required.');
+                GrantInput::timestamp($e->finishedAt); GrantInput::timestamp($e->observedAt);
+                if ($e->finishedAt > $e->observedAt) throw new InvalidArgumentException('Terminal observation precedes completion.');
+            }
             if ($d->operation === 'load') self::key($d->requestKey);
             $this->tenantId = $d->scope->tenantId;
             return;
