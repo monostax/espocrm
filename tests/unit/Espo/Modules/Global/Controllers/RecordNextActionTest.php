@@ -42,6 +42,8 @@ class RecordNextActionTest extends TestCase
     private array $updated = [];
     private bool $failSave = false;
     private bool $regular = true;
+    private bool $advanceParentVersion = false;
+    private bool $replaceParentSelection = false;
 
     private function entity(string $type, array $values): Entity
     {
@@ -50,6 +52,7 @@ class RecordNextActionTest extends TestCase
             'parentType', 'parentId', 'assignedUserId', 'dateEndDate',
         ], ['type' => 'varchar']);
         $attributes['teamsIds'] = ['type' => 'jsonArray'];
+        $attributes['versionNumber'] = ['type' => 'int'];
         $entity = new Entity($type, ['attributes' => $attributes]);
         $entity->set($values);
         $entity->setAsNotNew();
@@ -60,12 +63,13 @@ class RecordNextActionTest extends TestCase
     private function controller(string $type = 'Initiative'): RecordNextAction
     {
         $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->exec('CREATE TABLE record (id TEXT, next_action_id TEXT, next_action_type TEXT)');
+        $this->pdo->exec('CREATE TABLE record (id TEXT, next_action_id TEXT, next_action_type TEXT, version_number INTEGER)');
         $this->pdo->exec('CREATE TABLE activity (id TEXT, status TEXT)');
-        $this->pdo->exec("INSERT INTO record VALUES ('record-id', NULL, NULL)");
+        $this->pdo->exec("INSERT INTO record VALUES ('record-id', NULL, NULL, 1)");
         $this->record = $this->entity($type, [
             'id' => 'record-id', 'status' => $type === 'Opportunity' ? 'Open' : 'To Do',
             'assignedUserId' => 'owner-id', 'teamsIds' => ['opportunity-team'], 'initiativeTypeId' => 'type-id',
+            'versionNumber' => 1,
         ]);
         $this->initiativeType = $this->entity('InitiativeType', ['id' => 'type-id', 'teamsIds' => ['live-type-team']]);
         $em = $this->createMock(EntityManager::class);
@@ -82,6 +86,15 @@ class RecordNextActionTest extends TestCase
                     $this->assertTrue($this->pdo->inTransaction());
                     if ($entityType === $type) {
                         $this->assertSame(['id' => 'record-id'], $where);
+                        // Each read has its own fetched version, just like the ORM.
+                        $this->record = clone $this->record;
+                        $row = $this->pdo->query('SELECT * FROM record')->fetch(PDO::FETCH_ASSOC);
+                        $this->record->set([
+                            'versionNumber' => (int) $row['version_number'],
+                            'nextActionId' => $row['next_action_id'],
+                            'nextActionType' => $row['next_action_type'],
+                        ]);
+                        $this->record->updateFetchedValues();
                         return $this->record;
                     }
                     // Query predicates, not just the activity ID, enforce the parent boundary.
@@ -102,8 +115,11 @@ class RecordNextActionTest extends TestCase
         });
         $em->method('saveEntity')->willReturnCallback(function (Entity $entity): void {
             $this->assertTrue($this->pdo->inTransaction());
-            $this->pdo->prepare('UPDATE record SET next_action_id = ?, next_action_type = ? WHERE id = ?')
-                ->execute([$entity->get('nextActionId'), $entity->get('nextActionType'), $entity->getId()]);
+            $statement = $this->pdo->prepare('UPDATE record SET next_action_id = ?, next_action_type = ?, version_number = version_number + 1 WHERE id = ? AND version_number = ?');
+            $statement->execute([$entity->get('nextActionId'), $entity->get('nextActionType'), $entity->getId(), $entity->getFetched('versionNumber')]);
+            if ($statement->rowCount() !== 1) {
+                throw new Conflict('Stale parent version.');
+            }
             if ($this->failSave) {
                 throw new RuntimeException('Record save failed.');
             }
@@ -128,6 +144,7 @@ class RecordNextActionTest extends TestCase
                 $this->assertTrue($this->pdo->inTransaction());
                 $this->created[] = (array) $data;
                 $activity = $this->addActivity($activityType, ['id' => 'created-id'] + (array) $data);
+                $this->runActivityHook();
                 return new CreateResult($activity);
             });
             $service->method('update')->willReturnCallback(function (string $id, object $data) use ($activityType) {
@@ -138,6 +155,7 @@ class RecordNextActionTest extends TestCase
                 }
                 $activity = $this->activities[$activityType . ':' . $id];
                 $activity->set($data);
+                $this->runActivityHook();
                 return new UpdateResult($activity);
             });
             return $service;
@@ -152,6 +170,16 @@ class RecordNextActionTest extends TestCase
         });
         $class = $type === 'Opportunity' ? OpportunityNextAction::class : InitiativeNextAction::class;
         return new $class($em, $acl, $user, $services, $metadata);
+    }
+
+    private function runActivityHook(): void
+    {
+        if ($this->advanceParentVersion) {
+            $this->pdo->exec('UPDATE record SET version_number = version_number + 1');
+        }
+        if ($this->replaceParentSelection) {
+            $this->pdo->exec("UPDATE record SET next_action_id = 'replacement-id', next_action_type = 'Task'");
+        }
     }
 
     private function addActivity(string $type, array $values = []): Entity
@@ -264,6 +292,57 @@ class RecordNextActionTest extends TestCase
         }
         $this->assertSame(0, (int) $this->pdo->query('SELECT COUNT(*) FROM activity')->fetchColumn());
         $this->assertNull($this->pdo->query('SELECT next_action_id FROM record')->fetchColumn());
+    }
+
+    public static function activityHookOperations(): array
+    {
+        $cases = [];
+        foreach (['Opportunity', 'Initiative'] as $type) {
+            foreach (['create', 'link', 'complete'] as $operation) {
+                $cases["$type:$operation"] = [$type, $operation];
+            }
+        }
+        return $cases;
+    }
+
+    #[DataProvider('activityHookOperations')]
+    public function testActivityHooksCanAdvanceTheLockedParentVersion(string $type, string $operation): void
+    {
+        $controller = $this->controller($type);
+        $this->advanceParentVersion = true;
+        if ($operation === 'create') {
+            $result = $controller->postActionSelect($this->request(['createTask' => true, 'name' => 'Collect documents']));
+            $this->assertSame('created-id', $result->nextActionId);
+        } elseif ($operation === 'link') {
+            $this->addActivity('Task', ['parentId' => null, 'parentType' => null]);
+            $result = $controller->postActionSelect($this->request(['activityId' => 'activity-id', 'activityType' => 'Task']));
+            $this->assertSame('activity-id', $result->nextActionId);
+            $this->assertSame('record-id', $this->activities['Task:activity-id']->get('parentId'));
+        } else {
+            $this->addActivity('Task');
+            $this->selectActivity('Task');
+            $result = $controller->postActionComplete($this->request());
+            $this->assertNull($result->nextActionId);
+            $this->assertSame('Completed', $this->pdo->query('SELECT status FROM activity')->fetchColumn());
+        }
+        $this->assertSame(3, (int) $this->pdo->query('SELECT version_number FROM record')->fetchColumn());
+        $this->assertFalse($this->pdo->inTransaction());
+    }
+
+    public function testReloadDoesNotOverwriteASelectionChangedByAnActivityHook(): void
+    {
+        $controller = $this->controller('Opportunity');
+        $this->advanceParentVersion = true;
+        $this->replaceParentSelection = true;
+        try {
+            $controller->postActionSelect($this->request(['createTask' => true, 'name' => 'Collect documents']));
+            $this->fail('Expected the changed selection to conflict.');
+        } catch (Conflict $e) {
+            $this->assertSame('The next action has changed. Refresh and try again.', $e->getMessage());
+        }
+        $this->assertSame(0, (int) $this->pdo->query('SELECT COUNT(*) FROM activity')->fetchColumn());
+        $this->assertNull($this->pdo->query('SELECT next_action_id FROM record')->fetchColumn());
+        $this->assertSame(1, (int) $this->pdo->query('SELECT version_number FROM record')->fetchColumn());
     }
 
     public static function staleOperations(): array

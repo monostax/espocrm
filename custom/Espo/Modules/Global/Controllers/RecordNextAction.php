@@ -78,7 +78,7 @@ abstract class RecordNextAction
                 $activity = null;
             }
 
-            return $this->saveSelection($record, $activity);
+            return $this->saveSelection($request, $activity);
         });
     }
 
@@ -102,7 +102,7 @@ abstract class RecordNextAction
             $this->records->get($type)->update($activity->getId(), (object) ['status' => $status]);
 
             // Completion and clearing the reference either both succeed or both roll back.
-            return $this->saveSelection($record, null);
+            return $this->saveSelection($request, null);
         });
     }
 
@@ -164,8 +164,13 @@ abstract class RecordNextAction
         }
     }
 
-    private function saveSelection(Entity $record, ?Entity $activity): object
+    private function saveSelection(Request $request, ?Entity $activity): object
     {
+        // Activity hooks can update the parent's stream timestamp and advance its
+        // version in this same transaction. Reload under the lock we still hold
+        // instead of saving the pre-hook entity with a stale version baseline.
+        $record = $this->record($request);
+        $this->checkExpected($record, $request->getParsedBody());
         $record->set('nextActionId', $activity?->getId());
         $record->set('nextActionType', $activity?->getEntityType());
         $this->entityManager->saveEntity($record);
