@@ -26,8 +26,12 @@ final class WalletDebt
 
     public static function forTypes(PDO $pdo, string $tenant, string $debit, string $recovery): Amount
     {
-        $q = $pdo->prepare('SELECT COALESCE(SUM(credits), 0) FROM credit_transaction WHERE tenant_id = ? AND type IN (?, ?)');
-        $q->execute([$tenant, $debit, $recovery]);
+        $types = [$debit, $recovery];
+        if ($debit === NativeSearchDebt::DEBIT && $recovery === NativeSearchDebt::RECOVERY) {
+            $types = [...$types, NativeDebtReversals::TYPE, NativeDebtReversals::REOPEN];
+        }
+        $q = $pdo->prepare('SELECT COALESCE(SUM(credits), 0) FROM credit_transaction WHERE tenant_id = ? AND type IN (' . implode(',', array_fill(0, count($types), '?')) . ')');
+        $q->execute([$tenant, ...$types]);
         $debt = Amount::fromString('0')->minus(Amount::fromString((string) $q->fetchColumn()));
         if ($debt->compareTo(Amount::fromString('0')) < 0) throw new Conflict('Ledger debt is over-repaid.');
         return $debt;

@@ -2,7 +2,7 @@
     "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
     "fields": {
         "tenant": {"type": "link", "required": true, "notNull": true},
-        "type": {"type": "enum", "options": ["grant", "debit", "expiration", "reversal", "nativeSearchOverrun", "searchDebtPayment", "searchDebtRecovery", "purchaseReversal", "billingDebt", "billingDebtPayment", "billingDebtRecovery"], "notNull": true},
+        "type": {"type": "enum", "options": ["grant", "debit", "expiration", "reversal", "nativeSearchOverrun", "searchDebtPayment", "searchDebtRecovery", "purchaseReversal", "billingDebt", "billingDebtPayment", "billingDebtRecovery", "searchDebtReversal", "searchDebtReopen", "searchDebtRestore"], "notNull": true},
         "idempotencyKey": {"type": "varchar", "maxLength": 128, "notNull": true},
         "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true},
         "credits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},

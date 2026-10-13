@@ -43,6 +43,23 @@ final class DebtRepaymentOrigins
             $origins[$id]['remaining'] = $origins[$id]['remaining']->minus($amount);
             if ($origins[$id]['remaining']->compareTo(Amount::fromString('0')) < 0) throw new Conflict('Original debt is over-repaid.');
         }
+        if ($debit === NativeSearchDebt::DEBIT) {
+            $q = $pdo->prepare('SELECT * FROM credit_transaction WHERE tenant_id=? AND type IN (?,?)');
+            $q->execute([$tenant, NativeDebtReversals::TYPE, NativeDebtReversals::REOPEN]);
+            $corrections = [];
+            foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $id = $row['debt_transaction_id'];
+                if (!isset($origins[$id]) || !NativeDebtReversals::validPosting($row) ||
+                    ($row['type'] === NativeDebtReversals::TYPE && !NativeDebtReversals::validGroup($pdo, $row))) throw new Conflict('Invalid original debt correction.');
+                $effect = Amount::fromString($row['credits']);
+                $corrections[$id] = ($corrections[$id] ?? Amount::fromString('0'))->plus($effect);
+            }
+            foreach ($corrections as $id => $effect) {
+                if ($effect->compareTo(Amount::fromString('0')) < 0) throw new Conflict('Debt correction reopens uncorrected debt.');
+                $origins[$id]['remaining'] = $origins[$id]['remaining']->minus($effect);
+                if ($origins[$id]['remaining']->compareTo(Amount::fromString('0')) < 0) throw new Conflict('Original debt is over-corrected.');
+            }
+        }
         // Preserve the established pooled repayment contract for this tenant/category. Incomplete
         // historical provenance must not block ordinary funding or invent a correction entitlement.
         if ($legacy) return null;

@@ -6,7 +6,7 @@ namespace Espo\Modules\FeatureCredits\Accounting;
 
 use InvalidArgumentException;
 
-/** Privileged correction of a posted grant-backed debit, never a replacement grant. */
+/** Privileged correction of a posted usage debit or native overrun, never a replacement grant. */
 final readonly class ReversalInput
 {
     public string $credits;

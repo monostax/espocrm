@@ -15,16 +15,18 @@ final class Reversals
     public function reverse(ReversalInput $input): array
     {
         return $this->walletLock->run($input->tenantId, function (PDO $pdo, array $wallet, string $now) use ($input): array {
-            $q = $pdo->prepare("SELECT * FROM credit_transaction WHERE tenant_id = ? AND type = 'reversal' AND idempotency_key = ?");
+            $q = $pdo->prepare("SELECT * FROM credit_transaction WHERE tenant_id = ? AND type IN ('reversal','searchDebtReversal') AND idempotency_key = ?");
             $q->execute([$input->tenantId, $input->idempotencyKey]);
             if ($prior = $q->fetch(PDO::FETCH_ASSOC)) {
                 if ($prior['deleted'] || $prior['input_hash'] !== $input->hash) throw new Conflict('Conflicting reversal replay.');
+                if ($prior['type'] === NativeDebtReversals::TYPE) return NativeDebtReversals::receipt($pdo, $prior);
                 return json_decode($prior['evidence'], true, 512, JSON_THROW_ON_ERROR)['receipt'];
             }
             $q = $pdo->prepare('SELECT * FROM credit_transaction WHERE id = ? AND tenant_id = ?');
             $q->execute([$input->transactionId, $input->tenantId]);
             $debit = $q->fetch(PDO::FETCH_ASSOC);
             if (!$debit || $debit['deleted']) throw new NotFound('Unknown original credit transaction.');
+            if ($debit['type'] === NativeSearchDebt::DEBIT) return NativeDebtReversals::reverseLocked($pdo, $wallet, $now, $debit, $input, $this->funding);
             if ($debit['type'] !== 'debit' || Amount::fromString($debit['credits'])->compareTo(Amount::fromString('0')) >= 0) {
                 throw new Conflict('Only posted grant-backed usage debits can be reversed.');
             }

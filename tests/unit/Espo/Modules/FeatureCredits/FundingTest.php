@@ -48,6 +48,7 @@ require_once __DIR__ . '/ConversationCallerCases.php';
 require_once __DIR__ . '/ConfigurationCases.php';
 require_once __DIR__ . '/NativeSearchDebtCases.php';
 require_once __DIR__ . '/DebtRepaymentOriginCases.php';
+require_once __DIR__ . '/NativeDebtReversalCases.php';
 require_once __DIR__ . '/WaivedTranscriptionCases.php';
 require_once __DIR__ . '/ExpirationSweepCases.php';
 require_once __DIR__ . '/BillingPaymentAccountingCases.php';
@@ -72,6 +73,7 @@ class FundingTest extends TestCase
     use ConfigurationCases;
     use NativeSearchDebtCases;
     use DebtRepaymentOriginCases;
+    use NativeDebtReversalCases;
     use WaivedTranscriptionCases;
     use ExpirationSweepCases;
     use BillingPaymentAccountingCases;

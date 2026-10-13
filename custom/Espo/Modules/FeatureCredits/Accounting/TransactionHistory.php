@@ -57,6 +57,7 @@ final class TransactionHistory
             foreach ($rows as $index => $row) {
                 if ($row['deleted'] || !in_array($row['type'], ['grant', 'debit', 'expiration', 'reversal',
                     NativeSearchDebt::DEBIT, NativeSearchDebt::PAYMENT, NativeSearchDebt::RECOVERY,
+                    NativeDebtReversals::TYPE, NativeDebtReversals::REOPEN, NativeDebtReversals::RESTORE,
                     PurchaseReversals::TYPE, WalletDebt::BILLING, WalletDebt::PAYMENT, WalletDebt::RECOVERY], true)) {
                     throw new LogicException('Invalid posted transaction history.');
                 }

@@ -25,11 +25,7 @@ final class NativeSearchDebt
 
     public static function outstanding(PDO $pdo, string $tenantId): Amount
     {
-        $q = $pdo->prepare('SELECT COALESCE(SUM(credits), 0) FROM credit_transaction WHERE tenant_id = ? AND type IN (?, ?)');
-        $q->execute([$tenantId, self::DEBIT, self::RECOVERY]);
-        $debt = Amount::fromString('0')->minus(Amount::fromString((string) $q->fetchColumn()));
-        if ($debt->compareTo(Amount::fromString('0')) < 0) throw new Conflict('Native search debt is over-repaid.');
-        return $debt;
+        return WalletDebt::forTypes($pdo, $tenantId, self::DEBIT, self::RECOVERY);
     }
 
     public static function assertWallet(PDO $pdo, string $tenantId, string $balance, string $held): void
