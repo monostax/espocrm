@@ -155,6 +155,16 @@
                 "Lost": "danger"
             }
         },
+        "hasAccessibleWhatsappConversation": {
+            "type": "bool",
+            "readOnly": true,
+            "notStorable": true,
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "exportDisabled": true,
+            "importDisabled": true
+        },
         "followupStatus": {
             "type": "enum",
             "options": [

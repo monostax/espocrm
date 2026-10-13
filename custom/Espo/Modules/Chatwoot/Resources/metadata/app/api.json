@@ -1,0 +1,8 @@
+{
+    "controllerMiddlewareClassNameListMap": {
+        "Opportunity": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup"],
+        "ChatwootConversation": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup"],
+        "Contact": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup"],
+        "Account": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup"]
+    }
+}
