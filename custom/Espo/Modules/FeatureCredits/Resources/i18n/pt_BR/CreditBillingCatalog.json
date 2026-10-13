@@ -1,0 +1,22 @@
+{
+    "labels": {
+        "title": "Catálogo comercial de créditos",
+        "intro": "Publique ofertas futuras de pacotes e planos mensais. Os termos já aceitos permanecem inalterados. A publicação não ativa provedores de pagamento nem vendas.",
+        "forbidden": "É necessário ser administrador da instância.",
+        "sessionExpired": "Sua sessão expirou. Entre novamente para recuperar a publicação original.",
+        "unavailable": "Catálogo indisponível ou armazenamento de recuperação inacessível. Uma publicação pendente deve ser recuperada com os termos originais.",
+        "rejected": "Publicação rejeitada. Confira versões, referências de produtos e início futuro em UTC. Uma resposta anterior incerta mantém o comando original.",
+        "loading": "Carregando…", "reload": "Carregar catálogo atual / recuperar publicação pendente",
+        "current": "Catálogo atual", "published": "Publicado", "pending": "Resposta da publicação incerta. Repita o comando original; nenhuma publicação é automática.",
+        "review": "Revisar catálogo completo", "publish": "Confirmar e publicar estes termos", "edit": "Editar rascunho",
+        "completeCatalog": "Substitui toda a seleção de novas vendas no início de vigência. Ofertas omitidas saem de venda. Um catálogo vazio retira todas as ofertas; assinaturas existentes são preservadas.",
+        "versionsHelp": "Mantenha versões de produtos/ofertas inalterados. Mudanças de nomes, créditos, preços ou mercados exigem novas versões. Use a operação purchase ou subscription; as quantidades de créditos permanecem exatas no editor.",
+        "offerHelp": "Referencie ID e versão de um produto incluído. Países: códigos de duas letras separados por vírgula. Moeda: BRL ou USD. Intervalo: month para assinaturas, vazio para pacotes sem validade. A disponibilidade do provedor é verificada separadamente no checkout.",
+        "version": "Versão da publicação / oferta", "effectiveFrom": "Início de vigência (UTC)",
+        "products": "Planos e pacotes compartilhados", "product": "Produto", "offers": "Ofertas por mercado", "offer": "Oferta",
+        "productId": "ID do produto", "productVersion": "Versão do produto", "name": "Nome", "operation": "Operação (purchase / subscription)",
+        "credits": "Créditos", "offerId": "ID da oferta", "countries": "Países", "currency": "Moeda", "price": "Preço exato", "interval": "Intervalo (month / vazio)",
+        "month": "Mensal; créditos expiram ao fim do período", "nonExpiring": "Avulso; créditos não expiram",
+        "remove": "Remover", "addProduct": "Adicionar produto", "addOffer": "Adicionar oferta"
+    }
+}

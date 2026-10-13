@@ -95,6 +95,13 @@ class Projection
         $result['actions'] = Dataset::actions($safeActions);
         $result['day'] = $row['day'];
         $result['billingStatus'] = Ledger::exemption($row) ?? Ledger::billingStatus($group);
+        $result['billingRegime'] = $row['billingRegime'] ?? 'legacy-engagement-v1';
+        $result['creditBilling'] = $row['creditBilling'] ?? null;
+        if ($result['billingRegime'] === 'unified-prepaid-v1') {
+            $result['billingStatus'] = $result['creditBilling']['state'] === 'pending' ? 'creditPending' : 'creditSettled';
+        } elseif ($result['billingRegime'] === 'unattributed') {
+            $result['billingStatus'] = 'unavailable';
+        }
         if ($this->canViewAnalytics()) {
             $result['analytics'] = Analytics::summarize([$result]);
         }

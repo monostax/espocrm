@@ -29,6 +29,13 @@ class CandidateApplicationTest extends TestCase
     private string $account;
     private const NOW = '2026-10-13 00:00:00';
 
+    private function dropCheck(PDO $pdo,string $table,string $name): void
+    {
+        $mysql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' &&
+            !str_contains($pdo->getAttribute(PDO::ATTR_SERVER_VERSION),'MariaDB');
+        $pdo->exec('ALTER TABLE ' . $table . ' DROP ' . ($mysql ? 'CHECK' : 'CONSTRAINT') . ' ' . $name);
+    }
+
     public static function setUpBeforeClass(): void
     {
         if (!getenv('TEST_DATABASE_NAME')) self::markTestSkipped('Requires an empty disposable CRM application database.');
@@ -165,6 +172,26 @@ class CandidateApplicationTest extends TestCase
         $this->assertSame($receipt,$service->apply($input));
         $review = $this->service(\Espo\Modules\FeatureCredits\Enrichment\PurchasedReview::class)->read($this->tenant,$purchase['id']);
         $this->assertSame('Sócio-Administrador',$review['values']->role);
+        $this->assertTrue($review['application']['creationForm']['available']);
+        $this->assertContains('lastName',array_column($review['application']['creationForm']['fields'],'name'));
+    }
+
+    public function testReviewedCreationFormOffersTenantTeamAndCreatesThroughNormalRecords(): void
+    {
+        $tenant = $this->em->getEntityById('Tenant',$this->tenant);
+        $tenant->set('baseUserTeamId',$this->team); $this->em->saveEntity($tenant);
+        $purchase = $this->purchased();
+        $review = $this->service(\Espo\Modules\FeatureCredits\Enrichment\PurchasedReview::class)->read($this->tenant,$purchase['id']);
+        $form = $review['application']['creationForm'];
+        $this->assertTrue($form['available']);
+        $this->assertContains($this->team,array_column($form['teams'],'id'));
+        $receipt = $this->service(CandidateApplication::class)->apply(new ApplicationInput((object) [
+            'tenantId' => $this->tenant,'purchaseId' => $purchase['id'],'createIfUnmatched' => true,
+            'contactData' => (object) ['lastName' => 'Reviewed human choice','teamsIds' => [$this->team]],
+        ]));
+        $contact = $this->em->getEntityById('Contact',$receipt['contactId']);
+        $this->assertSame('Reviewed human choice',$contact->get('lastName'));
+        $this->assertSame($this->tenant,$contact->get('tenantId'));
     }
 
     public function testExplicitRegistrantApplicationAndReplayNeverOverwriteLaterManualCnpj(): void
@@ -192,7 +219,7 @@ class CandidateApplicationTest extends TestCase
         $pdo->exec("ALTER TABLE enrichment_attempt ADD CONSTRAINT injected_field_application CHECK (id<>'" . $purchase['id'] . "' OR application_receipt IS NULL)");
         try { $service->apply($input); $this->fail('Field receipt failure ignored.'); }
         catch (PDOException $e) { $this->assertStringContainsString('injected_field_application',$e->getMessage()); }
-        finally { $pdo->exec('ALTER TABLE enrichment_attempt DROP ' . (getenv('TEST_DATABASE_PLATFORM') === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_field_application'); }
+        finally { $this->dropCheck($pdo,'enrichment_attempt','injected_field_application'); }
         $this->assertSame('Company',$this->em->getEntityById('Account',$this->account)->get('name'));
         $this->assertNull($this->em->getEntityById('Account',$this->account)->get('description'));
         $invalid = clone $input; $invalid->fields = (object) ['name' => 'Not purchased']; $invalid->expected = (object) ['name' => 'Company'];
@@ -245,9 +272,13 @@ class CandidateApplicationTest extends TestCase
             'fields' => (object) ['description' => 'Purchased description'],'expected' => (object) ['description' => null]];
         $erase = ['source' => 'erase','type' => 'Account','id' => $this->account,'fields' => ['description']];
         $results = $this->applicationRace([$apply,$erase]);
-        if (($results[1]['error'] ?? null) === Conflict::class) {
-            // Existing CRM optimistic concurrency rejects stale erasure; its purchase cleanup must roll back too.
-            $this->assertSame('Record changed or removed. Read the latest version before saving.',$results[1]['message']);
+        $staleMariaRead = ($results[1]['error'] ?? null) === PDOException::class &&
+            str_contains($this->em->getPDO()->getAttribute(PDO::ATTR_SERVER_VERSION),'MariaDB') &&
+            str_contains($results[1]['message'] ?? '',"General error: 1020 Record has changed since last read in table 'enrichment_attempt'");
+        if (($results[1]['error'] ?? null) === Conflict::class || $staleMariaRead) {
+            // Espo optimistic concurrency or MariaDB's stale-row rejection aborts the erasure.
+            // Verify cleanup rolled back, then retry erasure from a fresh read; never accept partial erasure.
+            if (!$staleMariaRead) $this->assertSame('Record changed or removed. Read the latest version before saving.',$results[1]['message']);
             $this->assertFalse($this->service(\Espo\Modules\FeatureCredits\Enrichment\FieldReview::class)->read($this->tenant,$purchase['id'])['erased']);
             $this->service(\Espo\Tools\DataPrivacy\Erasor::class)->erase('Account',$this->account,['description']);
         } else {
@@ -308,7 +339,7 @@ class CandidateApplicationTest extends TestCase
         $pdo->exec("ALTER TABLE enrichment_purchase ADD CONSTRAINT injected_application CHECK (id<>'" . $purchase['id'] . "' OR application_receipt IS NULL)");
         try { $this->service(CandidateApplication::class)->apply($input); $this->fail('Receipt write failure ignored.'); }
         catch (PDOException $e) { $this->assertStringContainsString('injected_application',$e->getMessage()); }
-        finally { $pdo->exec('ALTER TABLE enrichment_purchase DROP ' . (getenv('TEST_DATABASE_PLATFORM') === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_application'); }
+        finally { $this->dropCheck($pdo,'enrichment_purchase','injected_application'); }
         $this->assertSame(0,$this->countRecords('contact')); $this->assertSame(0,$this->countRecords('record_relation'));
         $result = $this->service(CandidateApplication::class)->apply($input);
         $this->assertSame($result,$this->service(CandidateApplication::class)->apply($input));
@@ -379,7 +410,7 @@ class CandidateApplicationTest extends TestCase
         $pdo->exec("ALTER TABLE contact ADD CONSTRAINT injected_erasure CHECK (id<>'" . $result['contactId'] . "' OR cpf IS NOT NULL)");
         try { $this->service(\Espo\Tools\DataPrivacy\Erasor::class)->erase('Contact',$result['contactId'],['cpf']); $this->fail('Erasure failure ignored.'); }
         catch (PDOException $e) { $this->assertStringContainsString('injected_erasure',$e->getMessage()); }
-        finally { $pdo->exec('ALTER TABLE contact DROP ' . (getenv('TEST_DATABASE_PLATFORM') === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_erasure'); }
+        finally { $this->dropCheck($pdo,'contact','injected_erasure'); }
         $this->assertSame('52998224725',$this->em->getEntityById('Contact',$result['contactId'])->get('cpf'));
         $read = $this->service(\Espo\Modules\FeatureCredits\Enrichment\PurchasedReview::class)->read($this->tenant,$purchase['id']);
         $this->assertFalse($read['erased']); $this->assertSame('52998224725',$read['values']->cpf);

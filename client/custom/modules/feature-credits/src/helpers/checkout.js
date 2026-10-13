@@ -18,6 +18,7 @@ export class CheckoutJournal {
     validate(value) {
         const fields = {
             country: ['tenantId', 'requestKey', 'revision', 'billingCountry'],
+            override: ['tenantId', 'requestKey', 'revision', 'providerOverride'],
             accept: ['tenantId', 'requestKey', 'revision', 'catalogId', 'offerId', 'termsId'],
             charge: ['tenantId', 'obligationId', 'customerCreationId', 'billingType', 'dueDate'],
             cancel: ['tenantId', 'requestKey', 'obligationId'],
@@ -25,7 +26,8 @@ export class CheckoutJournal {
         const keys = fields[value?.action];
         if (!keys || Object.keys(value).sort().join() !== 'action,body' || !value.body ||
             Object.keys(value.body).sort().join() !== [...keys].sort().join() || value.body.tenantId !== this.tenantId ||
-            keys.some(key => key === 'revision' ? !Number.isSafeInteger(value.body[key]) || value.body[key] < 0 : typeof value.body[key] !== 'string')) {
+            keys.some(key => key === 'revision' ? !Number.isSafeInteger(value.body[key]) || value.body[key] < 0 :
+                key === 'providerOverride' ? ![null, 'asaas', 'stripe'].includes(value.body[key]) : typeof value.body[key] !== 'string')) {
             throw new Error('Invalid checkout command.');
         }
     }

@@ -14,13 +14,14 @@ const resources = 'custom/Espo/Modules/FeatureAiUsage/Resources/';
 const en = JSON.parse(read(resources + 'i18n/en_US/AiUsage.json')).labels;
 const pt = JSON.parse(read(resources + 'i18n/pt_BR/AiUsage.json')).labels;
 
-function load(file, imports = {}) {
+function load(file, imports = {}, globals = {}) {
     const exports = {};
     const {outputText} = ts.transpileModule(read(file), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS}});
-    vm.runInNewContext(outputText, {exports, require: key => imports[key], Intl, Date, console}, {filename: file});
+    vm.runInNewContext(outputText, {exports, require: key => imports[key], Intl, Date, console, URLSearchParams, ...globals}, {filename: file});
     return exports;
 }
-const {allowance, present, presentMetrics} = load(client + 'src/helpers/presentation.js');
+const creditPresentation = load('client/custom/modules/feature-credits/src/helpers/presentation.js');
+const {allowance, present, presentMetrics} = load(client + 'src/helpers/presentation.js', {'feature-credits:helpers/presentation': creditPresentation});
 const Format = load(client + 'src/helpers/format.js').default;
 const f = new Format('en_US');
 const t = key => en[key] || key;
@@ -243,12 +244,69 @@ test('analytics navigation preserves filters and daily drill-down opens activity
     assert.equal(loads, 2);
 });
 
+test('historical financial reads discard switched, cleared, foreign and denied tenant responses', async () => {
+    const pending = [];
+    const Page = load(client + 'src/views/page.js', {'views/main': class {}}, {
+        Espo: {Ajax: {getRequest: (url, params) => new Promise((resolve, reject) => pending.push({params, resolve, reject}))}},
+    }).default;
+    const page = new Page();
+    Object.assign(page, {state: {...state, tenantId: 'a'}, context: {}, requestVersion: 0,
+        reRender: async () => {}, t: key => key, getRouter: () => ({navigate() {}})});
+    const first = page.load(false);
+    page.state.tenantId = 'b';
+    const second = page.load(false);
+    pending[1].resolve({tenantId: 'b', credits: {netCredits: '2.0000'}});
+    await second;
+    pending[0].resolve({tenantId: 'a', credits: {netCredits: '99.0000'}});
+    await first;
+    assert.equal(page.payload.tenantId, 'b');
+    const third = page.load(false);
+    page.state.tenantId = '';
+    await page.load(false);
+    pending[2].resolve({tenantId: 'b'});
+    await third;
+    assert.equal(page.payload, null);
+    page.state.tenantId = 'b';
+    const foreign = page.load(false);
+    pending[3].resolve({tenantId: 'a'});
+    await foreign;
+    assert.equal(page.payload, null);
+    assert.equal(page.error, 'loadError');
+    const denied = page.load(false);
+    pending[4].reject({status: 403});
+    await denied;
+    assert.equal(page.payload, null);
+    assert.equal(page.error, 'forbidden');
+});
+
+test('explicit foreign tenant does not fall back and stale source details never open', async () => {
+    const Page = load(client + 'src/views/page.js', {'views/main': class {}}, {
+        Espo: {Ajax: {getRequest: async () => ({tenants: [{id: 'own'}], currentMonth: '2026-10'})}},
+    }).default;
+    const page = new Page();
+    Object.assign(page, {state: {tenantId: 'foreign'}, t: key => key, load: () => assert.fail('Unauthorized load')});
+    await page.bootstrap();
+    assert.equal(page.state.tenantId, 'foreign');
+    assert.equal(page.error, 'forbidden');
+    page.payload = {period: {timeZone: 'UTC'}};
+    page.requestVersion = 1;
+    let finish;
+    page.createView = () => new Promise(resolve => {finish = resolve;});
+    const opening = page.openDetail('run');
+    page.requestVersion++;
+    let removed = false;
+    finish({render: () => assert.fail('Stale detail opened'), remove: () => {removed = true;}});
+    await opening;
+    assert.equal(removed, true);
+});
+
 test('the production transpiler emits loadable AMD for every usage module', () => {
     const dir = mkdtempSync('/tmp/opencode/ai-usage-amd-');
     try {
         new Transpiler({path: path.resolve(root, client), destDir: dir}).process();
         const definitions = new Map();
         const modules = new Map([['views/main', class {}], ['views/modal', class {}], ['controller', class {}], ['ui/datepicker', class {}]]);
+        modules.set('feature-credits:helpers/presentation', creditPresentation);
         for (const file of readdirSync(dir, {recursive: true}).filter(file => file.endsWith('.js'))) {
             vm.runInNewContext(readFileSync(path.join(dir, file), 'utf8'), {
                 Intl, Date, define(id, deps, factory) {definitions.set('feature-ai-usage:' + id, {deps, factory});},
@@ -271,5 +329,30 @@ test('the production transpiler emits loadable AMD for every usage module', () =
         assert.equal(typeof resolve('feature-ai-usage:helpers/index').present, 'function');
     } finally {
         rmSync(dir, {recursive: true, force: true});
+    }
+});
+
+test('unified ledger amounts retain precision and pending differs from zero in EN/PT', () => {
+    for (const labels of [en, pt]) {
+        const payload = fixture();
+        payload.credits = {chargedCredits: '9999999999.9950', reversedCredits: '0.0001', netCredits: '-0.0050'};
+        payload.activity = {total: 3, list: [
+            {id: 'a', actions: [], billingStatus: 'creditSettled', creditBilling: {settledCredits: '0.0002'}},
+            {id: 'b', actions: [], billingStatus: 'creditPending', creditBilling: {settledCredits: null}},
+            {id: 'c', actions: [], billingStatus: 'creditSettled', creditBilling: {settledCredits: '0.0000'}},
+        ]};
+        const ui = present(payload, {...state, view: 'activity'}, f, key => labels[key] || key);
+        assert.equal(ui.creditCards[0].value, '10000000000.00');
+        assert.equal(ui.creditCards[1].value, '<0.01');
+        assert.equal(ui.creditCards[2].value, '−0.01');
+        assert.match(ui.activities[0].billingText, /<0.01/);
+        assert.equal(ui.activities[1].billingText, labels.billing_creditPending);
+        assert.match(ui.activities[2].billingText, /0.00/);
+        assert.equal(payload.credits.chargedCredits, '9999999999.9950');
+        handlebars.registerHelper('translate', key => labels[key] || key);
+        const html = handlebars.compile(read(client + 'res/templates/page.tpl'))({...ui, hasData: true});
+        assert.ok(html.includes(labels.postedCreditsExplanation));
+        assert.ok(html.includes(labels.legacyBilling));
+        assert.ok(html.includes('&lt;0.01'));
     }
 });

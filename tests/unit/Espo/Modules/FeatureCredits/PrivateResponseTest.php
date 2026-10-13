@@ -26,8 +26,10 @@ class PrivateResponseTest extends TestCase
     {
         return [['CreditBalance', 'status'], ['CreditHistory', 'list'], ['CreditGrants', 'list'], ['CreditReservations', 'list'],
             ['CreditRequests', 'list'], ['CreditOperations', 'list'], ['CreditOperationSource', 'read'], ['Credits', 'context'],
+            ['CreditWorkspace', 'read'], ['CreditWorkspace', 'conversation'],
             ['CreditExecution', 'execute'], ['CreditDispatch', 'execute'], ['CreditAsaasEvents', 'receive'], ['CreditReversals', 'reverse'],
             ['CreditBillingConfiguration', 'read'], ['CreditBillingConfiguration', 'publish'],
+            ['CreditConfiguration', 'read'], ['CreditConfiguration', 'publish'],
             ['CreditBilling', 'context'], ['CreditBilling', 'obligation'], ['CreditBilling', 'country'],
             ['CreditBilling', 'override'], ['CreditBilling', 'accept'], ['CreditBilling', 'cancel'],
             ['CreditBilling', 'customer'], ['CreditBilling', 'charge'], ['CreditBilling', 'recoverCreation'],
@@ -87,6 +89,7 @@ class PrivateResponseTest extends TestCase
         $factory->method('create')->with(PrivateResponse::class)->willReturn(new PrivateResponse());
         $provider = new MiddlewareProvider($metadata, $factory);
         $routes = [['post', '/CreditAsaasEvents/:integrationId'], ['post', '/CreditReversals']];
+        $routes = [...$routes, ['get', '/CreditConfiguration'], ['post', '/CreditConfiguration']];
         $routes = [...$routes, ['get', '/CreditCheckout/context'], ['get', '/CreditCheckout'], ['post', '/CreditCheckout/payment']];
         foreach (['context', 'obligation'] as $action) $routes[] = ['get', '/CreditBilling/' . $action];
         foreach (['country', 'override', 'accept', 'cancel', 'customer', 'charge', 'recoverCreation'] as $action) $routes[] = ['post', '/CreditBilling/' . $action];

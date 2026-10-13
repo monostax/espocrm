@@ -42,4 +42,25 @@ class CreditConfigurationTest extends TestCase
             catch (BadRequest) { $this->addToAssertionCount(1); }
         }
     }
+
+    public function testNonAdministratorCannotInspectOriginalTerms(): void
+    {
+        $request = $this->createMock(Request::class);
+        $request->expects($this->never())->method('getQueryParam');
+        $response = $this->createMock(Response::class);
+        $response->expects($this->once())->method('setHeader')->with('Cache-Control', 'private, no-store');
+        $this->expectException(Forbidden::class);
+        $this->controller(false)->getActionRead($request, $response);
+    }
+
+    public function testMalformedOriginalLookupsFailBeforeDatabaseWork(): void
+    {
+        foreach ([[], ['kind' => 'other', 'id' => 'id'], ['kind' => 'model', 'id' => ''],
+            ['kind' => 'agreement', 'id' => 'id'], ['kind' => 'model', 'id' => 'bad id']] as $query) {
+            $request = $this->createStub(Request::class);
+            $request->method('getQueryParam')->willReturnCallback(fn ($key) => $query[$key] ?? null);
+            try { $this->controller(true)->getActionRead($request, $this->createStub(Response::class)); $this->fail('Bad lookup accepted.'); }
+            catch (BadRequest) { $this->addToAssertionCount(1); }
+        }
+    }
 }

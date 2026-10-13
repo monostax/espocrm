@@ -28,6 +28,7 @@ class Service
         private Ledger $ledger,
         private Dataset $dataset,
         private Projection $projection,
+        private Credits $credits,
     ) {}
 
     public function context(): array
@@ -55,6 +56,7 @@ class Service
         $result = [
             'tenantId' => $tenantId, 'period' => $period->toArray(), 'view' => $view, 'filters' => (object) $filters,
             'billing' => $this->amounts($ledger['summary']), 'rates' => $ledger['contract']['rates'],
+            'credits' => $ledger['credits'],
             'usage' => $this->dataset->stats($ledger['runs']), 'filteredUsage' => $this->dataset->stats($filtered),
             'generatedAt' => gmdate(DATE_ATOM),
         ];
@@ -76,6 +78,7 @@ class Service
             $result['comparison'] = [
                 'period' => $previous->toArray(), 'usage' => $this->dataset->stats($previousLedger['runs']),
                 'billing' => $this->amounts($previousLedger['summary']),
+                'credits' => $previousLedger['credits'],
             ];
             if ($this->projection->canViewAnalytics()) {
                 $result['analytics']['previous'] = Analytics::summarize($previousLedger['runs']);
@@ -136,7 +139,8 @@ class Service
 
     private function load(string $tenantId, Period $period, array $agreements): array
     {
-        return $this->ledger->build($this->runs($tenantId, $period), $period, $agreements, $tenantId);
+        $report = $this->credits->report($tenantId, $period, iterator_to_array($this->runs($tenantId, $period)));
+        return $this->ledger->build($report['runs'], $period, $agreements, $tenantId) + ['credits' => $report['summary']];
     }
 
     private function runs(string $tenantId, Period $period): \Generator

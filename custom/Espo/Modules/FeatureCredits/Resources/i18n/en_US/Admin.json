@@ -1,0 +1,4 @@
+{
+    "labels": {"Credits & Usage": "Credits & Usage", "Enrichment rates": "Enrichment rates", "Commercial credit catalog": "Commercial credit catalog", "AI credit configuration": "AI credit configuration"},
+    "descriptions": {"enrichmentRates": "Review approved routes and publish immutable future enrichment prices.", "creditBillingCatalog": "Publish versioned plans, packages and market offers with immutable accepted terms.", "creditAiConfiguration": "Publish model policies and original-version tenant agreement replacements."}
+}

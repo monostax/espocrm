@@ -21,6 +21,8 @@
         {{#if showTokenUsage}}<button data-au-view="analytics" class="{{#if analyticsView}}active{{/if}}" aria-current="{{#if analyticsView}}page{{else}}false{{/if}}">{{translate 'analyticsTab' scope='AiUsage'}}</button>{{/if}}
     </nav>
     {{#unless analyticsView}}
+    {{#if creditCards}}<section class="panel panel-default" aria-label="{{translate 'unifiedCredits' scope='AiUsage'}}"><div class="panel-heading"><h3>{{translate 'unifiedCredits' scope='AiUsage'}}</h3></div><div class="panel-body"><p>{{translate 'postedCreditsExplanation' scope='AiUsage'}}</p><dl class="au-metrics-list">{{#each creditCards}}<div><dt>{{label}}</dt><dd class="numeric-text">{{value}}</dd></div>{{/each}}</dl></div></section>{{/if}}
+    <h3>{{translate 'legacyBilling' scope='AiUsage'}}</h3>
     {{#unless ready}}<div class="alert alert-warning" role="status"><strong>{{translate 'configurationRequired' scope='AiUsage'}}</strong><p>{{configurationText}}</p><small>{{translate 'usageStillVisible' scope='AiUsage'}}</small></div>{{/unless}}
     <section class="au-allowance panel panel-default" aria-label="{{translate 'includedAllowance' scope='AiUsage'}}">
         <div class="au-allowance-heading"><div><span class="au-eyebrow">{{translate 'includedAllowance' scope='AiUsage'}}</span><h3>{{allowanceText}} <small>{{unit}} / {{translate 'month' scope='AiUsage'}}</small></h3></div><div class="au-allowance-state"><span class="au-pill au-state-{{progress.state}}">{{stateText}}</span><small class="text-muted">{{translate 'resets' scope='AiUsage'}} {{resetDate}}</small></div></div>

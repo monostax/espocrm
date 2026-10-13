@@ -1,5 +1,7 @@
 [
     {"route": "/CreditEnrichmentPreview", "method": "get", "params": {"controller": "CreditEnrichmentPreview", "action": "read"}},
+    {"route": "/CreditWorkspace", "method": "get", "params": {"controller": "CreditWorkspace", "action": "read"}},
+    {"route": "/CreditWorkspace/conversation", "method": "get", "params": {"controller": "CreditWorkspace", "action": "conversation"}},
     {"route": "/CreditMigration", "method": "post", "params": {"controller": "CreditMigration", "action": "grant"}},
     {"route": "/CreditCheckout/context", "method": "get", "params": {"controller": "CreditCheckout", "action": "context"}},
     {"route": "/CreditCheckout", "method": "get", "params": {"controller": "CreditCheckout", "action": "read"}},
@@ -29,6 +31,7 @@
     {"route": "/CreditEnrichmentConfiguration", "method": "post", "params": {"controller": "CreditEnrichmentConfiguration", "action": "publish"}},
     {"route": "/CreditEnrichmentConfiguration", "method": "get", "params": {"controller": "CreditEnrichmentConfiguration", "action": "read"}},
     {"route": "/CreditConfiguration", "method": "post", "params": {"controller": "CreditConfiguration", "action": "publish"}},
+    {"route": "/CreditConfiguration", "method": "get", "params": {"controller": "CreditConfiguration", "action": "read"}},
     {"route": "/CreditDispatch", "method": "post", "noAuth": true, "params": {"controller": "CreditDispatch", "action": "execute"}},
     {"route": "/CreditExecution", "method": "post", "noAuth": true, "params": {"controller": "CreditExecution", "action": "execute"}},
     {"route": "/Credits/context", "method": "get", "params": {"controller": "Credits", "action": "context"}},

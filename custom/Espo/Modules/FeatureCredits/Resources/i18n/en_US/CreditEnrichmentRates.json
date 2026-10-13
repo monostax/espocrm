@@ -1,0 +1,10 @@
+{
+    "labels": {
+        "title": "Enrichment rates & routing", "intro": "Publish a future immutable rate version. Existing purchases and confirmed work keep their original terms. Publication does not activate suppliers.",
+        "forbidden": "Instance administrator access required.", "sessionExpired": "Session expired. Sign in again.", "unavailable": "The request could not be completed. Review the original command before retrying.",
+        "loading": "Loading…", "reload": "Load current policy / recover publication", "published": "Published", "current": "Source version", "routing": "Approved routing",
+        "routingHelp": "Routes are fixed by the approved policy; new versions change prices only. RDAP is disabled and Hub Finder is deferred, even where the retained policy lists them. Apollo native waterfall remains disabled. Rate inputs retain full precision.",
+        "pending": "Publication reply is unresolved. Retry the exact original version and terms; do not create a replacement.", "review": "Review new version", "version": "New unique version", "effectiveFrom": "Effective from (UTC)",
+        "target": "Target", "provider": "Provider", "product": "Product", "credits": "Credits per product", "inactive": "inactive", "publish": "Confirm / retry publication", "edit": "Edit draft"
+    }
+}

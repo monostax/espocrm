@@ -17,6 +17,8 @@ use PDO;
 /** Existing human record/relation services perform all CRM writes and mandatory-field validation. */
 class ApplicationRecords
 {
+    private const SCALAR_TYPES = ['varchar','text','enum','date','bool','int'];
+
     public function __construct(private EntityManager $em,private ServiceContainer $records,private Relations $relations,
         private User $user,private Acl $acl,private Metadata $metadata) {}
 
@@ -91,7 +93,7 @@ class ApplicationRecords
             $definition = $this->metadata->get(['entityDefs','Contact','fields',$field]);
             $standard = in_array($field,['firstName','lastName','teamsIds'],true);
             if (in_array($field,$forbidden,true) || (!$standard && (!($definition['required'] ?? false) ||
-                !in_array($definition['type'] ?? '',['varchar','text','enum','date','bool','int'],true)))) {
+                !in_array($definition['type'] ?? '',self::SCALAR_TYPES,true)))) {
                 throw new BadRequest('Only names, teams and mandatory scalar Contact fields may be supplied.');
             }
             $this->field($field === 'teamsIds' ? 'teams' : $field,'edit');
@@ -114,6 +116,48 @@ class ApplicationRecords
         $id = $this->records->get('Contact')->create((object) $data,(new CreateParams())->withSkipDuplicateCheck())->getEntity()->getId();
         $this->contactAccess($tenant,$id);
         return $id;
+    }
+
+    /** Read-only form projection after purchased-source authorization; writes still use normal CRM validation. */
+    public function creationForm(string $tenant): array
+    {
+        $available = $this->acl->checkScope('Contact','create') && $this->acl->checkField('Contact','tenant','edit');
+        $fields = [];
+        foreach ($this->metadata->get(['entityDefs','Contact','fields'],[]) as $name => $definition) {
+            if (in_array($name,['name','tenant','teams'],true)) continue;
+            $standard = in_array($name,['firstName','lastName'],true);
+            $required = $name === 'lastName' || ($definition['required'] ?? false);
+            if (!$standard && !$required) continue;
+            $allowed = !in_array($name,['cpf','emailAddress','phoneNumber','channelIdentitiesData','account','id'],true) &&
+                in_array($definition['type'] ?? '',self::SCALAR_TYPES,true) &&
+                !($definition['readOnly'] ?? false) && $this->acl->checkField('Contact',$name,'edit');
+            if (!$allowed) { if ($required) $available = false; continue; }
+            $fields[] = ['name' => $name,'type' => $definition['type'],'required' => $required,
+                'options' => $definition['type'] === 'enum' ? array_values($definition['options'] ?? []) : [],
+                'maxLength' => $definition['maxLength'] ?? null];
+        }
+        $teams = [];
+        $teamsAllowed = $this->acl->checkField('Contact','teams','edit') &&
+            $this->acl->checkScope('Team','read') && $this->acl->checkField('Team','name','read');
+        if ($teamsAllowed) {
+            $owner = $this->em->getEntityById('Tenant',$tenant);
+            if ($owner) {
+                $ids = [$owner->get('baseUserTeamId')];
+                foreach ($this->em->getRDBRepository('Tenant')->getRelation($owner,'otherUserTeams')->find() as $team) {
+                    $ids[] = $team->getId();
+                }
+                foreach (array_unique(array_filter($ids)) as $id) {
+                    $team = $this->em->getEntityById('Team',$id);
+                    if ($team && !$team->get('deleted') && $this->acl->check($team,'read')) {
+                        $teams[] = ['id' => $id,'name' => $team->get('name')];
+                    }
+                }
+            }
+        }
+        $teamsRequired = (bool) $this->metadata->get(['entityDefs','Contact','fields','teams','required'],false);
+        if ($teamsRequired && !$teams) $available = false;
+        return ['available' => $available,'fields' => $fields,'teams' => $teams,
+            'teamsAllowed' => $teamsAllowed,'teamsRequired' => $teamsRequired];
     }
 
     public function link(string $tenant,string $contact,string $account): void

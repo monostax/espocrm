@@ -1,0 +1,27 @@
+{
+    "credits": {
+        "label": "Credits & Usage",
+        "order": 29,
+        "itemList": [
+            "__APPEND__",
+            {
+                "url": "#Credits/aiConfiguration",
+                "label": "AI credit configuration",
+                "iconClass": "ti ti-settings",
+                "description": "creditAiConfiguration"
+            },
+            {
+                "url": "#Credits/billingCatalog",
+                "label": "Commercial credit catalog",
+                "iconClass": "ti ti-coins",
+                "description": "creditBillingCatalog"
+            },
+            {
+                "url": "#Credits/enrichmentRates",
+                "label": "Enrichment rates",
+                "iconClass": "ti ti-coins",
+                "description": "enrichmentRates"
+            }
+        ]
+    }
+}

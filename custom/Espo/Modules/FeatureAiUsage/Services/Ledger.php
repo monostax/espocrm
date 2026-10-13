@@ -24,6 +24,9 @@ class Ledger
             $type = match ($run['kind']) { 'opportunity-mention' => 'opportunity', 'stream-mention' => 'stream', default => 'conversation' };
             $id = (string) ($run[$type === 'stream' ? 'sourceNoteId' : $type . 'Id'] ?? '');
             $run['groupKey'] = $id !== '' ? $run['day'] . '|' . $type . '|' . $id : null;
+            if (isset($run['billingRegime']) && $run['billingRegime'] !== 'legacy-engagement-v1') {
+                $run['groupKey'] = null;
+            }
             $runs[] = $run;
             $daily[$run['day']]['runs']++;
             if ($run['groupKey'] === null || self::exemption($run) !== null) {
@@ -148,6 +151,9 @@ class Ledger
     /** Permanent exclusions take precedence over unresolved attribution and daily charges. */
     public static function exemption(array $run): ?string
     {
+        if (isset($run['billingRegime']) && $run['billingRegime'] !== 'legacy-engagement-v1') {
+            return null; // Workflow failure/telemetry waiver is never unified refund authority.
+        }
         if ($run['billingWaived'] ?? false) {
             return 'waived';
         }

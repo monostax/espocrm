@@ -10,7 +10,8 @@ use PDO;
 /** Free, current-actor review of one immutable purchased contribution, never hidden acquisitions. */
 final class PurchasedReview
 {
-    public function __construct(private ReviewLock $lock,private Access $access,private Purchases $purchases) {}
+    public function __construct(private ReviewLock $lock,private Access $access,private Purchases $purchases,
+        private ApplicationRecords $records) {}
 
     public function read(string $tenant,string $id): array
     {
@@ -52,6 +53,7 @@ final class PurchasedReview
                 // Availability is preflight only; explicit application rechecks every concrete write.
                 'application' => [...$saved['applicationStatus'],'available' => !$saved['applicationStatus']['applied'] && ($finder || $rdap) && $human && $write && !$identityChanged && !$saved['erased'] && $saved['conflict'] === null,
                     'recheckRequired' => true,'permissions' => $permissions['application'],
+                    'creationForm' => $finder && $human && $write ? $this->records->creationForm($tenant) : null,
                     'reason' => $saved['erased'] ? 'data_erased' : ($saved['conflict'] !== null ? 'identity_conflict' : ($identityChanged ? 'company_identity_changed' :
                         (!$finder && !$rdap ? 'application_not_implemented' : (!$human ? 'human_required' : (!$write ? 'application_permission_required' : null)))))]];
     }

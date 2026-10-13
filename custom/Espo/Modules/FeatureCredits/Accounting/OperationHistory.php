@@ -16,8 +16,9 @@ final class OperationHistory
 {
     public function __construct(private EntityManager $entityManager, private Clock $clock) {}
 
-    public function inspect(OperationHistoryQuery $input): array
+    public function inspect(OperationHistoryQuery $input, ?string $conversationId = null): array
     {
+        if ($conversationId !== null) GrantInput::identity($conversationId);
         $pdo = $this->entityManager->getPDO();
         if ($pdo->inTransaction()) {
             throw new LogicException('Operation history must own its read-only transaction.');
@@ -46,6 +47,10 @@ final class OperationHistory
             if ($input->beforeId !== null) {
                 $where = ' AND (u.admitted_at < ? OR (u.admitted_at = ? AND u.id < ?))';
                 array_push($params, $input->beforeAdmittedAt, $input->beforeAdmittedAt, $input->beforeId);
+            }
+            if ($conversationId !== null) {
+                $where .= " AND u.operation_type = 'ai' AND u.source_type = 'ChatwootConversation' AND u.source_id = ?";
+                $params[] = $conversationId;
             }
             $query = $pdo->prepare('SELECT u.id, u.deleted, u.operation_type, u.billing_regime,
                 u.state, u.admitted_at, u.settled_at, u.settled_credits,

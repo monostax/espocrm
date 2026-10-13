@@ -1,0 +1,17 @@
+{
+    "labels": {
+        "firstName": "New Contact first name", "lastName": "New Contact last name (required to create)", "teamsIds": "New Contact teams",
+        "creationUnavailable": "Creating a Contact is unavailable with the current permissions or required fields. Existing Contact matching remains available.",
+        "intro": "Discover data with shared credits. Review purchased results before applying them. Opening purchased results is free.",
+        "loading": "Loading…", "product": "Product", "email": "Email", "phone": "Phone", "company": "Company details", "employees": "Employees", "socios": "Sócios", "combined": "Email + phone",
+        "waterfall": "Provider waterfall", "budget": "Maximum shared budget (credits)", "budgetHelp": "Required with waterfall. Off: Apollo for fields/employees, CPF.CNPJ for Sócios. Only eligible, affordable providers run.",
+        "count": "Finder candidate count (1–50)", "titles": "Employee titles (comma-separated)", "seniorities": "Employee seniorities (comma-separated)",
+        "paidRefresh": "Fresh paid lookup, even if results are unchanged", "quote": "Get quote", "resume": "Resume / check original request", "newQuote": "New settings / quote",
+        "maximum": "Maximum charge", "combinedHelp": "Email runs first; email and phone share one total cap. No requested match costs zero. Unresolved work stops; successful purchases remain charged.",
+        "finderHelp": "Employees and Sócios are separate purchases. Sócios charge for each useful provider contribution, not just each person. Contact creation and relationships require explicit application.",
+        "noRoute": "No eligible provider", "settings": "Original settings", "yes": "Yes", "no": "No", "confirm": "Accept quoted terms and spend credits",
+        "history": "Purchased history — free review", "loadHistory": "Refresh history", "source": "Provider / delivery", "actor": "Requester", "purchasedAt": "Purchased (UTC)", "acquiredAt": "Acquired (UTC)", "credits": "Credits", "application": "Application", "applied": "Applied", "purchasedOnly": "Purchased, not applied", "more": "More", "review": "Review purchased values", "createIfUnmatched": "Create a Contact if no exact identity match exists", "current": "Current", "preserve": "Keep current value", "apply": "Apply selected purchased data",
+        "sessionExpired": "Session expired. Sign in again.", "forbidden": "Current permissions do not allow this action.", "conflict": "The record, terms, balance or active operation changed. Check the original request and review again.", "unavailable": "Unable to complete the request. Resume the original request rather than starting another purchase.", "storageUnavailable": "Retry storage is unavailable. Enable session storage before purchasing.",
+        "queued": "Queued", "running": "Running", "purchased": "Purchased", "pending_purchase": "Purchase pending", "waived": "Unresolved work waived", "no_match": "No match", "failed": "Failed", "complete": "Complete", "partial": "Partial results"
+    }
+}

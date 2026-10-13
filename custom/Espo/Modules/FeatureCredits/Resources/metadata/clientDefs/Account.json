@@ -1,0 +1,3 @@
+{
+    "bottomPanels": {"detail": ["__APPEND__", {"name": "creditEnrichment", "label": "Enrichment", "view": "feature-credits:views/enrichment", "order": 85}]}
+}

@@ -13,14 +13,16 @@ function moduleCode(id, file) {
 }
 
 (async () => {
-    const browser = await chromium.launch({headless: true, args: ['--no-sandbox']});
+    const browser = await chromium.launch({headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined, args: ['--no-sandbox']});
     try {
         for (const locale of ['en_US', 'pt_BR']) {
             const terms = {offerId: 'monthly-2000-br', version: 'launch-v1', productId: 'monthly-2000', currency: 'BRL',
                 price: '997.00', credits: '2000.0000', operation: 'subscription', termsId: 'terms-v1'};
             let accepted = null; let customer = null; let charge = null;
             let acceptPosts = 0; let customerPosts = 0; let chargePosts = 0; let recoveries = 0;
+            const overrides = [];
             const context = tenantId => ({tenantId, revision: 1, billingCountry: 'BR', catalogId: 'catalog-v1', earliestDueDate: '2026-10-13',
+                providerOverride: null, requestedProvider: 'asaas', effectiveProvider: 'asaas', pinned: !!accepted, routeMismatch: false, openObligations: accepted ? 1 : 0,
                 offers: [{terms, eligibility: {eligible: tenantId === 'a', blockedReason: tenantId === 'a' ? null : 'billing_provider_unavailable'}}],
                 checkouts: accepted && tenantId === 'a' ? [{state: charge ? 'pending' : 'accepted', acceptance: accepted}] : []});
             const page = await browser.newPage(); const errors = [];
@@ -33,6 +35,12 @@ function moduleCode(id, file) {
                     return {tenantId: 'a', obligationId: 'obligation', acceptance: accepted, state: charge ? (charge.state === 'bound' ? 'pending' : 'unknown') : customer ? 'creating' : 'accepted', customer, charge, earliestDueDate: '2026-10-13'};
                 }
                 assert.equal(body.tenantId, 'a');
+                if (endpoint === 'CreditBilling/override') {
+                    overrides.push(body);
+                    if (overrides.length === 1) throw new Error('Simulated lost override reply');
+                    assert.deepEqual(body, overrides[0]);
+                    return {after: {tenantId: 'a'}};
+                }
                 if (endpoint === 'CreditBilling/accept') {
                     ++acceptPosts; accepted = {tenantId: 'a', obligationId: 'obligation', requestKey: body.requestKey, terms}; return accepted;
                 }
@@ -57,7 +65,7 @@ function moduleCode(id, file) {
                 modules['views/main'] = class {
                     constructor(options) { this.options = options; }
                     setup() {} on() {} wait(promise) { this.ready = promise; }
-                    getUser() { return {id: 'browser-test-user'}; }
+                    getUser() { return {id: 'browser-test-user', isAdmin: () => window.fixtureAdmin !== false}; }
                     getRouter() { return {navigate: url => history.replaceState(null, '', '#' + url)}; }
                     translate(key) { return labels[key] || key; }
                     async reRender() { document.getElementById('root').innerHTML = template(this.data()); }
@@ -89,6 +97,20 @@ function moduleCode(id, file) {
             });
             await page.goto('http://127.0.0.1:32199/');
             await page.waitForFunction(() => window.checkoutReady && !view.busy);
+            await page.evaluate(async () => { window.fixtureAdmin = false; await view.reRender(); });
+            assert.equal(await page.locator('[data-checkout-override]').count(), 0);
+            await page.evaluate(async () => { window.fixtureAdmin = true; await view.reRender(); });
+            await page.locator('[data-checkout-override] button').click();
+            assert.equal(overrides.length, 0, 'Provider changes require explicit consent');
+            await page.locator('[name="confirmOverride"]').check();
+            await page.locator('[data-checkout-override] button').click();
+            await page.waitForFunction(() => !view.busy && !!view.pending);
+            assert.equal(overrides.length, 1); assert.equal(overrides[0].providerOverride, null);
+            await page.reload(); await page.waitForFunction(() => window.checkoutReady && !view.busy);
+            assert.equal(overrides.length, 1, 'Reload never posts automatically');
+            await page.locator('[data-checkout-retry]').click();
+            await page.waitForFunction(() => !view.busy && !view.pending);
+            assert.equal(overrides.length, 2); assert.deepEqual(overrides[0], overrides[1]);
             await page.locator('[data-checkout-offer]').click();
             await page.locator('[data-checkout-accept] button').click();
             assert.equal(acceptPosts, 0, 'Browser validation requires explicit terms consent');
@@ -109,12 +131,18 @@ function moduleCode(id, file) {
             assert.equal(await link.getAttribute('referrerpolicy'), 'no-referrer');
             const saved = await page.evaluate(() => JSON.stringify({...sessionStorage}));
             assert.ok(!saved.includes('52998224725') && !saved.includes('browser-payer@example.test'));
+            await page.locator('[name="providerOverride"]').selectOption('stripe');
+            await page.locator('[name="confirmOverride"]').check();
+            await page.locator('[data-checkout-override] button').click();
+            await page.waitForFunction(() => !view.busy && !!view.error);
+            assert.equal(overrides.length, 2, 'Pinned obligation prevents incompatible reassignment');
+            assert.equal(await page.locator('[role="alert"]').textContent(), labels.resolveObligations);
             await page.locator('[data-checkout-tenant]').selectOption('b');
             await page.waitForFunction(() => !view.busy && view.tenantId === 'b');
             assert.equal(await link.count(), 0); assert.equal(await page.locator('[data-checkout-offer]').isDisabled(), true);
             assert.deepEqual([acceptPosts, customerPosts, chargePosts, recoveries], [1, 1, 1, 1]);
             assert.deepEqual(errors, []);
-            console.log(`PASS ${locale}: real forms/terms validation, one charge, reload/recovery, private hosted link, disabled sales and tenant isolation (${await browser.version()}).`);
+            console.log(`PASS ${locale}: provider override consent/admin gating, lost-reply exact retry, pinned reassignment denial; real purchase forms, one charge, reload/recovery, private hosted link and tenant isolation (${await browser.version()}).`);
             await page.close();
         }
     } finally { await browser.close(); }

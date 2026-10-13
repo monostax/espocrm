@@ -224,7 +224,7 @@ test('production transpiler emits loadable AMD for the credit page and helpers',
     try {
         new Transpiler({path: path.resolve(root, client), destDir: dir}).process();
         const definitions = new Map();
-        const modules = new Map([['views/main', class {}], ['controller', class {}]]);
+        const modules = new Map([['views/main', class {}], ['views/record/panels/bottom', class {}], ['controller', class {}]]);
         for (const file of readdirSync(dir, {recursive: true}).filter(file => file.endsWith('.js'))) {
             vm.runInNewContext(readFileSync(path.join(dir, file), 'utf8'), {
                 define(id, deps, factory) { definitions.set('feature-credits:' + id, {deps, factory}); },
@@ -241,7 +241,7 @@ test('production transpiler emits loadable AMD for the credit page and helpers',
             return value;
         }
         for (const id of definitions.keys()) resolve(id);
-        assert.equal(definitions.size, 5);
+        assert.equal(definitions.size, 10);
         assert.equal(typeof resolve('feature-credits:helpers/presentation').sourceRoute, 'function');
         assert.equal(resolve('feature-credits:helpers/presentation').formatCredits('999999999999999999.995'), '1000000000000000000.00');
     } finally { rmSync(dir, {recursive: true, force: true}); }

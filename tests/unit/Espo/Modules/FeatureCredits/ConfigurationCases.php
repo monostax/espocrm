@@ -83,9 +83,36 @@ trait ConfigurationCases
             $this->assertSame('0.50000000', $pdo->query('SELECT credit_unit_price FROM tenant_credit_billing_rate')->fetchColumn());
             $this->assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM ai_model_credit_rate')->fetchColumn());
             $this->assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM tenant_credit_billing_rate')->fetchColumn());
+            $original = $service->inspect('model', $model['id']);
+            $this->assertSame($model['id'], $original['id']);
+            $this->assertSame((array) $definition, $original['data']);
+            $original = $service->inspect('agreement', $rate['id'], 'tenant');
+            $this->assertSame('0.50000000', $original['data']['creditUnitPrice']);
+            $this->assertSame('0.0000', $original['data']['monthlyCredits']);
+            $this->assertSame($model['id'], $original['data']['aiModelCreditRateId']);
+            $this->assertNull($original['data']['aiNativeSearchModelCreditRateId']);
+            $this->assertSame(4, $original['data']['aiMaxRequests']);
+            try { $service->inspect('agreement', $rate['id'], 'other'); $this->fail('Foreign agreement lookup accepted.'); }
+            catch (\Espo\Core\Exceptions\NotFound) { $this->addToAssertionCount(1); }
+            $user = $this->createStub(\Espo\Entities\User::class);
+            $user->method('isAdmin')->willReturn(true);
+            $request = $this->createStub(\Espo\Core\Api\Request::class);
+            $request->method('getQueryParam')->willReturnCallback(fn ($key) => [
+                'kind' => 'agreement', 'id' => $rate['id'], 'tenantId' => 'tenant',
+            ][$key] ?? null);
+            $response = $this->createMock(\Espo\Core\Api\Response::class);
+            $response->expects($this->once())->method('setHeader')->with('Cache-Control', 'private, no-store');
+            $controller = new \Espo\Modules\FeatureCredits\Controllers\CreditConfiguration($user, $service);
+            $this->assertSame($original, (array) $controller->getActionRead($request, $response));
             foreach (['tenant_credit_balance', 'credit_grant', 'credit_transaction', 'tenant_credit_cutover'] as $table) {
                 $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn());
             }
+            $pdo->exec('UPDATE tenant_credit_billing_rate SET deleted=TRUE');
+            try { $service->inspect('agreement', $rate['id'], 'tenant'); $this->fail('Deleted agreement exposed.'); }
+            catch (\Espo\Core\Exceptions\NotFound) { $this->addToAssertionCount(1); }
+            $pdo->exec('UPDATE ai_model_credit_rate SET deleted=TRUE');
+            try { $service->inspect('model', $model['id']); $this->fail('Deleted model exposed.'); }
+            catch (\Espo\Core\Exceptions\NotFound) { $this->addToAssertionCount(1); }
         });
     }
 

@@ -1,5 +1,7 @@
+import {formatCredits} from 'feature-credits:helpers/presentation';
+
 const DIMENSIONS = ['kind', 'action', 'conversation', 'opportunity', 'agent', 'account'];
-const BILLING_STATUSES = ['billed', 'partiallyBilled', 'included', 'notBilled', 'excluded', 'unavailable', 'failed', 'waived', 'pending'];
+const BILLING_STATUSES = ['billed', 'partiallyBilled', 'included', 'notBilled', 'excluded', 'unavailable', 'failed', 'waived', 'pending', 'creditPending', 'creditSettled'];
 export const KINDS = ['customer-message', 'private-mention', 'public-mention', 'scheduled-message', 'followup-trigger', 'opportunity-mention', 'stream-mention'];
 
 export function presentMetrics(metrics, format, t) {
@@ -121,13 +123,14 @@ export function present(payload, state, format, t) {
             inputTokensText: format.number(row.inputTokens), outputTokensText: format.number(row.outputTokens),
             cachedTokensText: format.number(row.cachedInputTokens),
             metrics: presentMetrics(row.analytics, format, t),
-            billingText: t('billing_' + status), billingHint: t('billingHint_' + status),
+            billingText: t('billing_' + status) + (status === 'creditSettled' ? ' · ' + formatCredits(row.creditBilling?.settledCredits) : ''), billingHint: t('billingHint_' + status),
             billingClass: ['billed', 'partiallyBilled'].includes(status) ? 'au-state-overLimit' : status === 'included' ? 'au-state-withinPlan' : '',
         };
     });
     const total = payload.breakdown?.total ?? payload.activity?.total ?? 0;
     return {
         ready: progress.ready, progress,
+        creditCards: payload.credits ? ['chargedCredits', 'reversedCredits', 'netCredits'].map(key => ({label: t(key), value: formatCredits(payload.credits[key])})) : null,
         analytics: presentAnalytics(payload.analytics, format, t),
         showBreakdownBilling: ['conversation', 'opportunity'].includes(state.dimension),
         stateText: t(progress.state), configurationText: t(b.reason || 'missingRate'),

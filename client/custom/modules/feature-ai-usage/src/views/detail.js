@@ -1,4 +1,5 @@
 import ModalView from 'views/modal';
+import {formatCredits} from 'feature-credits:helpers/presentation';
 import {recordName, link, presentMetrics} from 'feature-ai-usage:helpers/index';
 
 export default class extends ModalView {
@@ -24,6 +25,8 @@ export default class extends ModalView {
         const group = this.payload.billingGroup;
         return {
             failed: false,
+            creditCards: row.creditBilling ? ['settledCredits', 'reversedCredits', 'netCredits'].map(key => ({label: t(key),
+                value: row.creditBilling.state === 'pending' ? t('billing_creditPending') : formatCredits(row.creditBilling[key])})) : null,
             date: f.date(row.runAt, this.options.timeZone, true), kind: t(row.kind || 'unattributed'),
             actions: row.actions.map(t).join(' · ') || '—',
             billingText: t('billing_' + (row.billingStatus || 'unavailable')),

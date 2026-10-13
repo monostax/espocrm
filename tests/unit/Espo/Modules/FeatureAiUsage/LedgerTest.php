@@ -13,6 +13,26 @@ use PHPUnit\Framework\TestCase;
 
 class LedgerTest extends TestCase
 {
+    public function testMixedRegimesShareAnalyticsButNeverLegacyPricingOrWholeRunWaivers(): void
+    {
+        $legacy = $this->engagement('legacy');
+        $unified = $this->engagement('unified') + ['billingRegime' => 'unified-prepaid-v1',
+            'runOutcome' => 'failed', 'billingWaived' => true,
+            'creditBilling' => ['state' => 'settled', 'settledCredits' => '1.4924']];
+        $missing = $this->engagement('missing') + ['billingRegime' => 'unattributed'];
+        $ledger = (new Ledger())->build([$legacy, $unified, $missing], $this->period(),
+            [$this->agreement('credit', new RateCard(planIncludedCredits: 1))], 't');
+        $this->assertCount(3, $ledger['runs']);
+        $this->assertSame(1, $ledger['summary']['consumed']);
+        $this->assertSame(1, $ledger['summary']['covered']);
+        $this->assertSame(1, $ledger['groups']['2026-08-01|conversation|c']['runs']);
+        $this->assertNull(Ledger::exemption($unified));
+        $stats = (new Dataset())->stats($ledger['runs']);
+        $this->assertSame(1, $stats['failedRuns']);
+        $this->assertSame(0, $stats['waivedRuns']);
+        $this->assertSame(1, $stats['pendingRuns']);
+    }
+
     public function testGenericStreamCreditsShareTheTenantAllowance(): void
     {
         $runs = [$this->engagement('customer'), [

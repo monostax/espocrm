@@ -1,0 +1,10 @@
+{
+    "labels": {
+        "title": "Preços e rotas de enriquecimento", "intro": "Publique uma versão futura e imutável de preços. Compras e trabalhos confirmados mantêm os termos originais. A publicação não ativa fornecedores.",
+        "forbidden": "Acesso de administrador da instância obrigatório.", "sessionExpired": "Sessão expirada. Entre novamente.", "unavailable": "Não foi possível concluir a solicitação. Revise o comando original antes de tentar novamente.",
+        "loading": "Carregando…", "reload": "Carregar política atual / recuperar publicação", "published": "Publicado", "current": "Versão de origem", "routing": "Rotas aprovadas",
+        "routingHelp": "As rotas são fixadas pela política aprovada; novas versões alteram apenas os preços. RDAP está desativado e Hub Finder está adiado, mesmo quando constam na política preservada. O waterfall nativo da Apollo permanece desativado. Os campos de preço preservam a precisão completa.",
+        "pending": "A resposta da publicação está pendente. Repita a versão e os termos originais; não crie uma substituição.", "review": "Revisar nova versão", "version": "Nova versão única", "effectiveFrom": "Vigência a partir de (UTC)",
+        "target": "Destino", "provider": "Fornecedor", "product": "Produto", "credits": "Créditos por produto", "inactive": "inativo", "publish": "Confirmar / repetir publicação", "edit": "Editar rascunho"
+    }
+}

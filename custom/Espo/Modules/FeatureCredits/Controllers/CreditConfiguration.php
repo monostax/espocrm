@@ -20,6 +20,23 @@ final class CreditConfiguration
 {
     public function __construct(private User $user, private Configuration $configuration) {}
 
+    public function getActionRead(Request $request, Response $response): object
+    {
+        $response->setHeader('Cache-Control', 'private, no-store');
+        if (!$this->user->isAdmin()) throw new Forbidden('Instance administrator required to read credit terms.');
+        $kind = $request->getQueryParam('kind');
+        $id = $request->getQueryParam('id');
+        $tenantId = $request->getQueryParam('tenantId');
+        try {
+            if (!is_string($kind) || !is_string($id) || ($tenantId !== null && !is_string($tenantId))) {
+                throw new InvalidArgumentException('Configuration kind and original ID required.');
+            }
+            return (object) $this->configuration->inspect($kind, $id, $tenantId);
+        } catch (InvalidArgumentException $e) {
+            throw new BadRequest($e->getMessage());
+        }
+    }
+
     public function postActionPublish(Request $request, Response $response): object
     {
         $response->setHeader('Cache-Control', 'private, no-store');

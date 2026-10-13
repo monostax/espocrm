@@ -15,7 +15,7 @@
     {{#if storageError}}<div class="alert alert-warning" role="alert">{{translate 'storageError' scope='CreditCheckout'}}</div>{{/if}}
     {{#if hasContext}}
     <fieldset {{#if busy}}disabled{{/if}}>
-        {{#if pending}}<div class="alert alert-warning" role="status">{{translate 'pendingCommand' scope='CreditCheckout'}} <button type="button" class="btn btn-default" data-checkout-retry>{{translate 'retry' scope='CreditCheckout'}}</button></div>{{/if}}
+        {{#if pending}}<div class="alert alert-warning" role="status">{{translate 'pendingCommand' scope='CreditCheckout'}} {{#if canRetry}}<button type="button" class="btn btn-default" data-checkout-retry>{{translate 'retry' scope='CreditCheckout'}}</button>{{/if}}</div>{{/if}}
         <form data-checkout-country class="form-inline">
             <label for="checkout-country">{{translate 'country' scope='CreditCheckout'}} ({{billingCountry}})</label>
             <select id="checkout-country" name="billingCountry" class="form-control" required>
@@ -23,6 +23,27 @@
             </select>
             <button class="btn btn-default" {{#if pending}}disabled{{/if}} {{#if storageError}}disabled{{/if}}>{{translate 'saveCountry' scope='CreditCheckout'}}</button>
         </form>
+        <section class="panel panel-default">
+            <div class="panel-heading">{{translate 'providerRouting' scope='CreditCheckout'}}</div>
+            <div class="panel-body">
+                <dl><dt>{{translate 'requestedProvider' scope='CreditCheckout'}}</dt><dd>{{requestedProvider}}</dd>
+                    <dt>{{translate 'effectiveProvider' scope='CreditCheckout'}}</dt><dd>{{effectiveProvider}}</dd></dl>
+                {{#if routePinned}}<p role="status">{{translate 'routePinned' scope='CreditCheckout'}} ({{openObligations}})</p>{{/if}}
+                {{#if routeMismatch}}<div class="alert alert-warning" role="status">{{translate 'routeMismatch' scope='CreditCheckout'}}</div>{{/if}}
+                {{#if canOverride}}
+                <form data-checkout-override>
+                    <div class="form-group"><label for="checkout-provider">{{translate 'providerOverride' scope='CreditCheckout'}}</label>
+                        <select id="checkout-provider" name="providerOverride" class="form-control">
+                            {{#each providerOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+                        </select>
+                    </div>
+                    <p>{{translate 'overrideNotice' scope='CreditCheckout'}}</p>
+                    <div class="checkbox"><label><input type="checkbox" name="confirmOverride" required> {{translate 'confirmOverride' scope='CreditCheckout'}}</label></div>
+                    <button class="btn btn-default" {{#if pending}}disabled{{/if}} {{#if storageError}}disabled{{/if}}>{{translate 'saveOverride' scope='CreditCheckout'}}</button>
+                </form>
+                {{/if}}
+            </div>
+        </section>
         <h3>{{translate 'offers' scope='CreditCheckout'}}</h3>
         <div class="row">{{#each offers}}
             <div class="col-sm-4"><div class="panel panel-default"><div class="panel-body">

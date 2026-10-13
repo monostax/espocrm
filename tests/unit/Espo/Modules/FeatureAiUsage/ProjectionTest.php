@@ -14,6 +14,23 @@ use PHPUnit\Framework\TestCase;
 
 class ProjectionTest extends TestCase
 {
+    public function testUnifiedFailedWorkflowKeepsSettledCreditsWithoutSourceOrTokenLeak(): void
+    {
+        $em = $this->createMock(EntityManager::class);
+        $em->expects($this->never())->method('getEntityById');
+        $projection = new Projection($em, $this->createMock(Acl::class), $this->createMock(SelectBuilderFactory::class), $this->createMock(User::class));
+        foreach (['pending' => 'creditPending', 'settled' => 'creditSettled', 'released' => 'creditSettled'] as $state => $status) {
+            $credits = ['state' => $state, 'settledCredits' => $state === 'pending' ? null : '0.0000'];
+            $result = $projection->activity(['id' => 'run', 'day' => '2026-10-10', 'billingRegime' => 'unified-prepaid-v1',
+                'creditBilling' => $credits, 'billingWaived' => true, 'runOutcome' => 'failed',
+                'conversationId' => 'restricted', 'inputTokens' => 123]);
+            $this->assertSame($status, $result['billingStatus']);
+            $this->assertSame($credits, $result['creditBilling']);
+            $this->assertNull($result['conversation']);
+            $this->assertArrayNotHasKey('inputTokens', $result);
+        }
+    }
+
     public function testRecordLabelsAndLinksRequireRecordReadAccess(): void
     {
         $em = $this->createMock(EntityManager::class);

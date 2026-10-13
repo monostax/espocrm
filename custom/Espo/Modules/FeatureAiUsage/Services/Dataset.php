@@ -72,7 +72,9 @@ class Dataset
             $unassigned += (int) (($run['groupKey'] ?? null) === null);
             $failed += (int) (($run['runOutcome'] ?? null) === 'failed');
             $waived += (int) (Ledger::exemption($run) === 'waived');
-            $pending += (int) (($run['groupKey'] ?? null) === null && Ledger::exemption($run) === null);
+            $pending += (int) (($run['billingRegime'] ?? null) === 'unified-prepaid-v1'
+                ? ($run['creditBilling']['state'] ?? null) === 'pending'
+                : (($run['groupKey'] ?? null) === null && Ledger::exemption($run) === null));
         }
         return [
             'runs' => count($runs), 'conversations' => count($conversations), 'opportunities' => count($opportunities),

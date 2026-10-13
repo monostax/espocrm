@@ -29,6 +29,48 @@ final class Configuration
 {
     public function __construct(private EntityManager $entityManager, private Clock $clock, private AiCatalog $catalog) {}
 
+    /** Explicit original-version lookup for the administrator editor. No selection or mutation. */
+    public function inspect(string $kind, string $id, ?string $tenantId = null): array
+    {
+        if (!in_array($kind, ['model', 'agreement'], true)) throw new InvalidArgumentException('Unknown configuration kind.');
+        GrantInput::identity($id);
+        if ($kind === 'agreement') {
+            if ($tenantId === null) throw new InvalidArgumentException('Agreement tenant required.');
+            GrantInput::identity($tenantId);
+        }
+        $pdo = $this->entityManager->getPDO();
+        if ($kind === 'model') {
+            $q = $pdo->prepare('SELECT policy_id FROM ai_model_credit_rate WHERE id=? AND deleted=FALSE');
+            $q->execute([$id]);
+            $policyId = $q->fetchColumn();
+            if (!is_string($policyId)) throw new NotFound('Unknown model policy.');
+            $policy = $this->catalog->resolve($policyId);
+            return ['kind' => $kind, 'id' => $id, 'data' => [
+                'provider' => $policy->rate->provider, 'model' => $policy->rate->model,
+                'multiplier' => (string) $policy->rate->multiplier,
+                'inputTokenBound' => $policy->inputTokenBound, 'outputTokenLimit' => $policy->outputTokenLimit,
+                'boundProfile' => $policy->boundProfile,
+            ]];
+        }
+        $q = $pdo->prepare('SELECT r.version, r.effective_from, r.effective_until, r.currency,
+            r.credit_unit_price, r.monthly_credits, r.ai_model_credit_rate_id,
+            r.ai_native_search_model_credit_rate_id, r.ai_max_requests FROM tenant_credit_billing_rate r
+            INNER JOIN tenant t ON t.id=r.tenant_id AND t.deleted=FALSE
+            WHERE r.id=? AND r.tenant_id=? AND r.deleted=FALSE');
+        $q->execute([$id, $tenantId]);
+        $row = $q->fetch(PDO::FETCH_ASSOC);
+        if (!$row) throw new NotFound('Unknown agreement.');
+        return ['kind' => $kind, 'id' => $id, 'data' => [
+            'tenantId' => $tenantId, 'version' => $row['version'],
+            'effectiveFrom' => $row['effective_from'], 'effectiveUntil' => $row['effective_until'],
+            'currency' => $row['currency'], 'creditUnitPrice' => (string) $row['credit_unit_price'],
+            'monthlyCredits' => (string) $row['monthly_credits'],
+            'aiModelCreditRateId' => $row['ai_model_credit_rate_id'],
+            'aiNativeSearchModelCreditRateId' => $row['ai_native_search_model_credit_rate_id'],
+            'aiMaxRequests' => (int) $row['ai_max_requests'],
+        ]];
+    }
+
     public function publishModel(stdClass $definition, ?string $actorId = null): array
     {
         $policy = new AiModelPolicy(get_object_vars($definition));

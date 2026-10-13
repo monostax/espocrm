@@ -1,0 +1,22 @@
+{
+    "labels": {
+        "title": "Commercial credit catalog",
+        "intro": "Publish future package and monthly-plan offers. Existing accepted terms remain unchanged. Publication does not activate payment providers or sales.",
+        "forbidden": "Instance administrator access is required.",
+        "sessionExpired": "Your session expired. Sign in again to recover the original publication.",
+        "unavailable": "Catalog unavailable or retry storage inaccessible. A pending publication must be recovered with its original terms.",
+        "rejected": "Publication rejected. Check versions, product references and the future UTC start. An unresolved earlier reply retains its original command.",
+        "loading": "Loading…", "reload": "Load current catalog / recover pending publication",
+        "current": "Current catalog", "published": "Published", "pending": "Publication response unresolved. Retry the exact original command; no automatic publication occurs.",
+        "review": "Review complete catalog", "publish": "Confirm and publish these terms", "edit": "Edit draft",
+        "completeCatalog": "This replaces the complete new-sale selection at its effective start. Omitted offers are withdrawn from new sales. An empty catalog withdraws all offers; existing subscriptions are preserved.",
+        "versionsHelp": "Keep unchanged product/offer versions. Changed names, credits, prices or markets require new versions. Use operation purchase or subscription; credit quantities remain exact in the editor.",
+        "offerHelp": "Reference an included product ID and version. Countries: comma-separated two-letter codes. Currency: BRL or USD. Interval: month for subscriptions, empty for non-expiring packages. Provider availability is checked separately at checkout.",
+        "version": "Publication / offer version", "effectiveFrom": "Effective start (UTC)",
+        "products": "Shared plans and packages", "product": "Product", "offers": "Market offers", "offer": "Offer",
+        "productId": "Product ID", "productVersion": "Product version", "name": "Name", "operation": "Operation (purchase / subscription)",
+        "credits": "Credits", "offerId": "Offer ID", "countries": "Countries", "currency": "Currency", "price": "Exact price", "interval": "Interval (month / empty)",
+        "month": "Monthly; credits expire at period end", "nonExpiring": "One-time; credits never expire",
+        "remove": "Remove", "addProduct": "Add product", "addOffer": "Add offer"
+    }
+}

@@ -53,7 +53,11 @@ export default class extends MainView {
         try {
             this.context = await Espo.Ajax.getRequest('AiUsage/context');
             if (this.disposed) return;
-            if (!this.context.tenants.some(t => t.id === this.state.tenantId)) this.state.tenantId = this.context.tenants[0]?.id || '';
+            if (this.state.tenantId && !this.context.tenants.some(t => t.id === this.state.tenantId)) {
+                this.error = this.t('forbidden');
+                return;
+            }
+            this.state.tenantId ||= this.context.tenants[0]?.id || '';
             this.state.month ||= this.context.currentMonth;
             if (this.state.tenantId) await this.load(false);
         } catch (error) {
@@ -68,8 +72,15 @@ export default class extends MainView {
             if (!this.disposed) this.reRender();
             return;
         }
-        if (!this.state.tenantId) return;
+        if (!this.state.tenantId) {
+            this.requestVersion++;
+            this.payload = null;
+            this.loading = false;
+            if (render) await this.reRender();
+            return;
+        }
         const version = ++this.requestVersion;
+        const tenantId = this.state.tenantId;
         this.loading = true;
         this.error = null;
         if (render) await this.reRender();
@@ -80,6 +91,7 @@ export default class extends MainView {
                 dimension: this.state.dimension, offset: this.state.offset, limit: 25, ...this.state.filters,
             });
             if (version !== this.requestVersion || this.disposed) return;
+            if (data.tenantId !== tenantId) throw new Error('Mismatched usage tenant.');
             this.payload = data;
             this.getRouter().navigate('AiUsage/index/' + new URLSearchParams({tenantId: this.state.tenantId, month: this.state.month}).toString(), {trigger: false, replace: true});
         } catch (error) {
@@ -175,9 +187,15 @@ export default class extends MainView {
     }
 
     async openDetail(id) {
+        const version = this.requestVersion;
+        const tenantId = this.state.tenantId;
         const view = await this.createView('usageDetail', 'feature-ai-usage:views/detail', {
             id, tenantId: this.state.tenantId, month: this.state.month, format: this.format, timeZone: this.payload.period.timeZone,
         });
+        if (this.disposed || version !== this.requestVersion || tenantId !== this.state.tenantId) {
+            view.remove();
+            return;
+        }
         view.render();
     }
 }

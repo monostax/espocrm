@@ -9,6 +9,7 @@ export default class extends MainView {
         'change [data-checkout-tenant]': function (e) { this.changeTenant(e.currentTarget.value); },
         'click [data-checkout-refresh]': function () { if (!this.busy) this.load(); },
         'submit [data-checkout-country]': function (e) { e.preventDefault(); this.country(e.currentTarget); },
+        'submit [data-checkout-override]': function (e) { e.preventDefault(); this.override(e.currentTarget); },
         'click [data-checkout-offer]': function (e) { this.selectOffer(e.currentTarget.dataset.checkoutOffer); },
         'submit [data-checkout-accept]': function (e) { e.preventDefault(); if (e.currentTarget.elements.acceptTerms.checked) this.accept(); },
         'click [data-checkout-open]': function (e) { this.open(e.currentTarget.dataset.checkoutOpen); },
@@ -188,7 +189,22 @@ export default class extends MainView {
     retry() {
         if (!this.pending || this.storageError) return;
         const {action, body} = this.pending;
+        if (action === 'override' && !this.getUser().isAdmin()) return;
         return this.run(version => this.command(action, body, version));
+    }
+
+    override(form) {
+        if (!this.getUser().isAdmin() || !this.context || this.pending || this.storageError ||
+            !form.reportValidity() || !form.elements.confirmOverride.checked) return;
+        const providerOverride = form.elements.providerOverride.value || null;
+        if (![null, 'asaas', 'stripe'].includes(providerOverride)) return;
+        const requested = providerOverride || ({BR: 'asaas', US: 'stripe'}[this.context.billingCountry] || null);
+        if (this.context.pinned && requested !== this.context.effectiveProvider) {
+            this.error = this.t('resolveObligations');
+            return this.reRender();
+        }
+        const body = {tenantId: this.tenantId, requestKey: this.key(), revision: this.context.revision, providerOverride};
+        return this.run(version => this.command('override', body, version));
     }
 
     customer(form) {
@@ -265,6 +281,15 @@ export default class extends MainView {
             tenants: (this.tenants || []).map(t => ({...t, selected: t.id === this.tenantId})),
             countries: ['BR', 'US'].map(id => ({id, selected: id === this.context?.billingCountry})),
             billingCountry: this.context?.billingCountry || '—', hasMoreCheckouts: this.context?.hasMoreCheckouts,
+            canOverride: this.getUser().isAdmin(),
+            canRetry: this.pending?.action !== 'override' || this.getUser().isAdmin(),
+            providerOptions: [null, 'asaas', 'stripe'].map(id => ({id: id || '',
+                label: this.t(id ? 'provider_' + id : 'automaticProvider'),
+                selected: id === (this.context?.providerOverride ?? null)})),
+            requestedProvider: this.t(this.context?.requestedProvider ? 'provider_' + this.context.requestedProvider : 'noProvider'),
+            effectiveProvider: this.t(this.context?.effectiveProvider ? 'provider_' + this.context.effectiveProvider : 'noProvider'),
+            routePinned: this.context?.pinned, routeMismatch: this.context?.routeMismatch,
+            openObligations: this.context?.openObligations,
             offers: (this.context?.offers || []).map(o => ({...this.terms(o.terms), eligible: o.eligibility.eligible && !this.pending && !this.storageError,
                 blocked: o.eligibility.eligible ? null : this.t(o.eligibility.blockedReason)})),
             checkouts: (this.context?.checkouts || []).map(c => ({...this.terms(c.acceptance.terms), id: c.acceptance.obligationId, stateLabel: this.t('state_' + c.state)})),

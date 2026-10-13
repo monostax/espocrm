@@ -86,6 +86,12 @@ trait OperationHistoryCases
             $reservations = $this->reservations($pdo);
             $usage = $reservations->reserve($this->admission())['usageId'];
             $released = $reservations->reserve($this->admission('release', '1', 'apollo'))['usageId'];
+            $pdo->exec("UPDATE credit_usage SET source_type='ChatwootConversation', source_id='conversation'");
+            $conversationRead = fn (string $tenant = 'tenant', string $source = 'conversation') =>
+                $this->operationHistory($pdo)->inspect(new OperationHistoryQuery($tenant), $source)['list'];
+            $this->assertSame([$usage], array_column($conversationRead(), 'id'));
+            $this->assertSame([], $conversationRead('other'));
+            $this->assertSame([], $conversationRead('tenant', 'another'));
             $id = (new Requests($this->lock($pdo), $funding))->authorize($this->request($usage))['requestId'];
             $outcomes = new Outcomes($this->lock($pdo));
             $read = fn () => array_column($this->operationHistory($pdo)->inspect(new OperationHistoryQuery('tenant'))['list'], null, 'id');
@@ -93,6 +99,7 @@ trait OperationHistoryCases
                 (object) ['source' => 'provider']));
             $this->assertSame('admitted', $read()[$usage]['state']);
             $this->assertNull($read()[$usage]['settledCredits']);
+            $this->assertNull($conversationRead()[0]['settledCredits']);
             $this->assertSame('0', $read()[$usage]['accruedCreditsExact']);
             $outcomes->record(new OutcomeInput('tenant', $usage, 'execution', $id, 'cancelled', 0, 0, 1,
                 (object) ['source' => 'provider']));
@@ -108,11 +115,15 @@ trait OperationHistoryCases
             $this->assertSame('0.0002', $rows[$usage]['settledCredits']);
             $this->assertSame('0.0000', $rows[$usage]['reservedCredits']);
             $this->assertSame('settled', $rows[$usage]['state']);
+            $beforeConversationRead = $this->auditSnapshot($pdo);
+            $this->assertSame('0.0002', $conversationRead()[0]['settledCredits']);
+            $this->assertSame($beforeConversationRead, $this->auditSnapshot($pdo));
             $this->assertSame('released', $rows[$released]['state']);
             $this->assertSame('0.0000', $rows[$released]['settledCredits']);
             $pdo->exec("UPDATE credit_usage SET source_type = 'Contact', source_id = 'deleted-private-source',
                 operation_key = 'private-key', evidence = '{\"private\":true}' WHERE id = " . $pdo->quote($usage));
             $this->assertSame($rows, $read());
+            $this->assertSame([], $conversationRead());
         });
     }
 

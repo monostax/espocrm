@@ -12,7 +12,7 @@ use Espo\Core\Acl;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Billing\TenantRateLookup;
-use Espo\Modules\FeatureAiUsage\Services\{Access, Dataset, Ledger, Projection, Service};
+use Espo\Modules\FeatureAiUsage\Services\{Access, Credits, Dataset, Ledger, Projection, Service};
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\EntityCollection;
@@ -28,6 +28,7 @@ class ServiceTest extends TestCase
             $access, $em, $this->createMock(Config::class),
             (new \ReflectionClass(TenantRateLookup::class))->newInstanceWithoutConstructor(),
             new Ledger(), new Dataset(), $projection ?? $this->createMock(Projection::class),
+            $this->createMock(Credits::class),
         );
     }
 
@@ -121,7 +122,9 @@ class ServiceTest extends TestCase
             ->setConstructorArgs([$em, $acl, $this->createMock(SelectBuilderFactory::class), $user])
             ->onlyMethods(['accessibleIds'])->getMock();
         $projection->method('accessibleIds')->willReturn(['1' => true, '2' => true, '4' => true, '5' => true]);
-        $service = new Service($access, $em, $config, new TenantRateLookup($em, $currency), new Ledger(), new Dataset(), $projection);
+        $credits = $this->createMock(Credits::class);
+        $credits->method('report')->willReturnCallback(fn ($tenant, $period, $runs) => ['runs' => $runs, 'summary' => []]);
+        $service = new Service($access, $em, $config, new TenantRateLookup($em, $currency), new Ledger(), new Dataset(), $projection, $credits);
         $response = $service->summary(['tenantId' => 'a', 'month' => '2026-08', 'view' => $view, 'dimension' => 'kind', 'from' => '2026-08-02', 'limit' => 1]);
         $this->assertSame(4, $response['usage']['runs']);
         $this->assertSame(3, $response['filteredUsage']['runs']);
