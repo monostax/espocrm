@@ -9,6 +9,7 @@
     { "route": "/JourneyRelationships/:type/:targetId/:id", "method": "delete", "params": { "controller": "JourneyRelationships", "action": "unlink", "type": ":type", "targetId": ":targetId", "id": ":id" } },
     { "route": "/Note/:id/streamAiStatus/:membershipId", "method": "post", "params": { "controller": "StreamAgent", "action": "status", "id": ":id", "membershipId": ":membershipId" } },
     { "route": "/Note/:id/streamAiProgress/:membershipId", "method": "post", "params": { "controller": "StreamAgent", "action": "progress", "id": ":id", "membershipId": ":membershipId" } },
+    { "route": "/Note/:id/streamAiMessage/:membershipId", "method": "post", "params": { "controller": "StreamAgent", "action": "message", "id": ":id", "membershipId": ":membershipId" } },
     { "route": "/Account/action/bulkReadState", "method": "post", "params": { "controller": "AccountInbox", "action": "bulkReadState" } },
     { "route": "/Contact/action/bulkReadState", "method": "post", "params": { "controller": "ContactInbox", "action": "bulkReadState" } },
     { "route": "/Opportunity/action/bulkReadState", "method": "post", "params": { "controller": "OpportunityReadState", "action": "bulkReadState" } },

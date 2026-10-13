@@ -272,7 +272,8 @@ class ContactInbox
             $account = $this->em->getEntityById('Account', $data->accountId);
             if (!$account || $account->get('tenantId') !== $record->get('tenantId') || !$this->acl->checkEntityRead($account)) throw new Forbidden();
         }
-        return $this->present($this->records->get(static::ENTITY_TYPE)->update($record->getId(), $data)->getEntity());
+        $params = (new \Espo\Core\Record\UpdateParamsFetcher())->fetch($request);
+        return $this->present($this->records->get(static::ENTITY_TYPE)->update($record->getId(), $data, $params)->getEntity());
     }
 
     public function delete(Request $request): bool

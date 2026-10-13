@@ -30,6 +30,21 @@ class OperationSourceTest extends TestCase
         return $entity;
     }
 
+    private function usageRead(EntityManager $manager, ?Entity $usage): void
+    {
+        $statement = $this->createMock(\PDOStatement::class);
+        $statement->method('execute')->with(['operation', 'tenant'])->willReturn(true);
+        $statement->method('fetch')->with(\PDO::FETCH_ASSOC)->willReturn(
+            !$usage || $usage->get('deleted') || $usage->get('tenantId') !== 'tenant' ? false : [
+                'source_type' => $usage->get('sourceType'), 'source_id' => $usage->get('sourceId'),
+                'evidence' => $usage->get('evidence'),
+            ]
+        );
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->method('prepare')->with('SELECT source_type, source_id, evidence FROM credit_usage WHERE id = ? AND tenant_id = ? AND deleted = FALSE')->willReturn($statement);
+        $manager->method('getPDO')->willReturn($pdo);
+    }
+
     public static function sourceCases(): iterable
     {
         foreach (['ChatwootAiAgentRun', 'Opportunity'] as $scope) {
@@ -59,7 +74,8 @@ class OperationSourceTest extends TestCase
         ]);
         $canLookup = !in_array($case, ['unsupported', 'bad-id', 'empty-id', 'missing-id', 'scope-denied'], true);
         $manager = $this->createMock(EntityManager::class);
-        $manager->expects($this->exactly($canLookup ? 3 : 2))->method('getEntityById')
+        $this->usageRead($manager, $usage);
+        $manager->expects($this->exactly($canLookup ? 2 : 1))->method('getEntityById')
             ->willReturnCallback(function ($type, $id) use ($tenant, $usage, $source, $scope, $canLookup) {
                 if ($type === 'Tenant' && $id === 'tenant') return $tenant;
                 if ($type === 'CreditUsage' && $id === 'operation') return $usage;
@@ -87,7 +103,10 @@ class OperationSourceTest extends TestCase
     public function testUnknownAndForeignOperationsDoNotResolveSources(string $case): void
     {
         $manager = $this->createMock(EntityManager::class);
-        $manager->expects($this->exactly(str_ends_with($case, 'tenant') ? 1 : 2))->method('getEntityById')
+        $this->usageRead($manager, $case === 'missing-usage' ? null : $this->record([
+            'tenantId' => $case === 'foreign-usage' ? 'other' : 'tenant', 'deleted' => $case === 'deleted-usage',
+        ]));
+        $manager->expects($this->once())->method('getEntityById')
             ->willReturnCallback(fn ($scope) => $scope === 'Tenant'
                 ? ($case === 'missing-tenant' ? null : $this->record(['deleted' => $case === 'deleted-tenant']))
                 : ($case === 'missing-usage' ? null : $this->record([
@@ -151,6 +170,7 @@ class OperationSourceTest extends TestCase
         $access = $this->createMock(Access::class);
         $access->expects($this->once())->method('assertTenant')->with('tenant');
         $manager = $this->createMock(EntityManager::class);
+        $this->usageRead($manager, $this->record(['tenantId' => 'tenant']));
         $manager->method('getEntityById')->willReturnCallback(fn ($scope) => $this->record(
             $scope === 'CreditUsage' ? ['tenantId' => 'tenant'] : []));
         $this->assertEquals((object) ['tenantId' => 'tenant', 'id' => 'operation', 'source' => null],
@@ -167,7 +187,8 @@ class OperationSourceTest extends TestCase
     public function testNavigationRechecksPermissionsInsteadOfCachingSource(): void
     {
         $manager = $this->createMock(EntityManager::class);
-        $manager->expects($this->exactly(6))->method('getEntityById')->willReturnCallback(fn ($scope) =>
+        $this->usageRead($manager, $this->record(['tenantId' => 'tenant', 'sourceType' => 'Opportunity', 'sourceId' => 'source']));
+        $manager->expects($this->exactly(4))->method('getEntityById')->willReturnCallback(fn ($scope) =>
             $this->record(match ($scope) {
                 'CreditUsage' => ['tenantId' => 'tenant', 'sourceType' => 'Opportunity', 'sourceId' => 'source'],
                 'Opportunity' => ['tenantId' => 'tenant', 'name' => 'Name'],

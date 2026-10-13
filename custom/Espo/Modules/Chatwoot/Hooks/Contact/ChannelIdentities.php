@@ -382,6 +382,11 @@ class ChannelIdentities
      */
     private function normalizeValue(string $channelType, string $sourceId, ?string $label = null): array
     {
+        if ($channelType === 'linkedin') {
+            $profile = \Espo\Modules\Global\Tools\LinkedInProfile::profile('Contact',$sourceId);
+            if ($profile === null || strlen($profile) > 255) throw new BadRequest('A personal LinkedIn profile URL is required.');
+            return [$profile,$label,null];
+        }
         if (in_array($channelType, ['whatsapp', 'sms'])) {
             $normalized = PhoneNormalizer::normalize($sourceId);
 

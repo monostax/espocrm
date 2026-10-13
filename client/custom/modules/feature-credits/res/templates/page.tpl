@@ -1,6 +1,7 @@
 <div aria-busy="{{#if loading}}true{{else}}false{{/if}}">
     <h2>{{translate 'title' scope='Credits'}}</h2>
     <p class="text-muted">{{translate 'description' scope='Credits'}}</p>
+    <p><a href="{{checkoutUrl}}">{{translate 'title' scope='CreditCheckout'}}</a></p>
     <div class="row">
         <div class="col-sm-6 form-group"><label for="credit-tenant">{{translate 'tenant' scope='Credits'}}</label>
             <select id="credit-tenant" class="form-control" data-credit-tenant>

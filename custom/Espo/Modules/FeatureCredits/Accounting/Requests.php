@@ -155,7 +155,7 @@ final class Requests
                     throw new Conflict('Wallet and eligible grant projections disagree.');
                 }
             }
-            NativeSearchDebt::assertWallet($pdo, $input->tenantId, (string) $balance, (string) $walletHeld);
+            WalletDebt::assertWallet($pdo, $input->tenantId, (string) $balance, (string) $walletHeld);
             $pdo->prepare('UPDATE credit_reservation SET reserved_credits = ?, modified_at = ? WHERE id = ?')
                 ->execute([(string) $held, $now, $reservation['id']]);
             $pdo->prepare('UPDATE tenant_credit_balance SET balance = ?, reserved_credits = ?, modified_at = ? WHERE id = ?')

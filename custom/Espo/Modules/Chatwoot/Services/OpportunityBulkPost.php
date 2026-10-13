@@ -12,7 +12,6 @@ use Espo\Core\Job\QueueName;
 use Espo\Core\Record\ServiceFactory;
 use Espo\Core\Utils\Log;
 use Espo\Entities\User;
-use Espo\Modules\Chatwoot\Jobs\BroadcastOpportunityUpdate;
 use Espo\Modules\Chatwoot\Jobs\ProcessOpportunityBulkPost;
 use Espo\Modules\Chatwoot\Tools\Stream\BulkPostContext;
 use Espo\ORM\Entity;
@@ -179,13 +178,8 @@ class OpportunityBulkPost
         $this->em->getTransactionManager()->run(function () use ($id, $generation): void {
             $operation = $this->lock($id);
             if ((int) $operation->get('generation') !== $generation) return;
-            // The dirty flag is committed with each Note, so a killed worker cannot lose the invalidation.
+            // Each Note has transactional native Live Records intent; no account broadcast job.
             if ($operation->get('broadcastPending')) {
-                $this->em->createEntity('Job', [
-                    'name' => BroadcastOpportunityUpdate::class, 'className' => BroadcastOpportunityUpdate::class,
-                    'queue' => QueueName::Q0, 'attempts' => 3,
-                    'data' => (object) ['tenantIds' => [$operation->get('tenantId')]],
-                ]);
                 $operation->set('broadcastPending', false);
             }
             if ((int) $operation->get('succeeded') + (int) $operation->get('failed') < (int) $operation->get('total')) {

@@ -1,0 +1,5 @@
+{
+    "valuePermissionList": ["__APPEND__", "useEnrichmentCreditsPermission"],
+    "valuePermissionHighestLevels": {"useEnrichmentCreditsPermission": "yes"},
+    "permissionsStrictDefaults": {"useEnrichmentCreditsPermission": "no"}
+}

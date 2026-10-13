@@ -1,0 +1,6 @@
+{
+    "globalMiddlewareClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureLiveRecords\\Classes\\Api\\ProjectionHeader"
+    ]
+}

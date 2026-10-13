@@ -1,0 +1,4 @@
+{
+    "fields": {"useEnrichmentCreditsPermission": "Use enrichment credits"},
+    "tooltips": {"useEnrichmentCreditsPermission": "Purchase enrichment for accessible records in your workspaces. Applying results also requires record and field edit access."}
+}

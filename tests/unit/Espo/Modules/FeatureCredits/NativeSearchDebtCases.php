@@ -100,6 +100,7 @@ trait NativeSearchDebtCases
             $this->assertSame($results[0], $results[1]);
             $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type='nativeSearchOverrun'")->fetchColumn());
             $this->assertConsistent($pdo, '2.0000');
+            $this->assertDebtOrigins($pdo);
             $this->assertAuditHealthy($pdo);
         });
     }
@@ -117,7 +118,7 @@ trait NativeSearchDebtCases
             } catch (PDOException) {
                 $this->assertSame($before, $this->auditSnapshot($pdo));
             } finally {
-                $pdo->exec('ALTER TABLE credit_transaction DROP ' . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_failure');
+                $pdo->exec('ALTER TABLE credit_transaction DROP ' . self::dropCheckKeyword($pdo) . ' injected_failure');
             }
             $this->assertSame('15.0000', (new Settlements($this->lock($pdo), $funding))->settle('tenant', $usage, 'execution')['settledCredits']);
             $this->assertAuditHealthy($pdo);

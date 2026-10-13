@@ -1,0 +1,33 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true, "readOnly": true},
+        "obligation": {"type": "link", "notNull": true, "readOnly": true},
+        "provider": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "integrationId": {"type": "varchar", "maxLength": 24, "notNull": true, "readOnly": true},
+        "environment": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "kind": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "sourceKey": {"type": "varchar", "maxLength": 128, "notNull": true, "readOnly": true},
+        "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "externalReference": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "requestHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "requestCiphertext": {"type": "text", "notNull": true, "readOnly": true},
+        "bindingHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "state": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "externalId": {"type": "varchar", "maxLength": 104, "readOnly": true},
+        "externalHash": {"type": "varchar", "maxLength": 64, "readOnly": true},
+        "resultHash": {"type": "varchar", "maxLength": 64, "readOnly": true},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "modifiedAt": {"type": "datetime", "notNull": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "obligation": {"type": "belongsTo", "entity": "CreditBillingObligation"}
+    },
+    "indexes": {
+        "creationUnique": {"columns": ["tenantId", "provider", "integrationId", "kind", "sourceKey"], "unique": true},
+        "bindingUnique": {"columns": ["provider", "integrationId", "kind", "externalHash"], "unique": true},
+        "referenceUnique": {"columns": ["provider", "integrationId", "kind", "externalReference"], "unique": true},
+        "tenantState": {"columns": ["tenantId", "state"]}
+    }
+}

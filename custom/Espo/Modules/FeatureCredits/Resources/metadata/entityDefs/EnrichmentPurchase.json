@@ -1,0 +1,36 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "erasedAt": {"type": "datetime"},
+        "applicationHash": {"type": "varchar", "maxLength": 64},
+        "applicationReceipt": {"type": "text"},
+        "appliedContactId": {"type": "varchar", "maxLength": 17},
+        "appliedIdentityHash": {"type": "varchar", "maxLength": 64},
+        "tenant": {"type": "link", "notNull": true},
+        "quote": {"type": "link", "notNull": true},
+        "usage": {"type": "link", "notNull": true},
+        "candidateCache": {"type": "link"},
+        "candidateGroup": {"type": "varchar", "maxLength": 17},
+        "purchaseKind": {"type": "varchar", "maxLength": 16},
+        "purchaseKey": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "provider": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "product": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "policyId": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "credits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},
+        "valuesCiphertext": {"type": "text", "notNull": true},
+        "acquiredAt": {"type": "datetime", "notNull": true},
+        "purchasedAt": {"type": "datetime", "notNull": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "quote": {"type": "belongsTo", "entity": "EnrichmentQuote"},
+        "usage": {"type": "belongsTo", "entity": "CreditUsage"},
+        "candidateCache": {"type": "belongsTo", "entity": "EnrichmentCandidateCache"}
+    },
+    "indexes": {
+        "candidateApplication": {"columns": ["tenantId", "candidateGroup"]},
+        "purchaseUnique": {"columns": ["quoteId", "purchaseKey"], "unique": true},
+        "operation": {"columns": ["tenantId", "usageId"]}
+    }
+}

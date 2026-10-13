@@ -17,53 +17,62 @@ final class Funding
     public function grant(GrantInput $input): array
     {
         return $this->walletLock->run($input->tenantId, function (PDO $pdo, array $wallet, string $now) use ($input): array {
-            $query = $pdo->prepare('SELECT * FROM credit_grant
-                WHERE tenant_id = ? AND source_type = ? AND source_key = ? FOR UPDATE');
-            $query->execute([$input->tenantId, $input->sourceType, $input->sourceKey]);
-            $existing = $query->fetch(PDO::FETCH_ASSOC);
-            if ($existing) {
-                if ($existing['deleted'] || $existing['input_hash'] !== $input->hash) {
-                    throw new Conflict('Funding identity already has different input.');
-                }
-                return $this->receipt($existing);
-            }
-            if ($input->occurredAt > $now) {
-                throw new InvalidArgumentException('Funding cannot occur in the future.');
-            }
-            if ($input->actorId !== null) {
-                $query = $pdo->prepare('SELECT id FROM ' . ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? '`user`' : '"user"') .
-                    ' WHERE id = ? AND deleted = FALSE');
-                $query->execute([$input->actorId]);
-                if ($query->fetchColumn() !== $input->actorId) {
-                    throw new InvalidArgumentException('Unknown funding actor.');
-                }
-            }
-            // Lock/sweep existing grants before inserting any new financial records.
-            // Obsolete funds must not cause a transient wallet overflow on renewal.
-            $balance = $this->expireLocked($pdo, $input->tenantId, Amount::fromString($wallet['balance']), $now);
-            $grantId = RecordId::generate();
-            $transactionId = RecordId::generate();
-            $this->post($pdo, $transactionId, $input->tenantId, 'grant', $grantId, $input->hash,
-                $input->credits, $grantId, $input->actorId, $input->occurredAt, $now, $input->snapshotJson);
-            $pdo->prepare('INSERT INTO credit_grant
-                (id, tenant_id, source_type, source_key, input_hash, grant_transaction_id,
-                 granted_credits, remaining_credits, reserved_credits, expires_at, created_at, source_snapshot)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([
-                    $grantId, $input->tenantId, $input->sourceType, $input->sourceKey, $input->hash,
-                    $transactionId, $input->credits, $input->credits, '0.0000', $input->expiresAt, $now, $input->snapshotJson,
-                ]);
-            // Delayed renewal/migration delivery is posted then expired in this same transaction.
-            if ($input->expiresAt !== null && $input->expiresAt <= $now) {
-                $this->expireGrant($pdo, $input->tenantId, $grantId, $input->credits, $input->expiresAt, $now);
-            } else {
-                $balance = $balance->plus(Amount::fromString($input->credits));
-            }
-            $this->saveBalance($pdo, $wallet, $balance, $now);
-            return $this->receipt([
-                'id' => $grantId, 'grant_transaction_id' => $transactionId,
-                'granted_credits' => $input->credits, 'expires_at' => $input->expiresAt,
-            ]);
+            return $this->grantLocked($pdo, $wallet, $now, $input);
         });
+    }
+
+    /** Internal collaborator: caller owns WalletLock's transaction; billing identity commits with funding. */
+    public function grantLocked(PDO $pdo, array $wallet, string $now, GrantInput $input): array
+    {
+        if (!$pdo->inTransaction() || $wallet['tenant_id'] !== $input->tenantId) {
+            throw new \LogicException('Funding requires the original locked wallet.');
+        }
+        $query = $pdo->prepare('SELECT * FROM credit_grant
+            WHERE tenant_id = ? AND source_type = ? AND source_key = ? FOR UPDATE');
+        $query->execute([$input->tenantId, $input->sourceType, $input->sourceKey]);
+        $existing = $query->fetch(PDO::FETCH_ASSOC);
+        if ($existing) {
+            if ($existing['deleted'] || $existing['input_hash'] !== $input->hash) {
+                throw new Conflict('Funding identity already has different input.');
+            }
+            return $this->receipt($existing);
+        }
+        if ($input->occurredAt > $now) {
+            throw new InvalidArgumentException('Funding cannot occur in the future.');
+        }
+        if ($input->actorId !== null) {
+            $query = $pdo->prepare('SELECT id FROM ' . ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? '`user`' : '"user"') .
+                ' WHERE id = ? AND deleted = FALSE');
+            $query->execute([$input->actorId]);
+            if ($query->fetchColumn() !== $input->actorId) {
+                throw new InvalidArgumentException('Unknown funding actor.');
+            }
+        }
+        // Lock/sweep existing grants before inserting any new financial records.
+        // Obsolete funds must not cause a transient wallet overflow on renewal.
+        $balance = $this->expireLocked($pdo, $input->tenantId, Amount::fromString($wallet['balance']), $now);
+        $grantId = RecordId::generate();
+        $transactionId = RecordId::generate();
+        $this->post($pdo, $transactionId, $input->tenantId, 'grant', $grantId, $input->hash,
+            $input->credits, $grantId, $input->actorId, $input->occurredAt, $now, $input->snapshotJson);
+        $pdo->prepare('INSERT INTO credit_grant
+            (id, tenant_id, source_type, source_key, input_hash, grant_transaction_id,
+             granted_credits, remaining_credits, reserved_credits, expires_at, created_at, source_snapshot)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([
+                $grantId, $input->tenantId, $input->sourceType, $input->sourceKey, $input->hash,
+                $transactionId, $input->credits, $input->credits, '0.0000', $input->expiresAt, $now, $input->snapshotJson,
+            ]);
+        // Delayed renewal/migration delivery is posted then expired in this same transaction.
+        if ($input->expiresAt !== null && $input->expiresAt <= $now) {
+            $this->expireGrant($pdo, $input->tenantId, $grantId, $input->credits, $input->expiresAt, $now);
+        } else {
+            $balance = $balance->plus(Amount::fromString($input->credits));
+        }
+        $this->saveBalance($pdo, $wallet, $balance, $now);
+        return $this->receipt([
+            'id' => $grantId, 'grant_transaction_id' => $transactionId,
+            'granted_credits' => $input->credits, 'expires_at' => $input->expiresAt,
+        ]);
     }
 
     /** Sweep only unreserved expired funds. Repeated sweeps have no additional financial effect. */
@@ -112,8 +121,8 @@ final class Funding
 
     private function saveBalance(PDO $pdo, array $wallet, Amount $balance, string $now): void
     {
-        NativeSearchDebt::repayLocked($pdo, $wallet['tenant_id'], $now);
-        NativeSearchDebt::assertWallet($pdo, $wallet['tenant_id'], (string) $balance, $wallet['reserved_credits']);
+        WalletDebt::repayLocked($pdo, $wallet['tenant_id'], $now);
+        WalletDebt::assertWallet($pdo, $wallet['tenant_id'], (string) $balance, $wallet['reserved_credits']);
         $pdo->prepare('UPDATE tenant_credit_balance SET balance = ?, modified_at = ? WHERE id = ? AND tenant_id = ?')
             ->execute([(string) $balance, $now, $wallet['id'], $wallet['tenant_id']]);
     }

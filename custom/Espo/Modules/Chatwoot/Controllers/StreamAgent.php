@@ -39,6 +39,19 @@ class StreamAgent
         );
     }
 
+    public function postActionMessage(Request $request): object
+    {
+        $body = $request->getParsedBody();
+        $text = $body->text ?? null;
+        $runId = $body->workflowRunId ?? null;
+        if (!is_string($text) || trim($text) === '' || mb_strlen($text) > 500 ||
+            !is_string($runId) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $runId)) {
+            throw new BadRequest('A progress message (up to 500 characters) and workflow run ID are required.');
+        }
+        return $this->service->message($this->id($request, 'id'), $this->id($request, 'membershipId'),
+            $this->postHash($body->postHash ?? null), trim($text), $runId);
+    }
+
     public function postActionClaim(Request $request): object
     {
         $body = $request->getParsedBody();

@@ -78,6 +78,7 @@ class ServerStarter
         $loop = EventLoopFactory::create();
 
         $pusher = new Pusher($this->categoriesData, $this->phpExecutablePath, $this->isDebugMode);
+        $pusher->useQuerySubscriptions(new QuerySubscriptions($this->phpExecutablePath ?: PHP_BINARY, $loop));
 
         $this->subscriber->subscribe($pusher, $loop);
 

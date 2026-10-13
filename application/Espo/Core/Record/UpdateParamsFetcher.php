@@ -30,6 +30,7 @@
 namespace Espo\Core\Record;
 
 use Espo\Core\Api\Request;
+use Espo\Core\Exceptions\BadRequest;
 
 class UpdateParamsFetcher
 {
@@ -47,10 +48,17 @@ class UpdateParamsFetcher
         $versionNumber = $request->getHeader('X-Version-Number');
 
         if ($versionNumber !== null) {
-            $versionNumber = intval($versionNumber);
+            if (!preg_match('/\A(?:0|[1-9][0-9]*)\z/', $versionNumber) ||
+                filter_var($versionNumber, FILTER_VALIDATE_INT) === false
+            ) {
+                throw new BadRequest('Invalid version number.');
+            }
+
+            $versionNumber = (int) $versionNumber;
         }
 
         return UpdateParams::create()
+            ->withRequiredVersion()
             ->withSkipDuplicateCheck($skipDuplicateCheck)
             ->withVersionNumber($versionNumber);
     }

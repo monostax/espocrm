@@ -57,7 +57,7 @@ final class BalanceStatus
             $held = Amount::fromString($wallet ? $wallet['reserved_credits'] : '0');
             $expired = Amount::fromString((string) $grants['expired']);
             $zero = Amount::fromString('0');
-            $debt = NativeSearchDebt::outstanding($pdo, $tenantId);
+            $debt = WalletDebt::outstanding($pdo, $tenantId);
             if (($wallet && $wallet['deleted']) || (!$wallet && (int) $grants['grant_count'] !== 0) ||
                 (int) $grants['invalid'] !== 0 || $held->compareTo($zero) < 0 ||
                 $balance->plus($debt)->compareTo($held) < 0 ||

@@ -1,0 +1,17 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "version": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "policyId": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "effectiveFrom": {"type": "datetime", "notNull": true, "readOnly": true},
+        "definition": {"type": "jsonObject", "notNull": true, "readOnly": true},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "createdBy": {"type": "link"}
+    },
+    "links": {"createdBy": {"type": "belongsTo", "entity": "User"}},
+    "indexes": {
+        "versionUnique": {"columns": ["version"], "unique": true},
+        "policyUnique": {"columns": ["policyId"], "unique": true},
+        "startUnique": {"columns": ["effectiveFrom"], "unique": true}
+    }
+}

@@ -32,13 +32,13 @@ function view(getRequest) {
 const balance = tenantId => ({tenantId, walletExists: true, availableCredits: '9999999999.9999', reservedCredits: '0.0000', pendingExpirationCredits: '0.0000', balance: '9999999999.9999'});
 const report = tenantId => ({tenantId, list: [{id: 'op', settledCredits: null, accruedCreditsExact: '0.0001875'}], nextCursor: null});
 
-test('exact amounts, unknown final charges and waived requests remain distinct', () => {
+test('rounded amounts, unknown final charges and waived requests remain distinct', () => {
     const ui = helpers.present(balance('a'), report('a'), 'operations', key => en[key]);
-    assert.equal(ui.cards[0].value, '9999999999.9999');
-    assert.equal(ui.rows[0].cells[4].value, '0.0001875');
+    assert.equal(ui.cards[0].value, '10000000000.00');
+    assert.equal(ui.rows[0].cells[4].value, '<0.01');
     assert.equal(ui.rows[0].cells[5].value, en.notFinal);
     const zero = helpers.present(null, {list: [{settledCredits: '0.0000'}]}, 'operations', key => en[key]);
-    assert.equal(zero.rows[0].cells[5].value, '0.0000');
+    assert.equal(zero.rows[0].cells[5].value, '0.00');
     const waived = helpers.present(null, {list: [{billingState: 'waived', pricedCreditsExact: null}]}, 'requests', key => en[key]);
     assert.equal(waived.rows[0].cells[3].value, en.waived);
     assert.equal(waived.rows[0].cells[6].value, en.notFinal);
@@ -46,7 +46,36 @@ test('exact amounts, unknown final charges and waived requests remain distinct',
     assert.equal(helpers.present({...balance('a'), availableCredits: '0.0000'}, null, 'operations', key => key).exhausted, true);
     const debt = helpers.present({...balance('a'), availableCredits: '-5.0000', balance: '-5.0000'}, null, 'history', key => key);
     assert.equal(debt.exhausted, true);
-    assert.equal(debt.cards[0].value, '-5.0000');
+    assert.equal(debt.cards[0].value, '−5.00');
+});
+
+test('credit display rounds exact decimal strings with ties away from zero', () => {
+    for (const [raw, expected] of [
+        ['4998.5076', '4998.51'], ['1.4924', '1.49'], ['5', '5.00'], ['0.0000', '0.00'],
+        ['-0.0000', '0.00'], ['0.0040', '<0.01'], ['-0.0040', '−<0.01'],
+        ['0.0050', '0.01'], ['-0.0050', '−0.01'], ['1.2350', '1.24'], ['-1.2350', '−1.24'],
+        ['9.995', '10.00'], ['0.004999999999999999', '<0.01'],
+        ['999999999999999999.995', '1000000000000000000.00'],
+        [null, null], [undefined, undefined], ['unavailable', 'unavailable'],
+    ]) assert.equal(helpers.formatCredits(raw), expected, String(raw));
+});
+
+test('all credit reports format only presentation values and preserve full-precision source data', () => {
+    const rawBalance = Object.freeze({...balance('a'), availableCredits: '-0.0001'});
+    for (const [tab, {columns}] of Object.entries(helpers.reports)) {
+        const row = Object.freeze(Object.fromEntries(columns.map(key => [key,
+            /[Cc]redits/.test(key) ? '1.23456789' : key.endsWith('At') ? '2026-10-11 12:00:00' : 'fixture'])));
+        const rawPage = Object.freeze({list: Object.freeze([row])});
+        const before = JSON.stringify({rawBalance, rawPage});
+        const ui = helpers.present(rawBalance, rawPage, tab, key => key);
+        assert.equal(ui.cards[0].value, '−<0.01');
+        assert.equal(ui.exhausted, true);
+        columns.forEach((key, index) => {
+            assert.equal(ui.rows[0].cells[index].value,
+                /[Cc]redits/.test(key) ? '1.23' : row[key], `${tab}.${key}`);
+        });
+        assert.equal(JSON.stringify({rawBalance, rawPage}), before);
+    }
 });
 
 test('template escapes names, renders all reports, and has bilingual accessible states', () => {
@@ -212,7 +241,8 @@ test('production transpiler emits loadable AMD for the credit page and helpers',
             return value;
         }
         for (const id of definitions.keys()) resolve(id);
-        assert.equal(definitions.size, 3);
+        assert.equal(definitions.size, 5);
         assert.equal(typeof resolve('feature-credits:helpers/presentation').sourceRoute, 'function');
+        assert.equal(resolve('feature-credits:helpers/presentation').formatCredits('999999999999999999.995'), '1000000000000000000.00');
     } finally { rmSync(dir, {recursive: true, force: true}); }
 });

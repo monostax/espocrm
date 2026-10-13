@@ -85,7 +85,7 @@ class QualifierSchema
     {
         $rules = new stdClass();
         foreach ($properties as $key => $kind) $rules->$key = $kind === 'date'
-            ? (object) ['type' => 'string', 'format' => 'date'] : (object) ['type' => $kind, 'maxLength' => 255];
+            ? (object) ['type' => 'string', 'format' => 'date'] : (object) ['type' => $kind, ...($kind === 'string' ? ['maxLength' => 255] : [])];
         return (object) ['type' => 'object', 'properties' => $rules, 'required' => [], 'additionalProperties' => false];
     }
 }

@@ -65,6 +65,9 @@ class Pusher implements WampServerInterface
     /** @var array<string, array{conn: ConnectionInterface, topic: Topic<object>}[]> */
     protected $pendingSubscriptions = [];
     private string $phpExecutablePath;
+    private array $connectionTokens = [];
+    private array $requestedTopics = [];
+    private ?QuerySubscriptions $queries = null;
 
     /**
      * @param array<string, array<string, mixed>> $categoriesData
@@ -112,6 +115,9 @@ class Pusher implements WampServerInterface
         /** @var string $connectionId */
         $connectionId = $conn->resourceId ?? throw new RuntimeException();
 
+        $request = new \stdClass();
+        $this->requestedTopics[$connectionId][$topicId] = $request;
+
         $userId = $this->getUserIdByConnection($conn);
 
         if (!$userId) {
@@ -136,6 +142,12 @@ class Pusher implements WampServerInterface
             $this->connectionIdTopicIdListMap[$connectionId] = [];
         }
 
+        $category = $this->getCategoryData($topicId);
+        if (isset($category['queryCheckCommand'])) {
+            $this->queries?->subscribe($conn, $userId, $this->connectionTokens[$connectionId], $topicId, $category);
+            return;
+        }
+
         $checkCommand = $this->getAccessCheckCommandForTopic($conn, $topic);
 
         if ($checkCommand) {
@@ -144,7 +156,8 @@ class Pusher implements WampServerInterface
             $process = new Process($checkCommand);
             $process->start();
 
-            $process->on('exit', function ($exitCode) use ($topic, $connectionId, $topicId, $userId) {
+            $process->on('exit', function ($exitCode) use ($topic, $connectionId, $topicId, $userId, $request) {
+                if (($this->requestedTopics[$connectionId][$topicId] ?? null) !== $request || !isset($this->connections[$connectionId])) return;
                 if ($exitCode !== 0) {
                     if ($this->isDebugMode) {
                         $this->log("$connectionId: check access failed for topic $topicId for user $userId");
@@ -184,6 +197,13 @@ class Pusher implements WampServerInterface
 
         /** @var string $connectionId */
         $connectionId = $conn->resourceId ?? throw new RuntimeException();
+
+        unset($this->requestedTopics[$connectionId][$topicId]);
+        $this->queries?->unsubscribe($conn, $topicId);
+        $this->pendingSubscriptions[$connectionId] = array_values(array_filter(
+            $this->pendingSubscriptions[$connectionId] ?? [],
+            static fn ($pending) => $pending['topic']->getId() !== $topicId
+        ));
 
         $userId = $this->getUserIdByConnection($conn);
 
@@ -441,12 +461,15 @@ class Pusher implements WampServerInterface
             return;
         }
 
+        $this->connectionTokens[(string) $conn->resourceId] = $authToken;
+
         $command = "$this->phpExecutablePath command.php AuthTokenCheck $authToken $userId 2>&1";
 
         $process = new Process($command);
         $process->start();
 
-        $process->on('exit', function ($exitCode) use ($conn, $userId) {
+        $process->on('exit', function ($exitCode) use ($conn, $userId, $authToken) {
+            if (($this->connectionTokens[(string) $conn->resourceId] ?? null) !== $authToken) return;
             if ($exitCode !== 0) {
                 $this->closeConnection($conn);
 
@@ -492,6 +515,8 @@ class Pusher implements WampServerInterface
 
         unset($this->connections[$connectionId]);
         unset($this->pendingSubscriptions[$connectionId]);
+        unset($this->connectionTokens[$connectionId], $this->requestedTopics[$connectionId], $this->connectionIdTopicIdListMap[$connectionId]);
+        $this->queries?->unsubscribe($conn);
     }
 
     /**
@@ -550,6 +575,18 @@ class Pusher implements WampServerInterface
             return;
         }
 
+        // Internal producer topics are not browser topics. Projection checks
+        // evaluate each current viewer's actual API result before notifying.
+        foreach ($this->categoriesData as $category) {
+            if (($category['invalidationTopic'] ?? null) === $topicId) {
+                $created = $data->intentCreatedAtMs ?? null;
+                if (is_numeric($created) && $created <= microtime(true) * 1000 && microtime(true) * 1000 - $created < 5000) {
+                    $this->queries?->invalidate($topicId);
+                }
+                return;
+            }
+        }
+
         if (!$this->isTopicAllowed($topicId)) {
             return;
         }
@@ -583,13 +620,12 @@ class Pusher implements WampServerInterface
             return;
         }
 
-        $topic = $this->topicHash[$topicId] ?? null;
-
-        if ($topic) {
-            $topic->broadcast($data);
-
-            if ($this->isDebugMode) {
-                $this->log("send $topicId to all");
+        // Ratchet's TopicManager tracks subscribe frames before our asynchronous
+        // ACL command completes. Only our accepted subscriptions authorize sends.
+        foreach ($this->connections as $connectionId => $connection) {
+            if (in_array($topicId, $this->connectionIdTopicIdListMap[$connectionId] ?? [], true)) {
+                /** @var WampConnection $connection */
+                $connection->event($topicId, $data);
             }
         }
 
@@ -601,6 +637,11 @@ class Pusher implements WampServerInterface
     private function log(string $msg): void
     {
         echo "[" . date('Y-m-d H:i:s') . "] " . $msg . "\n";
+    }
+
+    public function useQuerySubscriptions(QuerySubscriptions $queries): void
+    {
+        $this->queries = $queries;
     }
 
     private function addTopicForUser(string $connectionId, Topic $topic, string $userId): void

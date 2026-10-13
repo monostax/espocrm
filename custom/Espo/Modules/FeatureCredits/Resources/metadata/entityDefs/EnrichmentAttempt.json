@@ -1,0 +1,43 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "cacheCiphertext": {"type": "text"},
+        "cacheHash": {"type": "varchar", "maxLength": 64},
+        "cacheExpiresAt": {"type": "datetime"},
+        "sourceAttemptId": {"type": "varchar", "maxLength": 17},
+        "acquisitionQuoteId": {"type": "varchar", "maxLength": 17},
+        "acquiredAt": {"type": "datetime"},
+        "erasedAt": {"type": "datetime"},
+        "resultHash": {"type": "varchar", "maxLength": 64},
+        "applicationHash": {"type": "varchar", "maxLength": 64},
+        "applicationReceipt": {"type": "text"},
+        "appliedIdentityHash": {"type": "varchar", "maxLength": 64},
+        "tenant": {"type": "link", "notNull": true},
+        "quote": {"type": "link", "notNull": true},
+        "product": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "provider": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "state": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "claimToken": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "claimedAt": {"type": "datetime", "notNull": true},
+        "deadlineAt": {"type": "datetime", "notNull": true},
+        "leaseUntil": {"type": "datetime", "notNull": true},
+        "pollAfter": {"type": "datetime"},
+        "requestId": {"type": "varchar", "maxLength": 128},
+        "subjectId": {"type": "varchar", "maxLength": 128},
+        "credits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},
+        "resultCiphertext": {"type": "text"},
+        "resultExpiresAt": {"type": "datetime"},
+        "purchasedAt": {"type": "datetime"},
+        "completedAt": {"type": "datetime"}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "quote": {"type": "belongsTo", "entity": "EnrichmentQuote"}
+    },
+    "indexes": {
+        "dispatchUnique": {"columns": ["quoteId", "product", "provider"], "unique": true},
+        "due": {"columns": ["tenantId", "state", "deadlineAt"]},
+        "expiry": {"columns": ["resultExpiresAt"]},
+        "cacheExpiry": {"columns": ["cacheExpiresAt"]}
+    }
+}

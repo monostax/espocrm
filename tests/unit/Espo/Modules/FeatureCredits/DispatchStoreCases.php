@@ -19,6 +19,47 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 trait DispatchStoreCases
 {
+    #[DataProvider('dialects')]
+    public function testAutomaticRecoveryTenantDiscoveryUsesDueUnifiedRoutesWithoutFinancialWrites(string $dialect): void
+    {
+        $this->executionDatabase($dialect, function (PDO $pdo): void {
+            $scan = fn (string $phase = 'terminal') => $this->dispatch($pdo, 'recoveryTenants', ['phase' => $phase, 'limit' => 5]);
+            $this->assertSame([], $scan());
+            [$intent] = $this->dispatchFixture($pdo);
+            $before = $pdo->query('SELECT * FROM credit_execution_route')->fetchAll(PDO::FETCH_ASSOC);
+            $this->assertSame(['tenant'], $scan());
+            $this->assertSame([], $scan('completion'));
+            $this->assertSame($before, $pdo->query('SELECT * FROM credit_execution_route')->fetchAll(PDO::FETCH_ASSOC));
+            $this->assertConsistent($pdo, '10.0000');
+
+            $pdo->exec("UPDATE credit_execution_route SET tenant_id='other'");
+            $this->assertSame([], $scan(), 'Foreign usage cannot nominate a tenant.');
+            $pdo->exec("UPDATE credit_execution_route SET tenant_id='tenant',billing_regime='legacy-engagement-v1'");
+            $this->assertSame([], $scan());
+            $pdo->exec("UPDATE credit_execution_route SET billing_regime='unified-prepaid-v1',deleted=TRUE");
+            $this->assertSame([], $scan());
+            $pdo->exec('UPDATE credit_execution_route SET deleted=FALSE');
+            $pdo->exec("UPDATE tenant SET deleted=TRUE WHERE id='tenant'");
+            $this->assertSame([], $scan());
+            $pdo->exec("UPDATE tenant SET deleted=FALSE WHERE id='tenant'");
+
+            $this->assertNotNull($this->dispatch($pdo, 'discoverUnsealed', ['tenantId' => 'tenant', 'leaseMs' => 60000, 'retryMs' => 120000]));
+            $this->assertSame([], $scan(), 'Leased route is not due.');
+            $this->now = '2026-10-11 00:00:00';
+            $this->assertSame(['tenant'], $scan(), 'Newly due routes need no tenant configuration edit.');
+            $this->dispatch($pdo, 'seal', ['scope' => $intent->scope]);
+            $this->assertSame([], $scan());
+            $this->assertSame(['tenant'], $scan('completion'));
+            $this->assertSame('pending', $this->dispatch($pdo, 'recoverOne', ['tenantId' => 'tenant', 'leaseMs' => 60000, 'retryMs' => 120000]));
+            $this->assertSame([], $scan('completion'));
+            $this->now = '2026-10-11 00:02:00';
+            $this->assertSame(['tenant'], $scan('completion'), 'Unknown provider facts stay eligible for recheck, not waived.');
+            $pdo->prepare('UPDATE credit_execution_route SET completion_finished_at=?')->execute([$this->now]);
+            $this->assertSame([], $scan('completion'));
+            $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type='debit'")->fetchColumn());
+        });
+    }
+
     private function dispatchStore(PDO $pdo): DispatchStore
     {
         $manager = $this->createMock(EntityManager::class);

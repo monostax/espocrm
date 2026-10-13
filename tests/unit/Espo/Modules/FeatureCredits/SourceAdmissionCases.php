@@ -49,7 +49,7 @@ trait SourceAdmissionCases
                     $query->execute([$usageId]); $stored = $query->fetch(PDO::FETCH_ASSOC);
                     $this->assertSame($type, $stored['source_type']); $this->assertSame($id, $stored['source_id']);
                     if ($type === 'ChatwootConversation') $this->assertSame(['sourceRequestId' => str_repeat('a', 64)], json_decode($stored['evidence'], true));
-                    $this->assertLinkedSourceNavigation($pdo, $type, $id, $stored['evidence']);
+                    $this->assertLinkedSourceNavigation($pdo, $type, $id, $stored['evidence'], $usageId);
                     $this->assertSame($admitted, $this->terminalCommand($pdo, $input, $catalog));
                     $changed = clone $input; $changed->source = clone $input->source; $changed->source->id = 'foreign';
                     try { $this->terminalCommand($pdo, $changed, $catalog); $this->fail('Source changed on retry.'); }
@@ -80,7 +80,7 @@ trait SourceAdmissionCases
         });
     }
 
-    private function assertLinkedSourceNavigation(PDO $pdo, string $type, string $id, ?string $evidence): void
+    private function assertLinkedSourceNavigation(PDO $pdo, string $type, string $id, ?string $evidence, string $usageId): void
     {
         $entity = function (array $fields) {
             $record = $this->createStub(\Espo\ORM\Entity::class);
@@ -88,14 +88,12 @@ trait SourceAdmissionCases
             return $record;
         };
         $tenant = $entity([]);
-        $usage = $entity(['tenantId' => 'tenant', 'sourceType' => $type, 'sourceId' => $id,
-            'evidence' => $evidence === null ? null : json_decode($evidence)]);
         $source = $entity(['tenantId' => 'tenant', 'name' => 'Source', 'parentType' => 'Opportunity', 'parentId' => 'deal']);
         $parent = $entity(['tenantId' => 'tenant']);
         $manager = $this->createStub(\Espo\ORM\EntityManager::class);
         $manager->method('getPDO')->willReturn($pdo);
         $manager->method('getEntityById')->willReturnCallback(fn ($scope) => match ($scope) {
-            'Tenant' => $tenant, 'CreditUsage' => $usage, $type => $source, default => $parent,
+            'Tenant' => $tenant, $type => $source, default => $parent,
         });
         $mode = 'allowed';
         $acl = $this->createStub(\Espo\Core\Acl::class);
@@ -107,20 +105,20 @@ trait SourceAdmissionCases
         $acl->method('checkEntity')->willReturnCallback(function () use (&$mode) { return $mode !== 'stream-denied'; });
         $acl->method('checkField')->willReturnCallback(function () use (&$mode) { return $mode !== 'name-denied'; });
         $service = new \Espo\Modules\FeatureCredits\Services\OperationSource($manager, $acl);
-        $allowed = $service->inspect('tenant', 'usage')['source'];
+        $allowed = $service->inspect('tenant', $usageId)['source'];
         $this->assertSame($id, $allowed['id']);
         if ($evidence !== null) $this->assertSame(str_repeat('a', 64), $allowed['requestId']);
-        $mode = 'scope-denied'; $this->assertNull($service->inspect('tenant', 'usage')['source']);
-        $mode = 'record-denied'; $this->assertNull($service->inspect('tenant', 'usage')['source']);
+        $mode = 'scope-denied'; $this->assertNull($service->inspect('tenant', $usageId)['source']);
+        $mode = 'record-denied'; $this->assertNull($service->inspect('tenant', $usageId)['source']);
         if ($type === 'Note') {
-            $mode = 'parent-denied'; $this->assertNull($service->inspect('tenant', 'usage')['source']);
-            $mode = 'stream-denied'; $this->assertNull($service->inspect('tenant', 'usage')['source']);
+            $mode = 'parent-denied'; $this->assertNull($service->inspect('tenant', $usageId)['source']);
+            $mode = 'stream-denied'; $this->assertNull($service->inspect('tenant', $usageId)['source']);
         }
-        $mode = 'name-denied'; $this->assertNull($service->inspect('tenant', 'usage')['source']['name']);
+        $mode = 'name-denied'; $this->assertNull($service->inspect('tenant', $usageId)['source']['name']);
         if ($type === 'ChatwootConversation' || $type === 'Note') {
             $table = $type === 'Note' ? 'opportunity' : 'chatwoot_account';
             $pdo->exec("UPDATE $table SET tenant_id = 'other'");
-            $this->assertNull($service->inspect('tenant', 'usage')['source']);
+            $this->assertNull($service->inspect('tenant', $usageId)['source']);
             $pdo->exec("UPDATE $table SET tenant_id = 'tenant' WHERE id = '" . ($type === 'Note' ? 'deal' : 'account') . "'");
         }
     }
@@ -227,7 +225,7 @@ trait SourceAdmissionCases
                         $this->assertHeld($pdo, '0.0000');
                         $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM credit_usage')->fetchColumn());
                     } finally {
-                        $pdo->exec('ALTER TABLE credit_allocation DROP ' . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' source_fault');
+                        $pdo->exec('ALTER TABLE credit_allocation DROP ' . self::dropCheckKeyword($pdo) . ' source_fault');
                     }
                     $receipt = $service->reserve($input);
                     $this->assertSame(['source_type' => $scope, 'source_id' => 'source'],

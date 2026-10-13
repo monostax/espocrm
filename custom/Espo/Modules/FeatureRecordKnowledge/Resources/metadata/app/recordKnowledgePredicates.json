@@ -1,4 +1,6 @@
 {
+    "owns": {"label": "owns", "subjects": ["Contact"], "objects": ["Account"], "inverse": "owned by", "aliases": [], "qualifiers": {"since": "date", "until": "date", "role": "string", "ownershipPercentage": "number"}},
+    "administers": {"label": "administers", "subjects": ["Contact"], "objects": ["Account"], "inverse": "administered by", "aliases": [], "qualifiers": {"since": "date", "until": "date", "role": "string"}},
     "works_at": {"label": "works at", "subjects": ["User", "Contact", "Lead"], "objects": ["Account"], "inverse": "employs", "aliases": ["employed_by"], "qualifiers": {"since": "date", "until": "date", "role": "string"}},
     "reports_to": {"label": "reports to", "subjects": ["User", "Contact", "Lead"], "objects": ["User", "Contact", "Lead"], "inverse": "manages", "aliases": [], "qualifiers": {"since": "date", "until": "date"}},
     "decides_for": {"label": "decides for", "subjects": ["User", "Contact", "Lead"], "objects": ["Account", "Opportunity"], "inverse": "decision maker", "aliases": [], "qualifiers": {"since": "date", "until": "date", "role": "string"}},

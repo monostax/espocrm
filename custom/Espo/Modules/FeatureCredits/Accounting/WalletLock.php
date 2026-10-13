@@ -50,7 +50,7 @@ final class WalletLock
             if ($wallet['tenant_id'] !== $tenantId || ($wallet['deleted'] ?? false)) {
                 throw new Conflict('Invalid wallet ownership or deleted financial record.');
             }
-            NativeSearchDebt::assertWallet($pdo, $tenantId, $wallet['balance'], $wallet['reserved_credits']);
+            WalletDebt::assertWallet($pdo, $tenantId, $wallet['balance'], $wallet['reserved_credits']);
             $result = $callback($pdo, $wallet, $now);
             $pdo->commit();
             return $result;

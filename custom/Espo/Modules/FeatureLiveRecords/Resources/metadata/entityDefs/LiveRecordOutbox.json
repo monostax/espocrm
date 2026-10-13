@@ -1,0 +1,18 @@
+{
+    "fields": {
+        "tenantId": {"type": "varchar", "maxLength": 64, "required": true},
+        "intent": {"type": "text", "required": true},
+        "createdAt": {"type": "datetime", "required": true},
+        "dueAt": {"type": "datetime", "required": true},
+        "attempts": {"type": "int", "default": 0},
+        "leaseToken": {"type": "varchar", "maxLength": 64},
+        "leaseUntil": {"type": "datetime"},
+        "completedAt": {"type": "datetime"},
+        "failureCode": {"type": "varchar", "maxLength": 32}
+    },
+    "indexes": {
+        "pending": {"columns": ["completedAt", "dueAt", "leaseUntil"]},
+        "tenantPending": {"columns": ["tenantId", "completedAt", "createdAt"]},
+        "retention": {"columns": ["completedAt"]}
+    }
+}

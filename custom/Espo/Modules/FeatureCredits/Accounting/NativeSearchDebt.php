@@ -34,7 +34,7 @@ final class NativeSearchDebt
 
     public static function assertWallet(PDO $pdo, string $tenantId, string $balance, string $held): void
     {
-        WalletLock::assertProjection((string) Amount::fromString($balance)->plus(self::outstanding($pdo, $tenantId)), $held);
+        WalletDebt::assertWallet($pdo, $tenantId, $balance, $held);
     }
 
     /** A measured overrun must settle before further admissions/authorizations.
@@ -79,27 +79,7 @@ final class NativeSearchDebt
      * Each payment has an equal opposite recovery leg with the same stable key. */
     public static function repayLocked(PDO $pdo, string $tenantId, string $now): void
     {
-        $debt = self::outstanding($pdo, $tenantId);
-        if ((string) $debt === '0.0000') return;
-        $q = $pdo->prepare('SELECT * FROM credit_grant WHERE tenant_id = ? AND (expires_at IS NULL OR expires_at > ?)
-            ORDER BY CASE WHEN expires_at IS NULL THEN 1 ELSE 0 END, expires_at, id FOR UPDATE');
-        $q->execute([$tenantId, $now]);
-        foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $grant) {
-            if ($grant['deleted']) throw new Conflict('Deleted financial grant.');
-            WalletLock::assertProjection($grant['remaining_credits'], $grant['reserved_credits']);
-            $free = Amount::fromString($grant['remaining_credits'])->minus(Amount::fromString($grant['reserved_credits']));
-            $take = $free->compareTo($debt) < 0 ? $free : $debt;
-            if ((string) $take === '0.0000') continue;
-            $key = 'search-payment:' . RecordId::generate();
-            $evidence = ['reason' => 'native_search_debt_payment', 'transferKey' => $key, 'grantId' => $grant['id']];
-            self::post($pdo, $tenantId, self::PAYMENT, $key, Amount::fromString('0')->minus($take), $grant['id'], null, $now, $evidence);
-            self::post($pdo, $tenantId, self::RECOVERY, $key, $take, null, null, $now, $evidence);
-            $pdo->prepare('UPDATE credit_grant SET remaining_credits = ? WHERE id = ?')->execute([
-                (string) Amount::fromString($grant['remaining_credits'])->minus($take), $grant['id'],
-            ]);
-            $debt = $debt->minus($take);
-            if ((string) $debt === '0.0000') break;
-        }
+        WalletDebt::repayKindLocked($pdo, $tenantId, $now, self::DEBIT, self::PAYMENT, self::RECOVERY, 'search-payment');
     }
 
     private static function post(PDO $pdo, string $tenantId, string $type, string $key, Amount $amount,

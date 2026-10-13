@@ -68,13 +68,18 @@ final class ReservationHistory
                 }
                 $accrued = BigDecimal::of($row['accrued_credits_exact']);
                 $settled = $row['settled_credits'] === null ? null : Amount::fromString($row['settled_credits']);
+                $purchased = $row['operation_type'] === 'enrichment' && $settled !== null ?
+                    FixedSettlement::purchasedTotal($pdo,$input->tenantId,$row['usage_id']) : null;
+                if ($purchased !== null && ($purchased->compareTo($settled) !== 0 || $accrued->compareTo((string) $purchased) !== 0)) {
+                    throw new LogicException('Invalid purchased reservation projection.');
+                }
                 $closed = in_array($row['state'], ['settled', 'released'], true);
                 if ($row['deleted'] || $row['parent_id'] === null || $row['parent_deleted'] ||
-                    !in_array($row['operation_type'], ['ai', 'apollo'], true) ||
+                    !in_array($row['operation_type'], ['ai', 'apollo', 'enrichment'], true) ||
                     $reserved->compareTo($zero) < 0 ||
                     (!$closed && ($row['state'] !== 'held' || $row['usage_state'] !== 'admitted' ||
-                        $row['settled_at'] !== null || $row['usage_settled_at'] !== null || $settled !== null ||
-                        $accrued->compareTo(NativeSearchDebt::accrualLimit($pdo, $input->tenantId, $row['id'], (string) $reserved)) > 0)) ||
+                        $row['settled_at'] !== null || $row['usage_settled_at'] !== null || ($settled !== null && $purchased === null) ||
+                        ($purchased === null && $accrued->compareTo(NativeSearchDebt::accrualLimit($pdo, $input->tenantId, $row['id'], (string) $reserved)) > 0))) ||
                     ($closed && ($row['usage_state'] !== $row['state'] || $reserved->compareTo($zero) !== 0 ||
                         $row['settled_at'] === null || $row['settled_at'] !== $row['usage_settled_at'] ||
                         $settled === null || $settled->compareTo($zero) < 0 ||

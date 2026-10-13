@@ -1,0 +1,30 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true},
+        "quote": {"type": "link", "notNull": true},
+        "scopeHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "identityScopeHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "sourceKey": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "candidateKey": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "resultOrder": {"type": "int", "notNull": true},
+        "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "provider": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "product": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "capabilityRevision": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "payloadCiphertext": {"type": "text"},
+        "acquiredAt": {"type": "datetime", "notNull": true},
+        "expiresAt": {"type": "datetime", "notNull": true},
+        "conflictAt": {"type": "datetime"},
+        "conflictReason": {"type": "varchar", "maxLength": 32}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "quote": {"type": "belongsTo", "entity": "EnrichmentQuote"}
+    },
+    "indexes": {
+        "sourceUnique": {"columns": ["tenantId", "scopeHash", "provider", "sourceKey"], "unique": true},
+        "expiry": {"columns": ["tenantId", "expiresAt"]},
+        "identityScope": {"columns": ["tenantId", "identityScopeHash"]}
+    }
+}

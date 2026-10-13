@@ -329,7 +329,8 @@ class Inbox
     public function update(Request $request): object
     {
         $record = $this->record($request);
-        return $this->present($this->records->get('Initiative')->update($record->getId(), $request->getParsedBody())->getEntity());
+        $params = (new \Espo\Core\Record\UpdateParamsFetcher())->fetch($request);
+        return $this->present($this->records->get('Initiative')->update($record->getId(), $request->getParsedBody(), $params)->getEntity());
     }
 
     public function delete(Request $request): bool

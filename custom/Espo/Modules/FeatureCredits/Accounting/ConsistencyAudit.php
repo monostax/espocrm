@@ -63,6 +63,15 @@ final class ConsistencyAudit
                 }
                 $query->closeCursor();
             }
+            $query = $pdo->prepare("SELECT * FROM credit_transaction WHERE tenant_id=?
+                AND type IN ('searchDebtPayment','searchDebtRecovery','billingDebtPayment','billingDebtRecovery') ORDER BY id");
+            $query->execute([$tenantId]);
+            while ($row = $query->fetch(PDO::FETCH_ASSOC)) {
+                if (DebtRepaymentOrigins::validEvidence($row)) continue;
+                if (count($findings) === $findingLimit) { $truncated = true; break; }
+                $findings[] = ['code' => 'transaction.debt_evidence', 'entityType' => 'CreditTransaction', 'id' => $row['id']];
+            }
+            $query->closeCursor();
             $pdo->commit();
             return ['tenantId' => $tenantId, 'observedAt' => $observedAt, 'consistent' => $findings === [],
                 'findings' => $findings, 'findingsTruncated' => $truncated];
@@ -95,7 +104,7 @@ final class ConsistencyAudit
         yield ['wallet.missing', 'Tenant', 'SELECT r.id FROM tenant r WHERE r.id = ? AND
             NOT EXISTS (SELECT 1 FROM tenant_credit_balance w WHERE w.tenant_id = r.id) AND (' . implode(' OR ', $exists) . ')'];
         $debtLedger = "(SELECT COALESCE(SUM(d.credits), 0) FROM credit_transaction d WHERE d.tenant_id = r.tenant_id
-            AND d.type IN ('nativeSearchOverrun', 'searchDebtRecovery'))";
+            AND d.type IN ('nativeSearchOverrun', 'searchDebtRecovery', 'billingDebt', 'billingDebtRecovery'))";
         yield ['wallet.range', 'TenantCreditBalance', "SELECT r.id FROM tenant_credit_balance r WHERE r.tenant_id = ? AND
             (r.reserved_credits < 0 OR r.balance - $debtLedger < r.reserved_credits OR $debtLedger > 0)"];
         yield ['wallet.grants', 'TenantCreditBalance', "SELECT r.id FROM tenant_credit_balance r WHERE r.tenant_id = ? AND
@@ -131,7 +140,8 @@ final class ConsistencyAudit
         yield ['usage.reservation', 'CreditUsage', 'SELECT r.id FROM credit_usage r WHERE r.tenant_id = ? AND
             (SELECT COUNT(*) FROM credit_reservation c WHERE c.usage_id = r.id AND c.tenant_id = r.tenant_id AND c.deleted = FALSE) <> 1'];
         yield ['usage.consumption', 'CreditUsage', "SELECT r.id FROM credit_usage r WHERE r.tenant_id = ? AND
-            ((r.state = 'admitted' AND r.settled_credits IS NOT NULL) OR
+            ((r.state = 'admitted' AND r.settled_credits IS NOT NULL AND (r.operation_type <> 'enrichment' OR NOT EXISTS
+                (SELECT 1 FROM enrichment_purchase p WHERE p.usage_id = r.id AND p.tenant_id = r.tenant_id AND p.deleted = FALSE))) OR
              (r.state IN ('settled', 'released') AND (r.settled_credits IS NULL OR r.settled_credits < 0)) OR
              COALESCE(r.settled_credits, 0) <> (SELECT -COALESCE(SUM(c.credits), 0) FROM credit_transaction c
                 WHERE c.tenant_id = r.tenant_id AND c.usage_id = r.id AND c.type IN ('debit', 'nativeSearchOverrun')) OR
@@ -140,6 +150,25 @@ final class ConsistencyAudit
                 WHERE a.tenant_id = r.tenant_id AND h.usage_id = r.id) -
                 (SELECT COALESCE(SUM(d.credits), 0) FROM credit_transaction d WHERE d.tenant_id = r.tenant_id
                     AND d.usage_id = r.id AND d.type = 'nativeSearchOverrun'))"];
+        yield ['usage.purchases', 'CreditUsage', "SELECT r.id FROM credit_usage r WHERE r.tenant_id = ? AND
+            EXISTS (SELECT 1 FROM enrichment_purchase p WHERE p.usage_id = r.id) AND
+            (r.operation_type <> 'enrichment' OR r.state NOT IN ('admitted', 'settled') OR
+             r.settled_credits IS NULL OR r.settled_credits < 0 OR
+             r.settled_credits <> (SELECT COALESCE(SUM(p.credits), 0) FROM enrichment_purchase p
+                 WHERE p.usage_id = r.id AND p.tenant_id = r.tenant_id))"];
+        yield ['purchase.binding', 'EnrichmentPurchase', "SELECT r.id FROM enrichment_purchase r WHERE r.tenant_id = ? AND
+            (r.deleted = TRUE OR r.credits <= 0 OR (r.values_ciphertext = '' AND r.erased_at IS NULL) OR
+             (r.values_ciphertext <> '' AND r.erased_at IS NOT NULL) OR r.acquired_at > r.purchased_at OR NOT EXISTS
+                (SELECT 1 FROM enrichment_quote q JOIN credit_usage u ON u.id = q.usage_id AND u.tenant_id = q.tenant_id
+                 WHERE q.id = r.quote_id AND q.tenant_id = r.tenant_id AND u.id = r.usage_id AND
+                    q.deleted = FALSE AND u.deleted = FALSE AND q.confirmed_at IS NOT NULL AND q.admitted_at IS NOT NULL
+                    AND u.operation_type = 'enrichment' AND u.state IN ('admitted', 'settled')))" ];
+        yield ['purchase.cache', 'EnrichmentPurchase', "SELECT r.id FROM enrichment_purchase r WHERE r.tenant_id = ? AND
+            ((r.candidate_cache_id IS NULL AND (r.candidate_group IS NOT NULL OR r.purchase_kind IS NOT NULL)) OR
+             (r.candidate_cache_id IS NOT NULL AND (r.candidate_group IS NULL OR r.purchase_kind IS NULL OR
+              r.purchase_kind NOT IN ('candidate','supplement') OR NOT EXISTS
+                (SELECT 1 FROM enrichment_candidate_cache c WHERE c.id=r.candidate_cache_id AND c.tenant_id=r.tenant_id
+                 AND c.provider=r.provider AND c.product=r.product AND c.acquired_at=r.acquired_at))))"];
         yield ['allocation.partition', 'CreditAllocation', 'SELECT r.id FROM credit_allocation r WHERE r.tenant_id = ? AND
             (r.reserved_credits < 0 OR r.consumed_credits < 0 OR r.released_credits < 0 OR r.expired_credits < 0 OR
              (r.settled_at IS NULL AND (r.consumed_credits <> 0 OR r.released_credits <> 0 OR r.expired_credits <> 0)) OR
@@ -166,29 +195,82 @@ final class ConsistencyAudit
             (r.authorized_credits < 0 OR r.authorized_credits <> (SELECT COALESCE(SUM(c.reserved_credits), 0) FROM credit_allocation c
                 WHERE c.tenant_id = r.tenant_id AND c.request_id = r.id))'];
         yield ['transaction.grant', 'CreditTransaction', "SELECT r.id FROM credit_transaction r WHERE r.tenant_id = ?
-            AND r.type NOT IN ('nativeSearchOverrun', 'searchDebtRecovery') AND NOT EXISTS
+            AND r.type NOT IN ('nativeSearchOverrun', 'searchDebtRecovery', 'billingDebt', 'billingDebtRecovery') AND NOT EXISTS
             (SELECT 1 FROM credit_grant g WHERE g.id = r.grant_id AND g.tenant_id = r.tenant_id AND g.deleted = FALSE)"];
         yield ['transaction.shape', 'CreditTransaction', "SELECT r.id FROM credit_transaction r WHERE r.tenant_id = ? AND
-            (r.type NOT IN ('grant', 'debit', 'expiration', 'nativeSearchOverrun', 'searchDebtPayment', 'searchDebtRecovery') OR
+            (r.type NOT IN ('grant', 'debit', 'expiration', 'reversal', 'nativeSearchOverrun', 'searchDebtPayment', 'searchDebtRecovery',
+                'purchaseReversal', 'billingDebt', 'billingDebtPayment', 'billingDebtRecovery') OR
              (r.type = 'grant' AND (r.credits <= 0 OR r.usage_id IS NOT NULL OR r.allocation_id IS NOT NULL OR NOT EXISTS
                 (SELECT 1 FROM credit_grant g WHERE g.id = r.grant_id AND g.tenant_id = r.tenant_id AND g.grant_transaction_id = r.id))) OR
              (r.type IN ('debit', 'expiration') AND r.credits >= 0) OR
-             (r.type = 'debit' AND r.allocation_id IS NULL) OR
+              (r.type = 'debit' AND r.allocation_id IS NULL) OR
+              (r.type = 'reversal' AND (r.credits <= 0 OR r.allocation_id IS NULL OR r.actor_id IS NULL OR r.reversal_of_id IS NULL)) OR
+              (r.type NOT IN ('reversal', 'expiration', 'purchaseReversal', 'billingDebt') AND r.reversal_of_id IS NOT NULL) OR
+              (r.type NOT IN ('searchDebtPayment', 'searchDebtRecovery', 'billingDebtPayment', 'billingDebtRecovery') AND r.debt_transaction_id IS NOT NULL) OR
               (r.allocation_id IS NULL AND r.usage_id IS NOT NULL AND r.type <> 'nativeSearchOverrun') OR
               (r.type = 'nativeSearchOverrun' AND (r.credits >= 0 OR r.grant_id IS NOT NULL OR r.allocation_id IS NOT NULL OR NOT EXISTS
                  (SELECT 1 FROM credit_usage u WHERE u.id = r.usage_id AND u.tenant_id = r.tenant_id AND u.state = 'settled' AND u.deleted = FALSE))) OR
-              (r.type IN ('searchDebtPayment', 'searchDebtRecovery') AND (r.usage_id IS NOT NULL OR r.allocation_id IS NOT NULL OR
-                 (r.type = 'searchDebtPayment' AND (r.credits >= 0 OR r.grant_id IS NULL)) OR
-                 (r.type = 'searchDebtRecovery' AND (r.credits <= 0 OR r.grant_id IS NOT NULL)) OR NOT EXISTS
-                 (SELECT 1 FROM credit_transaction p WHERE p.tenant_id = r.tenant_id AND p.idempotency_key = r.idempotency_key
-                     AND p.deleted = FALSE AND p.credits = -r.credits AND
+              (r.type IN ('searchDebtPayment', 'searchDebtRecovery', 'billingDebtPayment', 'billingDebtRecovery') AND (r.usage_id IS NOT NULL OR r.allocation_id IS NOT NULL OR
+                 (r.type IN ('searchDebtPayment', 'billingDebtPayment') AND (r.credits >= 0 OR r.grant_id IS NULL)) OR
+                 (r.type IN ('searchDebtRecovery', 'billingDebtRecovery') AND (r.credits <= 0 OR r.grant_id IS NOT NULL)) OR NOT EXISTS
+                  (SELECT 1 FROM credit_transaction p WHERE p.tenant_id = r.tenant_id AND p.idempotency_key = r.idempotency_key
+                      AND p.deleted = FALSE AND p.credits = -r.credits
+                      AND (p.debt_transaction_id = r.debt_transaction_id OR (p.debt_transaction_id IS NULL AND r.debt_transaction_id IS NULL)) AND
                      ((r.type = 'searchDebtPayment' AND p.type = 'searchDebtRecovery') OR
-                      (r.type = 'searchDebtRecovery' AND p.type = 'searchDebtPayment'))))) OR
+                      (r.type = 'searchDebtRecovery' AND p.type = 'searchDebtPayment') OR
+                      (r.type = 'billingDebtPayment' AND p.type = 'billingDebtRecovery') OR
+                      (r.type = 'billingDebtRecovery' AND p.type = 'billingDebtPayment'))))) OR
              (r.allocation_id IS NOT NULL AND NOT EXISTS
                 (SELECT 1 FROM credit_allocation a JOIN credit_reservation h ON h.id = a.reservation_id AND h.tenant_id = a.tenant_id
                  WHERE a.id = r.allocation_id AND a.tenant_id = r.tenant_id AND a.deleted = FALSE
                     AND a.grant_id = r.grant_id AND h.usage_id = r.usage_id AND
-                    ((r.type = 'debit' AND a.debit_transaction_id = r.id) OR
-                     (r.type = 'expiration' AND a.expiration_transaction_id = r.id)))))"];
+                     ((r.type = 'debit' AND a.debit_transaction_id = r.id) OR
+                      (r.type = 'reversal' AND a.debit_transaction_id = r.reversal_of_id) OR
+                      (r.type = 'expiration' AND (a.expiration_transaction_id = r.id OR r.reversal_of_id IS NOT NULL))))))"];
+        yield ['transaction.reversal', 'CreditTransaction', "SELECT r.id FROM credit_transaction r WHERE r.tenant_id = ? AND
+            r.type = 'reversal' AND (NOT EXISTS
+                (SELECT 1 FROM credit_transaction d JOIN credit_usage u ON u.id = d.usage_id AND u.tenant_id = d.tenant_id
+                 WHERE d.id = r.reversal_of_id AND d.tenant_id = r.tenant_id AND d.deleted = FALSE AND d.type = 'debit'
+                 AND d.grant_id = r.grant_id AND d.allocation_id = r.allocation_id AND d.usage_id = r.usage_id
+                 AND u.state = 'settled' AND u.deleted = FALSE AND -d.credits >=
+                    (SELECT COALESCE(SUM(c.credits), 0) FROM credit_transaction c WHERE c.tenant_id = d.tenant_id
+                     AND c.type = 'reversal' AND c.reversal_of_id = d.id)) OR
+                (EXISTS (SELECT 1 FROM credit_grant g WHERE g.id = r.grant_id AND g.expires_at <= r.posted_at) AND
+                 (SELECT COUNT(*) FROM credit_transaction e WHERE e.tenant_id = r.tenant_id AND e.type = 'expiration'
+                  AND e.reversal_of_id = r.id AND e.deleted = FALSE AND e.credits = -r.credits
+                  AND e.grant_id = r.grant_id AND e.allocation_id = r.allocation_id AND e.usage_id = r.usage_id
+                  AND e.posted_at = r.posted_at) <> 1))"];
+        yield ['transaction.reversal_expiry', 'CreditTransaction', "SELECT r.id FROM credit_transaction r WHERE r.tenant_id = ?
+            AND r.type = 'expiration' AND r.reversal_of_id IS NOT NULL AND NOT EXISTS
+                (SELECT 1 FROM credit_transaction c JOIN credit_grant g ON g.id = c.grant_id AND g.tenant_id = c.tenant_id
+                 WHERE c.id = r.reversal_of_id AND c.tenant_id = r.tenant_id AND c.type = 'reversal' AND c.deleted = FALSE
+                 AND c.credits = -r.credits AND c.grant_id = r.grant_id AND c.allocation_id = r.allocation_id
+                 AND c.usage_id = r.usage_id AND c.posted_at = r.posted_at AND g.expires_at <= r.posted_at)"];
+        foreach ([['nativeSearchOverrun', 'searchDebtRecovery'], ['billingDebt', 'billingDebtRecovery']] as [$debit, $recovery]) {
+            yield ['wallet.debt_overpaid', 'TenantCreditBalance', "SELECT r.id FROM tenant_credit_balance r WHERE r.tenant_id = ? AND
+                (SELECT COALESCE(SUM(t.credits), 0) FROM credit_transaction t WHERE t.tenant_id=r.tenant_id AND t.type IN ('$debit','$recovery')) > 0"];
+        }
+        foreach ([['nativeSearchOverrun', 'searchDebtPayment', 'searchDebtRecovery'], ['billingDebt', 'billingDebtPayment', 'billingDebtRecovery']] as [$debit, $payment, $recovery]) {
+            yield ['transaction.debt_origin', 'CreditTransaction', "SELECT r.id FROM credit_transaction r WHERE r.tenant_id=?
+                AND r.type IN ('$payment', '$recovery') AND r.debt_transaction_id IS NOT NULL AND NOT EXISTS
+                (SELECT 1 FROM credit_transaction d WHERE d.id=r.debt_transaction_id AND d.tenant_id=r.tenant_id
+                    AND d.type='$debit' AND d.deleted=FALSE AND d.credits < 0 AND d.posted_at <= r.posted_at
+                    AND -d.credits >= (SELECT COALESCE(SUM(c.credits),0) FROM credit_transaction c
+                        WHERE c.tenant_id=d.tenant_id AND c.type='$recovery' AND c.debt_transaction_id=d.id))"];
+        }
+        yield ['transaction.purchase_reversal', 'CreditTransaction', "SELECT r.id FROM credit_transaction r WHERE r.tenant_id = ? AND
+            r.type = 'purchaseReversal' AND (r.credits > 0 OR r.usage_id IS NOT NULL OR r.allocation_id IS NOT NULL OR NOT EXISTS
+                (SELECT 1 FROM credit_grant g JOIN credit_transaction t ON t.id=g.grant_transaction_id AND t.tenant_id=g.tenant_id
+                 WHERE g.id=r.grant_id AND g.tenant_id=r.tenant_id AND g.deleted=FALSE AND g.source_type='purchase'
+                 AND g.expires_at IS NULL AND t.id=r.reversal_of_id AND t.type='grant' AND t.deleted=FALSE
+                 AND t.credits=g.granted_credits AND r.credits +
+                    (SELECT COALESCE(SUM(d.credits),0) FROM credit_transaction d WHERE d.tenant_id=r.tenant_id
+                     AND d.type='billingDebt' AND d.reversal_of_id=r.id) = -g.granted_credits) OR
+                (SELECT COUNT(*) FROM credit_transaction c WHERE c.tenant_id=r.tenant_id AND c.type='purchaseReversal'
+                 AND c.grant_id=r.grant_id) <> 1)"];
+        yield ['transaction.billing_debt', 'CreditTransaction', "SELECT r.id FROM credit_transaction r WHERE r.tenant_id = ? AND
+            r.type = 'billingDebt' AND (r.credits >= 0 OR r.grant_id IS NOT NULL OR r.usage_id IS NOT NULL OR r.allocation_id IS NOT NULL OR NOT EXISTS
+                (SELECT 1 FROM credit_transaction p WHERE p.id=r.reversal_of_id AND p.tenant_id=r.tenant_id AND p.deleted=FALSE
+                 AND p.type='purchaseReversal' AND p.idempotency_key=r.idempotency_key AND p.posted_at=r.posted_at))"];
     }
 }

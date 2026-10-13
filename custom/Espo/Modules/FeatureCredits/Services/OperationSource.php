@@ -23,13 +23,20 @@ final class OperationSource
         if (!$tenant || $tenant->get('deleted')) {
             throw new NotFound('Unknown accounting tenant.');
         }
-        $usage = $this->entityManager->getEntityById('CreditUsage', $usageId);
-        if (!$usage || $usage->get('deleted') || $usage->get('tenantId') !== $tenantId) {
+        // Financial records are projections, not generic CRM record views.
+        // Hydrating all CreditUsage links asks ORM for billingRate.name, while
+        // TenantCreditBillingRate is versioned and has no name column.
+        $query = $this->entityManager->getPDO()->prepare(
+            'SELECT source_type, source_id, evidence FROM credit_usage WHERE id = ? AND tenant_id = ? AND deleted = FALSE'
+        );
+        $query->execute([$usageId, $tenantId]);
+        $usage = $query->fetch(\PDO::FETCH_ASSOC);
+        if (!$usage) {
             throw new NotFound('Unknown credit operation.');
         }
         $result = ['tenantId' => $tenantId, 'id' => $usageId, 'source' => null];
-        $scope = $usage->get('sourceType');
-        $id = $usage->get('sourceId');
+        $scope = $usage['source_type'];
+        $id = $usage['source_id'];
         if (!is_string($scope) || !SourceReference::supports($scope) || !is_string($id) ||
             !preg_match('/^[a-zA-Z0-9_-]{1,24}$/D', $id) || !$this->acl->checkScope($scope, 'read')) {
             return $result;
@@ -50,7 +57,7 @@ final class OperationSource
         }
         $result['source'] = ['scope' => $scope, 'id' => $id,
             'name' => $this->acl->checkField($scope, 'name') ? $source->get('name') : null];
-        $evidence = $usage->get('evidence');
+        $evidence = json_decode($usage['evidence'] ?? 'null');
         $requestId = is_object($evidence) ? ($evidence->sourceRequestId ?? null) : null;
         if (is_string($requestId) && preg_match('/^[a-f0-9]{64}$/D', $requestId)) $result['source']['requestId'] = $requestId;
         return $result;

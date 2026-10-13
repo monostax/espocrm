@@ -65,7 +65,8 @@ class RDBRelation
         private EntityManager $entityManager,
         private Entity $entity,
         string $relationName,
-        private HookMediator $hookMediator
+        private HookMediator $hookMediator,
+        private ?MutationObserver $mutationObserver = null,
     ) {
 
         if (!$entity->hasId()) {
@@ -584,16 +585,31 @@ class RDBRelation
      */
     public function relate(Entity $entity, ?array $columnData = null, array $options = []): void
     {
+        $this->observeMutation([$this->entity, $entity], 'link',
+            fn () => $this->persistRelation($entity, $columnData, $options));
+    }
+
+    private function persistRelation(Entity $entity, ?array $columnData, array $options): bool
+    {
         $this->processCheckForeignEntity($entity);
         $this->beforeRelate($entity, $columnData, $options);
+
+        // Reconciliation repeatedly ensures existing team memberships. PostgreSQL
+        // reports matched rows for a no-op UPDATE, unlike MySQL. Check the actual
+        // many-to-many edge inside the observer transaction on both engines.
+        if ($this->mutationObserver && $this->relationType === Entity::MANY_MANY &&
+            !$columnData && $this->isRelated($entity)) {
+            return false;
+        }
 
         $result = $this->getMapper()->relate($this->entity, $this->relationName, $entity, $columnData);
 
         if (!$result) {
-            return;
+            return false;
         }
 
         $this->afterRelate($entity, $columnData, $options);
+        return true;
     }
 
     /**
@@ -603,10 +619,20 @@ class RDBRelation
      */
     public function unrelate(Entity $entity, array $options = []): void
     {
+        $this->observeMutation([$this->entity, $entity], 'unlink',
+            fn () => $this->persistUnlink($entity, $options));
+    }
+
+    private function persistUnlink(Entity $entity, array $options): bool
+    {
         $this->processCheckForeignEntity($entity);
         $this->beforeUnrelate($entity, $options);
+        if ($this->mutationObserver && $this->relationType === Entity::MANY_MANY && !$this->isRelated($entity)) {
+            return false;
+        }
         $this->getMapper()->unrelate($this->entity, $this->relationName, $entity);
         $this->afterUnrelate($entity, $options);
+        return true;
     }
 
     /**
@@ -615,6 +641,21 @@ class RDBRelation
      * @param array<string, mixed> $options
      */
     public function massRelate(Select $query, array $options = []): void
+    {
+        if (!$this->mutationObserver) {
+            $this->persistMassRelation($query, $options);
+            return;
+        }
+        $this->entityManager->getTransactionManager()->run(function () use ($query, $options) {
+            $entities = [$this->entity];
+            foreach ($this->entityManager->getRDBRepository($query->getFrom())->clone($query)->find() as $entity) {
+                $entities[] = $entity;
+            }
+            $this->observeMutation($entities, 'link', fn () => $this->persistMassRelation($query, $options));
+        });
+    }
+
+    private function persistMassRelation(Select $query, array $options): void
     {
         if ($this->isBelongsToParentType()) {
             throw new RuntimeException("Can't mass relate 'belongToParent'.");
@@ -636,6 +677,12 @@ class RDBRelation
      */
     public function updateColumns(Entity $entity, array $columnData): void
     {
+        $this->observeMutation([$this->entity, $entity], 'link',
+            fn () => $this->persistColumns($entity, $columnData));
+    }
+
+    private function persistColumns(Entity $entity, array $columnData): void
+    {
         $this->processCheckForeignEntity($entity);
 
         if ($this->relationType !== Entity::MANY_MANY) {
@@ -649,6 +696,11 @@ class RDBRelation
         $id = $entity->getId();
 
         $this->getMapper()->updateRelationColumns($this->entity, $this->relationName, $id, $columnData);
+    }
+
+    private function observeMutation(array $entities, string $operation, \Closure $persist): mixed
+    {
+        return $this->mutationObserver ? $this->mutationObserver->run($entities, $operation, $persist) : $persist();
     }
 
     /**

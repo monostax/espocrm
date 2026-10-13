@@ -1,0 +1,22 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true, "readOnly": true},
+        "obligation": {"type": "link", "notNull": true, "readOnly": true},
+        "periodKey": {"type": "varchar", "maxLength": 32, "notNull": true, "readOnly": true},
+        "startsAt": {"type": "datetime", "notNull": true, "readOnly": true},
+        "endsAt": {"type": "datetime", "readOnly": true},
+        "termsId": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "bindingHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "receipt": {"type": "text", "readOnly": true},
+        "receiptHash": {"type": "varchar", "maxLength": 64, "readOnly": true},
+        "paidPayment": {"type": "link", "readOnly": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "obligation": {"type": "belongsTo", "entity": "CreditBillingObligation"},
+        "paidPayment": {"type": "belongsTo", "entity": "CreditBillingPayment"}
+    },
+    "indexes": {"periodUnique": {"columns": ["obligationId", "periodKey"], "unique": true}}
+}

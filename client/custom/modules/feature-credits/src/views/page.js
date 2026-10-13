@@ -169,6 +169,7 @@ export default class extends MainView {
             canNext: !this.loading && !!this.page?.nextCursor,
             canPrevious: !this.loading && this.cursors.length > 1,
             legacyUrl: '#AiUsage/index/' + new URLSearchParams({tenantId: this.tenantId}).toString(),
+            checkoutUrl: '#Credits/checkout/' + new URLSearchParams({tenantId: this.tenantId}).toString(),
         };
     }
 }

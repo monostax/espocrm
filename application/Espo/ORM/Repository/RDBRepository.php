@@ -62,6 +62,21 @@ use RuntimeException;
  */
 class RDBRepository implements Repository
 {
+    private ?MutationObserver $mutationObserver = null;
+
+    public function setMutationObserver(MutationObserver $observer): void
+    {
+        $this->mutationObserver = $observer;
+    }
+
+    /** Mandatory persistence boundary; skipHooks/skipAll do not bypass it. */
+    public function observeMutation(array $entities, string $operation, \Closure $persist): mixed
+    {
+        return $this->mutationObserver
+            ? $this->mutationObserver->run($entities, $operation, $persist)
+            : $persist();
+    }
+
     /** @phpstan-use RDBRepositoryDeprecationTrait<TEntity> */
     use RDBRepositoryDeprecationTrait;
 
@@ -140,6 +155,12 @@ class RDBRepository implements Repository
      * @param array<string, mixed> $options
      */
     public function save(Entity $entity, array $options = []): void
+    {
+        $this->observeMutation([$entity], $entity->isNew() ? 'create' : 'update',
+            fn () => $this->persist($entity, $options));
+    }
+
+    private function persist(Entity $entity, array $options): void
     {
         if (!isset($options[SaveContext::NAME])) {
             $options[SaveContext::NAME] = new SaveContext();
@@ -251,13 +272,18 @@ class RDBRepository implements Repository
      */
     public function getRelation(Entity $entity, string $relationName): RDBRelation
     {
-        return new RDBRelation($this->entityManager, $entity, $relationName, $this->hookMediator);
+        return new RDBRelation($this->entityManager, $entity, $relationName, $this->hookMediator, $this->mutationObserver);
     }
 
     /**
      * Remove a record (mark as deleted).
      */
     public function remove(Entity $entity, array $options = []): void
+    {
+        $this->observeMutation([$entity], 'delete', fn () => $this->persistRemoval($entity, $options));
+    }
+
+    private function persistRemoval(Entity $entity, array $options): void
     {
         if ($this->transactionalSave) {
             $this->entityManager->getTransactionManager()->run(function () use ($entity, $options) {

@@ -1,0 +1,29 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "erasedAt": {"type": "datetime"},
+        "erasureHash": {"type": "varchar", "maxLength": 64},
+        "tenant": {"type": "link", "notNull": true},
+        "targetType": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "targetId": {"type": "varchar", "maxLength": 24, "notNull": true},
+        "requestKey": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "snapshotHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "snapshot": {"type": "jsonObject", "notNull": true},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "createdBy": {"type": "link", "notNull": true},
+        "confirmedAt": {"type": "datetime"},
+        "admittedAt": {"type": "datetime"},
+        "discoveryStopReason": {"type": "varchar", "maxLength": 32},
+        "usage": {"type": "link"}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "createdBy": {"type": "belongsTo", "entity": "User"},
+        "usage": {"type": "belongsTo", "entity": "CreditUsage"}
+    },
+    "indexes": {
+        "requestUnique": {"columns": ["tenantId", "createdById", "requestKey"], "unique": true},
+        "target": {"columns": ["tenantId", "targetType", "targetId"]},
+        "usageUnique": {"columns": ["usageId"], "unique": true}
+    }
+}

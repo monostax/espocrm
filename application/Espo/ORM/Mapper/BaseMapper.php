@@ -1297,6 +1297,8 @@ class BaseMapper implements RDBMapper
      */
     private function insertInternal(Entity $entity, ?array $onDuplicateUpdateAttributeList = null): void
     {
+        $versionAttribute = $this->metadata->get($entity->getEntityType(), 'concurrencyAttribute');
+        if ($versionAttribute) $entity->set($versionAttribute, 1);
         $update = null;
 
         if ($onDuplicateUpdateAttributeList !== null && count($onDuplicateUpdateAttributeList)) {
@@ -1471,13 +1473,34 @@ class BaseMapper implements RDBMapper
             $where[self::ATTR_DELETED] = false;
         }
 
+        $versionAttribute = $this->metadata->get($entity->getEntityType(), 'concurrencyAttribute');
+        if ($versionAttribute) {
+            $previous = $entity->hasFetched($versionAttribute) ? $entity->getFetched($versionAttribute) : null;
+            if (!$entity->hasFetched($versionAttribute)) {
+                // Internal partial-entity writers have no edit baseline. They
+                // still advance the revision and participate in atomic CAS.
+                $current = $this->selectOne(SelectBuilder::create()->from($entity->getEntityType())
+                    ->select([self::ATTR_ID, $versionAttribute])->where($where)->build());
+                if (!$current) throw new \Espo\ORM\Exception\ConcurrencyConflict('Record changed or removed.');
+                $previous = $current->get($versionAttribute);
+            }
+            $where[$versionAttribute] = $previous;
+            $valueMap[$versionAttribute] = (int) $previous + 1;
+        }
+
         $query = UpdateBuilder::create()
             ->in($entity->getEntityType())
             ->set($valueMap)
             ->where($where)
             ->build();
 
-        $this->queryExecutor->execute($query);
+        $statement = $this->queryExecutor->execute($query);
+        if ($versionAttribute) {
+            if ($statement->rowCount() !== 1) {
+                throw new \Espo\ORM\Exception\ConcurrencyConflict('Record changed or removed.');
+            }
+            $entity->set($versionAttribute, $valueMap[$versionAttribute]);
+        }
     }
 
     private function prepareValueForInsert(?string $type, mixed $value): mixed

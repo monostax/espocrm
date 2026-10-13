@@ -1,0 +1,11 @@
+{
+    "discoveryQuoteProviderClassNameMap": {
+        "apollo": "Espo\\Modules\\FeatureCredits\\Enrichment\\Providers\\ApolloDiscovery",
+        "cpfcnpj": "Espo\\Modules\\FeatureCredits\\Enrichment\\Providers\\CpfCnpjDiscovery"
+    },
+    "quoteProviderClassNameMap": {
+        "cpfcnpj": "Espo\\Modules\\FeatureCredits\\Enrichment\\Providers\\CpfCnpj",
+        "hub": "Espo\\Modules\\FeatureCredits\\Enrichment\\Providers\\Hub",
+        "apollo": "Espo\\Modules\\FeatureCredits\\Enrichment\\Providers\\Apollo"
+    }
+}

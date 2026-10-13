@@ -25,6 +25,7 @@
         "channelType": {
             "whatsapp": "WhatsApp",
             "instagram": "Instagram",
+            "linkedin": "LinkedIn",
             "telegram": "Telegram",
             "facebook": "Facebook",
             "twitter": "Twitter / X",

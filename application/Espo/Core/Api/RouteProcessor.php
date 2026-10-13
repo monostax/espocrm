@@ -96,6 +96,30 @@ class RouteProcessor
     /**
      * @throws BadRequest
      */
+    public function processAuthenticatedRead(
+        ProcessData $processData,
+        Psr7Request $request,
+        Psr7Response $response
+    ): Psr7Response {
+        // Only the internal native-socket projection runner calls this after
+        // validating the token and setting the actual viewer in a fresh process.
+        if ($request->getMethod() !== 'GET' || $processData->getRoute()->noAuth()) {
+            return $response->withStatus(403);
+        }
+        $wrapped = new ResponseWrapper($response);
+        try {
+            return $this->processAfterAuth($processData, $request, $wrapped);
+        } catch (Exception $exception) {
+            $this->handleException(
+                $exception,
+                new RequestWrapper($request, $processData->getBasePath(), $processData->getRouteParams()),
+                $wrapped,
+                $processData->getRoute()->getAdjustedRoute()
+            );
+            return $wrapped->toPsr7();
+        }
+    }
+
     private function processInternal(
         ProcessData $processData,
         Psr7Request $psrRequest,

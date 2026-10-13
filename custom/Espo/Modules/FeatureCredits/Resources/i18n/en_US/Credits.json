@@ -18,12 +18,14 @@
         "sourceType": "Grant type", "grantedCredits": "Original credits", "remainingCredits": "Remaining credits", "expiresAt": "Expires at (UTC)",
         "outcome": "Outcome", "meteringState": "Metering", "billingState": "Billing", "waiverReason": "Waiver reason", "authorizedCredits": "Original request reservation", "pricedCreditsExact": "Exact request price", "type": "Posting type", "credits": "Posted credits",
         "notFinal": "Not final", "neverExpires": "Never expires", "unavailable": "—",
-        "ai": "AI", "apollo": "Apollo", "admitted": "Admitted", "held": "Held", "settled": "Settled", "released": "Released", "pendingReconciliation": "Pending reconciliation",
+        "ai": "AI", "apollo": "Apollo", "enrichment": "Enrichment", "admitted": "Admitted", "held": "Held", "settled": "Settled", "released": "Released", "pendingReconciliation": "Pending reconciliation",
         "purchase": "Purchase", "subscription": "Subscription", "migration": "Migration",
         "inFlight": "In flight", "success": "Success", "cancelled": "Cancelled", "superseded": "Superseded", "infrastructureFailure": "Infrastructure failure",
         "pending": "Pending", "unknown": "Unknown", "measured": "Measured", "unrecoverable": "Unrecoverable", "billable": "Billable", "waived": "Waived",
         "infrastructure_failure": "Infrastructure failure", "unrecoverable_cancellation": "Unrecoverable cancellation usage",
         "grant": "Grant", "debit": "Consumption", "expiration": "Expiration", "reversal": "Reversal",
-        "nativeSearchOverrun": "Native search overrun", "searchDebtPayment": "Grant applied to search debt", "searchDebtRecovery": "Search debt paid (transfer offset)"
+        "nativeSearchOverrun": "Native search overrun", "searchDebtPayment": "Grant applied to search debt", "searchDebtRecovery": "Search debt paid (transfer offset)",
+        "purchaseReversal": "Purchased credits recovered", "billingDebt": "Purchase reversal shortfall",
+        "billingDebtPayment": "Grant applied to billing debt", "billingDebtRecovery": "Billing debt paid (transfer offset)"
     }
 }

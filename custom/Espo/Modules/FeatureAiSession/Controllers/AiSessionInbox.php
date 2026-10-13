@@ -88,9 +88,10 @@ class AiSessionInbox
     {
         $session = $this->record($request);
         $patch = (object) array_intersect_key((array) $request->getParsedBody(), array_flip(['name', 'aiAgentMembershipId', 'isPinned']));
-        return $this->em->getTransactionManager()->run(function () use ($session, $patch): object {
+        $params = (new \Espo\Core\Record\UpdateParamsFetcher())->fetch($request);
+        return $this->em->getTransactionManager()->run(function () use ($session, $patch, $params): object {
             $this->em->getRDBRepository('AiSession')->where(['id' => $session->getId()])->forUpdate()->findOne();
-            return $this->present($this->records->get('AiSession')->update($session->getId(), $patch)->getEntity());
+            return $this->present($this->records->get('AiSession')->update($session->getId(), $patch, $params)->getEntity());
         });
     }
 

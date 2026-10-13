@@ -102,20 +102,6 @@ class ChatwootApiClient
         }
     }
 
-    /** Ask Chatwoot to invalidate opportunity UI over its authenticated ActionCable account stream. */
-    public function notifyOpportunityUpdate(string $platformUrl, string $apiKey, int $accountId): void
-    {
-        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/opportunity_events';
-        $response = $this->executeRequest($url, 'POST', '{}', [
-            'api_access_token: ' . $apiKey,
-            'Content-Type: application/json',
-        ], false);
-
-        if ($response['code'] < 200 || $response['code'] >= 300) {
-            throw new Error('Opportunity notification failed: HTTP ' . $response['code']);
-        }
-    }
-
     /**
      * Create an account on Chatwoot via Platform API.
      *

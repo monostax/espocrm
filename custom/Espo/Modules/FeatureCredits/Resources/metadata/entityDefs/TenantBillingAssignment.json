@@ -1,0 +1,14 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true, "readOnly": true},
+        "billingCountry": {"type": "varchar", "maxLength": 2, "readOnly": true},
+        "providerOverride": {"type": "varchar", "maxLength": 16, "readOnly": true},
+        "effectiveProvider": {"type": "varchar", "maxLength": 16, "readOnly": true},
+        "revision": {"type": "int", "notNull": true, "readOnly": true},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "modifiedAt": {"type": "datetime", "notNull": true}
+    },
+    "links": {"tenant": {"type": "belongsTo", "entity": "Tenant"}},
+    "indexes": {"tenantUnique": {"columns": ["tenantId"], "unique": true}}
+}

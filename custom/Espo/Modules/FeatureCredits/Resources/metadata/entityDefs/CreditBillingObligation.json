@@ -1,0 +1,25 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true, "readOnly": true},
+        "requestKey": {"type": "varchar", "maxLength": 128, "notNull": true, "readOnly": true},
+        "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "acceptanceHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "provider": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "integrationId": {"type": "varchar", "maxLength": 24, "notNull": true, "readOnly": true},
+        "catalogId": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "termsId": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "termsSnapshot": {"type": "jsonObject", "notNull": true, "readOnly": true},
+        "operation": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "billingCountry": {"type": "varchar", "maxLength": 2, "notNull": true, "readOnly": true},
+        "assignmentRevision": {"type": "int", "notNull": true, "readOnly": true},
+        "state": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "createdBy": {"type": "link", "notNull": true}
+    },
+    "links": {"tenant": {"type": "belongsTo", "entity": "Tenant"}, "createdBy": {"type": "belongsTo", "entity": "User"}},
+    "indexes": {
+        "requestUnique": {"columns": ["tenantId", "requestKey"], "unique": true},
+        "tenantState": {"columns": ["tenantId", "state"]}
+    }
+}

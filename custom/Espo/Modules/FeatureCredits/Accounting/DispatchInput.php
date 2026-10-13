@@ -11,7 +11,7 @@ use stdClass;
 final readonly class DispatchInput
 {
     public stdClass $data;
-    public string $tenantId;
+    public ?string $tenantId;
 
     public function __construct(stdClass $input)
     {
@@ -26,12 +26,20 @@ final readonly class DispatchInput
             'seal', 'recover' => ['operation', 'scope'],
             'recoverOne' => ['operation', 'tenantId', 'leaseMs', 'retryMs'],
             'discoverUnsealed' => ['operation', 'tenantId', 'leaseMs', 'retryMs'],
+            'recoveryTenants' => ['operation', 'phase', 'limit'],
             'sealTerminal' => ['operation', 'scope', 'evidence'],
             'claimTranscription' => ['operation', 'scope', 'requestKey', 'requestHash'],
             'finishTranscription' => ['operation', 'scope', 'requestKey', 'requestHash', 'facts'],
             default => throw new InvalidArgumentException('Unsupported credit dispatch command.'),
         };
         self::fields($d, $fields);
+        if ($d->operation === 'recoveryTenants') {
+            if (!in_array($d->phase, ['completion', 'terminal'], true) || !is_int($d->limit) || $d->limit < 1 || $d->limit > 5) {
+                throw new InvalidArgumentException('Bounded recovery tenant discovery required.');
+            }
+            $this->tenantId = null;
+            return;
+        }
         if (in_array($d->operation, ['claimTranscription', 'finishTranscription'], true)) {
             self::fields($d->scope, ['billingRegime', 'tenantId', 'runId', 'workflowRunId', 'executionId']);
             self::id($d->scope->tenantId);

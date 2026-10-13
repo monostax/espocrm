@@ -62,7 +62,7 @@ final class OperationHistory
             $zero = Amount::fromString('0');
             foreach ($rows as $index => $row) {
                 if ($row['deleted'] || $row['reservation_id'] === null || $row['reservation_deleted'] ||
-                    !in_array($row['operation_type'], ['ai', 'apollo'], true) ||
+                    !in_array($row['operation_type'], ['ai', 'apollo', 'enrichment'], true) ||
                     $row['billing_regime'] !== 'unified-prepaid-v1' ||
                     !preg_match('/^(0|[1-9][0-9]*)(\.[0-9]+)?$/D', $row['accrued_credits_exact'])) {
                     throw new LogicException('Invalid operation or reservation projection.');
@@ -70,11 +70,16 @@ final class OperationHistory
                 $reserved = Amount::fromString($row['reserved_credits']);
                 $accrued = BigDecimal::of($row['accrued_credits_exact']);
                 $settled = $row['settled_credits'] === null ? null : Amount::fromString($row['settled_credits']);
+                $purchased = $row['operation_type'] === 'enrichment' && $settled !== null ?
+                    FixedSettlement::purchasedTotal($pdo,$input->tenantId,$row['id']) : null;
+                if ($purchased !== null && ($purchased->compareTo($settled) !== 0 || $accrued->compareTo((string) $purchased) !== 0)) {
+                    throw new LogicException('Invalid purchased operation projection.');
+                }
                 $closed = in_array($row['state'], ['settled', 'released'], true);
                 if ($reserved->compareTo($zero) < 0 ||
                     (!$closed && ($row['state'] !== 'admitted' || $row['reservation_state'] !== 'held' ||
-                        $settled !== null || $row['settled_at'] !== null || $row['reservation_settled_at'] !== null ||
-                        $accrued->compareTo(NativeSearchDebt::accrualLimit($pdo, $input->tenantId, $row['reservation_id'], (string) $reserved)) > 0)) ||
+                        ($settled !== null && $purchased === null) || $row['settled_at'] !== null || $row['reservation_settled_at'] !== null ||
+                        ($purchased === null && $accrued->compareTo(NativeSearchDebt::accrualLimit($pdo, $input->tenantId, $row['reservation_id'], (string) $reserved)) > 0))) ||
                     ($closed && ($row['state'] !== $row['reservation_state'] || $reserved->compareTo($zero) !== 0 ||
                         $row['settled_at'] === null || $row['settled_at'] !== $row['reservation_settled_at'] ||
                         $settled === null || $settled->compareTo($zero) < 0 ||

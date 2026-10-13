@@ -1,4 +1,5 @@
 {
+    "transactionalSave": true,
     "deleteId": true,
     "fields": {
         "deleteId": {
@@ -18,6 +19,7 @@
             "options": [
                 "whatsapp",
                 "instagram",
+                "linkedin",
                 "telegram",
                 "facebook",
                 "twitter",

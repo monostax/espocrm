@@ -1,0 +1,31 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true, "readOnly": true},
+        "obligation": {"type": "link", "notNull": true, "readOnly": true},
+        "creation": {"type": "link", "notNull": true, "readOnly": true},
+        "provider": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "integrationId": {"type": "varchar", "maxLength": 24, "notNull": true, "readOnly": true},
+        "environment": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "externalId": {"type": "varchar", "maxLength": 104, "notNull": true, "readOnly": true},
+        "externalHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "bindingHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "revision": {"type": "int", "notNull": true, "readOnly": true},
+        "state": {"type": "varchar", "maxLength": 32, "notNull": true, "readOnly": true},
+        "identityHash": {"type": "varchar", "maxLength": 64, "readOnly": true},
+        "period": {"type": "link", "readOnly": true},
+        "verifiedAt": {"type": "datetime"},
+        "evidence": {"type": "text", "readOnly": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "obligation": {"type": "belongsTo", "entity": "CreditBillingObligation"},
+        "creation": {"type": "belongsTo", "entity": "CreditBillingCreation"},
+        "period": {"type": "belongsTo", "entity": "CreditBillingPeriod"}
+    },
+    "indexes": {
+        "paymentUnique": {"columns": ["provider", "integrationId", "externalHash"], "unique": true},
+        "tenantState": {"columns": ["tenantId", "state"]}
+    }
+}

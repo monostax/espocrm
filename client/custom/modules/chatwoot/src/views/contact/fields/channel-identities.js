@@ -19,6 +19,7 @@ import BaseFieldView from 'views/fields/base';
 const ICON_MAP = {
     whatsapp: 'fab fa-whatsapp',
     instagram: 'fab fa-instagram',
+    linkedin: 'fab fa-linkedin',
     telegram: 'fab fa-telegram-plane',
     facebook: 'fab fa-facebook',
     twitter: 'fab fa-twitter',
@@ -35,6 +36,7 @@ const ICON_MAP = {
 const EDITABLE_CHANNEL_TYPE_LIST = [
     'whatsapp',
     'instagram',
+    'linkedin',
     'telegram',
     'facebook',
     'twitter',

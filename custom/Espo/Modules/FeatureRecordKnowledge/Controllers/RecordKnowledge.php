@@ -62,7 +62,7 @@ class RecordKnowledge
         [$type, $id] = $this->identity($request);
         $body = $request->getParsedBody();
         if (!property_exists($body, 'icon')) throw new BadRequest('icon is required.');
-        return (object) $this->knowledge->writeIcon($type, $id, $body->icon);
+        return (object) $this->knowledge->writeIcon($type, $id, $body->icon, $this->version($request));
     }
     public function putActionOverview(Request $request): object
     {

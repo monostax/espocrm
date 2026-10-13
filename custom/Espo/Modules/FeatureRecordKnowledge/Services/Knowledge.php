@@ -28,6 +28,7 @@ class Knowledge
         $readable = $attribute && $this->acl->checkField($type, $attribute);
         return [
             'name' => $record->get('name'),
+            'versionNumber' => $record->get('versionNumber'),
             'icon' => $readable ? $record->get($attribute) : null,
             'iconEditable' => $readable && $this->acl->checkEntity($record, 'edit') &&
                 $this->acl->checkField($type, $attribute, 'edit'),
@@ -43,12 +44,13 @@ class Knowledge
         ]));
     }
 
-    public function writeIcon(string $type, string $id, mixed $icon): array
+    public function writeIcon(string $type, string $id, mixed $icon, ?int $version = null): array
     {
+        if ($version === null) throw new BadRequest('X-Version-Number is required.');
         $record = $this->access->record($type, $id, 'edit');
         $attribute = $this->metadata->get(['clientDefs', $type, 'recordIconAttribute']);
         if (!$attribute || !$this->acl->checkField($type, $attribute, 'edit')) throw new Forbidden();
-        $record = $this->records->get($type)->update($id, (object) [$attribute => $icon])->getEntity();
+        $record = $this->records->get($type)->update($id, (object) [$attribute => $icon], UpdateParams::create()->withVersionNumber($version))->getEntity();
         return $this->recordHeader($record);
     }
 

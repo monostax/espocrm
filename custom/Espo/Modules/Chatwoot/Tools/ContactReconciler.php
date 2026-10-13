@@ -720,6 +720,12 @@ class ContactReconciler
         ?string $whatsappLid = null,
         ?string $handle = null,
     ): Entity {
+        if ($channelType === 'linkedin') {
+            $profile = \Espo\Modules\Global\Tools\LinkedInProfile::profile('Contact',$sourceId);
+            if ($profile === null || strlen($profile) > 255) throw new \Espo\Core\Exceptions\BadRequest('A personal LinkedIn profile URL is required.');
+            $sourceId = $profile;
+            $handle = null;
+        }
         $handle = self::normalizeHandle($handle);
 
         // Look up with-deleted so we can restore instead of duplicating.

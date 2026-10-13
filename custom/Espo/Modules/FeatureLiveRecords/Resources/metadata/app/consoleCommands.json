@@ -1,0 +1,12 @@
+{
+    "liveRecordQuery": {
+        "className": "Espo\\Modules\\FeatureLiveRecords\\Classes\\Console\\Commands\\LiveRecordQuery",
+        "allowedOptions": [],
+        "allowedFlags": []
+    },
+    "liveRecords": {
+        "className": "Espo\\Modules\\FeatureLiveRecords\\Classes\\Console\\Commands\\LiveRecords",
+        "allowedOptions": [],
+        "allowedFlags": []
+    }
+}

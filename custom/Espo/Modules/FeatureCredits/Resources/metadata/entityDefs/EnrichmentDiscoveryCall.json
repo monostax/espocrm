@@ -1,0 +1,38 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true},
+        "quote": {"type": "link", "notNull": true},
+        "reusedFrom": {"type": "link"},
+        "scopeHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "provider": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "product": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "kind": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "slotKey": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "workKey": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "requestHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "requestCiphertext": {"type": "text"},
+        "capabilityRevision": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "retentionSeconds": {"type": "int", "notNull": true},
+        "claimToken": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "state": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "claimedAt": {"type": "datetime", "notNull": true},
+        "deadlineAt": {"type": "datetime", "notNull": true},
+        "dispatchedAt": {"type": "datetime"},
+        "completedAt": {"type": "datetime"},
+        "expiresAt": {"type": "datetime"},
+        "resultHash": {"type": "varchar", "maxLength": 64},
+        "payloadHash": {"type": "varchar", "maxLength": 64},
+        "resultCiphertext": {"type": "text"}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "quote": {"type": "belongsTo", "entity": "EnrichmentQuote"},
+        "reusedFrom": {"type": "belongsTo", "entity": "EnrichmentDiscoveryCall"}
+    },
+    "indexes": {
+        "slotUnique": {"columns": ["quoteId", "provider", "kind", "slotKey"], "unique": true},
+        "reuse": {"columns": ["tenantId", "scopeHash", "provider", "workKey"]},
+        "deadline": {"columns": ["state", "deadlineAt"]}
+    }
+}

@@ -52,6 +52,11 @@ fwrite(STDOUT, "ready\n");
 fflush(STDOUT);
 try {
     $result = match ($operation) {
+        'purchase-reverse' => $lock->run('tenant', fn (PDO $pdo, array $wallet, string $now) =>
+            \Espo\Modules\FeatureCredits\Accounting\PurchaseReversals::reverseLocked($pdo, $wallet, $now, $key,
+                ['fixture' => 'verified-full-refund'])),
+        'reverse' => (new \Espo\Modules\FeatureCredits\Accounting\Reversals($lock, $funding))->reverse(
+            new \Espo\Modules\FeatureCredits\Accounting\ReversalInput('tenant', $key, $expires, $credits, 'Correction', 'admin')),
         'agreement' => (new \Espo\Modules\FeatureCredits\Services\Configuration($manager, $clock,
             new \Espo\Modules\FeatureCredits\Pricing\AiCatalog($manager)))
             ->publishAgreement(json_decode(base64_decode($key), false, 32, JSON_THROW_ON_ERROR)),

@@ -36,6 +36,19 @@ class UpdateParams
 {
     private bool $skipDuplicateCheck = false;
     private ?int $versionNumber = null;
+    private bool $requireVersion = false;
+
+    public function withRequiredVersion(): self
+    {
+        $obj = clone $this;
+        $obj->requireVersion = true;
+        return $obj;
+    }
+
+    public function requiresVersion(): bool
+    {
+        return $this->requireVersion;
+    }
 
     public function __construct() {}
 

@@ -267,6 +267,12 @@ class Entity extends BaseEntity
             $selectBuilder->order($orderBy, $order);
         }
 
+        // Equal sort values (or no configured order) must not shuffle link IDs
+        // between reads and create false changes in authorized projections.
+        if ($orderBy !== Attribute::ID) {
+            $selectBuilder->order(Attribute::ID, Order::ASC);
+        }
+
         $collection = $selectBuilder->find();
 
         $ids = [];

@@ -1,0 +1,7 @@
+{
+    "order": 40,
+    "version": "1.0.0",
+    "name": "FeatureLiveRecords",
+    "description": "Permission-scoped live record infrastructure.",
+    "author": "Monostax"
+}

@@ -1,0 +1,8 @@
+{
+    "categories": {
+        "liveQuery": {
+            "queryCheckCommand": "live-record-query",
+            "invalidationTopic": "liveRecordChange"
+        }
+    }
+}

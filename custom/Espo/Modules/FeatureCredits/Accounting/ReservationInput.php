@@ -25,7 +25,7 @@ final readonly class ReservationInput
     ) {
         GrantInput::identity($tenantId);
         GrantInput::identity($billingRateId);
-        if (!in_array($operationType, ['ai', 'apollo'], true)) {
+        if (!in_array($operationType, ['ai', 'apollo', 'enrichment'], true)) {
             throw new InvalidArgumentException('Unsupported credit operation.');
         }
         foreach ([$operationKey, $executionId] as $key) {

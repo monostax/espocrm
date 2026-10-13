@@ -47,7 +47,12 @@ require_once __DIR__ . '/CompletionCases.php';
 require_once __DIR__ . '/ConversationCallerCases.php';
 require_once __DIR__ . '/ConfigurationCases.php';
 require_once __DIR__ . '/NativeSearchDebtCases.php';
+require_once __DIR__ . '/DebtRepaymentOriginCases.php';
 require_once __DIR__ . '/WaivedTranscriptionCases.php';
+require_once __DIR__ . '/ExpirationSweepCases.php';
+require_once __DIR__ . '/BillingPaymentAccountingCases.php';
+require_once __DIR__ . '/ReversalCases.php';
+require_once __DIR__ . '/BillingReversalCases.php';
 
 class FundingTest extends TestCase
 {
@@ -66,7 +71,12 @@ class FundingTest extends TestCase
     use ConversationCallerCases;
     use ConfigurationCases;
     use NativeSearchDebtCases;
+    use DebtRepaymentOriginCases;
     use WaivedTranscriptionCases;
+    use ExpirationSweepCases;
+    use BillingPaymentAccountingCases;
+    use ReversalCases;
+    use BillingReversalCases;
 
     private string $now = '2026-10-10 12:00:00';
 
@@ -225,7 +235,7 @@ class FundingTest extends TestCase
                     }
                     $this->assertFalse($pdo->inTransaction());
                 } finally {
-                    $pdo->exec("ALTER TABLE $table DROP " . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_failure');
+                    $pdo->exec("ALTER TABLE $table DROP " . self::dropCheckKeyword($pdo) . ' injected_failure');
                 }
             }
             $funding->grant($this->input(credits: '9999999999.9999'));
@@ -264,7 +274,7 @@ class FundingTest extends TestCase
                 $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type = 'expiration'")->fetchColumn());
             } finally {
                 $pdo->exec('ALTER TABLE tenant_credit_balance DROP ' .
-                    ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_failure');
+                    self::dropCheckKeyword($pdo) . ' injected_failure');
             }
             $funding->expire('tenant');
             $this->assertConsistent($pdo, '0.0000');
@@ -390,7 +400,7 @@ class FundingTest extends TestCase
                     $this->assertConsistent($pdo, '3.0000');
                     $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM credit_usage')->fetchColumn());
                 } finally {
-                    $pdo->exec("ALTER TABLE $table DROP " . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_failure');
+                    $pdo->exec("ALTER TABLE $table DROP " . self::dropCheckKeyword($pdo) . ' injected_failure');
                 }
             }
             $receipt = $service->reserve($this->admission());
@@ -406,7 +416,7 @@ class FundingTest extends TestCase
                     $this->assertConsistent($pdo, '3.0000');
                     $this->assertSame($receipt, $service->reserve($this->admission()));
                 } finally {
-                    $pdo->exec("ALTER TABLE $table DROP " . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_failure');
+                    $pdo->exec("ALTER TABLE $table DROP " . self::dropCheckKeyword($pdo) . ' injected_failure');
                 }
             }
             $service->release('tenant', $receipt['usageId'], 'execution');
@@ -630,7 +640,7 @@ class FundingTest extends TestCase
                     $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM credit_request')->fetchColumn());
                     $this->assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM credit_allocation')->fetchColumn());
                 } finally {
-                    $pdo->exec("ALTER TABLE $table DROP " . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_failure');
+                    $pdo->exec("ALTER TABLE $table DROP " . self::dropCheckKeyword($pdo) . ' injected_failure');
                 }
             }
             $service->authorize($this->request($usage, output: 4000));
@@ -820,7 +830,7 @@ class FundingTest extends TestCase
                     $this->assertSame($original, $pdo->query('SELECT * FROM credit_request')->fetch(PDO::FETCH_ASSOC));
                     $this->assertSame('0', $pdo->query('SELECT accrued_credits_exact FROM credit_reservation')->fetchColumn());
                 } finally {
-                    $pdo->exec("ALTER TABLE $table DROP " . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_failure');
+                    $pdo->exec("ALTER TABLE $table DROP " . self::dropCheckKeyword($pdo) . ' injected_failure');
                 }
             }
             try {
@@ -1181,7 +1191,7 @@ class FundingTest extends TestCase
                         $this->assertSame($rows, $pdo->query("SELECT * FROM $target ORDER BY id")->fetchAll(PDO::FETCH_ASSOC));
                     }
                 } finally {
-                    $pdo->exec("ALTER TABLE $table DROP " . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_failure');
+                    $pdo->exec("ALTER TABLE $table DROP " . self::dropCheckKeyword($pdo) . ' injected_failure');
                 }
             }
             $this->assertSame('0.0002', (new Settlements($this->lock($pdo), $funding))->settle('tenant', $usage, 'execution')['settledCredits']);
@@ -1659,7 +1669,7 @@ class FundingTest extends TestCase
                 $this->assertHeld($pdo, '2.0000');
                 $this->assertConsistent($pdo, '10.0000');
             } finally {
-                $pdo->exec('ALTER TABLE credit_request DROP ' . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' injected_failure');
+                $pdo->exec('ALTER TABLE credit_request DROP ' . self::dropCheckKeyword($pdo) . ' injected_failure');
             }
             $this->assertSame('waived', $service->recordUnavailable($input)['billingState']);
         });

@@ -28,7 +28,7 @@ use Throwable;
  * Funnel prefers the singular team field, then teams linkMultiple.
  *
  * Uses raw SQL UPDATE to avoid firing business hooks during migration.
- * DB-agnostic literals (no backticks; deleted = false for Postgres/MySQL).
+ * Driver-quoted identifiers and portable boolean literals for Postgres/MySQL.
  */
 class BackfillEntityTenants implements RebuildAction
 {
@@ -67,6 +67,8 @@ class BackfillEntityTenants implements RebuildAction
         $this->log->info("Global Module: Starting {$entityType}.tenantId backfill...");
 
         $pdo = $this->entityManager->getPDO();
+        // Names come from ENTITIES; `lead` is a reserved word in MySQL 8.
+        $table = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql' ? "`{$table}`" : "\"{$table}\"";
 
         $countStmt = $pdo->query(
             "SELECT COUNT(*) FROM {$table} WHERE tenant_id IS NULL AND deleted = false"

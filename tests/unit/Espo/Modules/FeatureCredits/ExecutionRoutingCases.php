@@ -218,7 +218,7 @@ trait ExecutionRoutingCases
             $pdo->exec("ALTER TABLE credit_transaction ADD CONSTRAINT terminal_fault CHECK (type <> 'debit')");
             try { $this->terminalCommand($pdo, $settle); $this->fail('Posting fault ignored.'); }
             catch (PDOException) { $this->assertHeld($pdo, '1.0000'); $this->assertConsistent($pdo, '10.0000'); }
-            $pdo->exec('ALTER TABLE credit_transaction DROP ' . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' terminal_fault');
+            $pdo->exec('ALTER TABLE credit_transaction DROP ' . self::dropCheckKeyword($pdo) . ' terminal_fault');
             // Cutover/configuration changes must not rewrite an admitted route.
             $pdo->exec('UPDATE tenant_credit_cutover SET deleted = TRUE');
             $settled = $this->terminalCommand($pdo, $settle);
@@ -423,7 +423,7 @@ trait ExecutionRoutingCases
             $pdo->exec('ALTER TABLE tenant_credit_cutover ADD CONSTRAINT cutover_fault CHECK (1 = 0)');
             try { $this->cutovers($pdo)->schedule($cutover); $this->fail('Cutover fault ignored.'); }
             catch (PDOException) { $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM tenant_credit_cutover')->fetchColumn()); }
-            $pdo->exec('ALTER TABLE tenant_credit_cutover DROP ' . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' cutover_fault');
+            $pdo->exec('ALTER TABLE tenant_credit_cutover DROP ' . self::dropCheckKeyword($pdo) . ' cutover_fault');
             $this->cutovers($pdo)->schedule($cutover);
             $service = $this->reservations($pdo);
             (new Funding($this->lock($pdo)))->grant($this->input());
@@ -437,7 +437,7 @@ trait ExecutionRoutingCases
                 $this->assertHeld($pdo, '0.0000');
                 $this->assertConsistent($pdo, '10.0000');
             }
-            $pdo->exec('ALTER TABLE credit_execution_route DROP ' . ($dialect === 'Mysql' ? 'CHECK' : 'CONSTRAINT') . ' route_fault');
+            $pdo->exec('ALTER TABLE credit_execution_route DROP ' . self::dropCheckKeyword($pdo) . ' route_fault');
             $this->assertSame('held', $service->reserve($this->executionAdmission())['state']);
         });
     }

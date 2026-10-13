@@ -746,6 +746,16 @@ class Service implements Crud,
 
         $entity->setMultiple($data);
 
+        if ($this->metadata->get(['entityDefs', $this->entityType, 'atomicConcurrencyControl'])) {
+            if ($params->requiresVersion() && $params->getVersionNumber() === null) {
+                throw new Conflict('A version precondition is required. Read the record before saving.');
+            }
+            if ($params->getVersionNumber() !== null && $params->getVersionNumber() !== (int) $entity->getFetched('versionNumber')) {
+                // Do not return potentially restricted values from a stale entity.
+                throw new Conflict('Record changed. Read the latest version before saving.');
+            }
+        }
+
         if ($params->getVersionNumber() !== null) {
             $this->processConcurrencyControl($entity, $params->getVersionNumber());
         }

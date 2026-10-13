@@ -39,6 +39,12 @@ use PHPUnit\Framework\TestCase;
 
 trait SchemaFixture
 {
+    private static function dropCheckKeyword(\PDO $pdo): string
+    {
+        return $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql' &&
+            !str_contains($pdo->getAttribute(\PDO::ATTR_SERVER_VERSION), 'MariaDB') ? 'CHECK' : 'CONSTRAINT';
+    }
+
     private const ROOT = 'custom/Espo/Modules/FeatureCredits/Resources/metadata/';
 
     private function metadata(): array
@@ -46,6 +52,8 @@ trait SchemaFixture
         $data = [];
         foreach (['entityDefs', 'scopes', 'recordDefs'] as $category) {
             foreach (glob(self::ROOT . "$category/*.json") as $path) {
+                // Role extends the core entity; it is not a credit accounting table.
+                if ($category === 'entityDefs' && basename($path) === 'Role.json') continue;
                 $data[$category][basename($path, '.json')] = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
             }
         }
@@ -113,9 +121,10 @@ class SchemaTest extends TestCase
     public function testGeneratedFinancialSchema(string $dialect): void
     {
         $schema = $this->schema($dialect);
-        $this->assertCount(14, $schema->getTables());
+        $this->assertCount(31, $schema->getTables());
         foreach ($schema->getTables() as $table) {
-            if ($table->getName() !== 'ai_model_credit_rate') {
+            if (!in_array($table->getName(), ['ai_model_credit_rate', 'enrichment_credit_catalog',
+                'credit_billing_catalog', 'credit_billing_product', 'credit_market_offer', 'credit_billing_event'], true)) {
                 $this->assertTrue($table->getColumn('tenant_id')->getNotnull(), $table->getName());
             }
             $this->assertSame(17, $table->getColumn('id')->getLength());
@@ -129,10 +138,31 @@ class SchemaTest extends TestCase
         $this->assertFalse($schema->getTable('credit_request')->getColumn('priced_credits_exact')->getNotnull());
         $this->assertFalse($schema->getTable('credit_usage')->getColumn('settled_credits')->getNotnull());
         $this->assertFalse($schema->getTable('credit_transaction')->getColumn('reversal_of_id')->getNotnull());
+        $this->assertFalse($schema->getTable('credit_transaction')->getColumn('debt_transaction_id')->getNotnull());
+        $this->assertSame(17, $schema->getTable('credit_transaction')->getColumn('debt_transaction_id')->getLength());
+        $this->assertCount(1, array_filter($schema->getTable('credit_transaction')->getIndexes(),
+            static fn ($index) => $index->getColumns() === ['tenant_id', 'debt_transaction_id', 'type']));
         $this->assertTrue($schema->getTable('credit_allocation')->getColumn('grant_id')->getNotnull());
 
         foreach ([
             'ai_model_credit_rate' => ['policy_id'],
+            'enrichment_credit_catalog' => ['version'],
+            'credit_billing_catalog' => ['version'],
+            'credit_billing_product' => ['commercial_key', 'version'],
+            'credit_market_offer' => ['commercial_key', 'version'],
+            'tenant_billing_assignment' => ['tenant_id'],
+            'credit_billing_change' => ['tenant_id', 'request_key'],
+            'credit_billing_obligation' => ['tenant_id', 'request_key'],
+            'credit_billing_creation' => ['tenant_id', 'provider', 'integration_id', 'kind', 'source_key'],
+            'credit_billing_payment' => ['provider', 'integration_id', 'external_hash'],
+            'credit_billing_period' => ['obligation_id', 'period_key'],
+            'credit_billing_event' => ['provider', 'integration_id', 'external_hash'],
+            'credit_billing_verification' => ['payment_id', 'revision'],
+            'enrichment_quote' => ['tenant_id', 'created_by_id', 'request_key'],
+            'enrichment_attempt' => ['quote_id', 'product', 'provider'],
+            'enrichment_purchase' => ['quote_id', 'purchase_key'],
+            'enrichment_candidate_cache' => ['tenant_id', 'scope_hash', 'provider', 'source_key'],
+            'enrichment_discovery_call' => ['quote_id', 'provider', 'kind', 'slot_key'],
             'tenant_credit_balance' => ['tenant_id'],
             'tenant_credit_cutover' => ['tenant_id'],
             'credit_execution_route' => ['run_id'],
@@ -226,8 +256,9 @@ class SchemaTest extends TestCase
                         ') VALUES (' . implode(',', array_fill(0, count($values), '?')) . ')';
                     $pdo->prepare($sql)->execute(array_values($values));
                 };
-                if ($name === 'credit_execution_route') $row['usage_id'] = 'a';
+                if (in_array($name, ['credit_execution_route', 'enrichment_quote'], true)) $row['usage_id'] = 'a';
                 if ($name === 'credit_execution_attempt') $row['request_id'] = 'a';
+                if ($name === 'credit_billing_creation') $row['external_hash'] = str_repeat('a', 64);
                 $insert($row);
 
                 // Each unique index must reject a conflicting row independently of the primary key.
@@ -243,6 +274,11 @@ class SchemaTest extends TestCase
                         }
                     }
                     unset($value);
+                    if (in_array($name, ['enrichment_credit_catalog', 'credit_billing_catalog'], true)) {
+                        // Isolate each of the catalog's three unique keys rather
+                        // than accidentally failing every probe on startUnique.
+                        $duplicate['effective_from'] = '2026-10-10 12:00:01';
+                    }
                     foreach ($index->getColumns() as $column) {
                         $duplicate[$column] = $row[$column];
                     }
@@ -254,7 +290,8 @@ class SchemaTest extends TestCase
                     }
                 }
 
-                if ($name === 'ai_model_credit_rate') continue; // Global catalog, not tenant finance.
+                if (in_array($name, ['ai_model_credit_rate', 'enrichment_credit_catalog',
+                    'credit_billing_catalog', 'credit_billing_product', 'credit_market_offer', 'credit_billing_event'], true)) continue; // Global catalogs and integration-scoped inbox.
                 $missingTenant = $row;
                 $missingTenant['id'] = 'c';
                 $missingTenant['tenant_id'] = null;

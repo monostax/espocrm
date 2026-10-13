@@ -1,0 +1,20 @@
+{
+    "ReconcileBillingEvents": {
+        "name": "Reconcile Verified Billing Payments",
+        "isSystem": true,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureCredits\\Jobs\\ReconcileBillingEvents"
+    },
+    "ExpireCredits": {
+        "name": "Expire Unreserved Credits",
+        "isSystem": true,
+        "scheduling": "*/5 * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureCredits\\Jobs\\ExpireCredits"
+    },
+    "DispatchEnrichment": {
+        "name": "Dispatch and Recover Enrichment",
+        "isSystem": true,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureCredits\\Jobs\\DispatchEnrichment"
+    }
+}

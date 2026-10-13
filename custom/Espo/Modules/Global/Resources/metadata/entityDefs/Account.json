@@ -1,5 +1,11 @@
 {
     "fields": {
+        "linkedinUrl": { "type": "url", "maxLength": 512, "trim": true },
+        "cnpj": {
+            "type": "varchar",
+            "maxLength": 18,
+            "trim": true
+        },
         "crmTags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" },
         "createdBy": {
             "view": "views/fields/user-with-avatar"

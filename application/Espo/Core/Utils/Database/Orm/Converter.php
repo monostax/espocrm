@@ -542,6 +542,9 @@ class Converter
 
         // @todo Refactor.
         if ($this->metadata->get(['entityDefs', $entityType, 'optimisticConcurrencyControl'])) {
+            if ($this->metadata->get(['entityDefs', $entityType, 'atomicConcurrencyControl'])) {
+                $ormMetadata[$entityType]['concurrencyAttribute'] = Field::VERSION_NUMBER;
+            }
             $ormMetadata[$entityType][EntityParam::ATTRIBUTES][Field::VERSION_NUMBER] = [
                 AttributeParam::TYPE => Entity::INT,
                 AttributeParam::DB_TYPE => Types::BIGINT,

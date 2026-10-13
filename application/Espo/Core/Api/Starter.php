@@ -97,24 +97,39 @@ class Starter
     /**
      * @param SlimApp<ContainerInterface|null> $slim
      */
-    private function addRoutes(SlimApp $slim): void
+    public function handleAuthenticatedRead(Psr7Request $request): Psr7Response
+    {
+        // Internal entry point: the caller must establish a freshly authenticated
+        // ApplicationUser first. Keep the ordinary routes and API middleware.
+        if ($request->getMethod() !== 'GET') {
+            throw new \InvalidArgumentException('Only read projections are supported.');
+        }
+        $slim = SlimAppFactory::create();
+        $this->addGlobalMiddlewares($slim);
+        $slim->addRoutingMiddleware();
+        $this->addRoutes($slim, true);
+        $slim->addErrorMiddleware(false, true, true, $this->log);
+        return $slim->handle($request);
+    }
+
+    private function addRoutes(SlimApp $slim, bool $authenticatedRead = false): void
     {
         $routeList = $this->routeUtil->getFullList();
 
         foreach ($routeList as $item) {
-            $this->addRoute($slim, $item);
+            $this->addRoute($slim, $item, $authenticatedRead);
         }
     }
 
     /**
      * @param SlimApp<ContainerInterface|null> $slim
      */
-    private function addRoute(SlimApp $slim, Route $item): void
+    private function addRoute(SlimApp $slim, Route $item, bool $authenticatedRead = false): void
     {
         $slimRoute = $slim->map(
             [$item->getMethod()],
             $item->getAdjustedRoute(),
-            function (Psr7Request $request, Psr7Response $response, array $args) use ($slim, $item) {
+            function (Psr7Request $request, Psr7Response $response, array $args) use ($slim, $item, $authenticatedRead) {
                 $routeParams = $this->routeParamsFetcher->fetch($item, $args);
 
                 $processData = new ProcessData(
@@ -123,7 +138,9 @@ class Starter
                     routeParams: $routeParams,
                 );
 
-                return $this->routeProcessor->process($processData, $request, $response);
+                return $authenticatedRead
+                    ? $this->routeProcessor->processAuthenticatedRead($processData, $request, $response)
+                    : $this->routeProcessor->process($processData, $request, $response);
             }
         );
 

@@ -68,7 +68,8 @@ class ActivityInbox
         $record = $this->record($request);
         $data = clone $request->getParsedBody();
         $this->access->validateTeams($data, $this->tenant($request), false);
-        return $this->inbox->present($this->services->get($record->getEntityType())->update($record->getId(), $data)->getEntity());
+        $params = (new \Espo\Core\Record\UpdateParamsFetcher())->fetch($request);
+        return $this->inbox->present($this->services->get($record->getEntityType())->update($record->getId(), $data, $params)->getEntity());
     }
 
     public function deleteActionDelete(Request $request): bool
@@ -98,6 +99,7 @@ class ActivityInbox
     {
         $task = $this->recurrenceTask($request);
         $body = clone $request->getParsedBody();
+        $body->taskVersionNumber = $this->taskVersion($request);
         if (isset($body->patch)) $this->access->validateTeams($body->patch, $this->tenant($request), false);
         return $this->recurrence->convert($task->getId(), $body);
     }
@@ -105,8 +107,16 @@ class ActivityInbox
     {
         $task = $this->recurrenceTask($request);
         $body = clone $request->getParsedBody();
+        $body->taskVersionNumber = $this->taskVersion($request);
         if (isset($body->patch)) $this->access->validateTeams($body->patch, $this->tenant($request), false);
         return $this->recurrence->mutate($task->getId(), $body);
+    }
+
+    private function taskVersion(Request $request): int
+    {
+        $version = (new \Espo\Core\Record\UpdateParamsFetcher())->fetch($request)->getVersionNumber();
+        if ($version === null) throw new \Espo\Core\Exceptions\Conflict('A Task version precondition is required.');
+        return $version;
     }
 
     public function getActionStream(Request $request): object

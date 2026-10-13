@@ -149,7 +149,9 @@ class ContractsTest extends TestCase
         [$name, $qualifiers] = Predicates::validate('employed_by', 'Contact', 'Account', (object) ['role' => 'CTO', 'since' => '2026-10-02']);
         $this->assertSame('builtin:works_at', $name);
         $this->assertSame(['role' => 'CTO', 'since' => '2026-10-02'], (array) $qualifiers);
-        $this->assertCount(11, Predicates::schema());
+        $this->assertCount(13, Predicates::schema());
+        [$owner, $ownership] = Predicates::validate('owns','Contact','Account',(object) ['ownershipPercentage' => 25.5]);
+        $this->assertSame('builtin:owns',$owner); $this->assertSame(25.5,$ownership->ownershipPercentage);
     }
 
     public function testInvalidPredicatesEndpointsQualifiersAndDatesAreRejected(): void

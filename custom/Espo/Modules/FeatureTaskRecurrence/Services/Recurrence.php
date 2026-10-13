@@ -107,6 +107,9 @@ class Recurrence
             if ($task->get('recurrenceSeriesId')) return $this->read($taskId);
             $this->entityManager->getRDBRepository('Task')->select('id')->where(['id' => $taskId])->forUpdate()->findOne() ?? throw new NotFound();
             $task = $this->entityManager->getEntityById('Task', $taskId) ?? throw new NotFound();
+            if (isset($input->taskVersionNumber) && $input->taskVersionNumber !== (int) $task->get('versionNumber')) {
+                throw new Conflict('Task changed. Read the latest version before saving.');
+            }
             if ($task->get('recurrenceSeriesId')) return $this->read($taskId);
             $this->services->get('Task')->loadAdditionalFields($task);
             if (isset($input->patch)) $task = $this->services->get('Task')->update($taskId, clone $input->patch)->getEntity();
@@ -217,6 +220,13 @@ class Recurrence
                 $segments[$segment->getId()] = $segment;
             }
             $selected = $segments[$selected->getId()];
+            if (isset($input->taskVersionNumber)) {
+                $task = $this->entityManager->getRDBRepository('Task')->where(['id' => $taskId])->forUpdate()->findOne() ?? throw new NotFound();
+                if ($input->taskVersionNumber !== (int) $task->get('versionNumber')) {
+                    throw new Conflict('Task changed. Read the latest version before saving.');
+                }
+                $this->services->get('Task')->loadAdditionalFields($task);
+            }
             if (!is_int($input->version ?? null) || $input->version !== (int) $selected->get('version')) throw new Conflict('Recurrence changed. Reload the Task before applying this operation.');
             $boundary = $task->get('recurrenceId');
             $patch = $this->template->patch($input->patch ?? new \stdClass());

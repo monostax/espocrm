@@ -68,6 +68,7 @@ class Erasor implements
         private RecordServiceContainer $recordServiceContainer,
         private EmailAddressAccessChecker $emailAddressAccessChecker,
         private PhoneNumberAccessChecker $phoneNumberAccessChecker,
+        private \Espo\Core\HookManager $hookManager,
     ) {}
 
     /**
@@ -76,6 +77,13 @@ class Erasor implements
      * @throws NotFound
      */
     public function erase(string $entityType, string $id, array $fieldList): void
+    {
+        $this->entityManager->getTransactionManager()->run(
+            fn () => $this->eraseInTransaction($entityType, $id, $fieldList)
+        );
+    }
+
+    private function eraseInTransaction(string $entityType, string $id, array $fieldList): void
     {
         if ($this->acl->getPermissionLevel(Permission::DATA_PRIVACY) === Table::LEVEL_NO) {
             throw new Forbidden();
@@ -102,6 +110,8 @@ class Erasor implements
         }
 
         $service->loadAdditionalFields($entity);
+
+        $this->hookManager->process($entityType, 'beforeDataPrivacyErase', $entity, ['fieldList' => $fieldList]);
 
         $fieldUtil = $this->fieldUtil;
 

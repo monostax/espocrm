@@ -1,0 +1,23 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "provider": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "integrationId": {"type": "varchar", "maxLength": 24, "notNull": true, "readOnly": true},
+        "environment": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "externalId": {"type": "varchar", "maxLength": 200, "notNull": true, "readOnly": true},
+        "externalHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "eventType": {"type": "varchar", "maxLength": 88, "notNull": true, "readOnly": true},
+        "paymentId": {"type": "varchar", "maxLength": 104, "notNull": true, "readOnly": true},
+        "subscriptionHint": {"type": "varchar", "maxLength": 104, "readOnly": true},
+        "state": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
+        "receivedAt": {"type": "datetime", "notNull": true},
+        "nextAttemptAt": {"type": "datetime", "notNull": true},
+        "leaseToken": {"type": "varchar", "maxLength": 17, "readOnly": true},
+        "lastReason": {"type": "varchar", "maxLength": 32, "readOnly": true}
+    },
+    "indexes": {
+        "eventUnique": {"columns": ["provider", "integrationId", "externalHash"], "unique": true},
+        "pending": {"columns": ["state", "nextAttemptAt"]}
+    }
+}

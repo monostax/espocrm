@@ -1,0 +1,4 @@
+{
+    "fields": {"useEnrichmentCreditsPermission": "Usar créditos de enriquecimento"},
+    "tooltips": {"useEnrichmentCreditsPermission": "Comprar enriquecimento para registros acessíveis nos seus ambientes. Aplicar resultados também exige permissão de edição do registro e dos campos."}
+}

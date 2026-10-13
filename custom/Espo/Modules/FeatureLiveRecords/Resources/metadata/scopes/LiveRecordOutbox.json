@@ -1,0 +1,11 @@
+{
+    "entity": true,
+    "object": false,
+    "tab": false,
+    "acl": true,
+    "aclStrict": true,
+    "customizable": false,
+    "importable": false,
+    "exportable": false,
+    "module": "FeatureLiveRecords"
+}

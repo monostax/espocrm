@@ -149,7 +149,7 @@ class OpportunityBulkPostTest extends TestCase
             } else $accountBroadcasts++;
         }
         self::assertGreaterThanOrEqual($count, $native);
-        self::assertSame((int) ceil($count / 50), $accountBroadcasts, 'One durable account invalidation per chunk.');
+        self::assertSame(0, $accountBroadcasts, 'Account-wide invalidation jobs are retired; Notes have native transactional intent.');
     }
 
     public function testRejectsMixedTenantsEvenForAnAdministrator(): void

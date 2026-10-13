@@ -26,6 +26,7 @@ class CreditDispatchTest extends TestCase
     public static function invalidSignatures(): iterable
     {
         yield 'unsigned' => ['', '', '', '{}'];
+        yield 'unsigned global discovery' => ['test-secret', 'credit-execution-v1', 'now', '{"operation":"recoveryTenants","phase":"completion","limit":5}'];
         yield 'terminal signature cannot cross endpoint' => ['test-secret', 'credit-execution-v1', 'now', '{}'];
         yield 'expired' => ['test-secret', 'credit-dispatch-v1', 'expired', '{}'];
         yield 'future' => ['test-secret', 'credit-dispatch-v1', 'future', '{}'];
@@ -65,6 +66,9 @@ class CreditDispatchTest extends TestCase
         yield 'terminal seal without proof' => [(object) ['operation' => 'sealTerminal', 'scope' => (object) []]];
         yield 'unsealed discovery cannot supply status' => [(object) ['operation' => 'discoverUnsealed', 'tenantId' => 'tenant', 'leaseMs' => 1000, 'retryMs' => 1000, 'status' => 'FAILED']];
         yield 'transcription cannot supply a price' => [(object) ['operation' => 'claimTranscription', 'scope' => (object) [], 'requestKey' => 'audio', 'requestHash' => str_repeat('a', 64), 'credits' => '0']];
+        yield 'discovery cannot choose tenants' => [(object) ['operation' => 'recoveryTenants', 'phase' => 'completion', 'limit' => 5, 'tenantIds' => ['tenant']]];
+        yield 'discovery cannot exceed batch bound' => [(object) ['operation' => 'recoveryTenants', 'phase' => 'terminal', 'limit' => 6]];
+        yield 'discovery cannot choose unknown phase' => [(object) ['operation' => 'recoveryTenants', 'phase' => 'waive', 'limit' => 5]];
     }
 
     #[DataProvider('malformed')]

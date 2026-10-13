@@ -18,12 +18,14 @@
         "sourceType": "Tipo de concessão", "grantedCredits": "Créditos originais", "remainingCredits": "Créditos restantes", "expiresAt": "Expira em (UTC)",
         "outcome": "Resultado", "meteringState": "Medição", "billingState": "Cobrança", "waiverReason": "Motivo da isenção", "authorizedCredits": "Reserva original da requisição", "pricedCreditsExact": "Preço exato da requisição", "type": "Tipo de lançamento", "credits": "Créditos contabilizados",
         "notFinal": "Não finalizado", "neverExpires": "Sem expiração", "unavailable": "—",
-        "ai": "IA", "apollo": "Apollo", "admitted": "Admitida", "held": "Reservada", "settled": "Liquidada", "released": "Liberada", "pendingReconciliation": "Conciliação pendente",
+        "ai": "IA", "apollo": "Apollo", "enrichment": "Enriquecimento", "admitted": "Admitida", "held": "Reservada", "settled": "Liquidada", "released": "Liberada", "pendingReconciliation": "Conciliação pendente",
         "purchase": "Compra", "subscription": "Assinatura", "migration": "Migração",
         "inFlight": "Em andamento", "success": "Sucesso", "cancelled": "Cancelada", "superseded": "Substituída", "infrastructureFailure": "Falha de infraestrutura",
         "pending": "Pendente", "unknown": "Desconhecida", "measured": "Medida", "unrecoverable": "Irrecuperável", "billable": "Cobrável", "waived": "Isenta",
         "infrastructure_failure": "Falha de infraestrutura", "unrecoverable_cancellation": "Uso cancelado irrecuperável",
         "grant": "Concessão", "debit": "Consumo", "expiration": "Expiração", "reversal": "Estorno",
-        "nativeSearchOverrun": "Excedente da busca nativa", "searchDebtPayment": "Créditos aplicados à dívida de busca", "searchDebtRecovery": "Dívida de busca paga (contrapartida)"
+        "nativeSearchOverrun": "Excedente da busca nativa", "searchDebtPayment": "Créditos aplicados à dívida de busca", "searchDebtRecovery": "Dívida de busca paga (contrapartida)",
+        "purchaseReversal": "Créditos comprados recuperados", "billingDebt": "Saldo devedor por estorno da compra",
+        "billingDebtPayment": "Créditos aplicados à dívida de cobrança", "billingDebtRecovery": "Dívida de cobrança paga (contrapartida)"
     }
 }

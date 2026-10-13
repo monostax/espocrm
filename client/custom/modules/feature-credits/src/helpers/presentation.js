@@ -7,11 +7,30 @@ export const reports = {
 };
 
 const enums = new Set(['operationType', 'state', 'sourceType', 'outcome', 'meteringState', 'billingState', 'waiverReason', 'type']);
+const creditFields = new Set(['availableCredits', 'reservedCredits', 'pendingExpirationCredits', 'balance',
+    'accruedCreditsExact', 'settledCredits', 'grantedCredits', 'remainingCredits', 'authorizedCredits', 'pricedCreditsExact', 'credits']);
+
+// Display only: keep API/model decimal strings untouched for accounting and exports.
+export function formatCredits(value) {
+    if (typeof value !== 'string') return value;
+    const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value);
+    if (!match) return value;
+    const [, sign, whole, fraction = ''] = match;
+    const decimals = fraction.padEnd(3, '0');
+    let cents = BigInt(whole + decimals.slice(0, 2));
+    if (decimals[2] >= '5') cents += BigInt(1);
+    const negative = sign ? '−' : '';
+    if (cents === BigInt(0)) {
+        return /[1-9]/.test(whole + fraction) ? negative + '<0.01' : '0.00';
+    }
+    const digits = cents.toString().padStart(3, '0');
+    return negative + digits.slice(0, -2) + '.' + digits.slice(-2);
+}
 
 export function present(balance, page, tab, t) {
     const columns = reports[tab].columns;
     return {
-        cards: balance ? ['availableCredits', 'reservedCredits', 'pendingExpirationCredits', 'balance'].map(key => ({label: t(key), value: balance[key]})) : [],
+        cards: balance ? ['availableCredits', 'reservedCredits', 'pendingExpirationCredits', 'balance'].map(key => ({label: t(key), value: formatCredits(balance[key])})) : [],
         walletMissing: balance?.walletExists === false,
         exhausted: balance?.walletExists === true && (balance.availableCredits === '0.0000' || balance.availableCredits?.startsWith('-')),
         observedAt: balance?.observedAt,
@@ -25,8 +44,7 @@ export function present(balance, page, tab, t) {
                 if (value === null || value === undefined) {
                     return {value: t(['settledCredits', 'pricedCreditsExact'].includes(key) ? 'notFinal' : key === 'expiresAt' ? 'neverExpires' : 'unavailable')};
                 }
-                // Decimal strings remain exact, including sub-quantum accrued prices. Never use Number.
-                return {value: enums.has(key) ? t(value) : value};
+                return {value: enums.has(key) ? t(value) : creditFields.has(key) ? formatCredits(value) : value};
             }),
         })),
         showSource: ['operations', 'reservations', 'requests'].includes(tab),

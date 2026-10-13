@@ -1,0 +1,16 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "commercialKey": {"type": "varchar", "maxLength": 24, "notNull": true, "readOnly": true},
+        "version": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "termsId": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
+        "definition": {"type": "jsonObject", "notNull": true, "readOnly": true},
+        "createdAt": {"type": "datetime", "notNull": true},
+        "createdBy": {"type": "link"}
+    },
+    "links": {"createdBy": {"type": "belongsTo", "entity": "User"}},
+    "indexes": {
+        "versionUnique": {"columns": ["commercialKey", "version"], "unique": true},
+        "termsUnique": {"columns": ["termsId"], "unique": true}
+    }
+}

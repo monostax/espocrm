@@ -133,6 +133,44 @@ class StreamAgent
         ];
     }
 
+    /** Intermediate messages persist as a timeline on the pending reply, separate from final-answer drafts. */
+    public function message(string $noteId, string $membershipId, string $postHash, string $post, string $runId): object
+    {
+        $result = $this->entityManager->getTransactionManager()->run(function () use ($noteId, $membershipId, $postHash, $post, $runId): object {
+            $source = $this->entityManager->getRDBRepository('Note')->where(['id' => $noteId])->forUpdate()->findOne();
+            $target = $source instanceof Note ? $this->validate($source, $membershipId, $postHash) : null;
+            if (!$target || !$this->delegatedInitiator($source, $target)) throw new Forbidden('Source access was revoked or the request changed.');
+            if (($source->getData()->opportunityAiExecutions->{$membershipId} ?? null) !== $runId) {
+                throw new Forbidden('Another workflow owns this request.');
+            }
+            $pending = $this->existingReply($noteId, $membershipId);
+            if (!StreamAgentProgress::isPending($pending) ||
+                ($pending->getData()->opportunityStreamAgent->workflowRunId ?? null) !== $runId) {
+                throw new Forbidden('This request is no longer running.');
+            }
+            if ($pending->getCreatedById() !== $this->user->getId() ||
+                ($source->getParentType() !== 'AiSession' && !$this->acl->check($pending, 'create'))) {
+                throw new Forbidden('No permission to post in this stream.');
+            }
+            $data = $pending->getData();
+            $progress = $data->opportunityStreamAgent;
+            $key = hash('sha256', $post);
+            $progress->messages ??= [];
+            foreach ($progress->messages as $message) {
+                if ($message->id === $key) {
+                    return (object) ['published' => true, 'noteId' => $pending->getId(), 'replayed' => true];
+                }
+            }
+            $progress->messages[] = (object) ['id' => $key, 'text' => $post,
+                'createdAt' => (new \DateTimeImmutable())->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z')];
+            $pending->setData($data);
+            $this->entityManager->saveEntity($pending, [SaveOption::SKIP_MODIFIED_BY => true, SaveOption::SKIP_HOOKS => true]);
+            return (object) ['published' => true, 'noteId' => $pending->getId(), 'replayed' => false];
+        });
+        if ($result->published) $this->live->publish($this->existingReply($noteId, $membershipId));
+        return $result;
+    }
+
     public function reply(string $noteId, string $membershipId, string $postHash, string $post, string $runId): object
     {
         $result = $this->entityManager->getTransactionManager()->run(function () use (

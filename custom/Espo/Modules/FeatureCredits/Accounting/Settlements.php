@@ -173,8 +173,8 @@ final class Settlements
             $pdo->prepare("UPDATE credit_usage SET state = 'settled', settled_credits = ?, settled_at = ? WHERE id = ?")
                 ->execute([(string) $charge, $now, $usageId]);
             $held = Amount::fromString($wallet['reserved_credits'])->minus($total);
-            NativeSearchDebt::repayLocked($pdo, $tenantId, $now);
-            NativeSearchDebt::assertWallet($pdo, $tenantId, (string) $balance, (string) $held);
+            WalletDebt::repayLocked($pdo, $tenantId, $now);
+            WalletDebt::assertWallet($pdo, $tenantId, (string) $balance, (string) $held);
             $pdo->prepare('UPDATE tenant_credit_balance SET balance = ?, reserved_credits = ?, modified_at = ? WHERE id = ?')
                 ->execute([(string) $balance, (string) $held, $now, $wallet['id']]);
             return $this->receipt(array_replace($usage, ['settled_credits' => (string) $charge, 'settled_at' => $now]), $reservation);

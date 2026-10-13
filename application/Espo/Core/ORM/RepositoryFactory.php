@@ -37,6 +37,9 @@ use Espo\ORM\EntityFactory as EntityFactoryInterface;
 use Espo\ORM\Relation\RelationsMap;
 use Espo\ORM\Repository\Repository;
 use Espo\ORM\Repository\RepositoryFactory as RepositoryFactoryInterface;
+use Espo\Core\Utils\Metadata;
+use Espo\ORM\Repository\RDBRepository;
+use Espo\ORM\Repository\MutationObserver;
 
 class RepositoryFactory implements RepositoryFactoryInterface
 {
@@ -45,13 +48,14 @@ class RepositoryFactory implements RepositoryFactoryInterface
         private InjectableFactory $injectableFactory,
         private ClassNameProvider $classNameProvider,
         private RelationsMap $relationsMap,
+        private Metadata $metadata,
     ) {}
 
     public function create(string $entityType): Repository
     {
         $className = $this->getClassName($entityType);
 
-        return $this->injectableFactory->createWithBinding(
+        $repository = $this->injectableFactory->createWithBinding(
             $className,
             BindingContainerBuilder::create()
                 ->bindInstance(EntityFactoryInterface::class, $this->entityFactory)
@@ -65,6 +69,17 @@ class RepositoryFactory implements RepositoryFactoryInterface
                 )
                 ->build()
         );
+
+        $observerClass = $this->metadata->get(['entityDefs', $entityType, 'mutationObserverClassName']);
+        if ($observerClass && $repository instanceof RDBRepository) {
+            $observer = $this->injectableFactory->create($observerClass);
+            if (!$observer instanceof MutationObserver) {
+                throw new \LogicException('Invalid persistence mutation observer.');
+            }
+            $repository->setMutationObserver($observer);
+        }
+
+        return $repository;
     }
 
     /**

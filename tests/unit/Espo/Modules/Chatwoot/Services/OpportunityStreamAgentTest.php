@@ -406,6 +406,84 @@ class OpportunityStreamAgentTest extends TestCase
         self::assertSame('Final answer', $reply->getPost());
     }
 
+    public function testIntermediateMessageIsDeduplicatedAndDoesNotCompleteTheRun(): void
+    {
+        $human = $this->createMock(User::class);
+        $human->method('isActive')->willReturn(true);
+        $this->records['User/human'] = $human;
+        $data = $this->source->getData();
+        $data->opportunityAiInitiatorUserId = 'human';
+        $this->source->setData($data);
+        $pending = $this->queuedReply();
+        $pending->set('opportunityThreadRootId', 'thread');
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $first = $this->service->message('source', 'ai', $this->postHash, 'Vou verificar.', 'run');
+        $again = $this->service->message('source', 'ai', $this->postHash, 'Vou verificar.', 'run');
+        self::assertTrue($first->published);
+        self::assertFalse($first->replayed);
+        self::assertTrue($again->replayed);
+        self::assertSame($first->noteId, $again->noteId);
+        self::assertSame('pending-reply', $first->noteId);
+        self::assertCount(1, $this->replies);
+        self::assertSame('thread', $pending->get('opportunityThreadRootId'));
+        self::assertSame('ai-user', $pending->getCreatedById());
+        self::assertSame('Vou verificar.', $this->service->preview('pending-reply')->progress->messages[0]->text);
+        self::assertSame('running', $pending->getData()->opportunityStreamAgent->status);
+        $snapshot = (object) ['postHash' => $this->postHash, 'sequence' => 1, 'phase' => 'thinking',
+            'activities' => [], 'thinking' => '', 'draft' => ''];
+        $this->service->updateProgress('source', 'ai', 'run', $snapshot);
+        self::assertSame('Vou verificar.', $this->service->preview('pending-reply')->progress->messages[0]->text);
+        self::assertSame('', $this->service->preview('pending-reply')->progress->draft);
+        $snapshot->sequence = 2;
+        $snapshot->draft = 'Final answer streaming';
+        $this->service->updateProgress('source', 'ai', 'run', $snapshot);
+        self::assertSame('Final answer streaming', $this->service->preview('pending-reply')->progress->draft);
+        $this->service->message('source', 'ai', $this->postHash, 'Encontrei o contato.', 'run');
+        $this->service->message('source', 'ai', $this->postHash, 'Vou verificar.', 'run');
+        $messages = $this->service->preview('pending-reply')->progress->messages;
+        self::assertCount(2, $messages);
+        self::assertSame('Vou verificar.', $messages[0]->text);
+        self::assertSame('Encontrei o contato.', $messages[1]->text);
+        self::assertNotEmpty($messages[1]->createdAt);
+        self::assertSame('Final answer streaming', $this->service->preview('pending-reply')->progress->draft);
+        $this->service->reply('source', 'ai', $this->postHash, 'Final answer', 'run');
+        self::assertSame('Final answer', $pending->getPost());
+        self::assertCount(1, $this->replies);
+        self::assertFalse(isset($this->service->preview('pending-reply')->progress->draft));
+        self::assertCount(2, $this->service->preview('pending-reply')->progress->messages);
+        $this->expectException(Forbidden::class);
+        $this->service->message('source', 'ai', $this->postHash, 'Too late', 'run');
+    }
+
+    public function testIntermediateMessageRejectsAnotherRun(): void
+    {
+        $human = $this->createMock(User::class);
+        $human->method('isActive')->willReturn(true);
+        $this->records['User/human'] = $human;
+        $data = $this->source->getData();
+        $data->opportunityAiInitiatorUserId = 'human';
+        $this->source->setData($data);
+        $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $this->expectException(Forbidden::class);
+        $this->service->message('source', 'ai', $this->postHash, 'Checking', 'other-run');
+    }
+
+    public function testIntermediateMessageRechecksHumanAccess(): void
+    {
+        $human = $this->createMock(User::class);
+        $human->method('isActive')->willReturn(true);
+        $this->records['User/human'] = $human;
+        $data = $this->source->getData();
+        $data->opportunityAiInitiatorUserId = 'human';
+        $this->source->setData($data);
+        $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $this->humanAccess = false;
+        $this->expectException(Forbidden::class);
+        $this->service->message('source', 'ai', $this->postHash, 'Checking', 'run');
+    }
+
     public function testProgressIsOrderedOwnedAndPreservedOnCompletion(): void
     {
         $reply = $this->queuedReply();

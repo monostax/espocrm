@@ -25,6 +25,7 @@ final class DispatchStore
     public function execute(DispatchInput $input): mixed
     {
         $d = $input->data;
+        if ($d->operation === 'recoveryTenants') return $this->recoveryTenants($d->phase, $d->limit);
         if ($d->operation === 'deliver') return $this->deliver($input->tenantId, $d->leaseMs, $d->retryMs);
         if ($d->operation === 'recover') return $this->recover($d->scope);
         if ($d->operation === 'recoverOne') return $this->recoverOne($input->tenantId, $d->leaseMs, $d->retryMs);
@@ -102,6 +103,26 @@ final class DispatchStore
                     $facts, 'pending', 0, $now, $now]);
             return null;
         });
+    }
+
+    /** Service-authenticated, read-only discovery for instance-wide rollout.
+     * Newly admitted unified operations become eligible automatically. No tenant
+     * list, balance threshold, grant validity or provider-age waiver is involved.
+     * Existing per-tenant polls still own locking/leases and move due times, so
+     * oldest-due ordering advances across bounded batches of tenants. */
+    private function recoveryTenants(string $phase, int $limit): array
+    {
+        $now = $this->clock->now();
+        $condition = $phase === 'terminal'
+            ? 'r.completion_requested_at IS NULL AND (r.completion_due_at IS NULL OR r.completion_due_at<=?)'
+            : 'r.completion_requested_at IS NOT NULL AND r.completion_finished_at IS NULL AND r.completion_due_at<=?';
+        $query = $this->entityManager->getPDO()->prepare('SELECT r.tenant_id, MIN(COALESCE(r.completion_due_at,r.admitted_at)) AS due_at
+            FROM credit_execution_route r JOIN tenant t ON t.id=r.tenant_id AND t.deleted=FALSE
+            JOIN credit_usage u ON u.id=r.usage_id AND u.tenant_id=r.tenant_id AND u.deleted=FALSE
+            WHERE r.deleted=FALSE AND r.billing_regime=? AND ' . $condition . '
+            GROUP BY r.tenant_id ORDER BY due_at,r.tenant_id LIMIT ' . $limit);
+        $query->execute([ExecutionRouting::UNIFIED, $now]);
+        return $query->fetchAll(PDO::FETCH_COLUMN);
     }
 
     /** Lease one unsealed route for an authoritative orchestrator lookup. A due
