@@ -17,7 +17,12 @@ if ($mode === 'interrupt') $f->transport->onSend = static function () use ($pdo)
     fwrite(STDOUT, "lookup\n"); fflush(STDOUT); sleep(30);
 };
 fwrite(STDOUT, "ready\n"); fflush(STDOUT);
-try { $output = ['result' => $mode === 'event' ? $f->events->processBatch() : $f->read($id)]; }
+try { $output = ['result' => match ($mode) {
+    'event' => $f->events->processBatch(),
+    'subscription' => $f->subscriptions->cancel('tenant', $id, 'stop', 'admin'),
+    default => $f->read($id),
+}]; }
 catch (Throwable $e) { $output = ['error' => get_class($e), 'message' => $e->getMessage()]; }
 $output['reads'] = count($f->transport->calls);
+$output['deletes'] = count(array_filter($f->transport->calls, static fn ($c) => $c[2] === 'DELETE'));
 print json_encode($output, JSON_THROW_ON_ERROR) . "\n";

@@ -32,6 +32,7 @@ class PrivateResponseTest extends TestCase
             ['CreditBilling', 'override'], ['CreditBilling', 'accept'], ['CreditBilling', 'cancel'],
             ['CreditBilling', 'customer'], ['CreditBilling', 'charge'], ['CreditBilling', 'recoverCreation'],
             ['CreditCheckout', 'context'], ['CreditCheckout', 'read'], ['CreditCheckout', 'payment'],
+            ['CreditSubscriptions', 'cancel'], ['CreditSubscriptions', 'reconcile'],
             ['CreditEnrichmentConfiguration', 'read'], ['CreditEnrichmentConfiguration', 'publish'],
             ['CreditEnrichmentQuotes', 'quote'], ['CreditEnrichmentQuotes', 'confirm'], ['CreditEnrichmentReview', 'read'],
             ['CreditEnrichmentApplication', 'apply'], ['CreditEnrichmentHistory', 'list'], ['CreditEnrichmentFields', 'apply']];
@@ -89,6 +90,7 @@ class PrivateResponseTest extends TestCase
         $routes = [...$routes, ['get', '/CreditCheckout/context'], ['get', '/CreditCheckout'], ['post', '/CreditCheckout/payment']];
         foreach (['context', 'obligation'] as $action) $routes[] = ['get', '/CreditBilling/' . $action];
         foreach (['country', 'override', 'accept', 'cancel', 'customer', 'charge', 'recoverCreation'] as $action) $routes[] = ['post', '/CreditBilling/' . $action];
+        foreach (['cancel', 'reconcile'] as $action) $routes[] = ['post', '/CreditSubscriptions/' . $action];
         foreach ($routes as [$method, $path]) foreach ([400, 403, 404, 409, 503] as $status) {
             $route = new Route($method, $path, $path, [], true, null);
             $handler = new class ($status) implements \Psr\Http\Server\RequestHandlerInterface {

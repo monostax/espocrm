@@ -1,0 +1,22 @@
+{
+    "version": "launch-2026-10-13-v1",
+    "products": [
+        {"productId": "monthly-2000", "productVersion": "v1", "name": "Monthly 2,000 credits", "operation": "subscription", "credits": "2000.0000"},
+        {"productId": "monthly-7000", "productVersion": "v1", "name": "Monthly 7,000 credits", "operation": "subscription", "credits": "7000.0000"},
+        {"productId": "monthly-15000", "productVersion": "v1", "name": "Monthly 15,000 credits", "operation": "subscription", "credits": "15000.0000"},
+        {"productId": "package-500", "productVersion": "v1", "name": "500 credits", "operation": "purchase", "credits": "500.0000"},
+        {"productId": "package-2000", "productVersion": "v1", "name": "2,000 credits", "operation": "purchase", "credits": "2000.0000"},
+        {"productId": "package-5000", "productVersion": "v1", "name": "5,000 credits", "operation": "purchase", "credits": "5000.0000"}
+    ],
+    "offers": [
+        {"offerId": "monthly-2000-br", "version": "v1", "productId": "monthly-2000", "productVersion": "v1", "countries": ["BR"], "currency": "BRL", "price": "997.00", "interval": "month"},
+        {"offerId": "monthly-7000-br", "version": "v1", "productId": "monthly-7000", "productVersion": "v1", "countries": ["BR"], "currency": "BRL", "price": "2997.00", "interval": "month"},
+        {"offerId": "monthly-15000-br", "version": "v1", "productId": "monthly-15000", "productVersion": "v1", "countries": ["BR"], "currency": "BRL", "price": "5897.00", "interval": "month"},
+        {"offerId": "monthly-2000-us", "version": "v1", "productId": "monthly-2000", "productVersion": "v1", "countries": ["US"], "currency": "USD", "price": "199.00", "interval": "month"},
+        {"offerId": "monthly-7000-us", "version": "v1", "productId": "monthly-7000", "productVersion": "v1", "countries": ["US"], "currency": "USD", "price": "500.00", "interval": "month"},
+        {"offerId": "monthly-15000-us", "version": "v1", "productId": "monthly-15000", "productVersion": "v1", "countries": ["US"], "currency": "USD", "price": "999.00", "interval": "month"},
+        {"offerId": "package-500-br", "version": "v1", "productId": "package-500", "productVersion": "v1", "countries": ["BR"], "currency": "BRL", "price": "299.00", "interval": null},
+        {"offerId": "package-2000-br", "version": "v1", "productId": "package-2000", "productVersion": "v1", "countries": ["BR"], "currency": "BRL", "price": "1099.00", "interval": null},
+        {"offerId": "package-5000-br", "version": "v1", "productId": "package-5000", "productVersion": "v1", "countries": ["BR"], "currency": "BRL", "price": "2499.00", "interval": null}
+    ]
+}

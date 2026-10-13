@@ -23,6 +23,7 @@ final class BillingPaymentFixtures
     public Catalog $catalog;
     public Creation $creation;
     public Payments $payments;
+    public \Espo\Modules\FeatureCredits\Billing\Subscriptions $subscriptions;
     public Events $events;
     public AsaasTestTransport $transport;
     public AsaasTestConnections $connections;
@@ -52,10 +53,11 @@ final class BillingPaymentFixtures
         $this->catalog = new Catalog($this->manager, $this->clock);
         $this->accounts = new Accounts($this->manager, $this->clock, $this->catalog, $this->providers);
         $store = new CreationStore($this->accounts, new Crypt($config), $this->connections);
+        $this->subscriptions = new \Espo\Modules\FeatureCredits\Billing\Subscriptions($this->accounts, $store, $this->connections, $this->transport);
         $this->creation = new Creation($store, new Adapter($this->transport));
         $this->lock = new WalletLock($this->manager, $this->clock); $this->funding = new Funding($this->lock);
         $this->payments = new Payments($this->manager, $this->accounts, $store, $this->connections, $this->transport, $this->lock, $this->funding);
-        $this->events = new Events($this->manager, $this->connections, $this->clock, $this->payments);
+        $this->events = new Events($this->manager, $this->connections, $this->clock, $this->payments, $this->subscriptions);
     }
 
     public function charge(bool $subscription = false, string $tenant = 'tenant', string $key = 'buy', string $method = 'PIX', string $due = '2026-10-15'): array

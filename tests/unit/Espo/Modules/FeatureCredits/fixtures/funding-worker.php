@@ -52,6 +52,11 @@ fwrite(STDOUT, "ready\n");
 fflush(STDOUT);
 try {
     $result = match ($operation) {
+        'legacy-migration' => (new \Espo\Modules\FeatureCredits\Accounting\LegacyMigration($lock, $funding))
+            ->grant('tenant', $key, '10', null, 'legacy:1', 'approval:1', 'admin'),
+        'funding-refund' => $lock->run('tenant', fn (PDO $pdo, array $wallet, string $now) =>
+            \Espo\Modules\FeatureCredits\Accounting\FundingRefunds::reverseLocked($pdo, $wallet, $now, $key,
+                \Espo\Modules\FeatureCredits\Accounting\Amount::fromString($credits), ['fixture' => 'verified-refund'], $funding)),
         'purchase-reverse' => $lock->run('tenant', fn (PDO $pdo, array $wallet, string $now) =>
             \Espo\Modules\FeatureCredits\Accounting\PurchaseReversals::reverseLocked($pdo, $wallet, $now, $key,
                 ['fixture' => 'verified-full-refund'])),

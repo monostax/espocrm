@@ -258,12 +258,16 @@ trait NativeDebtReversalCases
             $funding->grant($this->input('repayment', '5'));
             $input = $this->nativeCorrection($debit, '1'); $receipt = $service->reverse($input);
             $part = $receipt['restorations'][0];
-            foreach (['missing-leg', 'changed-expiry'] as $fault) {
+            foreach (['missing-leg', 'changed-expiry', 'missing-original-recovery', 'missing-original-debt'] as $fault) {
                 if ($fault === 'missing-leg') $pdo->prepare('UPDATE credit_transaction SET deleted=TRUE WHERE id=?')->execute([$part['restoreTransactionId']]);
+                elseif ($fault === 'missing-original-recovery') $pdo->prepare('UPDATE credit_transaction SET deleted=TRUE WHERE id=?')->execute([$part['recoveryTransactionId']]);
+                elseif ($fault === 'missing-original-debt') $pdo->prepare('UPDATE credit_transaction SET deleted=TRUE WHERE id=?')->execute([$debit['id']]);
                 else $pdo->prepare('UPDATE credit_grant SET expires_at=? WHERE id=?')->execute(['2027-01-01 00:00:00', $part['grantId']]);
                 $this->assertContains('transaction.native_correction_evidence', array_column($this->audit($pdo)->inspect('tenant')['findings'], 'code'));
                 try { $service->reverse($input); $this->fail('Corrupt correction replay accepted.'); } catch (Conflict) {}
                 if ($fault === 'missing-leg') $pdo->prepare('UPDATE credit_transaction SET deleted=FALSE WHERE id=?')->execute([$part['restoreTransactionId']]);
+                elseif ($fault === 'missing-original-recovery') $pdo->prepare('UPDATE credit_transaction SET deleted=FALSE WHERE id=?')->execute([$part['recoveryTransactionId']]);
+                elseif ($fault === 'missing-original-debt') $pdo->prepare('UPDATE credit_transaction SET deleted=FALSE WHERE id=?')->execute([$debit['id']]);
                 else $pdo->prepare('UPDATE credit_grant SET expires_at=? WHERE id=?')->execute([$part['expiresAt'], $part['grantId']]);
             }
             $this->assertSame($receipt, $service->reverse($input)); $this->assertAuditHealthy($pdo);

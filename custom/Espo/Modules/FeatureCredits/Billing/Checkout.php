@@ -44,7 +44,7 @@ final class Checkout
             $q = $pdo->prepare("SELECT * FROM credit_billing_creation WHERE tenant_id=? AND provider=? AND integration_id=?
                 AND ((kind='customer' AND source_key='customer') OR (kind IN ('payment','subscription') AND obligation_id=?))");
             $q->execute([$tenant, $accepted['provider'], $accepted['integrationId'], $obligation]);
-            $customer = null; $customerExternal = null; $charge = null; $command = null;
+            $customer = null; $customerExternal = null; $charge = null; $command = null; $subscription = null;
             foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $row) {
                 $original = $this->creations->verify($row);
                 if ($row['kind'] === 'customer') {
@@ -55,13 +55,14 @@ final class Checkout
                     if ($charge !== null || $row['source_key'] !== $obligation ||
                         $row['kind'] !== ($accepted['terms']['operation'] === 'purchase' ? 'payment' : 'subscription')) throw new Conflict('Ambiguous checkout charge.');
                     $charge = $this->summary($row); $command = $original;
+                    if ($row['kind'] === 'subscription' && $row['state'] === 'bound') $subscription = Subscriptions::projection($parent, $row);
                 }
             }
             if ($charge && (!$customer || $customer['state'] !== 'bound' || $customer['environment'] !== $charge['environment'] ||
                 ($command->body['customer'] ?? null) !== $customerExternal)) throw new Conflict('Checkout customer binding is unavailable.');
             // The decrypted command stays internal. In particular, never return payer data to the SPA.
             return ['view' => ['tenantId' => $tenant, 'obligationId' => $obligation, 'state' => $parent['state'],
-                'acceptance' => $accepted, 'customer' => $customer, 'charge' => $charge,
+                'acceptance' => $accepted, 'customer' => $customer, 'charge' => $charge, 'subscription' => $subscription,
                 'earliestDueDate' => substr($now, 0, 10)], 'command' => $command];
         });
     }

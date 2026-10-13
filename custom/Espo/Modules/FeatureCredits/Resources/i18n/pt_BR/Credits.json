@@ -26,7 +26,7 @@
         "grant": "Concessão", "debit": "Consumo", "expiration": "Expiração", "reversal": "Estorno",
         "nativeSearchOverrun": "Excedente da busca nativa", "searchDebtPayment": "Créditos aplicados à dívida de busca", "searchDebtRecovery": "Dívida de busca paga (contrapartida)",
         "searchDebtReversal": "Correção da dívida de busca nativa", "searchDebtReopen": "Pagamento original da dívida de busca revertido (contrapartida)", "searchDebtRestore": "Créditos do pagamento original restaurados",
-        "purchaseReversal": "Créditos comprados recuperados", "billingDebt": "Saldo devedor por estorno da compra",
+        "purchaseReversal": "Créditos recuperados por estorno", "billingDebt": "Saldo devedor por estorno do pagamento",
         "billingDebtPayment": "Créditos aplicados à dívida de cobrança", "billingDebtRecovery": "Dívida de cobrança paga (contrapartida)"
     }
 }

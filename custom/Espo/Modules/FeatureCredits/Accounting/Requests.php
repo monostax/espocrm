@@ -46,6 +46,7 @@ final class Requests
                 }
             }
             NativeSearchDebt::requireNoPendingOverrun($pdo, $input->tenantId);
+            WalletDebt::requireNoPendingRefund($pdo, $input->tenantId);
             $query = $pdo->prepare('SELECT * FROM credit_reservation WHERE usage_id = ? AND tenant_id = ?');
             $query->execute([$input->usageId, $input->tenantId]);
             $reservation = $query->fetch(PDO::FETCH_ASSOC);

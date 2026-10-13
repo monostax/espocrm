@@ -9,7 +9,8 @@ class Transport
 {
     public function send(Connection $connection, string $method, string $path, #[\SensitiveParameter] ?string $json = null, array $query = []): Response
     {
-        if (!in_array($method, ['GET', 'POST'], true) || !preg_match('#^/(customers|payments|subscriptions)(/[a-zA-Z0-9_-]+)?$#D', $path) ||
+        if (!in_array($method, ['GET', 'POST', 'DELETE'], true) || !preg_match('#^/(customers|payments|subscriptions)(/[a-zA-Z0-9_-]+)?$#D', $path) ||
+            ($method === 'DELETE' && (!preg_match('#^/subscriptions/sub_[a-zA-Z0-9_-]+$#D', $path) || $json !== null || $query)) ||
             ($method === 'GET' && $json !== null) || ($method === 'POST' && (!$connection->creationEnabled || $json === null || $query))) {
             throw new \InvalidArgumentException('Invalid Asaas transport operation.');
         }

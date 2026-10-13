@@ -94,6 +94,19 @@ final class BillingCatalogDatabaseTest extends TestCase
             $this->assertSame('15000.0000', $current->offers['monthly-15000-us']->credits);
             $this->assertSame('999.00', $current->offers['monthly-15000-us']->price);
             $this->assertSame($receipt['catalog'], $catalog->resolve($current->id)->receipt());
+            $packages = json_decode(file_get_contents('custom/Espo/Modules/FeatureCredits/Resources/billing/launch-2026-10-13.json'), false, 32, JSON_THROW_ON_ERROR);
+            $packages->effectiveFrom = '2026-10-14 00:00:00';
+            $next = $catalog->publish($packages, 'admin');
+            $this->assertSame($next, $catalog->publish($packages, 'admin'));
+            $this->now = $packages->effectiveFrom;
+            $updated = $catalog->current();
+            $this->assertCount(9, $updated->offers);
+            foreach ($current->offers as $id => $terms) $this->assertSame($terms->termsId, $updated->offers[$id]->termsId);
+            $this->assertSame($receipt['catalog'], $catalog->resolve($current->id)->receipt());
+            $this->assertSame('299.00', $updated->offers['package-500-br']->price);
+            $this->assertSame('2000.0000', $updated->offers['package-2000-br']->credits);
+            $this->assertSame('2499.00', $updated->offers['package-5000-br']->price);
+            $this->assertNull($updated->offers['package-5000-br']->interval);
             foreach (['credit_billing_obligation', 'credit_billing_creation', 'credit_billing_payment', 'credit_grant', 'credit_transaction'] as $table) {
                 $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn());
             }

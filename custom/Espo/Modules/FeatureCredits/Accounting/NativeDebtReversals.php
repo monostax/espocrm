@@ -107,6 +107,16 @@ final class NativeDebtReversals
     {
         if ($root['type'] !== self::TYPE || !self::validPosting($root)) return false;
         $receipt = json_decode($root['evidence'], true, 64, JSON_THROW_ON_ERROR)['receipt'];
+        $q = $pdo->prepare("SELECT d.id FROM credit_transaction d
+            JOIN credit_usage u ON u.id=d.usage_id AND u.tenant_id=d.tenant_id
+            JOIN credit_reservation r ON r.usage_id=u.id AND r.tenant_id=u.tenant_id
+            WHERE d.id=? AND d.tenant_id=? AND d.type='nativeSearchOverrun' AND d.deleted=FALSE
+            AND d.usage_id=? AND d.grant_id IS NULL AND d.allocation_id IS NULL AND d.posted_at<=?
+            AND u.deleted=FALSE AND u.state='settled' AND r.deleted=FALSE AND r.state='settled'
+            AND -d.credits >= (SELECT COALESCE(SUM(c.credits),0) FROM credit_transaction c
+                WHERE c.tenant_id=d.tenant_id AND c.type='searchDebtReversal' AND c.reversal_of_id=d.id)");
+        $q->execute([$receipt['reversalOfId'], $root['tenant_id'], $root['usage_id'], $root['posted_at']]);
+        if ($q->fetchColumn() === false) return false;
         $expected = [$root['id']];
         foreach ($receipt['restorations'] as $part) {
             array_push($expected, $part['reopenTransactionId'], $part['restoreTransactionId']);
@@ -114,6 +124,22 @@ final class NativeDebtReversals
             $q = $pdo->prepare('SELECT expires_at FROM credit_grant WHERE id=? AND tenant_id=? AND deleted=FALSE');
             $q->execute([$part['grantId'], $root['tenant_id']]); $grant = $q->fetch(PDO::FETCH_ASSOC);
             if (!$grant || $grant['expires_at'] !== $part['expiresAt']) return false;
+            $originals = [];
+            foreach ([NativeSearchDebt::PAYMENT => $part['paymentTransactionId'], NativeSearchDebt::RECOVERY => $part['recoveryTransactionId']] as $type => $id) {
+                $q = $pdo->prepare('SELECT * FROM credit_transaction WHERE id=? AND tenant_id=?');
+                $q->execute([$id, $root['tenant_id']]); $original = $q->fetch(PDO::FETCH_ASSOC);
+                if (!$original || $original['deleted'] || $original['type'] !== $type ||
+                    $original['debt_transaction_id'] !== $receipt['reversalOfId'] ||
+                    $original['posted_at'] > $root['posted_at'] || !DebtRepaymentOrigins::validEvidence($original) ||
+                    $original['grant_id'] !== ($type === NativeSearchDebt::PAYMENT ? $part['grantId'] : null)) return false;
+                $originals[$type] = $original;
+            }
+            $payment = $originals[NativeSearchDebt::PAYMENT]; $recovery = $originals[NativeSearchDebt::RECOVERY];
+            if ($payment['idempotency_key'] !== $recovery['idempotency_key'] || $payment['evidence'] !== $recovery['evidence'] ||
+                Amount::fromString($payment['credits'])->plus(Amount::fromString($recovery['credits']))->compareTo(Amount::fromString('0')) !== 0) return false;
+            $q = $pdo->prepare('SELECT COALESCE(SUM(-credits),0) FROM credit_transaction WHERE tenant_id=? AND type=? AND reversal_of_id=?');
+            $q->execute([$root['tenant_id'], self::REOPEN, $recovery['id']]);
+            if (Amount::fromString((string) $q->fetchColumn())->compareTo(Amount::fromString($recovery['credits'])) > 0) return false;
         }
         $q = $pdo->prepare("SELECT * FROM credit_transaction WHERE tenant_id=? AND input_hash=? AND
             (type IN ('searchDebtReversal','searchDebtReopen','searchDebtRestore') OR (type='expiration' AND debt_transaction_id IS NOT NULL))");

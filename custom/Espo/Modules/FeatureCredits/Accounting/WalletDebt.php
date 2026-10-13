@@ -49,6 +49,13 @@ final class WalletDebt
         self::repayKindLocked($pdo, $tenant, $now, self::BILLING, self::PAYMENT, self::RECOVERY, 'billing-payment');
     }
 
+    public static function requireNoPendingRefund(PDO $pdo, string $tenant): void
+    {
+        $q = $pdo->prepare("SELECT id FROM credit_billing_payment WHERE tenant_id=? AND state='awaiting_refund_release' LIMIT 1");
+        $q->execute([$tenant]);
+        if ($q->fetchColumn() !== false) throw new Conflict('Verified subscription refund awaits original in-flight completion.');
+    }
+
     public static function repayKindLocked(PDO $pdo, string $tenant, string $now,
         string $debit, string $payment, string $recovery, string $prefix): void
     {

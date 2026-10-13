@@ -52,6 +52,22 @@ final class ApprovedBillingCatalogTest extends TestCase
         [$code, $out, $err] = $run(['2099-01-01 00:00:00']);
         $this->assertSame(0, $code); $this->assertSame('', $err);
         $catalog = new CatalogDefinition(json_decode($out, false, 32, JSON_THROW_ON_ERROR));
+        $this->assertCount(6, $catalog->products);
+        $this->assertCount(9, $catalog->offers);
+        foreach (['500' => '299.00', '2000' => '1099.00', '5000' => '2499.00'] as $credits => $price) {
+            $terms = $catalog->offers["package-$credits-br"];
+            $this->assertSame($price, $terms->price);
+            $this->assertSame($credits . '.0000', $terms->credits);
+            $this->assertSame(['BR'], $terms->countries);
+            $this->assertSame('BRL', $terms->currency);
+            $this->assertSame('purchase', $terms->operation);
+            $this->assertNull($terms->interval);
+        }
+        $old = json_decode(file_get_contents('custom/Espo/Modules/FeatureCredits/Resources/billing/launch-2026-10-12.json'));
+        $old->effectiveFrom = '2098-01-01 00:00:00';
+        foreach ((new CatalogDefinition($old))->offers as $id => $terms) {
+            $this->assertSame($terms->termsId, $catalog->offers[$id]->termsId);
+        }
         $this->assertSame('2099-01-01 00:00:00', $catalog->effectiveFrom);
         $this->assertSame($out, $run(['2099-01-01 00:00:00'])[1]);
     }

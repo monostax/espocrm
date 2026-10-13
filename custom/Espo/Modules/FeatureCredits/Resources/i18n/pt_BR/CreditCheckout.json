@@ -1,5 +1,13 @@
 {
     "labels": {
+        "reconcileSubscription": "Consultar assinatura original",
+        "cancellationPending": "O cancelamento aguarda confirmação. Consulte a assinatura original para recuperar o estado; o cancelamento não será reenviado.",
+        "stopSubscriptionTerms": "Encerrar permanentemente esta assinatura e excluir suas cobranças não pagas. Créditos pagos mantêm o vencimento original; isso não solicita reembolso.",
+        "stopSubscription": "Encerrar assinatura",
+        "subscription_ACTIVE": "Recorrência ativa no Asaas. Os créditos ainda dependem de pagamento verificado.",
+        "subscription_INACTIVE": "Recorrência inativa no Asaas. Cobranças não pagas podem permanecer.",
+        "subscription_EXPIRED": "Recorrência encerrada no Asaas. Cobranças não pagas podem permanecer.",
+        "subscription_DELETED": "Assinatura removida permanentemente no Asaas.",
         "title": "Planos e compra de créditos",
         "description": "Confira as condições comerciais, cadastre o pagador autorizado e conclua o pagamento no Asaas. Os créditos são concedidos somente após a verificação do pagamento.",
         "tenant": "Organização",

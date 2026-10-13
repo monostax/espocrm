@@ -50,7 +50,159 @@ final class BillingPaymentsDatabaseTest extends TestCase
         $this->assertTrue($result['consistent'], json_encode($result));
     }
 
+    #[DataProvider('dialects')]
+    public function testSubscriptionCancellationRetainsFundingAndDelayedPaymentCannotReactivateRouting(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, BillingPaymentFixtures $f): void {
+            [$accepted, $charge] = $f->charge(true); $id = $f->payment($charge);
+            $this->now = '2026-10-20 00:00:00'; $funded = $f->read($id);
+            $obligation = $accepted['obligationId'];
+            $this->assertSame('ACTIVE', $f->subscriptions->reconcile('tenant', $obligation)['providerStatus']);
+            $context = $f->accounts->context('tenant');
+            $f->accounts->changeCountry('tenant', 'us', $context['revision'], 'US', 'admin');
+            $this->assertSame('asaas', $f->accounts->context('tenant')['effectiveProvider']);
+            $f->connections->enabled = false;
+            $user = $this->createStub(\Espo\Entities\User::class); $user->method('getId')->willReturn('admin');
+            $access = $this->createMock(\Espo\Modules\FeatureAiUsage\Services\Access::class); $access->expects($this->once())->method('assertTenant')->with('tenant');
+            $controller = new \Espo\Modules\FeatureCredits\Controllers\CreditSubscriptions($user, $access, $f->subscriptions);
+            $request = $this->createStub(\Espo\Core\Api\Request::class);
+            $request->method('getBodyContents')->willReturn(json_encode(['tenantId' => 'tenant', 'obligationId' => $obligation, 'requestKey' => 'stop']));
+            $cancelled = (array) $controller->postActionCancel($request, $this->createStub(\Espo\Core\Api\Response::class));
+            $this->assertSame('cancelled', $cancelled['state']); $this->assertFalse($cancelled['cancellationPending']);
+            $this->assertSame('stripe', $f->accounts->context('tenant')['effectiveProvider']);
+            $this->assertSame($cancelled, $f->subscriptions->cancel('tenant', $obligation, 'stop', 'admin'));
+            $this->assertSame($funded, $f->read($id));
+            $this->assertSame('cancelled', $f->accounts->readObligation('tenant', $obligation)['state']);
+            $this->assertSame('stripe', $f->accounts->context('tenant')['effectiveProvider']);
+            $this->assertSame('100.0000', $this->balance($pdo));
+            $this->assertCount(1, array_filter($f->transport->calls, static fn ($c) => $c[2] === 'DELETE'));
+            $late = $f->payment($charge, 'pay_late'); $this->now = '2026-12-01 00:00:00';
+            $this->assertSame($funded['funding'], $f->read($late)['funding']);
+            $this->assertSame(1, $this->rows($pdo, 'credit_grant')); $this->audit($f);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testSubscriptionLostCancellationReplyUsesOnlyOriginalProviderLookup(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, BillingPaymentFixtures $f): void {
+            [$accepted] = $f->charge(true); $obligation = $accepted['obligationId'];
+            $f->transport->mode = 'lost';
+            try { $f->subscriptions->cancel('tenant', $obligation, 'stop', 'admin'); $this->fail('Lost response accepted.'); } catch (ServiceUnavailable) {}
+            $this->assertSame(1, $f->accounts->context('tenant')['openObligations']);
+            $f->transport->mode = 'success'; $f->connections->enabled = false;
+            $result = $f->subscriptions->cancel('tenant', $obligation, 'stop', 'admin');
+            $this->assertSame('cancelled', $result['state']);
+            $this->assertSame('GET', $f->transport->calls[array_key_last($f->transport->calls)][2]);
+            $this->assertCount(1, array_filter($f->transport->calls, static fn ($c) => $c[2] === 'DELETE'));
+            $this->assertSame(0, $this->rows($pdo, 'credit_grant'));
+            try { $f->subscriptions->cancel('tenant', $obligation, 'other', 'admin'); $this->fail('Changed cancellation accepted.'); } catch (Conflict) {}
+            $calls = count($f->transport->calls);
+            try { $f->subscriptions->reconcile('other', $obligation); $this->fail('Foreign subscription accepted.'); } catch (\Espo\Core\Exceptions\NotFound) {}
+            $this->assertCount($calls, $f->transport->calls);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testSubscriptionSuspensionAndUnverifiedRemovalStayPinned(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, BillingPaymentFixtures $f): void {
+            [$accepted, $charge] = $f->charge(true); $obligation = $accepted['obligationId'];
+            foreach ($f->transport->objects as $key => $object) if ($object['id'] === $charge['externalId']) $reference = $key;
+            foreach (['INACTIVE', 'EXPIRED'] as $status) {
+                $f->transport->objects[$reference]['status'] = $status;
+                $this->assertSame($status, $f->subscriptions->reconcile('tenant', $obligation)['providerStatus']);
+                $this->assertSame(1, $f->accounts->context('tenant')['openObligations']);
+            }
+            $f->transport->objects[$reference]['value'] = '999';
+            try { $f->subscriptions->reconcile('tenant', $obligation); $this->fail('Changed terms accepted.'); } catch (Conflict) {}
+            $this->assertSame(1, $f->accounts->context('tenant')['openObligations']);
+            unset($f->transport->objects[$reference]);
+            try { $f->subscriptions->reconcile('tenant', $obligation); $this->fail('404 treated as cancellation.'); } catch (ServiceUnavailable) {}
+            $this->assertSame(1, $f->accounts->context('tenant')['openObligations']);
+            $this->assertSame(0, $this->rows($pdo, 'credit_grant'));
+            $calls = count($f->transport->calls);
+            $pdo->exec("UPDATE credit_billing_obligation SET subscription_record='null'");
+            try { $f->subscriptions->reconcile('tenant', $obligation); $this->fail('Invalid saved evidence accepted.'); } catch (Conflict) {}
+            $this->assertCount($calls, $f->transport->calls);
+        });
+    }
+
     private function rows(PDO $pdo, string $table): int { return (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn(); }
+
+    #[DataProvider('dialects')]
+    public function testSubscriptionRemovalEventUsesAuthoritativeOriginalLookupAndRetainsAudit(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, BillingPaymentFixtures $f): void {
+            [$accepted, $charge] = $f->charge(true);
+            $raw = json_encode(['id' => 'evt_subscription', 'event' => 'SUBSCRIPTION_DELETED',
+                'subscription' => ['id' => $charge['externalId'], 'deleted' => true, 'customer' => 'forged']]);
+            $received = $f->events->receive('asaas-br', 'fixture-webhook-token', $raw);
+            $this->assertSame($received, $f->events->receive('asaas-br', 'fixture-webhook-token', $raw));
+            $f->events->processBatch();
+            $this->assertSame('pending', $f->accounts->readObligation('tenant', $accepted['obligationId'])['state']);
+            foreach ($f->transport->objects as &$object) if ($object['id'] === $charge['externalId']) $object['deleted'] = true;
+            unset($object);
+            $f->events->receive('asaas-br', 'fixture-webhook-token', str_replace('evt_subscription', 'evt_removed', $raw));
+            $f->events->processBatch();
+            $this->assertSame('cancelled', $f->accounts->readObligation('tenant', $accepted['obligationId'])['state']);
+            $this->assertSame(2, (int) $pdo->query("SELECT COUNT(*) FROM credit_billing_change WHERE kind='subscription'")->fetchColumn());
+            $this->assertSame(0, $this->rows($pdo, 'credit_grant'));
+            $this->assertCount(0, array_filter($f->transport->calls, static fn ($c) => $c[2] === 'DELETE'));
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testSubscriptionRemovalRollbackRecoversByGetWithoutAnotherDelete(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, BillingPaymentFixtures $f): void {
+            [$accepted] = $f->charge(true); $obligation = $accepted['obligationId'];
+            $f->accounts->changeCountry('tenant', 'us', 1, 'US', 'admin');
+            $pdo->exec("ALTER TABLE tenant_billing_assignment ADD CONSTRAINT injected_failure CHECK (effective_provider='asaas')");
+            try { $f->subscriptions->cancel('tenant', $obligation, 'stop', 'admin'); $this->fail('Removal committed without routing.'); } catch (PDOException) {}
+            finally { $pdo->exec('ALTER TABLE tenant_billing_assignment DROP ' . self::dropCheckKeyword($pdo) . ' injected_failure'); }
+            $this->assertSame('pending', $f->accounts->readObligation('tenant', $obligation)['state']);
+            $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM credit_billing_change WHERE kind='subscription'")->fetchColumn());
+            $this->assertSame('cancelled', $f->subscriptions->cancel('tenant', $obligation, 'stop', 'admin')['state']);
+            $this->assertSame('stripe', $f->accounts->context('tenant')['effectiveProvider']);
+            $this->assertCount(1, array_filter($f->transport->calls, static fn ($c) => $c[2] === 'DELETE'));
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testSubscriptionIndependentDuplicateCancellationClaimsOnlyOneDelete(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, BillingPaymentFixtures $f) use ($dialect): void {
+            [$accepted] = $f->charge(true); $workers = [];
+            $pdo->beginTransaction(); $pdo->query("SELECT id FROM tenant WHERE id='tenant' FOR UPDATE");
+            try {
+                foreach ([1, 2] as $_) {
+                    $process = proc_open([PHP_BINARY, __DIR__ . '/fixtures/billing-payment-worker.php', $dialect, $accepted['obligationId'], $this->now, 'subscription'],
+                        [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+                    $this->assertIsResource($process); $workers[] = [$process, $pipes]; stream_set_timeout($pipes[1], 15);
+                    fwrite($pipes[0], json_encode($f->transport->objects) . "\n"); fflush($pipes[0]);
+                    $this->assertSame("ready\n", fgets($pipes[1]));
+                    $read = [$pipes[1]]; $write = $except = [];
+                    $this->assertSame(0, stream_select($read, $write, $except, 0, 150000));
+                }
+                $pdo->commit(); $results = [];
+                foreach ($workers as [$process, $pipes]) {
+                    $results[] = json_decode(fgets($pipes[1]), true, 32, JSON_THROW_ON_ERROR);
+                    $this->assertSame('', stream_get_contents($pipes[2]));
+                }
+                $this->assertCount(2, array_column($results, 'result'), json_encode($results));
+                $this->assertSame(1, array_sum(array_column($results, 'deletes')));
+                // Each process has isolated provider fixtures; a later GET may supersede the DELETE response.
+                // The durable cancellation claim still cannot grant another DELETE permission.
+                $record = json_decode($pdo->query('SELECT subscription_record FROM credit_billing_obligation')->fetchColumn(), true);
+                $this->assertSame('stop', $record['cancellation']['requestKey']);
+                $this->assertSame(0, $this->rows($pdo, 'credit_grant'));
+            } finally {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                foreach ($workers as [$process, $pipes]) { if (proc_get_status($process)['running']) proc_terminate($process); foreach ($pipes as $pipe) fclose($pipe); proc_close($process); }
+            }
+        });
+    }
     private function balance(PDO $pdo): string { return (string) $pdo->query("SELECT balance FROM tenant_credit_balance WHERE tenant_id='tenant'")->fetchColumn(); }
 
     #[DataProvider('dialects')]

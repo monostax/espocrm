@@ -18,6 +18,8 @@ export default class extends MainView {
         'click [data-checkout-retry]': function () { this.retry(); },
         'click [data-checkout-cancel]': function () { this.cancel(); },
         'click [data-checkout-payment]': function () { this.payment(); },
+        'click [data-subscription-reconcile]': function () { this.subscription('reconcile'); },
+        'submit [data-subscription-cancel]': function (e) { e.preventDefault(); if (e.currentTarget.elements.stopSubscription.checked) this.subscription('cancel'); },
     };
 
     setup() {
@@ -237,6 +239,18 @@ export default class extends MainView {
         });
     }
 
+    subscription(action) {
+        if (this.detail?.charge?.kind !== 'subscription' || this.detail.charge.state !== 'bound' || !['pending', 'active'].includes(this.detail.state)) return;
+        const body = {tenantId: this.tenantId, obligationId: this.obligationId};
+        // One permanent stop command per subscription, stable across reloads and lost responses.
+        if (action === 'cancel') body.requestKey = 'subscription-stop-' + this.obligationId;
+        return this.run(async version => {
+            const receipt = await Espo.Ajax.postRequest('CreditSubscriptions/' + action, body);
+            if (receipt.tenantId !== body.tenantId || receipt.obligationId !== body.obligationId) throw new Error('Mismatched subscription.');
+            if (this.active(version)) await this.load();
+        });
+    }
+
     terms(terms) {
         return terms ? {...terms, creditsDisplay: formatCredits(terms.credits), monthly: terms.operation === 'subscription'} : null;
     }
@@ -261,6 +275,9 @@ export default class extends MainView {
             canRecover: !!creation && creation.state !== 'bound',
             canCancel: detail?.state === 'accepted' && !this.pending && !this.storageError,
             canPayment: detail?.charge?.state === 'bound' && ['pending', 'active', 'completed'].includes(detail.state),
+            canManageSubscription: detail?.charge?.kind === 'subscription' && detail.charge.state === 'bound' && ['pending', 'active'].includes(detail.state),
+            cancellationPending: detail?.subscription?.cancellationPending,
+            subscriptionStatus: detail?.subscription?.providerStatus ? this.t('subscription_' + detail.subscription.providerStatus) : null,
             dueDate: detail?.earliestDueDate || this.context?.earliestDueDate,
             sandbox: creation?.environment === 'sandbox' || this.handoff?.environment === 'sandbox',
             invoiceUrl: paymentLink(this.handoff, this.tenantId, this.obligationId),

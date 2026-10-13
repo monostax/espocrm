@@ -1,5 +1,8 @@
 {
     "routeMiddlewareClassNameListMap": {
+        "post_/CreditSubscriptions/cancel": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "post_/CreditSubscriptions/reconcile": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "post_/CreditMigration": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "get_/CreditCheckout/context": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "get_/CreditCheckout": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "post_/CreditCheckout/payment": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
@@ -16,6 +19,8 @@
         "post_/CreditBilling/recoverCreation": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"]
     },
     "controllerMiddlewareClassNameListMap": {
+        "CreditSubscriptions": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "CreditMigration": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "CreditCheckout": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "CreditReversals": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "CreditAsaasEvents": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],

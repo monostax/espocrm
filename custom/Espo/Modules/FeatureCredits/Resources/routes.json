@@ -1,4 +1,5 @@
 [
+    {"route": "/CreditMigration", "method": "post", "params": {"controller": "CreditMigration", "action": "grant"}},
     {"route": "/CreditCheckout/context", "method": "get", "params": {"controller": "CreditCheckout", "action": "context"}},
     {"route": "/CreditCheckout", "method": "get", "params": {"controller": "CreditCheckout", "action": "read"}},
     {"route": "/CreditCheckout/payment", "method": "post", "params": {"controller": "CreditCheckout", "action": "payment"}},
@@ -13,6 +14,8 @@
     {"route": "/CreditBilling/customer", "method": "post", "params": {"controller": "CreditBilling", "action": "customer"}},
     {"route": "/CreditBilling/charge", "method": "post", "params": {"controller": "CreditBilling", "action": "charge"}},
     {"route": "/CreditBilling/recoverCreation", "method": "post", "params": {"controller": "CreditBilling", "action": "recoverCreation"}},
+    {"route": "/CreditSubscriptions/cancel", "method": "post", "params": {"controller": "CreditSubscriptions", "action": "cancel"}},
+    {"route": "/CreditSubscriptions/reconcile", "method": "post", "params": {"controller": "CreditSubscriptions", "action": "reconcile"}},
     {"route": "/CreditBillingConfiguration", "method": "post", "params": {"controller": "CreditBillingConfiguration", "action": "publish"}},
     {"route": "/CreditBillingConfiguration", "method": "get", "params": {"controller": "CreditBillingConfiguration", "action": "read"}},
     {"route": "/CreditEnrichmentFields", "method": "post", "params": {"controller": "CreditEnrichmentFields", "action": "apply"}},

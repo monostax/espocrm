@@ -54,6 +54,16 @@
             <p role="status">{{stateLabel}}</p>
             {{#if sandbox}}<div class="alert alert-info">{{translate 'sandbox' scope='CreditCheckout'}}</div>{{/if}}
             {{#if canCancel}}<button type="button" class="btn btn-default" data-checkout-cancel>{{translate 'cancel' scope='CreditCheckout'}}</button>{{/if}}
+            {{#if subscriptionStatus}}<p role="status">{{subscriptionStatus}}</p>{{/if}}
+            {{#if canManageSubscription}}
+                <button type="button" class="btn btn-default" data-subscription-reconcile>{{translate 'reconcileSubscription' scope='CreditCheckout'}}</button>
+                {{#if cancellationPending}}<p role="status">{{translate 'cancellationPending' scope='CreditCheckout'}}</p>{{else}}
+                <form data-subscription-cancel>
+                    <div class="checkbox"><label><input type="checkbox" name="stopSubscription" required> {{translate 'stopSubscriptionTerms' scope='CreditCheckout'}}</label></div>
+                    <button class="btn btn-danger">{{translate 'stopSubscription' scope='CreditCheckout'}}</button>
+                </form>
+                {{/if}}
+            {{/if}}
             {{#if canPayer}}
             <h4>{{translate 'payer' scope='CreditCheckout'}}</h4>
             <form data-checkout-payer autocomplete="off">

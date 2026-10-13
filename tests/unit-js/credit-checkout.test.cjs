@@ -36,6 +36,30 @@ function page({getRequest = async (endpoint, {tenantId, obligationId} = {}) => e
 }
 const acceptCommand = () => ({action: 'accept', body: {tenantId: 'a', requestKey: 'original', revision: 1, catalogId: 'catalog', offerId: 'monthly', termsId: 'original-terms'}});
 
+test('subscription stop retains one command after lost replies and isolates late tenant responses', async () => {
+    const calls = []; const pending = deferred();
+    const {p} = page({postRequest: async (url, body) => { calls.push([url, plain(body)]); if (calls.length === 1) throw {status: 503}; return pending.promise; }});
+    p.obligationId = 'sub-original';
+    p.detail = {...detail('a', 'sub-original'), state: 'active', charge: {kind: 'subscription', state: 'bound'}};
+    assert.equal(p.data().canManageSubscription, true);
+    await p.subscription('cancel');
+    const second = p.subscription('cancel'); await tick();
+    assert.deepEqual(calls[0], calls[1]);
+    assert.equal(calls[0][0], 'CreditSubscriptions/cancel');
+    await p.changeTenant('b');
+    pending.resolve({tenantId: 'a', obligationId: 'sub-original', state: 'cancelled'}); await second;
+    assert.equal(p.tenantId, 'b'); assert.equal(p.detail, null);
+});
+
+test('pending subscription cancellation offers lookup recovery without another consent action', async () => {
+    const {p} = page();
+    p.detail = {...detail(), state: 'pending', charge: {kind: 'subscription', state: 'bound'}, subscription: {cancellationPending: true, providerStatus: 'INACTIVE'}};
+    const data = p.data();
+    assert.equal(data.cancellationPending, true);
+    assert.equal(data.subscriptionStatus, en.subscription_INACTIVE);
+    p.detail.state = 'cancelled'; assert.equal(p.data().canManageSubscription, false);
+});
+
 test('journal scopes commands to user and tenant and rejects payer data and replacing unresolved identity', () => {
     const session = storage(); const journal = new helper.CheckoutJournal(session, 'user', 'a');
     journal.save(acceptCommand());

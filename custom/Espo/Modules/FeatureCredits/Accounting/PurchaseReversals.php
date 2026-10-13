@@ -31,6 +31,9 @@ final class PurchaseReversals
         GrantInput::identity($grantId);
         $tenant = $wallet['tenant_id'];
         if ($receipt = self::receiptLocked($pdo, $tenant, $grantId)) return $receipt;
+        if (FundingRefunds::latest($pdo, $tenant, $grantId) !== null) {
+            throw new Conflict('Use cumulative refund accounting for a partially reversed grant.');
+        }
         $q = $pdo->prepare('SELECT g.* FROM credit_grant g JOIN credit_transaction t ON t.id=g.grant_transaction_id
             AND t.tenant_id=g.tenant_id AND t.grant_id=g.id AND t.type=? AND t.credits=g.granted_credits AND t.deleted=FALSE
             WHERE g.id=? AND g.tenant_id=? FOR UPDATE');

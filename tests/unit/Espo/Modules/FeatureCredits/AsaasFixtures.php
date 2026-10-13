@@ -49,6 +49,13 @@ final class AsaasTestTransport extends Transport
             if ($this->mode === 'throw') throw new \RuntimeException('Simulated process failure after provider creation.');
             return $this->mode === 'lost' ? new Response(0, null) : new Response(200, $object);
         }
+        if (str_starts_with($path, '/subscriptions/')) {
+            foreach ($this->objects as $key => $object) if ($object['id'] === substr($path, 15)) {
+                if ($method === 'DELETE') { $object['deleted'] = true; $this->objects[$key] = $object; }
+                return $this->mode === 'lost' ? new Response(0, null) : new Response(200, $object + ['status' => 'ACTIVE']);
+            }
+            return new Response(404, null);
+        }
         if (str_starts_with($path, '/payments/')) {
             foreach ($this->objects as $object) if ($object['id'] === substr($path, 10)) {
                 return $this->mode === 'lost' ? new Response(0, null) : new Response(200, $object);

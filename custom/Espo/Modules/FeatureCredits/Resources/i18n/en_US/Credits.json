@@ -26,7 +26,7 @@
         "grant": "Grant", "debit": "Consumption", "expiration": "Expiration", "reversal": "Reversal",
         "nativeSearchOverrun": "Native search overrun", "searchDebtPayment": "Grant applied to search debt", "searchDebtRecovery": "Search debt paid (transfer offset)",
         "searchDebtReversal": "Native search debt correction", "searchDebtReopen": "Original search repayment reversed (transfer offset)", "searchDebtRestore": "Original repayment credits restored",
-        "purchaseReversal": "Purchased credits recovered", "billingDebt": "Purchase reversal shortfall",
+        "purchaseReversal": "Refunded funding recovered", "billingDebt": "Funding refund shortfall",
         "billingDebtPayment": "Grant applied to billing debt", "billingDebtRecovery": "Billing debt paid (transfer offset)"
     }
 }

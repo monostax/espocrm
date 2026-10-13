@@ -42,6 +42,7 @@ final class Reservations
         }
         if (($routing['route'] ?? null) !== null) throw new Conflict('Execution route has no matching accounting operation.');
         NativeSearchDebt::requireNoPendingOverrun($pdo, $input->tenantId);
+        WalletDebt::requireNoPendingRefund($pdo, $input->tenantId);
         $query = $pdo->prepare('SELECT id FROM tenant_credit_billing_rate WHERE tenant_id = ? AND deleted = FALSE
             AND effective_from <= ? AND (effective_until IS NULL OR effective_until > ?)');
         $query->execute([$input->tenantId, $now, $now]);

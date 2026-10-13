@@ -255,10 +255,31 @@ final class Accounts
     {
         if (!$pdo->inTransaction() || $pdo !== $this->entityManager->getPDO()) throw new LogicException('Payment completion requires the original transaction.');
         $state = $operation === 'purchase' ? 'completed' : 'active';
-        $q = $pdo->prepare('UPDATE credit_billing_obligation SET state=? WHERE id=? AND tenant_id=? AND state<>?');
+        $q = $pdo->prepare("UPDATE credit_billing_obligation SET state=? WHERE id=? AND tenant_id=? AND state<>? AND state NOT IN ('cancelled','failed')");
         $q->execute([$state, $obligationId, $tenantId, $state]);
         if ($q->rowCount() && $operation === 'purchase') {
             // A country edit while payment was pending may now become effective. Completion and routing are atomic.
+            $account = $this->account($pdo, $tenantId);
+            $this->saveAccount($pdo, $account, $this->obligations($pdo, $account), $now);
+        }
+    }
+
+    /** Append-only subscription observations reuse the existing billing change audit. */
+    public function subscriptionObservationLocked(PDO $pdo, string $tenantId, string $obligationId, array $evidence, string $now): void
+    {
+        if (!$pdo->inTransaction() || $pdo !== $this->entityManager->getPDO()) throw new LogicException('Subscription evidence requires the original transaction.');
+        $key = 'subscription:' . $obligationId . ':' . $evidence['revision'];
+        $this->recordChange($pdo, $tenantId, $key, $this->hash($evidence), 'subscription',
+            $evidence['cancellation']['actorId'] ?? 'system', ['obligationId' => $obligationId], $evidence, $now);
+    }
+
+    /** Verified permanent provider removal; paid grants and historical payment bindings survive. */
+    public function subscriptionRemovedLocked(PDO $pdo, string $tenantId, string $obligationId, string $now): void
+    {
+        if (!$pdo->inTransaction() || $pdo !== $this->entityManager->getPDO()) throw new LogicException('Subscription removal requires the original transaction.');
+        $q = $pdo->prepare("UPDATE credit_billing_obligation SET state='cancelled' WHERE id=? AND tenant_id=? AND operation='subscription' AND state<>'cancelled'");
+        $q->execute([$obligationId, $tenantId]);
+        if ($q->rowCount()) {
             $account = $this->account($pdo, $tenantId);
             $this->saveAccount($pdo, $account, $this->obligations($pdo, $account), $now);
         }

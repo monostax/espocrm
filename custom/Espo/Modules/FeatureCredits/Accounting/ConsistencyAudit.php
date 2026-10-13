@@ -82,6 +82,15 @@ final class ConsistencyAudit
                 $findings[] = ['code' => 'transaction.native_correction_evidence', 'entityType' => 'CreditTransaction', 'id' => $row['id']];
             }
             $query->closeCursor();
+            $query = $pdo->prepare("SELECT DISTINCT grant_id FROM credit_transaction WHERE tenant_id=? AND type='purchaseReversal'
+                AND idempotency_key LIKE 'funding-refund:%' ORDER BY grant_id");
+            $query->execute([$tenantId]);
+            foreach ($query->fetchAll(PDO::FETCH_COLUMN) as $grantId) {
+                try { FundingRefunds::latest($pdo, $tenantId, $grantId); continue; }
+                catch (\Espo\Core\Exceptions\Conflict) {}
+                if (count($findings) === $findingLimit) { $truncated = true; break; }
+                $findings[] = ['code' => 'transaction.funding_refund', 'entityType' => 'CreditGrant', 'id' => $grantId];
+            }
             $pdo->commit();
             return ['tenantId' => $tenantId, 'observedAt' => $observedAt, 'consistent' => $findings === [],
                 'findings' => $findings, 'findingsTruncated' => $truncated];
@@ -272,7 +281,7 @@ final class ConsistencyAudit
                         WHERE c.tenant_id=d.tenant_id AND c.type='$recovery' AND c.debt_transaction_id=d.id))"];
         }
         yield ['transaction.purchase_reversal', 'CreditTransaction', "SELECT r.id FROM credit_transaction r WHERE r.tenant_id = ? AND
-            r.type = 'purchaseReversal' AND (r.credits > 0 OR r.usage_id IS NOT NULL OR r.allocation_id IS NOT NULL OR NOT EXISTS
+            r.type = 'purchaseReversal' AND r.idempotency_key NOT LIKE 'funding-refund:%' AND (r.credits > 0 OR r.usage_id IS NOT NULL OR r.allocation_id IS NOT NULL OR NOT EXISTS
                 (SELECT 1 FROM credit_grant g JOIN credit_transaction t ON t.id=g.grant_transaction_id AND t.tenant_id=g.tenant_id
                  WHERE g.id=r.grant_id AND g.tenant_id=r.tenant_id AND g.deleted=FALSE AND g.source_type='purchase'
                  AND g.expires_at IS NULL AND t.id=r.reversal_of_id AND t.type='grant' AND t.deleted=FALSE
@@ -280,7 +289,7 @@ final class ConsistencyAudit
                     (SELECT COALESCE(SUM(d.credits),0) FROM credit_transaction d WHERE d.tenant_id=r.tenant_id
                      AND d.type='billingDebt' AND d.reversal_of_id=r.id) = -g.granted_credits) OR
                 (SELECT COUNT(*) FROM credit_transaction c WHERE c.tenant_id=r.tenant_id AND c.type='purchaseReversal'
-                 AND c.grant_id=r.grant_id) <> 1)"];
+                  AND c.grant_id=r.grant_id) <> 1)"];
         yield ['transaction.billing_debt', 'CreditTransaction', "SELECT r.id FROM credit_transaction r WHERE r.tenant_id = ? AND
             r.type = 'billingDebt' AND (r.credits >= 0 OR r.grant_id IS NOT NULL OR r.usage_id IS NOT NULL OR r.allocation_id IS NOT NULL OR NOT EXISTS
                 (SELECT 1 FROM credit_transaction p WHERE p.id=r.reversal_of_id AND p.tenant_id=r.tenant_id AND p.deleted=FALSE

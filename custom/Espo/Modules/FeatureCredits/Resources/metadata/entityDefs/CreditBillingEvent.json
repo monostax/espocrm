@@ -8,7 +8,7 @@
         "externalHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
         "inputHash": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
         "eventType": {"type": "varchar", "maxLength": 88, "notNull": true, "readOnly": true},
-        "paymentId": {"type": "varchar", "maxLength": 104, "notNull": true, "readOnly": true},
+        "paymentId": {"type": "varchar", "maxLength": 104, "readOnly": true},
         "subscriptionHint": {"type": "varchar", "maxLength": 104, "readOnly": true},
         "state": {"type": "varchar", "maxLength": 16, "notNull": true, "readOnly": true},
         "receivedAt": {"type": "datetime", "notNull": true},

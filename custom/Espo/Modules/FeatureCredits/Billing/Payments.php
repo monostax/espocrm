@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureCredits\Billing;
 
 use Espo\Core\Exceptions\{Conflict, NotFound, ServiceUnavailable};
-use Espo\Modules\FeatureCredits\Accounting\{Funding, GrantInput, PurchaseReversals, RecordId, WalletLock};
+use Espo\Modules\FeatureCredits\Accounting\{Funding, FundingRefunds, GrantInput, PurchaseReversals, RecordId, WalletLock};
 use Espo\Modules\FeatureCredits\Billing\Asaas\{Command, Connections, PaymentVerification, Transport};
 use Espo\ORM\EntityManager;
 use PDO;
@@ -96,14 +96,17 @@ final class Payments
             $identity = self::hash([$row['binding_hash'], $verified['customer'], $verified['subscription'], $verified['originalDueDate'], $verified['value'], $verified['period']]);
             if ($row['identity_hash'] !== null && $row['identity_hash'] !== $identity) throw new Conflict('Verified payment period or amount changed.');
             $period = $this->period($pdo, $row, $accepted, $verified['period'], $now);
+            $loss = $this->originalLoss($pdo, $row, $verified);
             $receipt = null; $reversal = null; $state = $verified['review'] ? 'review_required' : 'pending';
             if ($period['receipt'] !== null) {
                 $receipt = json_decode($period['receipt'], true, 32, JSON_THROW_ON_ERROR);
                 if (self::hash($receipt) !== $period['receipt_hash']) throw new Conflict('Inconsistent billing funding receipt.');
-                if ($receipt['grantId'] !== null) $reversal = PurchaseReversals::receiptLocked($pdo, $tenant, $receipt['grantId']);
+                if ($receipt['grantId'] !== null) $reversal = PurchaseReversals::receiptLocked($pdo, $tenant, $receipt['grantId']) ??
+                    FundingRefunds::latest($pdo, $tenant, $receipt['grantId']);
             }
             $purchase = $accepted['terms']['operation'] === 'purchase';
-            if ($purchase && ($reversal !== null || $row['state'] === 'reversed_unfunded' || $verified['fullReversal'] !== null)) {
+            $fullLoss = $loss !== null && \Brick\Math\BigDecimal::of($loss['value'])->compareTo($verified['value']) === 0;
+            if ($purchase && !isset($reversal['cumulativeCredits']) && ($reversal !== null || $row['state'] === 'reversed_unfunded' || $fullLoss)) {
                 $state = $receipt === null ? 'reversed_unfunded' : 'reversed';
                 if ($receipt !== null && $reversal === null) {
                     if ($period['paid_payment_id'] !== $row['id'] || $receipt['grantId'] === null) throw new Conflict('Reversal does not own original purchase funding.');
@@ -117,9 +120,13 @@ final class Payments
                     $reversal = PurchaseReversals::reverseLocked($pdo, $wallet, $now, $receipt['grantId'], [
                         'paymentId' => $row['id'], 'periodId' => $period['id'], 'provider' => $row['provider'],
                         'integrationId' => $row['integration_id'], 'environment' => $row['environment'],
-                        'externalPaymentId' => $row['external_id'], 'verificationRevision' => $revision, 'reversal' => $verified['fullReversal']]);
+                         'externalPaymentId' => $row['external_id'], 'verificationRevision' => $revision, 'reversal' => $loss]);
                 }
                 $this->accounts->paymentCompletedLocked($pdo, $tenant, $row['obligation_id'], 'purchase', $now);
+            } elseif ($fullLoss && $receipt === null) {
+                $state = 'reversed_unfunded';
+            } elseif ($fullLoss && $receipt['grantId'] === null) {
+                $state = 'reversed';
             } elseif ($verified['paid']) {
                 if ($period['starts_at'] > $now) {
                     $state = 'awaiting_period';
@@ -141,8 +148,32 @@ final class Payments
                                 ]));
                         $pdo->prepare('UPDATE credit_billing_period SET receipt=?, receipt_hash=?, paid_payment_id=? WHERE id=?')
                             ->execute([json_encode($receipt, JSON_THROW_ON_ERROR), self::hash($receipt), $row['id'], $period['id']]);
+                        $period['paid_payment_id'] = $row['id'];
                     }
                     $this->accounts->paymentCompletedLocked($pdo, $tenant, $row['obligation_id'], $accepted['terms']['operation'], $now);
+                }
+            }
+            if ($loss !== null && $receipt !== null && $receipt['grantId'] !== null &&
+                ($reversal === null || isset($reversal['cumulativeCredits']))) {
+                if ($period['paid_payment_id'] !== $row['id']) throw new Conflict('Refund does not own original period funding.');
+                $q = $pdo->prepare('SELECT * FROM credit_grant WHERE id=? AND tenant_id=?');
+                $q->execute([$receipt['grantId'], $tenant]); $grant = $q->fetch(PDO::FETCH_ASSOC);
+                $source = $grant ? json_decode($grant['source_snapshot'], true, 32, JSON_THROW_ON_ERROR) : [];
+                if (!$grant || $grant['source_key'] !== 'billing:' . $period['id'] || ($source['paymentId'] ?? null) !== $row['id'] ||
+                    ($source['periodId'] ?? null) !== $period['id'] || ($source['externalPaymentId'] ?? null) !== $row['external_id']) {
+                    throw new Conflict('Refund grant has different original payment provenance.');
+                }
+                if (!$purchase && $grant['reserved_credits'] !== '0.0000') {
+                    // Await real completion/release; elapsed time never releases an AI hold.
+                    $state = 'awaiting_refund_release';
+                } else {
+                    $q = $pdo->prepare('SELECT * FROM tenant_credit_balance WHERE id=?'); $q->execute([$wallet['id']]);
+                    $reversal = FundingRefunds::reverseLocked($pdo, $q->fetch(PDO::FETCH_ASSOC), $now, $receipt['grantId'],
+                        FundingRefunds::credits($accepted['terms']['credits'], $verified['value'], $loss['value']),
+                        ['paymentId' => $row['id'], 'periodId' => $period['id'], 'provider' => $row['provider'],
+                            'integrationId' => $row['integration_id'], 'environment' => $row['environment'],
+                            'externalPaymentId' => $row['external_id'], 'verificationRevision' => $revision, 'reversal' => $loss], $this->funding);
+                    $state = $fullLoss ? 'reversed' : 'partially_reversed';
                 }
             }
             $pdo->prepare('UPDATE credit_billing_payment SET identity_hash=?, period_id=?, state=?, verified_at=?, evidence=? WHERE id=?')
@@ -152,6 +183,23 @@ final class Payments
                 'retryAt' => $state === 'awaiting_period' ? $period['starts_at'] : null,
                 'endedPeriod' => $period['ends_at'] !== null && $period['ends_at'] <= $now]);
         });
+    }
+
+    /** Completed loss observations are monotonic; a later stale paid/partial GET cannot erase them. */
+    private function originalLoss(PDO $pdo, array $payment, array $verified): ?array
+    {
+        $loss = $verified['fullReversal'] ?? $verified['refund'] ?? null;
+        $q = $pdo->prepare('SELECT * FROM credit_billing_verification WHERE payment_id=? AND tenant_id=? ORDER BY revision');
+        $q->execute([$payment['id'], $payment['tenant_id']]);
+        foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $evidence = json_decode($row['evidence'], true, 32, JSON_THROW_ON_ERROR);
+            if ($row['deleted'] || self::hash($evidence) !== $row['evidence_hash'] ||
+                ($evidence['bindingHash'] ?? null) !== $payment['binding_hash']) throw new Conflict('Invalid historical payment verification.');
+            if ($row['state'] === 'superseded') continue;
+            $candidate = $evidence['payment']['fullReversal'] ?? $evidence['payment']['refund'] ?? null;
+            if ($candidate !== null && ($loss === null || \Brick\Math\BigDecimal::of($candidate['value'])->isGreaterThan($loss['value']))) $loss = $candidate;
+        }
+        return $loss;
     }
 
     private function recordVerification(PDO $pdo, array $payment, int $revision, array $verified, string $now, array $result): array
@@ -173,7 +221,7 @@ final class Payments
         if ($row['state'] !== 'bound' || !in_array($row['kind'], ['payment', 'subscription'], true)) throw new Conflict('Payment creation is not bound.');
         $q = $pdo->prepare('SELECT * FROM credit_billing_obligation WHERE id=? AND tenant_id=?'); $q->execute([$row['obligation_id'], $tenant]);
         $parent = $q->fetch(PDO::FETCH_ASSOC);
-        if (!$parent || $parent['deleted'] || !in_array($parent['state'], ['pending', 'active', 'completed'], true)) throw new Conflict('Original payment obligation is unavailable.');
+        if (!$parent || $parent['deleted'] || !in_array($parent['state'], ['pending', 'active', 'completed', 'cancelled'], true)) throw new Conflict('Original payment obligation is unavailable.');
         $accepted = $this->accounts->originalAcceptance($parent);
         if ($accepted['provider'] !== $row['provider'] || $accepted['integrationId'] !== $row['integration_id']) throw new Conflict('Original provider binding mismatch.');
         return [$row, $command, $accepted];

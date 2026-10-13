@@ -54,6 +54,8 @@ require_once __DIR__ . '/ExpirationSweepCases.php';
 require_once __DIR__ . '/BillingPaymentAccountingCases.php';
 require_once __DIR__ . '/ReversalCases.php';
 require_once __DIR__ . '/BillingReversalCases.php';
+require_once __DIR__ . '/FundingRefundCases.php';
+require_once __DIR__ . '/LegacyMigrationCases.php';
 
 class FundingTest extends TestCase
 {
@@ -79,6 +81,8 @@ class FundingTest extends TestCase
     use BillingPaymentAccountingCases;
     use ReversalCases;
     use BillingReversalCases;
+    use FundingRefundCases;
+    use LegacyMigrationCases;
 
     private string $now = '2026-10-10 12:00:00';
 

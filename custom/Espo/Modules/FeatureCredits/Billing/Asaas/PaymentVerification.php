@@ -44,7 +44,8 @@ final class PaymentVerification
         if (!is_string($status) || !preg_match('/^[A-Z_]{1,64}$/D', $status) || !is_bool($data['deleted'] ?? null)) {
             throw new Conflict('Incomplete authoritative payment status.');
         }
-        $review = $data['deleted'] || !empty($data['refunds']) || !empty($data['chargeback']) || !empty($data['split']) ||
+        $won = self::wonDispute($data, $body['value']);
+        $review = $data['deleted'] || !empty($data['refunds']) || (!empty($data['chargeback']) && !$won) || !empty($data['split']) ||
             !in_array($status, ['PENDING', 'AWAITING_RISK_ANALYSIS', 'AUTHORIZED', 'CONFIRMED', 'RECEIVED', 'OVERDUE', 'DUNNING_REQUESTED'], true);
         foreach (['discount', 'fine', 'interest'] as $adjustment) {
             if (isset($data[$adjustment]) && (!is_array($data[$adjustment]) || !self::money($data[$adjustment]['value'] ?? null, '0'))) $review = true;
@@ -53,10 +54,45 @@ final class PaymentVerification
         $paid = !$review && ($status === 'RECEIVED' || ($status === 'CONFIRMED' && in_array($method, ['BOLETO', 'CREDIT_CARD'], true)));
         // PIX CONFIRMED is precautionary review, not the PIX RECEIVED settlement signal.
         if ($method === 'PIX' && $status === 'CONFIRMED') $review = true;
+        $refund = self::partialRefund($data, $body['value']);
+        if ($refund !== null) {
+            $paid = $status === 'RECEIVED' || ($status === 'CONFIRMED' && in_array($method, ['BOLETO', 'CREDIT_CARD'], true));
+            $review = !$paid;
+        }
         return ['paymentId' => $id, 'customer' => $body['customer'], 'subscription' => $data['subscription'] ?? null,
             'originalDueDate' => $due, 'value' => $body['value'], 'billingType' => $method, 'status' => $status,
             'period' => $period, 'paid' => $paid, 'review' => $review,
-            'fullReversal' => self::fullReversal($data, $body['value'])];
+            'fullReversal' => self::fullReversal($data, $body['value']), 'refund' => $refund];
+    }
+
+    private static function wonDispute(array $data, string $value): bool
+    {
+        $c = $data['chargeback'] ?? null;
+        return in_array($data['status'], ['RECEIVED', 'CONFIRMED'], true) && is_array($c) &&
+            ($c['status'] ?? null) === 'REVERSED' && ($c['payment'] ?? null) === $data['id'] &&
+            ($c['customerAccount'] ?? null) === $data['customer'] && self::money($c['value'] ?? null, $value) &&
+            empty($c['installment']) && is_string($c['id'] ?? null) && (bool) preg_match('/^[a-zA-Z0-9_-]{1,104}$/D', $c['id']);
+    }
+
+    private static function partialRefund(array $data, string $value): ?array
+    {
+        if (!in_array($data['status'], ['RECEIVED', 'CONFIRMED'], true) || $data['deleted'] || !empty($data['split']) || !empty($data['chargeback'])) return null;
+        foreach (['discount', 'fine', 'interest'] as $field) {
+            if (isset($data[$field]) && (!is_array($data[$field]) || !self::money($data[$field]['value'] ?? null, '0'))) return null;
+        }
+        if (isset($data['interestValue']) && !self::money($data['interestValue'], '0')) return null;
+        $refunds = $data['refunds'] ?? null;
+        if (!is_array($refunds) || !array_is_list($refunds) || !$refunds || count($refunds) > 100) return null;
+        $total = BigDecimal::zero();
+        foreach ($refunds as $refund) {
+            if (!is_array($refund) || ($refund['status'] ?? null) !== 'DONE' || !empty($refund['refundedSplits']) ||
+                !is_string($refund['value'] ?? null) || !preg_match('/^[0-9]{1,10}(?:\.[0-9]{1,2})?$/D', $refund['value'])) return null;
+            $amount = BigDecimal::of($refund['value']);
+            if (!$amount->isPositive()) return null;
+            $total = $total->plus($amount);
+        }
+        if (!$total->isLessThan($value)) return null;
+        return ['kind' => 'refund', 'status' => 'PARTIAL', 'value' => (string) $total->toScale(2)];
     }
 
     /** Full final losses only. Partial refunds, open disputes and ambiguous adjustments stay in review. */
