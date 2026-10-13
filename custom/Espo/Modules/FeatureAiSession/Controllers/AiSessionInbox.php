@@ -76,10 +76,23 @@ class AiSessionInbox
     public function postActionCreate(Request $request): object
     {
         $account = $this->workspace($request);
-        return $this->present($this->records->get('AiSession')->create((object) [
-            'name' => 'New chat', 'chatwootAccountId' => $account->getId(),
-            'aiAgentMembershipId' => $request->getParsedBody()->aiAgentMembershipId ?? null,
-        ])->getEntity());
+        $body = $request->getParsedBody();
+        return $this->em->getTransactionManager()->run(function () use ($account, $body): object {
+            $session = $this->records->get('AiSession')->create((object) [
+                'name' => 'New chat', 'chatwootAccountId' => $account->getId(),
+                'aiAgentMembershipId' => $body->aiAgentMembershipId ?? null,
+            ])->getEntity();
+            if (!property_exists($body, 'post')) return $this->present($session);
+            // Reload server-owned fields stripped by the record service's output ACL.
+            $session = $this->em->getEntityById('AiSession', $session->getId());
+            if (!$this->access->owner($this->user, $session) || !$this->acl->checkEntityRead($session) ||
+                !$this->acl->checkEntityStream($session)) throw new NotFound();
+            $post = $this->createPost($session, $body);
+            return (object) [
+                'session' => $this->present($this->em->getEntityById('AiSession', $session->getId())),
+                'post' => $post,
+            ];
+        });
     }
 
     public function getActionRead(Request $request): object { return $this->present($this->record($request)); }
@@ -126,6 +139,11 @@ class AiSessionInbox
     {
         $session = $this->record($request);
         $body = $request->getParsedBody();
+        return $this->createPost($session, $body);
+    }
+
+    private function createPost(Entity $session, object $body): object
+    {
         if (!$this->acl->checkScope('Note', 'read') || !$this->acl->checkField('Note', 'post')) throw new Forbidden();
         $fields = ['post', ...(!empty($body->postEditorState) ? ['postEditorState'] : []), ...(!empty($body->attachmentsIds) ? ['attachments'] : [])];
         foreach ($fields as $field) {
