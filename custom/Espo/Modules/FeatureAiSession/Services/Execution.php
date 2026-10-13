@@ -55,7 +55,7 @@ class Execution
         foreach ($this->em->getRDBRepository('Note')->where([
             'parentType' => 'AiSession', 'parentId' => $source->getParentId(), 'type' => 'Post',
             'opportunityPostDeleted' => false, 'number<' => $source->get('number'),
-        ])->order('number', 'DESC')->limit(0, 40)->find() as $post) {
+        ])->order('number', 'DESC')->limit(0, 120)->find() as $post) {
             assert($post instanceof Note);
             if (!$this->acl->checkEntityRead($owner, $post)) continue;
             if (isset($post->getData()->opportunityStreamAgent) &&
