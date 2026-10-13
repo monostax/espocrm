@@ -1,4 +1,5 @@
 [
+    {"route": "/CreditEnrichmentPreview", "method": "get", "params": {"controller": "CreditEnrichmentPreview", "action": "read"}},
     {"route": "/CreditMigration", "method": "post", "params": {"controller": "CreditMigration", "action": "grant"}},
     {"route": "/CreditCheckout/context", "method": "get", "params": {"controller": "CreditCheckout", "action": "context"}},
     {"route": "/CreditCheckout", "method": "get", "params": {"controller": "CreditCheckout", "action": "read"}},

@@ -53,6 +53,41 @@ final class Quotes
         });
     }
 
+    /** Read-only planning: no quote, wallet lock, reservation or supplier execution. */
+    public function preview(array $params): array
+    {
+        if (array_diff(array_keys($params), ['tenantId', 'targetType', 'targetId'])) {
+            throw new \InvalidArgumentException('Invalid enrichment preview query.');
+        }
+        $base = new QuoteInput((object) [...$params, 'products' => ['email'], 'requestKey' => 'preview']);
+        // Deny foreign/inaccessible records before inspecting the catalog or exposing action details.
+        $this->access->record($base);
+        $actions = ['email', 'phone', 'combined'];
+        if ($base->data['targetType'] === 'Account') array_push($actions, 'company', 'employees', 'socios');
+        $rows = [];
+        foreach ($actions as $action) {
+            $input = new QuoteInput((object) [...$params,
+                'products' => $action === 'combined' ? ['email', 'phone'] : [$action],
+                'requestKey' => 'preview',
+                ...(in_array($action, ['employees', 'socios'], true) ? ['count' => 1] : [])]);
+            $row = ['action' => $action, 'available' => false, 'reason' => null, 'startingCredits' => null,
+                'unit' => match ($action) { 'employees' => 'candidate', 'socios' => 'useful_provider_contribution', default => 'record' }];
+            try {
+                $target = $this->access->target($input);
+                $plan = $this->snapshot($input, $target);
+                $row['available'] = (bool) array_filter($plan['routes']);
+                $row['reason'] = $row['available'] ? null : 'noRoute';
+                $row['startingCredits'] = $row['available'] ? $plan['maximum'] : null;
+            } catch (\Espo\Core\Exceptions\Forbidden) {
+                $row['reason'] = 'forbidden';
+            } catch (Conflict | \Espo\Core\Exceptions\ServiceUnavailable) {
+                $row['reason'] = 'previewUnavailable';
+            }
+            $rows[] = $row;
+        }
+        return ['actions' => $rows];
+    }
+
     /** Same quote ID is the idempotency identity; callers cannot submit prices or altered settings. */
     public function confirm(string $tenantId, string $quoteId): array
     {

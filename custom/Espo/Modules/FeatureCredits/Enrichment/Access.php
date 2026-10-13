@@ -29,6 +29,15 @@ class Access
 
     public function target(QuoteInput $input): Entity
     {
+        $target = $this->record($input);
+        $data = $input->data;
+        $type = $data['targetType'];
+        return $this->productTarget($input, $target, $type);
+    }
+
+    /** Record-level gate for read-only action discovery; product ACLs are checked per action. */
+    public function record(QuoteInput $input): Entity
+    {
         $this->actorId();
         $data = $input->data;
         $type = $data['targetType'];
@@ -43,6 +52,12 @@ class Access
             $target->get('tenantId') !== $data['tenantId'] || !$this->acl->check($target, 'read')) {
             throw new Forbidden('Enrichment access required.');
         }
+        return $target;
+    }
+
+    private function productTarget(QuoteInput $input, Entity $target, string $type): Entity
+    {
+        $data = $input->data;
         if ($input->isDiscovery()) {
             $source = match ($data['products'][0]) { 'employees' => 'linkedinUrl', 'socios' => 'cnpj', 'cnpj' => 'website' };
             if (!$this->acl->checkField('Account', $source, 'read')) throw new Forbidden('Discovery identity access required.');
