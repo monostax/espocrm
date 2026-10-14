@@ -30,7 +30,7 @@ class ContactInbox
 {
     protected const ENTITY_TYPE = 'Contact';
     protected const SORT_FIELDS = ['streamUpdatedAt', 'createdAt', 'modifiedAt', 'name', 'accountName', 'assignedUserName', 'source'];
-    protected const EDIT_FIELDS = ['firstName', 'lastName', 'accountId', 'assignedUserId', 'tags', 'crmTagsIds', 'source', 'emailAddress', 'phoneNumber', 'description', 'customFields'];
+    protected const EDIT_FIELDS = ['firstName', 'lastName', 'accountId', 'assignedUserId', 'tags', 'crmTagsIds', 'source', 'emailAddress', 'phoneNumber', 'cpf', 'channelIdentitiesData', 'description', 'customFields'];
     protected const GROUP_FIELDS = [
         'assignee' => ['assignedUserId', 'assignedUser'],
         'account' => ['accountId', 'account'],
@@ -38,7 +38,7 @@ class ContactInbox
     ];
     protected const FIELDS = [
         'name', 'firstName', 'lastName', 'account', 'assignedUser', 'teams', 'tags', 'crmTags', 'source',
-        'emailAddress', 'phoneNumber', 'channelIdentitiesData', 'description', 'customFields',
+        'emailAddress', 'phoneNumber', 'cpf', 'channelIdentitiesData', 'description', 'customFields',
         'createdAt', 'modifiedAt', 'createdBy',
     ];
 
@@ -223,9 +223,13 @@ class ContactInbox
 
     public function metadata(Request $request): object
     {
-        $this->workspace($request);
+        $workspace = $this->workspace($request);
+        $billing = static::ENTITY_TYPE === 'Contact' ? $this->em->getRDBRepository('TenantBillingAssignment')
+            ->where(['tenantId' => $workspace->get('tenantId')])->findOne() : null;
         $fields = [];
         foreach (static::FIELDS as $name) {
+            if ($name === 'cpf' && $billing?->get('billingCountry') !== 'BR') continue;
+            if ($name === 'channelIdentitiesData' && !$this->acl->checkScope('ContactChannelIdentity', 'read')) continue;
             if (!$this->acl->checkField(static::ENTITY_TYPE, $name)) continue;
             $def = $this->metadata->get(['entityDefs', static::ENTITY_TYPE, 'fields', $name]);
             if (!$def) continue;
