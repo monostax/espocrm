@@ -6,7 +6,8 @@
                 "order": 30,
                 "itemList": [
                     {
-                        "url": "#Configurations/WhatsAppBusinessAccount",
+                        "url": "{{chatwootFrontendUrl}}/app/accounts/{{chatwootAccountId}}/settings/whatsapp-templates",
+                        "target": "_top",
                         "label": "WhatsApp Templates",
                         "iconClass": "ti ti-template",
                         "description": "whatsAppMessageTemplates",
