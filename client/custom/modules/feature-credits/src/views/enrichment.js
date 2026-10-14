@@ -113,6 +113,7 @@ export default class extends BottomPanelView {
         const finder = ['employees', 'socios'].includes(this.product);
         const scope = {...this.session.scope};
         this.detail = this.current = null;
+        this.applicationCommand = null;
         return this.run(async version => {
             const detail = await Espo.Ajax.getRequest('CreditEnrichmentReview', {tenantId: scope.tenantId, id, ...(finder ? {} : {source: 'field'})});
             const current = finder ? null : await Espo.Ajax.getRequest(scope.targetType + '/' + encodeURIComponent(scope.targetId));
@@ -174,8 +175,10 @@ export default class extends BottomPanelView {
             products: products.map(value => ({value, label: this.t(value), selected: this.product === value})), account: this.model.entityType === 'Account',
             items: this.items.map(item => ({...item, credits: formatCredits(item.receipt.credits), product: this.t(item.receipt.product)})), next: this.next,
             detail: this.detail, finder: this.finder,
+            creationTeams: (this.detail?.application.creationForm?.teams || []).map((team, index, teams) => ({...team, selected: teams.length === 1})),
             creationFields: (this.detail?.application.creationForm?.fields || []).map(field => ({...field,
                 label: this.translate(field.name, 'fields', 'Contact'),
+                value: field.name === 'lastName' ? this.detail?.values.name || '' : '',
                 isEnum: field.type === 'enum', isBool: field.type === 'bool', isText: field.type === 'text',
                 inputType: field.type === 'int' ? 'number' : field.type === 'date' ? 'date' : 'text',
             })),

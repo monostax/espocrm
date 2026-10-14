@@ -163,13 +163,26 @@ class CandidateApplicationTest extends TestCase
         $this->assertSame([], $this->service(\Espo\Modules\FeatureCredits\Accounting\ConsistencyAudit::class)->inspect($this->tenant)['findings']);
     }
 
-    public function testVerifiedPortugueseSocioRoleAppliesOriginalPurchaseWithoutRewritingFacts(): void
+    public function testSocioApplicationAcceptsCompanyEditsAndChangedRetryFormWithoutDuplicatingRecords(): void
     {
         $purchase = $this->purchased(['role' => 'Sócio-Administrador']);
+        $account = $this->em->getEntityById('Account',$this->account);
+        $account->set('cnpj','04252011000110'); $this->em->saveEntity($account);
+        $reviewer = $this->service(\Espo\Modules\FeatureCredits\Enrichment\PurchasedReview::class);
+        $review = $reviewer->read($this->tenant,$purchase['id']);
+        $this->assertTrue($review['identityChanged']);
+        $this->assertTrue($review['application']['available']);
+        $this->assertNull($review['application']['reason']);
         $service = $this->service(CandidateApplication::class); $input = $this->input($purchase);
         $receipt = $service->apply($input);
         $this->assertCount(2,$receipt['relationIds']);
         $this->assertSame($receipt,$service->apply($input));
+        $retry = new ApplicationInput((object) ['tenantId' => $this->tenant,'purchaseId' => $purchase['id'],
+            'createIfUnmatched' => false,'contactData' => (object) ['lastName' => 'Changed retry form']]);
+        $this->assertSame($receipt,$service->apply($retry));
+        $this->assertSame(1,$this->countRecords('contact'));
+        $this->assertSame(2,$this->countRecords('record_relation'));
+        $this->assertSame('Person',$this->em->getEntityById('Contact',$receipt['contactId'])->get('lastName'));
         $review = $this->service(\Espo\Modules\FeatureCredits\Enrichment\PurchasedReview::class)->read($this->tenant,$purchase['id']);
         $this->assertSame('Sócio-Administrador',$review['values']->role);
         $this->assertTrue($review['application']['creationForm']['available']);
@@ -396,7 +409,7 @@ class CandidateApplicationTest extends TestCase
         $this->assertNull($this->em->getEntityById('Contact',$contact->getId())->get('cpf'));
         $read = $this->service(\Espo\Modules\FeatureCredits\Enrichment\PurchasedReview::class)->read($this->tenant,$purchase['id']);
         $this->assertTrue($read['erased']); $this->assertSame([],(array) $read['values']);
-        $this->assertSame($purchase,$read['receipt']);
+        $this->assertSame(array_diff_key($purchase,array_flip(['provider','policyId'])) + ['source' => 1],$read['receipt']);
         $q = $this->em->getPDO()->prepare('SELECT payload_ciphertext FROM enrichment_candidate_cache WHERE tenant_id=?'); $q->execute([$this->tenant]);
         $this->assertNull($q->fetchColumn());
         try { $this->service(CandidateApplication::class)->apply($this->input($purchase)); $this->fail('Erased candidate recreated.'); } catch (Conflict) {}
@@ -419,7 +432,7 @@ class CandidateApplicationTest extends TestCase
     public function testApiActorCannotApplyAndUnmatchedCreationRequiresExplicitConsent(): void
     {
         $purchase = $this->purchased();
-        try { $this->service(CandidateApplication::class)->apply($this->input($purchase,false)); $this->fail('Implicit Contact creation.'); } catch (Conflict) {}
+        try { $this->service(CandidateApplication::class)->apply($this->input($purchase,false)); $this->fail('Implicit Contact creation.'); } catch (\Espo\Core\Exceptions\BadRequest) {}
         $incomplete = new ApplicationInput((object) ['tenantId' => $this->tenant,'purchaseId' => $purchase['id'],'createIfUnmatched' => true]);
         try { $this->service(CandidateApplication::class)->apply($incomplete); $this->fail('Mandatory Contact name invented.'); }
         catch (\Espo\Core\Exceptions\BadRequest) {}
@@ -461,23 +474,24 @@ class CandidateApplicationTest extends TestCase
         }
     }
 
-    public function testInactiveCompatibilityLinkAndConflictingManualQualifiersAreNotOverwritten(): void
+    public function testInactiveCompatibilityLinkAndDifferentManualQualifiersAreReusedWithoutConflict(): void
     {
         $purchase = $this->purchased();
         $contact = $this->em->createEntity('Contact',['lastName' => 'Existing','cpf' => '52998224725','tenantId' => $this->tenant,
             'accountId' => $this->account,'teamsIds' => [$this->team]]);
         $pdo = $this->em->getPDO();
         $q = $pdo->prepare('UPDATE account_contact SET is_inactive=TRUE WHERE contact_id=? AND account_id=?'); $q->execute([$contact->getId(),$this->account]);
-        try { $this->service(CandidateApplication::class)->apply($this->input($purchase)); $this->fail('Inactive link reactivated.'); } catch (Conflict) {}
-        $this->assertSame(0,$this->countRecords('record_relation'));
-        $pdo->prepare('UPDATE account_contact SET is_inactive=FALSE WHERE contact_id=? AND account_id=?')->execute([$contact->getId(),$this->account]);
         $old = $this->service(Relations::class)->submit((object) ['tenantId' => $this->tenant,'subjectType' => 'Contact','subjectId' => $contact->getId(),
             'objectType' => 'Account','objectId' => $this->account,'predicate' => 'administers',
             'qualifiers' => (object) ['role' => 'Manual role'],'idempotencyKey' => 'manual-conflict'],true);
-        try { $this->service(CandidateApplication::class)->apply($this->input($purchase)); $this->fail('Manual qualifiers overwritten.'); } catch (Conflict) {}
+        $result = $this->service(CandidateApplication::class)->apply($this->input($purchase));
+        $this->assertSame($contact->getId(),$result['contactId']);
+        $this->assertSame([$old['id']],$result['relationIds']);
         $this->assertSame(1,$this->countRecords('record_relation'));
         $this->assertSame('Manual role',$this->em->getEntityById('RecordRelation',$old['id'])->get('qualifiers')->role);
-        $q = $pdo->prepare('SELECT application_receipt FROM enrichment_purchase WHERE id=?'); $q->execute([$purchase['id']]); $this->assertNull($q->fetchColumn());
+        $q = $pdo->prepare('SELECT is_inactive FROM account_contact WHERE contact_id=? AND account_id=?');
+        $q->execute([$contact->getId(),$this->account]); $this->assertTrue((bool) $q->fetchColumn());
+        $q = $pdo->prepare('SELECT application_receipt FROM enrichment_purchase WHERE id=?'); $q->execute([$purchase['id']]); $this->assertNotNull($q->fetchColumn());
     }
 
     public function testPaidReviewDoesNotConferContactWritePermission(): void
@@ -485,7 +499,7 @@ class CandidateApplicationTest extends TestCase
         $purchase = $this->purchased();
         $factory = $this->reviewOnlyFactory();
         $review = $factory->create(\Espo\Modules\FeatureCredits\Enrichment\PurchasedReview::class)->read($this->tenant,$purchase['id']);
-        $this->assertSame($purchase,$review['receipt']);
+        $this->assertSame(array_diff_key($purchase,array_flip(['provider','policyId'])) + ['source' => 1],$review['receipt']);
         $this->assertFalse($review['application']['available']);
         try { $factory->create(CandidateApplication::class)->apply($this->input($purchase)); $this->fail('Purchaser created Contact without permission.'); }
         catch (Forbidden) {}

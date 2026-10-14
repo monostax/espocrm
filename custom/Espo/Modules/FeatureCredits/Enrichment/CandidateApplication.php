@@ -38,13 +38,10 @@ final class CandidateApplication
             $q = $pdo->prepare('SELECT id FROM account WHERE id=? AND tenant_id=? AND deleted=FALSE FOR UPDATE');
             $q->execute([$account,$tenant]); if (!$q->fetchColumn()) throw new NotFound('Account is unavailable.');
             $target = $this->access->target($quote);
-            if (Quotes::hash($this->access->discoveryIdentity($quote,$target)) !== Quotes::hash($selected['terms']['identity'])) {
-                throw new Conflict('Company identity changed; application requires review.');
-            }
             $permissions = $this->access->discoveryPermissions($quote,$target);
             $q = $pdo->prepare('SELECT * FROM enrichment_purchase WHERE tenant_id=? AND candidate_group=? ORDER BY purchased_at,id');
             $q->execute([$tenant,$selected['candidateGroup']]); $rows = $q->fetchAll(PDO::FETCH_ASSOC);
-            $facts = []; $roles = []; $mapped = null; $identityHash = null; $saved = null; $sources = [];
+            $facts = []; $roles = []; $mapped = null; $saved = null; $sources = [];
             foreach ($rows as $row) {
                 if ($row['deleted']) throw new Conflict('Purchased candidate history is unavailable.');
                 $purchase = $this->purchases->readLocked($pdo,$tenant,$row['id']);
@@ -55,29 +52,24 @@ final class CandidateApplication
                         throw new Forbidden('Candidate identity field access required for application.');
                     }
                     if ($field === 'role') { $roles[$value] = true; continue; }
-                    if (isset($facts[$field]) && !CandidateProjection::equivalent($facts[$field],$value)) {
-                        if (in_array($field,['cpf','linkedinUrl'],true)) {
-                            return CandidateConflicts::blockLocked($pdo,$tenant,[$selected['candidateGroup']],$this->clock->now(),'identity_contradiction');
-                        }
-                        throw new Conflict('Purchased field changes require explicit review.');
+                    if (in_array($field,['cpf','linkedinUrl'],true) && isset($facts[$field]) && !CandidateProjection::equivalent($facts[$field],$value)) {
+                        return CandidateConflicts::blockLocked($pdo,$tenant,[$selected['candidateGroup']],$this->clock->now(),'identity_contradiction');
                     }
+                    // Later purchased supplements may update descriptive fields.
                     $facts[$field] = $value;
                 }
                 $sources[] = $row['id'];
                 if ($row['applied_contact_id'] !== null) {
-                    if ($mapped !== null && ($mapped !== $row['applied_contact_id'] || $identityHash !== $row['applied_identity_hash'])) {
+                    if ($mapped !== null && $mapped !== $row['applied_contact_id']) {
                         throw new Conflict('Candidate application mappings disagree.');
                     }
-                    $mapped = $row['applied_contact_id']; $identityHash = $row['applied_identity_hash'];
+                    $mapped = $row['applied_contact_id'];
                 }
                 if ($row['id'] === $id) $saved = $row;
             }
             $hash = Quotes::hash($data);
-            if ($saved['application_hash'] !== null && !hash_equals($saved['application_hash'],$hash)) {
-                throw new Conflict('Application retry has different input.');
-            }
             try {
-                $contact = $this->records->resolve($tenant,$facts,$mapped,$identityHash);
+                $contact = $this->records->resolve($tenant,$facts,$mapped);
             } catch (ApplicationIdentityConflict) {
                 return CandidateConflicts::blockLocked($pdo,$tenant,[$selected['candidateGroup']],$this->clock->now(),'identity_contradiction');
             }
@@ -87,12 +79,11 @@ final class CandidateApplication
                     ($receipt['accountId'] ?? null) !== $account || ($receipt['tenantId'] ?? null) !== $tenant) {
                     throw new Conflict('Application receipt binding differs.');
                 }
-                $this->records->replay($tenant,$contact,$account,$receipt['relationIds']);
                 return $receipt;
             }
             $relationships = self::relationships($quote->data['products'][0],$facts,array_keys($roles));
             if ($contact === null) {
-                if (!$data['createIfUnmatched']) throw new Conflict('No exact Contact match; explicit creation and mandatory fields are required.');
+                if (!$data['createIfUnmatched']) throw new BadRequest('No matching Contact; enable contact creation and complete the required fields.');
                 $contact = $this->records->create($tenant,$facts,$data['contactData']);
             }
             $this->records->link($tenant,$contact,$account);

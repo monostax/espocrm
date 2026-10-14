@@ -193,7 +193,9 @@ trait EnrichmentCandidateCacheCases
             $this->assertSame(['cpf','linkedinUrl'],$redacted['redactedFields']);
             $this->assertObjectNotHasProperty('cpf',$redacted['values']); $this->assertObjectNotHasProperty('linkedinUrl',$redacted['values']);
             $pdo->exec("UPDATE account SET cnpj='04252011000110'");
-            $this->assertSame('company_identity_changed',$review->read('tenant',$receipt['id'])['application']['reason']);
+            $changed = $review->read('tenant',$receipt['id']);
+            $this->assertTrue($changed['identityChanged']);
+            $this->assertSame('application_permission_required',$changed['application']['reason']);
             $this->allowed = false;
             try { $review->read('tenant',$receipt['id']); $this->fail('Revoked actor read purchased values.'); } catch (\Espo\Core\Exceptions\Forbidden) {}
             $this->allowed = true;

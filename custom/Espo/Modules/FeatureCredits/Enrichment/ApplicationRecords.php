@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureCredits\Enrichment;
 
 use Espo\Core\Acl;
-use Espo\Core\Exceptions\{BadRequest,Conflict,Forbidden};
+use Espo\Core\Exceptions\{BadRequest,Forbidden};
 use Espo\Core\Record\{CreateParams,ServiceContainer};
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
@@ -29,7 +29,7 @@ class ApplicationRecords
     }
 
     /** Pre-write only; missing/deleted/incompatible mappings must never silently select another Contact. */
-    public function resolve(string $tenant,array $facts,?string $mapped,?string $expectedIdentity): ?string
+    public function resolve(string $tenant,array $facts,?string $mapped): ?string
     {
         $pdo = $this->em->getPDO(); $matches = [];
         if (isset($facts['cpf'])) {
@@ -56,9 +56,6 @@ class ApplicationRecords
         $id = $mapped ?? ($matches[0] ?? null);
         if ($id === null) return null;
         $identity = $this->identity($tenant,$id);
-        if ($expectedIdentity !== null && !hash_equals($expectedIdentity,Quotes::hash($identity))) {
-            throw new ApplicationIdentityConflict('Mapped Contact identity changed.');
-        }
         if (isset($facts['cpf']) && $identity['cpf'] !== null && $facts['cpf'] !== $identity['cpf']) {
             throw new ApplicationIdentityConflict('Contact CPF conflicts with the candidate.');
         }
@@ -164,7 +161,6 @@ class ApplicationRecords
     {
         $this->contactAccess($tenant,$contact); $this->field('accounts','edit');
         $row = $this->accountLink($contact,$account);
-        if ($row && $row['is_inactive']) throw new Conflict('Existing Account link is inactive; explicit review is required.');
         if ($row && !$row['deleted']) {
             return; // Preserve primary Account and every manual compatibility role.
         }
@@ -175,22 +171,18 @@ class ApplicationRecords
     {
         $ids = [];
         foreach ($relationships as $index => $item) {
-            $q = $this->em->getPDO()->prepare("SELECT id,qualifiers,status FROM record_relation WHERE tenant_id=? AND subject_type='Contact'
+            $q = $this->em->getPDO()->prepare("SELECT id,status FROM record_relation WHERE tenant_id=? AND subject_type='Contact'
                 AND subject_id=? AND object_type='Account' AND object_id=? AND predicate=? AND deleted=FALSE
                 AND status IN ('confirmed','suggested') ORDER BY id FOR UPDATE");
             $q->execute([$tenant,$contact,$account,'builtin:' . $item['predicate']]);
             $reuse = null; $confirmed = null;
             foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $qualifiers = json_decode($row['qualifiers'] ?? '{}',true,32,JSON_THROW_ON_ERROR);
-                if (Quotes::hash($qualifiers) !== Quotes::hash($item['qualifiers'])) {
-                    throw new Conflict('Existing relationship qualifiers require explicit review.');
-                }
                 if ($row['status'] === 'confirmed') $confirmed ??= $row['id'];
                 $reuse = $row['id'];
             }
             $reuse = $confirmed ?? $reuse;
             if ($reuse !== null) {
-                // Existing service checks evidence, human authority and suggested-only transitions.
+                // Reuse existing relationship details instead of rejecting or replacing them.
                 $ids[] = $this->relations->decide($reuse,'confirmed')['id'];
             } else {
                 $ids[] = $this->relations->submit((object) ['tenantId' => $tenant,'subjectType' => 'Contact','subjectId' => $contact,
@@ -201,23 +193,9 @@ class ApplicationRecords
         return $ids;
     }
 
-    public function replay(string $tenant,string $contact,string $account,array $relationIds): void
-    {
-        $this->contactAccess($tenant,$contact); $this->field('accounts','edit');
-        $row = $this->accountLink($contact,$account);
-        if (!$row || $row['deleted'] || $row['is_inactive']) throw new Conflict('Applied Account link changed.');
-        foreach ($relationIds as $id) {
-            $q = $this->em->getPDO()->prepare("SELECT id FROM record_relation WHERE id=? AND tenant_id=? AND subject_type='Contact'
-                AND subject_id=? AND object_type='Account' AND object_id=? AND deleted=FALSE AND status='confirmed' FOR UPDATE");
-            $q->execute([$id,$tenant,$contact,$account]);
-            if (!$q->fetchColumn()) throw new Conflict('Applied relationship changed.');
-            $this->relations->decide($id,'confirmed');
-        }
-    }
-
     private function accountLink(string $contact,string $account): array|false
     {
-        $q = $this->em->getPDO()->prepare('SELECT deleted,is_inactive FROM account_contact WHERE contact_id=? AND account_id=? FOR UPDATE');
+        $q = $this->em->getPDO()->prepare('SELECT deleted FROM account_contact WHERE contact_id=? AND account_id=? FOR UPDATE');
         $q->execute([$contact,$account]); return $q->fetch(PDO::FETCH_ASSOC);
     }
 

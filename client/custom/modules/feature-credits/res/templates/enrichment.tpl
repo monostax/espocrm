@@ -48,15 +48,15 @@
         {{#if detail.application.available}}<form data-enrichment-apply>
             {{#if finder}}
             {{#if detail.application.creationForm.available}}
-            <div class="checkbox"><label><input name="createIfUnmatched" type="checkbox">{{translate 'createIfUnmatched' scope='CreditEnrichment'}}</label></div>
-            <fieldset data-enrichment-create disabled hidden>
+            <div class="checkbox"><label><input name="createIfUnmatched" type="checkbox" checked>{{translate 'createIfUnmatched' scope='CreditEnrichment'}}</label></div>
+            <fieldset data-enrichment-create>
             {{#each creationFields}}<label>{{label}}
                 {{#if isEnum}}<select class="form-control" name="contact-{{name}}" {{#if required}}required{{/if}}><option value=""></option>{{#each options}}<option value="{{this}}">{{this}}</option>{{/each}}</select>
                 {{else}}{{#if isBool}}<select class="form-control" name="contact-{{name}}" {{#if required}}required{{/if}}><option value=""></option><option value="true">{{translate 'yes' scope='CreditEnrichment'}}</option><option value="false">{{translate 'no' scope='CreditEnrichment'}}</option></select>
                 {{else}}{{#if isText}}<textarea class="form-control" name="contact-{{name}}" {{#if required}}required{{/if}} {{#if maxLength}}maxlength="{{maxLength}}"{{/if}}></textarea>
-                {{else}}<input class="form-control" name="contact-{{name}}" type="{{inputType}}" {{#if required}}required{{/if}} {{#if maxLength}}maxlength="{{maxLength}}"{{/if}}>{{/if}}{{/if}}{{/if}}
+                {{else}}<input class="form-control" name="contact-{{name}}" type="{{inputType}}" value="{{value}}" {{#if required}}required{{/if}} {{#if maxLength}}maxlength="{{maxLength}}"{{/if}}>{{/if}}{{/if}}{{/if}}
             </label>{{/each}}
-            {{#if detail.application.creationForm.teamsAllowed}}<label>{{translate 'teamsIds' scope='CreditEnrichment'}}<select class="form-control" name="teamsIds" multiple {{#if detail.application.creationForm.teamsRequired}}required{{/if}}>{{#each detail.application.creationForm.teams}}<option value="{{id}}">{{name}}</option>{{/each}}</select></label>{{/if}}
+            {{#if detail.application.creationForm.teamsAllowed}}<label>{{translate 'teamsIds' scope='CreditEnrichment'}}<select class="form-control" name="teamsIds" multiple {{#if detail.application.creationForm.teamsRequired}}required{{/if}}>{{#each creationTeams}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>{{/if}}
             </fieldset>
             {{else}}<p>{{translate 'creationUnavailable' scope='CreditEnrichment'}}</p>{{/if}}
             {{/if}}

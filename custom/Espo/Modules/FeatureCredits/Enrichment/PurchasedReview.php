@@ -51,10 +51,10 @@ final class PurchasedReview
                 'candidateGroup' => $saved['candidateGroup'],'kind' => $saved['kind'],
                 'conflict' => $saved['conflict'],'identityChanged' => $identityChanged,
                 // Availability is preflight only; explicit application rechecks every concrete write.
-                'application' => [...$saved['applicationStatus'],'available' => !$saved['applicationStatus']['applied'] && ($finder || $rdap) && $human && $write && !$identityChanged && !$saved['erased'] && $saved['conflict'] === null,
+                'application' => [...$saved['applicationStatus'],'available' => !$saved['applicationStatus']['applied'] && ($finder || $rdap) && $human && $write && ($finder || !$identityChanged) && !$saved['erased'] && $saved['conflict'] === null,
                     'recheckRequired' => true,'permissions' => $permissions['application'],
                     'creationForm' => $finder && $human && $write ? $this->records->creationForm($tenant) : null,
-                    'reason' => $saved['erased'] ? 'data_erased' : ($saved['conflict'] !== null ? 'identity_conflict' : ($identityChanged ? 'company_identity_changed' :
+                    'reason' => $saved['erased'] ? 'data_erased' : ($saved['conflict'] !== null ? 'identity_conflict' : ($identityChanged && !$finder ? 'company_identity_changed' :
                         (!$finder && !$rdap ? 'application_not_implemented' : (!$human ? 'human_required' : (!$write ? 'application_permission_required' : null)))))]];
     }
 }
