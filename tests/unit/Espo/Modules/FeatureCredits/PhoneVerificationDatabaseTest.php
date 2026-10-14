@@ -44,6 +44,12 @@ use Espo\Modules\FeatureCredits\Verification\TwilioCredentials;
 use Espo\Modules\FeatureCredits\Verification\TwilioLookup;
 use Espo\Modules\FeatureCredits\Verification\TwilioTransport;
 use Espo\Modules\FeatureCredits\Verification\VerificationResult;
+use Espo\Modules\FeatureCredits\Verification\BounceBanCredentials;
+use Espo\Modules\FeatureCredits\Verification\BounceBanLookup;
+use Espo\Modules\FeatureCredits\Verification\BounceBanTransport;
+use Espo\Modules\FeatureCredits\Verification\EmailResult;
+use Espo\Modules\FeatureCredits\Verification\Kind;
+use Espo\Modules\FeatureCredits\Verification\CustomerProjection;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\BaseEntity;
 use Espo\ORM\Entity;
@@ -69,6 +75,8 @@ final class PhoneVerificationDatabaseTest extends TestCase
     private bool $apiActor = false;
     public int $providerCalls = 0;
     public ?VerificationResult $nextResult = null;
+    public ?EmailResult $emailResult = null;
+    public array $emailCalls = [];
 
     public static function dialects(): iterable
     {
@@ -114,6 +122,7 @@ final class PhoneVerificationDatabaseTest extends TestCase
                 first_name VARCHAR(100),
                 last_name VARCHAR(100),
                 phone_number VARCHAR(64),
+                email_address VARCHAR(254),
                 date_of_birth VARCHAR(10),
                 data_nascimento VARCHAR(10),
                 cpf VARCHAR(14)
@@ -151,6 +160,8 @@ final class PhoneVerificationDatabaseTest extends TestCase
             $this->deniedEntities = [];
             $this->apiActor = false;
             $this->providerCalls = 0;
+            $this->emailCalls = [];
+            $this->emailResult = new EmailResult('completed', 'task1', 'deliverable', ['score' => 99, 'flags' => ['is_accept_all' => true], 'verifiedAt' => null]);
             $this->nextResult = VerificationResult::completed(
                 'verified',
                 ['firstName'],
@@ -164,6 +175,8 @@ final class PhoneVerificationDatabaseTest extends TestCase
                 'releaseApprovalRef' => 'ADR-2026-10-14',
                 'allowlistedTenantIds' => ['tenant', 'other'],
             ], 'admin');
+            $gate->publish((object) ['enabled' => true, 'providerValidated' => true,
+                'releaseApprovalRef' => 'email-test', 'allowlistedTenantIds' => ['tenant', 'other']], 'admin', Kind::EMAIL);
             $funding->grant(new GrantInput(
                 'tenant',
                 'purchase',
@@ -278,7 +291,10 @@ final class PhoneVerificationDatabaseTest extends TestCase
                 return ['accountSid' => 'AC_TEST', 'authToken' => 'AUTH_TEST'];
             }
         };
-        $gate = new CapabilityGate($config, $creds, $clock);
+        $emailCredentials = new class extends BounceBanCredentials {
+            public function get(): array { return ['apiKey' => 'test-only']; }
+        };
+        $gate = new CapabilityGate($config, $creds, $clock, emailCredentials: $emailCredentials);
         $lock = new WalletLock($manager, $clock);
         $funding = new Funding($lock);
         $reservations = new Reservations($lock, $funding);
@@ -300,18 +316,25 @@ final class PhoneVerificationDatabaseTest extends TestCase
         };
 
         $operations = new Operations($manager, $clock, $access, $gate, $lock, $reviewLock, $reservations, $crypt, $config);
-        $execution = new Execution($manager, $lock, $actorAccess, $gate, $lookup, $settlement, $crypt, $config, $clock);
+        $emailLookup = new class($emailCredentials, new BounceBanTransport(), $this) extends BounceBanLookup {
+            public function __construct(BounceBanCredentials $c, BounceBanTransport $t, private PhoneVerificationDatabaseTest $suite) { parent::__construct($c, $t); }
+            public function verify(string $email, ?string $taskId, int $timeoutMs): EmailResult {
+                $this->suite->emailCalls[] = [$email, $taskId];
+                return $this->suite->emailResult ?? new EmailResult('failed');
+            }
+        };
+        $execution = new Execution($manager, $lock, $actorAccess, $gate, $lookup, $settlement, $crypt, $config, $clock, emailProvider: $emailLookup);
 
         return [$operations, $execution, $gate, $funding, $crypt, $manager, $acl];
     }
 
-    private function seedPurchasedPhones(PDO $pdo, Crypt $crypt, string $quoteId, string $attemptId, string $provider, array $phones): void
+    private function seedPurchasedPhones(PDO $pdo, Crypt $crypt, string $quoteId, string $attemptId, string $provider, array $phones, string $product = 'phone'): void
     {
         $request = [
             'tenantId' => 'tenant',
             'targetType' => 'Contact',
             'targetId' => 'contact',
-            'products' => ['phone'],
+            'products' => [$product],
             'requestKey' => 'req-' . $quoteId,
             'waterfall' => true,
             'refresh' => false,
@@ -323,10 +346,10 @@ final class PhoneVerificationDatabaseTest extends TestCase
             'identity' => ['firstName' => 'Maria', 'lastName' => 'Silva'],
             'policyId' => str_repeat('a', 64),
             'routingPolicy' => 'br-identifiers-v1',
-            'availability' => [$provider => ['phone' => str_repeat('a', 64)]],
+            'availability' => [$provider => [$product => str_repeat('a', 64)]],
             'budget' => '8.0000',
             'maximum' => '8.0000',
-            'routes' => ['phone' => [['provider' => $provider, 'credits' => '8.0000', 'version' => str_repeat('a', 64)]]],
+            'routes' => [$product => [['provider' => $provider, 'credits' => '8.0000', 'version' => str_repeat('a', 64)]]],
         ];
         $pdo->prepare('INSERT INTO enrichment_quote
             (id, tenant_id, target_type, target_id, request_key, snapshot_hash, snapshot, created_at, created_by_id, confirmed_at, admitted_at)
@@ -351,7 +374,7 @@ final class PhoneVerificationDatabaseTest extends TestCase
                 $attemptId,
                 'tenant',
                 $quoteId,
-                'phone',
+                $product,
                 $provider,
                 'matched',
                 bin2hex(random_bytes(24)),
@@ -360,12 +383,208 @@ final class PhoneVerificationDatabaseTest extends TestCase
                 $this->now,
                 '8.0000',
                 $crypt->encrypt(json_encode($phones, JSON_THROW_ON_ERROR)),
-                FieldCache::resultHash('tenant', $quoteId, $attemptId, $provider, 'phone', $phones, $binding),
+                FieldCache::resultHash('tenant', $quoteId, $attemptId, $provider, $product, $phones, $binding),
                 '2027-01-12 12:00:00',
                 $this->now,
                 $this->now,
                 $this->now,
             ]);
+    }
+
+    private function emailStart(Operations $operations, string $key, array $source = ['key' => 'email', 'kind' => 'contact_email'], bool $refresh = false): array
+    {
+        $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]], Kind::EMAIL);
+        return $operations->start((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'source' => $source,
+            'requestKey' => $key, 'contextRevision' => $context['rows'][$source['key']]['contextRevision'], 'refresh' => $refresh], Kind::EMAIL);
+    }
+
+    #[DataProvider('dialects')]
+    public function testEmailOutcomesChargeTwoCreditsAndReuseAcrossSourcesWithoutNames(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution, CapabilityGate $gate, Funding $funding, Crypt $crypt): void {
+            $pdo->exec("UPDATE contact SET email_address = ' Person+Tag@Example.com ', first_name = NULL, last_name = NULL, name = NULL WHERE id = 'contact'");
+            $this->deniedFields = ['Contact.firstName', 'Contact.lastName', 'Contact.dateOfBirth'];
+            $this->seedPurchasedPhones($pdo, $crypt, 'qemail', 'emailA', 'hub', ['person+tag@example.com'], 'email');
+            $this->seedPurchasedPhones($pdo, $crypt, 'qemail2', 'emailB', 'cpfcnpj', ['PERSON+TAG@example.com'], 'email');
+            $pdo->exec("INSERT INTO contact_channel_identity (id, contact_id, tenant_id, channel_type, source_id) VALUES ('emailchan', 'contact', 'tenant', 'email', 'person+tag@example.com')");
+            $first = $this->emailStart($operations, 'email-start');
+            self::assertSame('2.0000', $first['operation']['reservedCredits']);
+            $joined = $this->emailStart($operations, 'email-join', ['key' => 'purchased', 'kind' => 'purchased', 'receiptId' => 'emailA', 'index' => 0]);
+            self::assertSame('joined', $joined['resolution']);
+            self::assertSame($first['operation']['id'], $joined['operation']['id']);
+            $execution->run('tenant', $first['operation']['id']);
+            $execution->run('tenant', $first['operation']['id']);
+            self::assertCount(1, $this->emailCalls);
+            self::assertSame(['person+tag@example.com', null], $this->emailCalls[0]);
+            foreach ([['key' => 'email', 'kind' => 'contact_email'], ['key' => 'ch', 'kind' => 'channel', 'id' => 'emailchan'],
+                ['key' => 'p', 'kind' => 'purchased', 'receiptId' => 'emailB', 'index' => 0]] as $index => $source) {
+                self::assertSame('reused', $this->emailStart($operations, 'reuse-' . $index, $source)['resolution']);
+            }
+            foreach (['risky', 'undeliverable', 'unknown'] as $outcome) {
+                $this->now = Operations::after($this->now, 61);
+                $this->emailResult = new EmailResult('completed', 'task-' . $outcome, $outcome, ['score' => 0, 'flags' => []]);
+                $attempt = $this->emailStart($operations, $outcome, refresh: true);
+                $execution->run('tenant', $attempt['operation']['id']);
+                $status = $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'operationId' => $attempt['operation']['id']], Kind::EMAIL);
+                self::assertSame($outcome, $status['operation']['outcome']);
+                self::assertSame('2.0000', $status['operation']['settledCredits']);
+                $public = CustomerProjection::status($status);
+                self::assertSame(0, $public['operation']['emailEvidence']['score']);
+                self::assertArrayNotHasKey('canonicalPhone', $public['operation']);
+                self::assertStringNotContainsString('task-', json_encode($public));
+            }
+            self::assertSame('32.0000', $pdo->query("SELECT balance FROM tenant_credit_balance WHERE tenant_id = 'tenant'")->fetchColumn());
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testEmailPendingPollingRecoveryDeadlineAndErasure(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution, CapabilityGate $gate, Funding $funding, Crypt $crypt): void {
+            $pdo->exec("UPDATE contact SET email_address = 'person@example.com' WHERE id = 'contact'");
+            $this->emailResult = new EmailResult('pending', 'task1', tryAgainAt: strtotime($this->now . ' UTC') + 60);
+            $start = $this->emailStart($operations, 'pending');
+            $id = $start['operation']['id'];
+            $execution->run('tenant', $id);
+            $execution->run('tenant', $id);
+            self::assertCount(1, $this->emailCalls);
+            self::assertSame('awaiting', $pdo->query("SELECT state FROM phone_verification_operation WHERE id = '$id'")->fetchColumn());
+            self::assertSame('2.0000', $pdo->query("SELECT reserved_credits FROM tenant_credit_balance WHERE tenant_id = 'tenant'")->fetchColumn());
+            $this->assertHealthyAccounting($pdo);
+            $this->now = Operations::after($this->now, 60);
+            $claim = $execution->claim('tenant', $id);
+            self::assertSame('task1', $claim['taskId']);
+            self::assertNull($execution->claim('tenant', $id));
+            $this->now = Operations::after($this->now, 31);
+            $execution->recover('tenant', $id);
+            $pdo->exec("UPDATE contact SET first_name = 'Changed', email_address = NULL WHERE id = 'contact'");
+            $gate->publish((object) ['killSwitch' => true], 'admin', Kind::EMAIL);
+            $this->emailResult = new EmailResult('completed', 'task1', 'unknown', ['score' => 0, 'flags' => []]);
+            $execution->run('tenant', $id);
+            self::assertSame(['person@example.com', 'task1'], $this->emailCalls[1]);
+            self::assertSame('2.0000', $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'operationId' => $id], Kind::EMAIL)['operation']['settledCredits']);
+            $gate->publish((object) ['killSwitch' => false], 'admin', Kind::EMAIL);
+            $pdo->exec("UPDATE contact SET email_address = 'changed@example.com' WHERE id = 'contact'");
+            $next = $this->emailStart($operations, 'deadline');
+            $this->emailResult = new EmailResult('pending', 'task2');
+            $execution->run('tenant', $next['operation']['id']);
+            $this->now = Operations::after($this->now, 301);
+            $execution->recover('tenant', $next['operation']['id']);
+            self::assertSame('0.0000', $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'operationId' => $next['operation']['id']], Kind::EMAIL)['operation']['settledCredits']);
+            $third = $this->emailStart($operations, 'erase');
+            $execution->run('tenant', $third['operation']['id']);
+            $pdo->exec("UPDATE contact SET deleted = TRUE WHERE id = 'contact'");
+            $execution->recover('tenant', $third['operation']['id']);
+            self::assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM phone_verification_operation WHERE id = '{$third['operation']['id']}' AND supplier_task_ciphertext IS NOT NULL")->fetchColumn());
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testEmailAuthorizationFailuresRejectionAndSharedPilotLimits(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution, CapabilityGate $gate): void {
+            $pdo->exec("UPDATE contact SET email_address = 'person@example.com' WHERE id = 'contact'");
+            $gate->publish((object) ['enabled' => false], 'admin');
+            $first = $this->emailStart($operations, 'email-independent');
+            $this->deniedFields = ['Contact.emailAddress'];
+            $execution->run('tenant', $first['operation']['id']);
+            self::assertSame([], $this->emailCalls);
+            $this->deniedFields = [];
+            self::assertSame('0.0000', $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'requestKey' => 'email-independent'], Kind::EMAIL)['operation']['settledCredits']);
+            $this->now = Operations::after($this->now, 61);
+            $second = $this->emailStart($operations, 'email-provider-error');
+            $this->emailResult = new EmailResult('failed');
+            $execution->run('tenant', $second['operation']['id']);
+            self::assertSame('40.0000', $pdo->query("SELECT balance FROM tenant_credit_balance WHERE tenant_id = 'tenant'")->fetchColumn());
+            $pdo->exec("INSERT INTO contact_channel_identity (id, contact_id, tenant_id, channel_type, source_id, ownership_status)
+                VALUES ('rejected-email', 'contact', 'tenant', 'email', 'PERSON@example.com', 'rejected')");
+            $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact',
+                'sources' => [['key' => 'email', 'kind' => 'contact_email']]], Kind::EMAIL);
+            self::assertSame('ownership_rejected', $context['rows']['email']['reason']);
+            for ($i = 0; $i < 5; $i++) {
+                $pdo->exec("UPDATE contact SET email_address = 'person$i@example.com' WHERE id = 'contact'");
+                $this->emailStart($operations, 'open-' . $i);
+            }
+            $gate->publish((object) ['enabled' => true], 'admin');
+            $source = ['key' => 'phone', 'kind' => 'contact_phone'];
+            $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]]);
+            try {
+                $operations->start((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'source' => $source,
+                    'requestKey' => 'phone-over-limit', 'contextRevision' => $context['rows']['phone']['contextRevision']]);
+                self::fail('Email operations must count against the shared phone pilot allowance.');
+            } catch (Conflict) {}
+            self::assertSame('10.0000', $pdo->query("SELECT reserved_credits FROM tenant_credit_balance WHERE tenant_id = 'tenant'")->fetchColumn());
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testEmailReplayKindIsolationPollingBudgetAndRetention(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution, CapabilityGate $gate, Funding $funding, Crypt $crypt): void {
+            $pdo->exec("UPDATE contact SET email_address = 'person@example.com' WHERE id = 'contact'");
+            $source = ['key' => 'email', 'kind' => 'contact_email'];
+            $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]], Kind::EMAIL);
+            $command = (object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'source' => $source, 'requestKey' => 'bound-key',
+                'contextRevision' => $context['rows']['email']['contextRevision']];
+            $start = $operations->start($command, Kind::EMAIL);
+            self::assertSame($start, $operations->start($command, Kind::EMAIL));
+            try {
+                $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'requestKey' => 'bound-key']);
+                self::fail('Phone endpoint must not expose email receipts.');
+            } catch (NotFound) {}
+            $this->emailResult = new EmailResult('pending', 'task1');
+            $execution->run('tenant', $start['operation']['id']);
+            for ($i = 0; $i < 9; $i++) {
+                $this->now = Operations::after($this->now, 30);
+                $execution->run('tenant', $start['operation']['id']);
+                $execution->run('tenant', $start['operation']['id']);
+            }
+            self::assertCount(10, $this->emailCalls); // One paid submit, nine free reads before the deadline.
+            self::assertSame(9, (int) $pdo->query("SELECT poll_count FROM phone_verification_operation WHERE id = '{$start['operation']['id']}'")->fetchColumn());
+            $this->now = Operations::after($this->now, 30);
+            $execution->run('tenant', $start['operation']['id']);
+            self::assertCount(10, $this->emailCalls);
+            $this->emailResult = new EmailResult('completed', 'task2', 'deliverable', ['score' => 90, 'flags' => []]);
+            $next = $this->emailStart($operations, 'retained');
+            $execution->run('tenant', $next['operation']['id']);
+            $this->now = Operations::after($this->now, CapabilityGate::FRESH_REUSE_SECONDS);
+            $ctx = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]], Kind::EMAIL);
+            self::assertTrue($ctx['rows']['email']['currentResult']['stale']);
+            $this->now = Operations::after($this->now, CapabilityGate::RETENTION_SECONDS);
+            $execution->expireEvidence();
+            $receipt = $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'operationId' => $next['operation']['id']], Kind::EMAIL);
+            self::assertNull($receipt['operation']['canonicalEmail']);
+            self::assertNull($receipt['operation']['emailEvidence']);
+            self::assertSame('2.0000', $receipt['operation']['settledCredits']);
+            self::assertSame($start['operation']['id'], $operations->start($command, Kind::EMAIL)['operation']['id']);
+            self::assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM phone_verification_operation WHERE supplier_task_ciphertext IS NOT NULL')->fetchColumn());
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testEmailHistoryReauthorizesChannelSourceWithoutExposingRevokedEvidence(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution): void {
+            $pdo->exec("UPDATE contact SET email_address = 'person@example.com' WHERE id = 'contact'");
+            $pdo->exec("INSERT INTO contact_channel_identity (id, contact_id, tenant_id, channel_type, source_id)
+                VALUES ('emailchan', 'contact', 'tenant', 'email', 'person@example.com')");
+            $start = $this->emailStart($operations, 'email-channel', ['key' => 'ch', 'kind' => 'channel', 'id' => 'emailchan']);
+            $execution->run('tenant', $start['operation']['id']);
+            $this->deniedEntities = ['emailchan'];
+            $receipt = $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'operationId' => $start['operation']['id']], Kind::EMAIL);
+            self::assertSame('2.0000', $receipt['operation']['settledCredits']);
+            self::assertNull($receipt['operation']['canonicalEmail']);
+            self::assertNull($receipt['operation']['emailEvidence']);
+            self::assertNull($receipt['operation']['outcome']);
+            $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact',
+                'sources' => [['key' => 'email', 'kind' => 'contact_email']]], Kind::EMAIL);
+            self::assertNull($context['rows']['email']['currentResult']);
+            $this->assertHealthyAccounting($pdo);
+        });
     }
 
     private function assertHealthyAccounting(PDO $pdo, string $tenantId = 'tenant'): void

@@ -17,13 +17,14 @@ final class CustomerProjection
 
     public static function context(array $data): array
     {
+        $email = ($data['verificationKind'] ?? Kind::PHONE) === Kind::EMAIL;
         $rows = [];
         foreach ($data['rows'] ?? [] as $key => $row) {
             $projected = self::only($row, [
                 'key',
                 'eligible',
                 'reason',
-                'canonicalPhone',
+                $email ? 'canonicalEmail' : 'canonicalPhone',
                 'ownershipStatus',
                 'contextRevision',
             ]);
@@ -45,13 +46,14 @@ final class CustomerProjection
         }
 
         return [
+            ...($email ? ['verificationKind' => Kind::EMAIL] : []),
             'tenantId' => $data['tenantId'],
             'contactId' => $data['contactId'],
             'observedAt' => $data['observedAt'],
             'priceCredits' => $data['priceCredits'],
             'available' => $data['available'],
             'reason' => $data['reason'],
-            'contact' => self::only($data['contact'] ?? [], [
+            'contact' => $email ? (object) [] : self::only($data['contact'] ?? [], [
                 'nameReady',
                 'hasDateOfBirth',
                 'dateOfBirth',
@@ -63,6 +65,12 @@ final class CustomerProjection
 
     public static function evidence(array $result): array
     {
+        if (($result['verificationKind'] ?? Kind::PHONE) === Kind::EMAIL) {
+            return [
+                ...self::only($result, ['operationId', 'usageId', 'outcome', 'completedAt', 'freshUntil', 'fresh', 'stale', 'settledCredits']),
+                'emailEvidence' => self::emailEvidence($result['emailEvidence'] ?? null),
+            ];
+        }
         return [
             'operationId' => $result['operationId'],
             'usageId' => $result['usageId'],
@@ -82,6 +90,14 @@ final class CustomerProjection
 
     public static function operation(array $operation): array
     {
+        if (($operation['verificationKind'] ?? Kind::PHONE) === Kind::EMAIL) {
+            return [
+                ...self::only($operation, ['verificationKind', 'id', 'usageId', 'reservationId', 'canonicalEmail',
+                    'state', 'outcome', 'priceCredits', 'reservedCredits', 'settledCredits', 'admittedAt', 'completedAt',
+                    'freshUntil', 'fresh', 'stale', 'erased', 'expired', 'identityChanged']),
+                'emailEvidence' => self::emailEvidence($operation['emailEvidence'] ?? null),
+            ];
+        }
         return [
             'id' => $operation['id'],
             'usageId' => $operation['usageId'],
@@ -116,6 +132,16 @@ final class CustomerProjection
             ...(isset($receipt['requestKey']) ? ['requestKey' => $receipt['requestKey']] : []),
             ...(isset($receipt['resolution']) ? ['resolution' => $receipt['resolution']] : []),
             'operation' => self::operation($receipt['operation']),
+        ];
+    }
+
+    private static function emailEvidence(?array $evidence): ?array
+    {
+        if ($evidence === null) return null;
+        return [
+            'score' => $evidence['score'] ?? null,
+            'verifiedAt' => $evidence['verifiedAt'] ?? null,
+            'flags' => (object) self::only($evidence['flags'] ?? [], ['is_disposable', 'is_accept_all', 'is_role', 'is_free']),
         ];
     }
 

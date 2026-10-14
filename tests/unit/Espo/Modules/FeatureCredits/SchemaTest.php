@@ -121,10 +121,10 @@ class SchemaTest extends TestCase
     public function testGeneratedFinancialSchema(string $dialect): void
     {
         $schema = $this->schema($dialect);
-        $this->assertCount(33, $schema->getTables());
+        $this->assertCount(34, $schema->getTables());
         foreach ($schema->getTables() as $table) {
             if (!in_array($table->getName(), ['ai_model_credit_rate', 'enrichment_credit_catalog',
-                'credit_billing_catalog', 'credit_billing_product', 'credit_market_offer', 'credit_billing_event'], true)) {
+                'credit_billing_catalog', 'credit_billing_product', 'credit_market_offer', 'credit_billing_event', 'verification_provider_window'], true)) {
                 $this->assertTrue($table->getColumn('tenant_id')->getNotnull(), $table->getName());
             }
             $this->assertSame(17, $table->getColumn('id')->getLength());
@@ -293,7 +293,7 @@ class SchemaTest extends TestCase
                 }
 
                 if (in_array($name, ['ai_model_credit_rate', 'enrichment_credit_catalog',
-                    'credit_billing_catalog', 'credit_billing_product', 'credit_market_offer', 'credit_billing_event'], true)) continue; // Global catalogs and integration-scoped inbox.
+                    'credit_billing_catalog', 'credit_billing_product', 'credit_market_offer', 'credit_billing_event', 'verification_provider_window'], true)) continue; // Global catalogs and integration-scoped state.
                 $missingTenant = $row;
                 $missingTenant['id'] = 'c';
                 $missingTenant['tenant_id'] = null;

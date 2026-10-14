@@ -1,5 +1,6 @@
 {
     "labels": {
+        "email_deliverability": "Email verification",
         "title": "Credits & Usage",
         "description": "Shared prepaid tenant credits. These balances are separate from legacy engagement billing and do not authorize AI execution.",
         "tenant": "Tenant", "selectTenant": "Select a tenant", "refresh": "Refresh / retry", "legacyUsage": "Legacy AI usage",

@@ -96,8 +96,8 @@ final class ReservationHistory
                         if ($settled === null || $verifiedCharge->compareTo($settled) !== 0 || $accrued->compareTo((string) $verifiedCharge) !== 0) {
                             throw new LogicException('Invalid settled verification reservation projection.');
                         }
-                    } elseif ((string) $reserved !== '8.0000' || $settled !== null || !$accrued->isZero() ||
-                        !FixedSettlement::openVerificationValid($pdo, $input->tenantId, $row['usage_id'])) {
+                    } elseif ($settled !== null || !$accrued->isZero() ||
+                        !FixedSettlement::openVerificationValid($pdo, $input->tenantId, $row['usage_id'], (string) $reserved)) {
                         throw new LogicException('Invalid open verification reservation projection.');
                     }
                 }
@@ -105,6 +105,8 @@ final class ReservationHistory
                     break;
                 }
                 $list[] = ['id' => $row['id'], 'usageId' => $row['usage_id'],
+                    ...($row['operation_type'] === 'verification' && FixedSettlement::verificationKind($pdo, $input->tenantId, $row['usage_id']) === 'email_deliverability'
+                        ? ['verificationKind' => 'email_deliverability'] : []),
                     'operationType' => $row['operation_type'], 'state' => $row['state'],
                     'reservedCredits' => (string) $reserved,
                     'accruedCreditsExact' => (string) $accrued->strippedOfTrailingZeros(),

@@ -1,6 +1,10 @@
 {
     "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
     "fields": {
+        "verificationKind": {"type": "varchar", "maxLength": 32, "notNull": true, "default": "phone_identity"},
+        "supplierTaskCiphertext": {"type": "text"},
+        "pollCount": {"type": "int", "notNull": true, "default": 0},
+        "nextPollAt": {"type": "datetime"},
         "tenant": {"type": "link", "notNull": true},
         "contact": {"type": "link", "notNull": true},
         "actor": {"type": "link", "notNull": true},
@@ -41,6 +45,7 @@
         "tenantSubject": {"columns": ["tenantId", "subjectHash", "completedAt"]},
         "tenantContact": {"columns": ["tenantId", "contactId", "admittedAt"]},
         "due": {"columns": ["tenantId", "state", "deadlineAt"]},
+        "emailPollDue": {"columns": ["state", "nextPollAt"]},
         "retention": {"columns": ["retentionExpiresAt"]}
     }
 }

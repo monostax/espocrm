@@ -47,7 +47,7 @@ class Operations
         private ?JobSchedulerFactory $scheduler = null,
     ) {}
 
-    public function context(stdClass $input): array
+    public function context(stdClass $input, string $kind = Kind::PHONE): array
     {
         $data = get_object_vars($input);
         if (array_diff(array_keys($data), ['tenantId', 'contactId', 'sources']) ||
@@ -59,7 +59,7 @@ class Operations
         }
         $tenantId = $data['tenantId'];
         $contactId = $data['contactId'];
-        $this->access->contact($tenantId, $contactId);
+        $this->access->contact($tenantId, $contactId, $kind);
 
         $sources = [];
         $seenKeys = [];
@@ -79,17 +79,17 @@ class Operations
             $sources[$key] = $rawSource;
         }
 
-        return $this->reviewLock->run($tenantId, function (PDO $pdo) use ($tenantId, $contactId, $sources): array {
+        return $this->reviewLock->run($tenantId, function (PDO $pdo) use ($tenantId, $contactId, $sources, $kind): array {
             $now = $this->clock->now();
-            $contact = $this->access->contact($tenantId, $contactId);
-            $identity = $this->access->contactIdentity($contact, $now);
-            $cap = $this->capability->inspect($tenantId);
+            $contact = $this->access->contact($tenantId, $contactId, $kind);
+            $identity = $this->access->contactIdentity($contact, $now, $kind);
+            $cap = $this->capability->inspect($tenantId, $kind);
             $hmacKey = $this->hmacKey();
 
             $rows = [];
             foreach ($sources as $key => $source) {
                 try {
-                    $resolved = $this->access->resolveSource($pdo, $tenantId, $contact, $source);
+                    $resolved = $this->access->resolveSource($pdo, $tenantId, $contact, $source, $kind);
                 } catch (NotFound | Forbidden | Conflict) {
                     $rows[$key] = [
                         'key' => $key,
@@ -106,7 +106,7 @@ class Operations
                     continue;
                 }
 
-                $e164 = $resolved['e164'];
+                $e164 = $resolved['value'];
                 $ownershipRejected = $resolved['ownershipRejected'];
                 if ($ownershipRejected) {
                     $rows[$key] = [
@@ -172,20 +172,8 @@ class Operations
                     continue;
                 }
 
-                $firstName = $identity['name']['firstName'];
-                $lastName = $identity['name']['lastName'];
-                $dob = $identity['dateOfBirth'];
                 $policyVersion = $cap['policyVersion'];
-                $fingerprintHash = IdentityInput::fingerprintHash(
-                    $hmacKey,
-                    $tenantId,
-                    $contactId,
-                    $e164,
-                    $firstName,
-                    $lastName,
-                    $dob,
-                    $policyVersion,
-                );
+                $fingerprintHash = Kind::fingerprint($hmacKey, $tenantId, $contactId, $e164, $identity, $policyVersion, $kind);
 
                 [$active, $completed, $failed] = $this->findMatchingOperations($pdo, $tenantId, $contactId, $fingerprintHash, $now);
                 $fresh = $completed !== null && $completed['fresh'];
@@ -201,15 +189,7 @@ class Operations
                     'reason' => $reason,
                     'canonicalPhone' => $e164,
                     'ownershipStatus' => 'unverified',
-                    'contextRevision' => self::computeContextRevision(
-                        $tenantId,
-                        $contactId,
-                        $e164,
-                        $firstName,
-                        $lastName,
-                        $dob,
-                        $policyVersion,
-                    ),
+                    'contextRevision' => Kind::revision($tenantId, $contactId, $e164, $identity, $policyVersion, $kind),
                     'actions' => [
                         'canVerify' => $canVerify,
                         'canRefresh' => $canRefresh,
@@ -221,11 +201,19 @@ class Operations
                 ];
             }
 
+            if ($kind === Kind::EMAIL) {
+                foreach ($rows as &$row) {
+                    $row['canonicalEmail'] = $row['canonicalPhone'];
+                    unset($row['canonicalPhone']);
+                }
+                unset($row);
+            }
             return [
+                'verificationKind' => $kind,
                 'tenantId' => $tenantId,
                 'contactId' => $contactId,
                 'observedAt' => $now,
-                'priceCredits' => CapabilityGate::PRICE_CREDITS,
+                'priceCredits' => Kind::price($kind),
                 'available' => $cap['available'],
                 'reason' => $cap['reason'],
                 'contact' => [
@@ -239,7 +227,7 @@ class Operations
         });
     }
 
-    public function start(stdClass $input): array
+    public function start(stdClass $input, string $kind = Kind::PHONE): array
     {
         $data = get_object_vars($input);
         if (array_diff(array_keys($data), ['tenantId', 'contactId', 'source', 'requestKey', 'contextRevision', 'refresh', 'dateOfBirth']) ||
@@ -263,6 +251,9 @@ class Operations
             throw new InvalidArgumentException('Refresh flag must be boolean.');
         }
         $suppliedDob = $data['dateOfBirth'] ?? null;
+        if ($kind === Kind::EMAIL && array_key_exists('dateOfBirth', $data)) {
+            throw new InvalidArgumentException('Email verification does not accept date of birth.');
+        }
         if ($suppliedDob !== null && $suppliedDob !== '') {
             $suppliedDob = IdentityInput::validateDateOfBirth($suppliedDob, $this->clock->now());
         } else {
@@ -274,12 +265,13 @@ class Operations
         $requestKey = $data['requestKey'];
         $contextRevision = $data['contextRevision'];
         $actorId = $this->access->actorId();
-        $contact = $this->access->contact($tenantId, $contactId);
+        $contact = $this->access->contact($tenantId, $contactId, $kind);
 
         $canonicalSource = $source;
         unset($canonicalSource['key']);
         ksort($canonicalSource);
         $commandHash = self::hash([
+            ...($kind === Kind::EMAIL ? ['verificationKind' => $kind] : []),
             'tenantId' => $tenantId,
             'contactId' => $contactId,
             'source' => $canonicalSource,
@@ -326,6 +318,7 @@ class Operations
                 $preSaveRevision,
                 $refresh,
                 $commandHash,
+                $kind,
             ): array {
                 // 1. Check request binding first so retries return the original operation even after expiry/erasure.
                 $q = $pdo->prepare('SELECT * FROM phone_verification_request WHERE tenant_id = ? AND request_key = ?');
@@ -334,9 +327,9 @@ class Operations
                     if ($existingRequest['deleted'] || !hash_equals($existingRequest['command_hash'], $commandHash)) {
                         throw new Conflict('Phone verification request key already has different parameters.');
                     }
-                    $this->access->contact($tenantId, $contactId);
+                    $this->access->contact($tenantId, $contactId, $kind);
                     $op = $this->loadOperationLocked($pdo, $tenantId, $existingRequest['operation_id']);
-                    if ($op['contact_id'] !== $contactId) {
+                    if ($op['contact_id'] !== $contactId || ($op['verification_kind'] ?? Kind::PHONE) !== $kind) {
                         throw new Conflict('Phone verification request belongs to another Contact.');
                     }
                     return [
@@ -354,14 +347,14 @@ class Operations
                 if (!$q->fetchColumn()) {
                     throw new NotFound('Unknown verification Contact.');
                 }
-                $contact = $this->access->contact($tenantId, $contactId);
-                $identity = $this->access->contactIdentity($contact, $now);
-                $resolved = $this->access->resolveSource($pdo, $tenantId, $contact, $source);
+                $contact = $this->access->contact($tenantId, $contactId, $kind);
+                $identity = $this->access->contactIdentity($contact, $now, $kind);
+                $resolved = $this->access->resolveSource($pdo, $tenantId, $contact, $source, $kind);
 
                 if ($resolved['ownershipRejected']) {
                     throw Conflict::createWithBody('Phone ownership is rejected.', '{"reason":"ownership_rejected"}');
                 }
-                if ($resolved['e164'] === null) {
+                if ($resolved['value'] === null) {
                     $reason = $resolved['phoneReason'] ?? 'invalid_phone';
                     throw Conflict::createWithBody('Phone number is not eligible for Brazil verification.', json_encode(['reason' => $reason], JSON_THROW_ON_ERROR));
                 }
@@ -372,44 +365,28 @@ class Operations
                     throw Conflict::createWithBody('Contact date of birth is invalid.', '{"reason":"invalid_date_of_birth"}');
                 }
 
-                $e164 = $resolved['e164'];
+                $e164 = $resolved['value'];
                 $firstName = $identity['name']['firstName'];
                 $lastName = $identity['name']['lastName'];
                 $dob = $identity['dateOfBirth'];
-                $cap = $this->capability->inspect($tenantId);
+                $cap = $this->capability->inspect($tenantId, $kind);
                 $policyVersion = $cap['policyVersion'];
 
-                $currentRevision = self::computeContextRevision(
-                    $tenantId,
-                    $contactId,
-                    $e164,
-                    $firstName,
-                    $lastName,
-                    $dob,
-                    $policyVersion,
-                );
+                $currentRevision = Kind::revision($tenantId, $contactId, $e164, $identity, $policyVersion, $kind);
                 if (!hash_equals($currentRevision, $contextRevision) &&
                     ($preSaveRevision === null || !hash_equals($preSaveRevision, $contextRevision))) {
                     throw Conflict::createWithBody('Phone verification context changed; review and confirm again.', '{"reason":"context_changed"}');
                 }
 
                 $hmacKey = $this->hmacKey();
-                $subjectHash = IdentityInput::subjectHash($hmacKey, $tenantId, $contactId, $e164);
-                $fingerprintHash = IdentityInput::fingerprintHash(
-                    $hmacKey,
-                    $tenantId,
-                    $contactId,
-                    $e164,
-                    $firstName,
-                    $lastName,
-                    $dob,
-                    $policyVersion,
-                );
+                $subjectHash = $kind === Kind::PHONE ? IdentityInput::subjectHash($hmacKey, $tenantId, $contactId, $e164)
+                    : hash_hmac('sha256', self::hash([$kind, $tenantId, $contactId, $e164]), $hmacKey);
+                $fingerprintHash = Kind::fingerprint($hmacKey, $tenantId, $contactId, $e164, $identity, $policyVersion, $kind);
 
                 // 3. Join an active matching operation (D18: one shared active check per input fingerprint).
                 $q = $pdo->prepare("SELECT * FROM phone_verification_operation
                     WHERE tenant_id = ? AND contact_id = ? AND fingerprint_hash = ?
-                    AND state IN ('admitted', 'claimed') AND deleted = FALSE
+                    AND state IN ('admitted', 'claimed', 'awaiting') AND deleted = FALSE
                     ORDER BY admitted_at DESC, id DESC FOR UPDATE");
                 $q->execute([$tenantId, $contactId, $fingerprintHash]);
                 foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $activeOp) {
@@ -434,7 +411,8 @@ class Operations
                         ORDER BY completed_at DESC, id DESC LIMIT 1 FOR UPDATE");
                     $q->execute([$tenantId, $contactId, $fingerprintHash]);
                     $completedOp = $q->fetch(PDO::FETCH_ASSOC);
-                    if ($completedOp && $completedOp['fresh_until'] > $now && $completedOp['retention_expires_at'] > $now) {
+                    if ($completedOp && $completedOp['fresh_until'] > $now && $completedOp['retention_expires_at'] > $now &&
+                        $this->projectOperationLocked($pdo, $tenantId, $completedOp, $now)['fresh']) {
                         $this->insertRequestBinding($pdo, $tenantId, $contactId, $actorId, $requestKey, $commandHash, 'reused', $completedOp['id'], $now);
                         return [
                             'tenantId' => $tenantId,
@@ -471,11 +449,11 @@ class Operations
                     'verification:' . $operationId,
                     'verification:' . $operationId,
                     $agreements[0],
-                    CapabilityGate::PRICE_CREDITS,
+                    Kind::price($kind),
                     new SourceReference('Contact', $contactId),
                 ));
 
-                $snapshotIdentity = [
+                $snapshotIdentity = $kind === Kind::EMAIL ? ['email' => $e164, 'source' => $source] : [
                     'phone' => $e164,
                     'firstName' => $firstName,
                     'lastName' => $lastName,
@@ -484,6 +462,7 @@ class Operations
                 $identityCiphertext = $this->crypt->encrypt(json_encode($snapshotIdentity, JSON_THROW_ON_ERROR));
                 $deadlineAt = self::after($now, CapabilityGate::OPERATION_DEADLINE_SECONDS);
                 $identityHash = self::hash([
+                    ...($kind === Kind::EMAIL ? ['verificationKind' => $kind] : []),
                     'id' => $operationId,
                     'tenantId' => $tenantId,
                     'contactId' => $contactId,
@@ -491,7 +470,7 @@ class Operations
                     'usageId' => $hold['usageId'],
                     'reservationId' => $hold['reservationId'],
                     'policyVersion' => $policyVersion,
-                    'priceCredits' => CapabilityGate::PRICE_CREDITS,
+                    'priceCredits' => Kind::price($kind),
                     'subjectHash' => $subjectHash,
                     'fingerprintHash' => $fingerprintHash,
                     'hasDateOfBirth' => $dob !== null,
@@ -503,8 +482,8 @@ class Operations
                 $pdo->prepare('INSERT INTO phone_verification_operation
                     (id, tenant_id, contact_id, actor_id, usage_id, reservation_id, policy_version, price_credits,
                      subject_hash, fingerprint_hash, has_date_of_birth, identity_ciphertext, identity_hash,
-                     state, admitted_at, deadline_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute([
+                     state, admitted_at, deadline_at, verification_kind)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute([
                         $operationId,
                         $tenantId,
                         $contactId,
@@ -512,7 +491,7 @@ class Operations
                         $hold['usageId'],
                         $hold['reservationId'],
                         $policyVersion,
-                        CapabilityGate::PRICE_CREDITS,
+                        Kind::price($kind),
                         $subjectHash,
                         $fingerprintHash,
                         $dob !== null ? 1 : 0,
@@ -521,6 +500,7 @@ class Operations
                         'admitted',
                         $now,
                         $deadlineAt,
+                        $kind,
                     ]);
 
                 $this->insertRequestBinding($pdo, $tenantId, $contactId, $actorId, $requestKey, $commandHash, 'admitted', $operationId, $now);
@@ -554,7 +534,7 @@ class Operations
     /**
      * Recover the original operation or receipt with current authorization checks; never dispatch (Section 5).
      */
-    public function status(array $params): array
+    public function status(array $params, string $kind = Kind::PHONE): array
     {
         if (array_diff(array_keys($params), ['tenantId', 'contactId', 'requestKey', 'operationId']) ||
             !is_string($params['tenantId'] ?? null) ||
@@ -578,11 +558,11 @@ class Operations
             GrantInput::identity($operationId);
         }
 
-        $this->access->contact($tenantId, $contactId);
+        $this->access->contact($tenantId, $contactId, $kind);
 
-        return $this->reviewLock->run($tenantId, function (PDO $pdo) use ($tenantId, $contactId, $requestKey, $operationId): array {
+        return $this->reviewLock->run($tenantId, function (PDO $pdo) use ($tenantId, $contactId, $requestKey, $operationId, $kind): array {
             $now = $this->clock->now();
-            $this->access->contact($tenantId, $contactId);
+            $this->access->contact($tenantId, $contactId, $kind);
             $resolution = null;
             if ($requestKey !== null) {
                 $q = $pdo->prepare('SELECT * FROM phone_verification_request WHERE tenant_id = ? AND request_key = ?');
@@ -595,7 +575,7 @@ class Operations
                 $resolution = $req['resolution'];
             }
             $op = $this->loadOperationLocked($pdo, $tenantId, (string) $operationId);
-            if ($op['contact_id'] !== $contactId) {
+            if ($op['contact_id'] !== $contactId || ($op['verification_kind'] ?? Kind::PHONE) !== $kind) {
                 throw new NotFound('Unknown phone verification operation.');
             }
             return [
@@ -610,7 +590,7 @@ class Operations
     /**
      * Return authorized, retained evidence and dated financial receipts for that Contact (Section 5).
      */
-    public function history(array $params): array
+    public function history(array $params, string $kind = Kind::PHONE): array
     {
         if (array_diff(array_keys($params), ['tenantId', 'contactId', 'limit', 'beforeAt', 'beforeId']) ||
             !is_string($params['tenantId'] ?? null) ||
@@ -635,13 +615,13 @@ class Operations
             GrantInput::identity($params['beforeId']);
         }
 
-        $this->access->contact($tenantId, $contactId);
+        $this->access->contact($tenantId, $contactId, $kind);
 
-        return $this->reviewLock->run($tenantId, function (PDO $pdo) use ($tenantId, $contactId, $params, $cursor, $limit): array {
+        return $this->reviewLock->run($tenantId, function (PDO $pdo) use ($tenantId, $contactId, $params, $cursor, $limit, $kind): array {
             $now = $this->clock->now();
-            $this->access->contact($tenantId, $contactId);
-            $sql = 'SELECT * FROM phone_verification_operation WHERE tenant_id = ? AND contact_id = ? AND deleted = FALSE';
-            $args = [$tenantId, $contactId];
+            $this->access->contact($tenantId, $contactId, $kind);
+            $sql = 'SELECT * FROM phone_verification_operation WHERE tenant_id = ? AND contact_id = ? AND verification_kind = ? AND deleted = FALSE';
+            $args = [$tenantId, $contactId, $kind];
             if ($cursor) {
                 $sql .= ' AND (admitted_at < ? OR (admitted_at = ? AND id < ?))';
                 array_push($args, $params['beforeAt'], $params['beforeAt'], $params['beforeId']);
@@ -682,6 +662,7 @@ class Operations
 
     public function projectOperationLocked(PDO $pdo, string $tenantId, array $op, string $now): array
     {
+        $kind = $op['verification_kind'] ?? Kind::PHONE;
         $q = $pdo->prepare('SELECT u.state AS usage_state, u.settled_credits, u.deleted AS usage_deleted,
             r.id AS reservation_id, r.state AS reservation_state, r.reserved_credits, r.deleted AS reservation_deleted
             FROM credit_usage u JOIN credit_reservation r ON r.usage_id = u.id AND r.tenant_id = u.tenant_id
@@ -702,14 +683,23 @@ class Operations
         if (!$hideDetails && $op['identity_ciphertext'] !== null) {
             $snapshotIdentity = json_decode($this->crypt->decrypt($op['identity_ciphertext']), true, 16, JSON_THROW_ON_ERROR);
             $this->verifyIdentityHash($op, $snapshotIdentity);
-            $canonicalPhone = $snapshotIdentity['phone'] ?? null;
+            $canonicalPhone = $snapshotIdentity[$kind === Kind::EMAIL ? 'email' : 'phone'] ?? null;
+            if ($kind === Kind::EMAIL) {
+                $contact = $this->access->contact($tenantId, $op['contact_id'], $kind);
+                try {
+                    $this->access->authorizeEmailSource($pdo, $tenantId, $contact, $snapshotIdentity['source']);
+                } catch (\Throwable) {
+                    $hideDetails = true;
+                    $canonicalPhone = null;
+                }
+            }
             try {
-                $contact = $this->access->contact($tenantId, $op['contact_id']);
-                $currentIdentity = $this->access->contactIdentity($contact, $now);
-                $identityChanged = !$currentIdentity['nameReady'] ||
+                $contact = $this->access->contact($tenantId, $op['contact_id'], $kind);
+                $currentIdentity = $this->access->contactIdentity($contact, $now, $kind);
+                $identityChanged = $kind === Kind::PHONE && (!$currentIdentity['nameReady'] ||
                     $currentIdentity['name']['firstName'] !== ($snapshotIdentity['firstName'] ?? null) ||
                     $currentIdentity['name']['lastName'] !== ($snapshotIdentity['lastName'] ?? null) ||
-                    $currentIdentity['dateOfBirth'] !== ($snapshotIdentity['dateOfBirth'] ?? null);
+                    $currentIdentity['dateOfBirth'] !== ($snapshotIdentity['dateOfBirth'] ?? null));
             } catch (\Throwable) {
                 $identityChanged = true;
             }
@@ -717,6 +707,7 @@ class Operations
 
         $matchedFields = [];
         $fieldOutcomes = null;
+        $emailEvidence = null;
         if ($op['state'] === 'completed' && !$hideDetails && $op['evidence_ciphertext'] !== null) {
             $evidence = json_decode($this->crypt->decrypt($op['evidence_ciphertext']), true, 16, JSON_THROW_ON_ERROR);
             $expectedHash = self::evidenceHash($tenantId, $op['id'], $op['outcome'], $evidence);
@@ -725,10 +716,11 @@ class Operations
             }
             $matchedFields = $evidence['matchedFields'] ?? [];
             $fieldOutcomes = $evidence['fieldOutcomes'] ?? null;
+            if ($kind === Kind::EMAIL) $emailEvidence = $evidence;
         }
 
         $publicState = match ($op['state']) {
-            'admitted', 'claimed' => 'pending',
+            'admitted', 'claimed', 'awaiting' => 'pending',
             'completed' => 'completed',
             'waived' => 'failed',
             default => throw new Conflict('Invalid phone verification state.'),
@@ -744,10 +736,12 @@ class Operations
             $op['fresh_until'] !== null && $op['fresh_until'] <= $now;
 
         return [
+            'verificationKind' => $kind,
             'id' => $op['id'],
             'usageId' => $op['usage_id'],
             'reservationId' => $op['reservation_id'],
-            'canonicalPhone' => $canonicalPhone,
+            ($kind === Kind::EMAIL ? 'canonicalEmail' : 'canonicalPhone') => $canonicalPhone,
+            ...($kind === Kind::EMAIL ? ['emailEvidence' => $emailEvidence] : []),
             'state' => $publicState,
             'outcome' => $publicOutcome,
             'matchedFields' => $matchedFields,
@@ -770,6 +764,7 @@ class Operations
     public static function verifyIdentityHash(array $op, array $snapshotIdentity): void
     {
         $expected = self::hash([
+            ...(($op['verification_kind'] ?? Kind::PHONE) === Kind::EMAIL ? ['verificationKind' => Kind::EMAIL] : []),
             'id' => $op['id'],
             'tenantId' => $op['tenant_id'],
             'contactId' => $op['contact_id'],
@@ -855,7 +850,7 @@ class Operations
         $completed = null;
         $failed = null;
         foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $op) {
-            if (in_array($op['state'], ['admitted', 'claimed'], true)) {
+            if (in_array($op['state'], ['admitted', 'claimed', 'awaiting'], true)) {
                 if ($op['deadline_at'] > $now && $active === null) {
                     $active = [
                         'operationId' => $op['id'],
@@ -875,10 +870,12 @@ class Operations
                     continue;
                 }
                 $projected = $this->projectOperationLocked($pdo, $tenantId, $op, $now);
-                if ($projected['identityChanged']) {
+                if ($projected['identityChanged'] || $projected['outcome'] === null) {
                     continue;
                 }
                 $completed = [
+                    'verificationKind' => $projected['verificationKind'],
+                    ...(isset($projected['emailEvidence']) ? ['emailEvidence' => $projected['emailEvidence']] : []),
                     'operationId' => $projected['id'],
                     'usageId' => $projected['usageId'],
                     'outcome' => $projected['outcome'],
@@ -921,7 +918,7 @@ class Operations
         }
 
         $q = $pdo->prepare("SELECT COUNT(*) FROM phone_verification_operation
-            WHERE tenant_id = ? AND state IN ('admitted', 'claimed') AND deadline_at > ? AND deleted = FALSE");
+            WHERE tenant_id = ? AND state IN ('admitted', 'claimed', 'awaiting') AND deadline_at > ? AND deleted = FALSE");
         $q->execute([$tenantId, $now]);
         if ((int) $q->fetchColumn() >= $limits['maxOutstandingPerTenant']) {
             throw Conflict::createWithBody(

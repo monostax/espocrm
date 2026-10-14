@@ -104,15 +104,15 @@ class PurchasedErasure
         $q->execute([$tenant,$contactId]);
         $operations = $q->fetchAll(PDO::FETCH_ASSOC);
         foreach ($operations as $op) {
-            $open = in_array($op['state'],['admitted','claimed'],true);
+            $open = in_array($op['state'],['admitted','claimed','awaiting'],true);
             if ($open) {
                 $pdo->prepare("UPDATE phone_verification_operation
-                    SET identity_ciphertext=NULL,evidence_ciphertext=NULL,erased_at=COALESCE(erased_at,?),
+                    SET identity_ciphertext=NULL,evidence_ciphertext=NULL,supplier_task_ciphertext=NULL,erased_at=COALESCE(erased_at,?),
                         state='waived',outcome='cancelled',failure_reason='contact_erased',completed_at=?
                     WHERE id=? AND tenant_id=?")->execute([$now,$now,$op['id'],$tenant]);
             } else {
                 $pdo->prepare("UPDATE phone_verification_operation
-                    SET identity_ciphertext=NULL,evidence_ciphertext=NULL,erased_at=COALESCE(erased_at,?)
+                    SET identity_ciphertext=NULL,evidence_ciphertext=NULL,supplier_task_ciphertext=NULL,erased_at=COALESCE(erased_at,?)
                     WHERE id=? AND tenant_id=?")->execute([$now,$op['id'],$tenant]);
             }
             if (!$open) continue;

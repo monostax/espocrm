@@ -11,6 +11,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Entities\User;
 use Espo\Modules\FeatureCredits\Verification\CapabilityGate;
 use Espo\Modules\FeatureCredits\Verification\Execution;
+use Espo\Modules\FeatureCredits\Verification\Kind;
 use InvalidArgumentException;
 use JsonException;
 use stdClass;
@@ -19,8 +20,9 @@ use stdClass;
  * Operator-only administration for phone verification activation, allowlist, limits,
  * kill switch, and sanitized diagnostics (D9, D20, D25).
  */
-final class CreditPhoneVerificationConfiguration
+class CreditPhoneVerificationConfiguration
 {
+    protected const KIND = Kind::PHONE;
     public function __construct(
         private User $user,
         private CapabilityGate $capability,
@@ -34,8 +36,8 @@ final class CreditPhoneVerificationConfiguration
             throw new BadRequest('Unknown phone verification configuration query parameter.');
         }
         return (object) [
-            'configuration' => $this->capability->configuration(),
-            'policyVersion' => $this->capability->policyVersion(),
+            'configuration' => $this->capability->configuration(static::KIND),
+            'policyVersion' => $this->capability->policyVersion(static::KIND),
             'diagnostics' => $this->execution->diagnostics(),
         ];
     }
@@ -53,8 +55,8 @@ final class CreditPhoneVerificationConfiguration
                 throw new InvalidArgumentException('A phone verification configuration object is required.');
             }
             return (object) [
-                'configuration' => $this->capability->publish($input, (string) $this->user->getId()),
-                'policyVersion' => $this->capability->policyVersion(),
+                'configuration' => $this->capability->publish($input, (string) $this->user->getId(), static::KIND),
+                'policyVersion' => $this->capability->policyVersion(static::KIND),
             ];
         } catch (InvalidArgumentException | JsonException $e) {
             throw new BadRequest($e->getMessage());

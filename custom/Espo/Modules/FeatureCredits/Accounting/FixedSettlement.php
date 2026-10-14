@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureCredits\Accounting;
 
 use Espo\Core\Exceptions\Conflict;
+use Espo\Modules\FeatureCredits\Verification\Kind;
 use PDO;
 
 /** Internal fixed-action settlement on the existing ledger; caller atomically publishes purchased access. */
@@ -38,27 +39,29 @@ final class FixedSettlement
         $rows = $q->fetchAll(PDO::FETCH_ASSOC);
         if (count($rows) !== 1) throw new \LogicException('Invalid phone verification receipt count.');
         $op = $rows[0];
+        $kind = $op['verification_kind'] ?? Kind::PHONE;
         if ($op['deleted'] || $op['usage_deleted'] || $op['tenant_id'] !== $tenant ||
             $op['operation_type'] !== 'verification' ||
             $op['operation_key'] !== 'verification:' . $op['id'] ||
             $op['execution_id'] !== 'verification:' . $op['id'] ||
             $op['source_type'] !== 'Contact' || $op['source_id'] !== $op['contact_id'] ||
-            (string) Amount::fromString($op['price_credits']) !== '8.0000' ||
+            !in_array($kind, [Kind::PHONE, Kind::EMAIL], true) ||
+            (string) Amount::fromString($op['price_credits']) !== Kind::price($kind) ||
             $op['completed_at'] === null || $op['admitted_at'] > $op['completed_at']) {
             throw new \LogicException('Invalid phone verification operation binding.');
         }
         $erased = $op['erased_at'] !== null;
-        if ($erased && ($op['identity_ciphertext'] !== null || $op['evidence_ciphertext'] !== null)) {
+        if ($erased && ($op['identity_ciphertext'] !== null || $op['evidence_ciphertext'] !== null || ($op['supplier_task_ciphertext'] ?? null) !== null)) {
             throw new \LogicException('Erased phone verification operation retains ciphertext.');
         }
         if ($op['state'] === 'completed') {
-            if (!in_array($op['outcome'], ['verified', 'not_verified', 'insufficient_data'], true) ||
+            if (!in_array($op['outcome'], Kind::outcomes($kind), true) ||
                 $op['claimed_at'] === null || $op['claimed_at'] > $op['completed_at'] ||
                 $op['fresh_until'] === null || $op['retention_expires_at'] === null ||
                 $op['evidence_hash'] === null || (!$erased && ($op['identity_ciphertext'] === null || $op['evidence_ciphertext'] === null))) {
                 throw new \LogicException('Invalid completed phone verification receipt.');
             }
-            return Amount::fromString('8.0000');
+            return Amount::fromString(Kind::price($kind));
         }
         if ($op['state'] === 'waived') {
             if (!in_array($op['outcome'], ['failed', 'cancelled', 'unavailable'], true) ||
@@ -71,7 +74,16 @@ final class FixedSettlement
         throw new \LogicException('Phone verification operation is not terminal.');
     }
 
-    public static function openVerificationValid(PDO $pdo, string $tenant, string $usage): bool
+    public static function verificationKind(PDO $pdo, string $tenant, string $usage): string
+    {
+        $q = $pdo->prepare('SELECT verification_kind FROM phone_verification_operation WHERE tenant_id = ? AND usage_id = ?');
+        $q->execute([$tenant, $usage]);
+        $kind = $q->fetchColumn();
+        if (!in_array($kind, [Kind::PHONE, Kind::EMAIL], true)) throw new \LogicException('Invalid verification kind.');
+        return $kind;
+    }
+
+    public static function openVerificationValid(PDO $pdo, string $tenant, string $usage, ?string $reserved = null): bool
     {
         $q = $pdo->prepare('SELECT o.*, u.operation_type, u.operation_key, u.execution_id, u.source_type, u.source_id
             FROM phone_verification_operation o JOIN credit_usage u ON u.id=o.usage_id AND u.tenant_id=o.tenant_id WHERE o.usage_id=?');
@@ -79,13 +91,16 @@ final class FixedSettlement
         $rows = $q->fetchAll(PDO::FETCH_ASSOC);
         if (count($rows) !== 1) return false;
         $op = $rows[0];
+        $kind = $op['verification_kind'] ?? Kind::PHONE;
         return !$op['deleted'] && $op['tenant_id'] === $tenant &&
             $op['operation_type'] === 'verification' &&
             $op['operation_key'] === 'verification:' . $op['id'] &&
             $op['execution_id'] === 'verification:' . $op['id'] &&
             $op['source_type'] === 'Contact' && $op['source_id'] === $op['contact_id'] &&
-            (string) Amount::fromString($op['price_credits']) === '8.0000' &&
-            in_array($op['state'], ['admitted', 'claimed'], true) &&
+            in_array($kind, [Kind::PHONE, Kind::EMAIL], true) &&
+            (string) Amount::fromString($op['price_credits']) === Kind::price($kind) &&
+            ($reserved === null || $reserved === Kind::price($kind)) &&
+            in_array($op['state'], $kind === Kind::EMAIL ? ['admitted', 'claimed', 'awaiting'] : ['admitted', 'claimed'], true) &&
             $op['completed_at'] === null && $op['outcome'] === null &&
             $op['evidence_ciphertext'] === null && $op['evidence_hash'] === null &&
             $op['erased_at'] === null && $op['identity_ciphertext'] !== null;
@@ -121,9 +136,10 @@ final class FixedSettlement
         }
         $q = $pdo->prepare('SELECT * FROM enrichment_purchase WHERE usage_id=?'); $q->execute([$usage['id']]);
         $purchases = $q->fetchAll(PDO::FETCH_ASSOC); $purchased = Amount::fromString('0'); $current = null;
+        $verificationKind = Kind::PHONE;
         if ($usage['operation_type'] === 'verification') {
             if ($purchaseId !== null || $purchases !== [] || $usage['settled_credits'] !== null ||
-                (string) $previous !== '0.0000' || (string) Amount::fromString($reservation['reserved_credits']) !== '8.0000') {
+                (string) $previous !== '0.0000') {
                 throw new Conflict('Invalid verification settlement state.');
             }
             try {
@@ -131,11 +147,14 @@ final class FixedSettlement
             } catch (\LogicException $e) {
                 throw new Conflict($e->getMessage());
             }
-            $q = $pdo->prepare('SELECT completed_at FROM phone_verification_operation WHERE usage_id=? AND tenant_id=?');
+            $q = $pdo->prepare('SELECT completed_at, price_credits, verification_kind FROM phone_verification_operation WHERE usage_id=? AND tenant_id=?');
             $q->execute([$usage['id'], $tenant]);
-            if ($charge->compareTo($expected) !== 0 || $q->fetchColumn() !== $now) {
+            $receipt = $q->fetch(PDO::FETCH_ASSOC);
+            if ($charge->compareTo($expected) !== 0 || !$receipt || $receipt['completed_at'] !== $now ||
+                Amount::fromString($reservation['reserved_credits'])->compareTo(Amount::fromString($receipt['price_credits'])) !== 0) {
                 throw new Conflict('Verification settlement does not match its atomic operation record.');
             }
+            $verificationKind = $receipt['verification_kind'];
         } else {
             foreach ($purchases as $purchase) {
                 if ($purchase['deleted'] || $purchase['tenant_id'] !== $tenant || Amount::fromString($purchase['credits'])->compareTo(Amount::fromString('0')) <= 0) {
@@ -197,7 +216,7 @@ final class FixedSettlement
                 $left = $left->minus($take);
                 $unused = $amount->minus($take);
                 $expired = $purchaseId === null && $grant['expires_at'] !== null && $grant['expires_at'] <= $now ? $unused : Amount::fromString('0');
-                $debit = $this->post($pdo, $tenant, $usage['id'], $allocation, 'debit', $take, $now, $purchaseId, $usage['operation_type']);
+                $debit = $this->post($pdo, $tenant, $usage['id'], $allocation, 'debit', $take, $now, $purchaseId, $usage['operation_type'], $verificationKind);
                 $expiry = $this->post($pdo, $tenant, $usage['id'], $allocation, 'expiration', $expired, $now, null, $usage['operation_type']);
                 $remaining = Amount::fromString($grant['remaining_credits'])->minus($take)->minus($expired);
                 $held = Amount::fromString($grant['reserved_credits'])->minus($purchaseId === null ? $amount : $take);
@@ -231,12 +250,12 @@ final class FixedSettlement
             ->execute([(string) $balance, (string) $held, $now, $wallet['id']]);
     }
 
-    private function post(PDO $pdo, string $tenant, string $usage, array $allocation, string $type, Amount $amount, string $now, ?string $purchaseId = null, string $operationType = 'enrichment'): ?string
+    private function post(PDO $pdo, string $tenant, string $usage, array $allocation, string $type, Amount $amount, string $now, ?string $purchaseId = null, string $operationType = 'enrichment', string $verificationKind = Kind::PHONE): ?string
     {
         if ((string) $amount === '0.0000') return null;
         $id = RecordId::generate(); $key = 'settle:' . $allocation['id'];
         $formula = $operationType === 'verification' ? 'verification-fixed-v1' : 'enrichment-fixed-v1';
-        $debitReason = $operationType === 'verification' ? 'phone_identity_verification' : 'requested_product_purchase';
+        $debitReason = $operationType === 'verification' ? $verificationKind . '_verification' : 'requested_product_purchase';
         $pdo->prepare('INSERT INTO credit_transaction
             (id, tenant_id, type, idempotency_key, input_hash, credits, usage_id, grant_id, allocation_id, occurred_at, posted_at, evidence)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')->execute([$id, $tenant, $type, $key,

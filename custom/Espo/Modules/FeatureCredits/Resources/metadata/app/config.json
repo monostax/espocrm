@@ -1,5 +1,9 @@
 {
     "params": {
+        "featureCreditsEmailVerification": {
+            "level": "system",
+            "readOnly": true
+        },
         "featureCreditsAiCatalog": {
             "level": "system",
             "readOnly": true

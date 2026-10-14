@@ -46,7 +46,7 @@ class Access
         return !$this->user->isApi() && !$this->user->isPortal() && !$this->user->isSystem();
     }
 
-    public function contact(string $tenantId, string $contactId): Entity
+    public function contact(string $tenantId, string $contactId, string $kind = Kind::PHONE): Entity
     {
         $this->actorId();
         GrantInput::identity($tenantId);
@@ -54,9 +54,9 @@ class Access
         if ($this->acl->getPermissionLevel('useEnrichmentCredits') !== 'yes' ||
             !$this->tenants->canActForTenant($this->user, $tenantId) ||
             !$this->acl->checkScope('Contact', 'read') ||
-            !$this->acl->checkField('Contact', 'phoneNumber', 'read') ||
-            !$this->acl->checkField('Contact', 'firstName', 'read') ||
-            !$this->acl->checkField('Contact', 'lastName', 'read')) {
+            !$this->acl->checkField('Contact', $kind === Kind::EMAIL ? 'emailAddress' : 'phoneNumber', 'read') ||
+            ($kind === Kind::PHONE && (!$this->acl->checkField('Contact', 'firstName', 'read') ||
+            !$this->acl->checkField('Contact', 'lastName', 'read')))) {
             throw new Forbidden('Phone verification access required.');
         }
         $tenant = $this->entityManager->getEntityById('Tenant', $tenantId);
@@ -72,8 +72,14 @@ class Access
      * Extract readable Contact identity attributes (D14, Section 5).
      * Unreadable fields are never silently sent to Twilio.
      */
-    public function contactIdentity(Entity $contact, string $nowUtc): array
+    public function contactIdentity(Entity $contact, string $nowUtc, string $kind = Kind::PHONE): array
     {
+        if ($kind === Kind::EMAIL) {
+            // Email admission never reads name/DOB or requires edit access.
+            return ['name' => ['firstName' => '', 'lastName' => ''], 'nameReady' => true,
+                'dateOfBirth' => null, 'hasDateOfBirth' => false, 'dateOfBirthValid' => true,
+                'dateOfBirthReadable' => false, 'dateOfBirthEditable' => false];
+        }
         $firstName = $this->acl->checkField('Contact', 'firstName', 'read') ? $contact->get('firstName') : null;
         $lastName = $this->acl->checkField('Contact', 'lastName', 'read') ? $contact->get('lastName') : null;
         $fullName = $this->acl->checkField('Contact', 'name', 'read') ? $contact->get('name') : null;
@@ -134,8 +140,9 @@ class Access
      *
      * @return array{rawPhone: string, e164: ?string, phoneReason: ?string, ownershipRejected: bool}
      */
-    public function resolveSource(PDO $pdo, string $tenantId, Entity $contact, array $source): array
+    public function resolveSource(PDO $pdo, string $tenantId, Entity $contact, array $source, string $verificationKind = Kind::PHONE): array
     {
+        if ($verificationKind === Kind::EMAIL) return $this->resolveEmailSource($pdo, $tenantId, $contact, $source);
         $kind = $source['kind'] ?? null;
         if (!is_string($kind) || !in_array($kind, ['contact_phone', 'channel', 'purchased'], true)) {
             throw new InvalidArgumentException('Unsupported phone verification source.');
@@ -151,11 +158,53 @@ class Access
             $this->isPhoneOwnershipRejected($pdo, $tenantId, $contactId, $resolved['rawPhone'], $norm['e164']);
 
         return [
+            'value' => $norm['e164'],
             'rawPhone' => $resolved['rawPhone'],
             'e164' => $norm['e164'],
             'phoneReason' => $norm['reason'],
             'ownershipRejected' => $rejected,
         ];
+    }
+
+    private function resolveEmailSource(PDO $pdo, string $tenantId, Entity $contact, array $source): array
+    {
+        $kind = $source['kind'] ?? null;
+        if (!in_array($kind, ['contact_email', 'channel', 'purchased'], true)) {
+            throw new InvalidArgumentException('Unsupported email verification source.');
+        }
+        if ($kind === 'contact_email') {
+            if (array_diff(array_keys($source), ['key', 'kind'])) throw new InvalidArgumentException('Invalid email source.');
+            $raw = $contact->get('emailAddress');
+            if (!is_string($raw) || trim($raw) === '') throw new NotFound('Contact has no saved email.');
+            $resolved = ['rawPhone' => $raw, 'channelRejected' => false];
+        } elseif ($kind === 'channel') {
+            $resolved = $this->resolveChannelPhone($pdo, $tenantId, $contact->getId(), $source, Kind::EMAIL);
+        } else {
+            $resolved = $this->resolvePurchasedPhone($pdo, $tenantId, $contact->getId(), $source, Kind::EMAIL);
+        }
+        $email = Kind::email($resolved['rawPhone']);
+        return ['value' => $email, 'phoneReason' => $email === null ? 'invalid_email' : null,
+            'ownershipRejected' => $resolved['channelRejected'] || $this->isEmailOwnershipRejected($pdo, $tenantId, $contact->getId(), $email)];
+    }
+
+    public function isEmailOwnershipRejected(PDO $pdo, string $tenantId, string $contactId, ?string $email): bool
+    {
+        $q = $pdo->prepare("SELECT source_id FROM contact_channel_identity WHERE tenant_id = ? AND contact_id = ?
+            AND channel_type = 'email' AND ownership_status = 'rejected' AND deleted = FALSE");
+        $q->execute([$tenantId, $contactId]);
+        foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $source) {
+            if ($email !== null && Kind::email($source) === $email) return true;
+        }
+        return false;
+    }
+
+    public function authorizeEmailSource(PDO $pdo, string $tenantId, Entity $contact, array $source): void
+    {
+        // Contact/field access was checked by contact(). Clearing a primary value after
+        // dispatch does not revoke that authorization or change the frozen input.
+        if (($source['kind'] ?? null) === 'contact_email') return;
+        if (isset($source['index'])) unset($source['value']);
+        $this->resolveSource($pdo, $tenantId, $contact, $source, Kind::EMAIL);
     }
 
     /** @return array{rawPhone: string, channelRejected: bool} */
@@ -175,8 +224,10 @@ class Access
     }
 
     /** @return array{rawPhone: string, channelRejected: bool} */
-    private function resolveChannelPhone(PDO $pdo, string $tenantId, string $contactId, array $source): array
+    private function resolveChannelPhone(PDO $pdo, string $tenantId, string $contactId, array $source, string $kind = Kind::PHONE): array
     {
+        $channels = $kind === Kind::EMAIL ? ['email'] : ['whatsapp', 'sms'];
+        $normalize = $kind === Kind::EMAIL ? Kind::email(...) : BrazilianPhone::e164(...);
         if (array_diff(array_keys($source), ['key', 'kind', 'id', 'channelType', 'sourceId'])) {
             throw new InvalidArgumentException('Invalid channel source descriptor.');
         }
@@ -200,25 +251,25 @@ class Access
             $row = $q->fetch(PDO::FETCH_ASSOC);
         } else {
             $sourceId = $source['sourceId'] ?? null;
-            $channelType = $source['channelType'] ?? 'whatsapp';
+            $channelType = $source['channelType'] ?? $channels[0];
             if (!is_string($sourceId) || trim($sourceId) === '' ||
-                !is_string($channelType) || !in_array($channelType, ['whatsapp', 'sms'], true)) {
+                !is_string($channelType) || !in_array($channelType, $channels, true)) {
                 throw new InvalidArgumentException('Channel identity id or sourceId is required.');
             }
-            $targetNorm = BrazilianPhone::e164($sourceId);
+            $targetNorm = $normalize($sourceId);
             $q = $pdo->prepare("SELECT id, channel_type, source_id, ownership_status FROM contact_channel_identity
                 WHERE tenant_id = ? AND contact_id = ? AND channel_type = ? AND deleted = FALSE ORDER BY id");
             $q->execute([$tenantId, $contactId, $channelType]);
             $row = false;
             foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $candidate) {
                 if (trim((string) $candidate['source_id']) === trim($sourceId) ||
-                    ($targetNorm !== null && BrazilianPhone::e164($candidate['source_id']) === $targetNorm)) {
+                    ($targetNorm !== null && $normalize($candidate['source_id']) === $targetNorm)) {
                     $row = $candidate;
                     break;
                 }
             }
         }
-        if (!$row || !in_array($row['channel_type'], ['whatsapp', 'sms'], true)) {
+        if (!$row || !in_array($row['channel_type'], $channels, true)) {
             throw new NotFound('Unknown Contact phone channel identity.');
         }
         $entity = $this->entityManager->getEntityById('ContactChannelIdentity', $row['id']);
@@ -232,7 +283,7 @@ class Access
     }
 
     /** @return array{rawPhone: string, channelRejected: bool} */
-    private function resolvePurchasedPhone(PDO $pdo, string $tenantId, string $contactId, array $source): array
+    private function resolvePurchasedPhone(PDO $pdo, string $tenantId, string $contactId, array $source, string $kind = Kind::PHONE): array
     {
         if (array_diff(array_keys($source), ['key', 'kind', 'receiptId', 'index', 'value'])) {
             throw new InvalidArgumentException('Invalid purchased phone source descriptor.');
@@ -250,7 +301,7 @@ class Access
         if ($index !== null && (!is_int($index) || $index < 0 || $index > 100)) {
             throw new InvalidArgumentException('Invalid purchased phone index.');
         }
-        if ($value !== null && (!is_string($value) || trim($value) === '' || strlen($value) > 64)) {
+        if ($value !== null && (!is_string($value) || trim($value) === '' || strlen($value) > ($kind === Kind::EMAIL ? 254 : 64))) {
             throw new InvalidArgumentException('Invalid purchased phone value.');
         }
 
@@ -267,7 +318,7 @@ class Access
         $q->execute([$tenantId, $attempt['quote_id']]);
         $quote = $q->fetch(PDO::FETCH_ASSOC);
         if (!$quote || $quote['deleted'] || $quote['target_type'] !== 'Contact' || $quote['target_id'] !== $contactId ||
-            $attempt['product'] !== 'phone' || $attempt['state'] !== 'matched') {
+            $attempt['product'] !== ($kind === Kind::EMAIL ? 'email' : 'phone') || $attempt['state'] !== 'matched') {
             throw new Forbidden('Purchased phone result does not belong to this Contact.');
         }
         Quotes::decode($quote);

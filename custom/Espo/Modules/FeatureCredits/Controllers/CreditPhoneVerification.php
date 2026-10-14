@@ -10,6 +10,7 @@ use Espo\Core\Api\Response;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Modules\FeatureCredits\Verification\CustomerProjection;
 use Espo\Modules\FeatureCredits\Verification\Operations;
+use Espo\Modules\FeatureCredits\Verification\Kind;
 use InvalidArgumentException;
 use JsonException;
 use OverflowException;
@@ -19,8 +20,9 @@ use stdClass;
  * Authenticated customer endpoints for phone identity verification (D10, D23, Section 5).
  * Registered with CustomerResponse middleware for private/no-store and sanitized errors.
  */
-final class CreditPhoneVerification
+class CreditPhoneVerification
 {
+    protected const KIND = Kind::PHONE;
     public function __construct(private Operations $operations) {}
 
     public function postActionContext(Request $request, Response $response): object
@@ -28,7 +30,7 @@ final class CreditPhoneVerification
         $response->setHeader('Cache-Control', 'private, no-store');
         $input = $this->parseJsonBody($request);
         try {
-            return (object) CustomerProjection::context($this->operations->context($input));
+            return (object) CustomerProjection::context($this->operations->context($input, static::KIND));
         } catch (InvalidArgumentException | JsonException | OverflowException | MathException $e) {
             throw new BadRequest($e->getMessage());
         }
@@ -39,7 +41,7 @@ final class CreditPhoneVerification
         $response->setHeader('Cache-Control', 'private, no-store');
         $input = $this->parseJsonBody($request);
         try {
-            return (object) CustomerProjection::status($this->operations->start($input));
+            return (object) CustomerProjection::status($this->operations->start($input, static::KIND));
         } catch (InvalidArgumentException | JsonException | OverflowException | MathException $e) {
             throw new BadRequest($e->getMessage());
         }
@@ -49,7 +51,7 @@ final class CreditPhoneVerification
     {
         $response->setHeader('Cache-Control', 'private, no-store');
         try {
-            return (object) CustomerProjection::status($this->operations->status($request->getQueryParams()));
+            return (object) CustomerProjection::status($this->operations->status($request->getQueryParams(), static::KIND));
         } catch (InvalidArgumentException $e) {
             throw new BadRequest($e->getMessage());
         }
@@ -59,7 +61,7 @@ final class CreditPhoneVerification
     {
         $response->setHeader('Cache-Control', 'private, no-store');
         try {
-            return (object) CustomerProjection::history($this->operations->history($request->getQueryParams()));
+            return (object) CustomerProjection::history($this->operations->history($request->getQueryParams(), static::KIND));
         } catch (InvalidArgumentException $e) {
             throw new BadRequest($e->getMessage());
         }

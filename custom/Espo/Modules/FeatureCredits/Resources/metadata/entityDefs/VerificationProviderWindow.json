@@ -1,0 +1,7 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "windowAt": {"type": "datetime", "notNull": true},
+        "requestCount": {"type": "int", "notNull": true, "default": 0}
+    }
+}

@@ -34,7 +34,7 @@ final class DispatchPhoneVerification implements JobDataLess
         foreach ($this->execution->due() as $row) {
             try {
                 $this->execution->recover($row['tenant_id'], $row['id']);
-                if ($row['state'] === 'admitted') {
+                if (in_array($row['state'], ['admitted', 'awaiting', 'claimed'], true)) {
                     $this->scheduler->create()
                         ->setClassName(RunPhoneVerification::class)
                         ->setData(['tenantId' => $row['tenant_id'], 'operationId' => $row['id']])

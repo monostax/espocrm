@@ -43,6 +43,7 @@ in internal logs. Successful responses retain private/no-store caching.
 | Credits/context, CreditWorkspace, /conversation | Explicit tenant/membership, balance and operation-state summaries; conversation records retain existing ACL checks. |
 | CreditBalance, CreditHistory, CreditGrants, CreditReservations, CreditRequests, CreditOperations | Existing explicit numeric/date/state projections. Stored pricing snapshots, evidence, external references and provider bindings are read only for internal checks, never returned. |
 | CreditOperationSource | Explicit source scope/ID/name and internal request identity after source-record and tenant checks. No evidence object returned. |
+| CreditPhoneVerification, CreditEmailVerification | Explicit context/start/status/history projections after Contact and kind-specific field/source authorization. Email returns `verificationKind: email_deliverability`, canonical email, deliverability outcome, score, allowlisted flags, dates, and fixed credits. Phone retains its existing contract. No supplier/task IDs, raw responses, provider-credit balances, policy hashes, or dispatch claims. Email financial operation/reservation reports include the neutral verification kind. |
 | AiUsage/context, /summary, /detail | Model names removed from activity projections for every role. Analytics groups only outcomes/time and customer-selected operational dimensions; model grouping is removed from API and UI. Billing-model enums describe the commercial charging method, not an AI supplier/model. |
 
 ## Operator and machine surfaces
@@ -52,6 +53,9 @@ in internal logs. Successful responses retain private/no-store caching.
   tenant financial-admin access/membership used by customer endpoints. Customer
   checkout no longer renders routing/override controls. Previously saved operator
   override commands remain recoverable with the existing instance-admin check.
+- CreditPhoneVerificationConfiguration and CreditEmailVerificationConfiguration are
+  independently gated instance-administrator surfaces. Their secrets stay in server
+  environment configuration. See [verification operations](Verification/README.md).
 - CreditMigration and CreditReversals require instance administrators. CreditDispatch
   and CreditExecution verify timestamped HMAC signatures; payment webhooks verify the
   originating integration's access token. They are not customer receipt contracts.

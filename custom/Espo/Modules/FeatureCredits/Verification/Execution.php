@@ -20,7 +20,7 @@ use Espo\ORM\EntityManager;
 use PDO;
 
 /**
- * At-most-once Twilio Lookup Identity Match dispatch, atomic settlement, deadline recovery,
+ * At-most-once verification submission, email status polling, atomic settlement, deadline recovery,
  * and 90-day retention cleanup (D11–D12, D16, D19–D21, D24–D25).
  */
 class Execution
@@ -36,6 +36,7 @@ class Execution
         private Config $config,
         private Clock $clock,
         private ?Log $log = null,
+        private ?BounceBanLookup $emailProvider = null,
     ) {}
 
     /**
@@ -52,7 +53,10 @@ class Execution
             return;
         }
         try {
-            $result = $this->provider->verify($claim['identity'], $timeoutMs);
+            $result = $claim['kind'] === Kind::EMAIL
+                ? ($this->emailProvider ?? new BounceBanLookup(new BounceBanCredentials(), new BounceBanTransport()))
+                    ->verify($claim['identity']['email'], $claim['taskId'], $timeoutMs)
+                : $this->provider->verify($claim['identity'], $timeoutMs);
         } catch (\Throwable) {
             $result = VerificationResult::failed('provider_exception');
         }
@@ -72,6 +76,8 @@ class Execution
             $tenantId,
             function (PDO $pdo, array $wallet, string $now) use ($tenantId, $operationId, $dispatch): ?array {
                 [$op, $usage, $hold] = $this->loadLocked($pdo, $tenantId, $operationId);
+                $kind = $op['verification_kind'] ?? Kind::PHONE;
+                $hasTask = $kind === Kind::EMAIL && $op['supplier_task_ciphertext'] !== null;
                 if (in_array($op['state'], ['completed', 'waived'], true) || $usage['state'] !== 'admitted') {
                     return null;
                 }
@@ -85,8 +91,12 @@ class Execution
                 // Already claimed operations are never resent (D12).
                 // If their lease or deadline has expired, waive and close at zero.
                 if ($op['state'] === 'claimed') {
-                    if ($op['deadline_at'] <= $now || ($op['lease_until'] !== null && $op['lease_until'] <= $now)) {
+                    if ($op['deadline_at'] <= $now || (!$hasTask && $op['lease_until'] !== null && $op['lease_until'] <= $now)) {
                         $this->waiveLocked($pdo, $wallet, $now, $op, $usage, $hold, 'unavailable', 'deadline');
+                    } elseif ($hasTask && $op['lease_until'] !== null && $op['lease_until'] <= $now) {
+                        // A lost read-only status response can be recovered; a lost submission never can.
+                        $pdo->prepare("UPDATE phone_verification_operation SET state = 'awaiting', claim_token = NULL, lease_until = NULL WHERE id = ?")
+                            ->execute([$operationId]);
                     }
                     return null;
                 }
@@ -97,8 +107,8 @@ class Execution
                 }
 
                 // D20, D25: The dispatch kill switch blocks unclaimed work; capability changes before claim waive.
-                $cap = $this->capability->inspect($tenantId);
-                if (!$cap['available'] || $cap['policyVersion'] !== $op['policy_version']) {
+                $cap = $this->capability->inspect($tenantId, $kind);
+                if (!$hasTask && (!$cap['available'] || $cap['policyVersion'] !== $op['policy_version'])) {
                     $reason = $cap['reason'] === 'kill_switch' ? 'kill_switch' : 'capability_changed';
                     $this->waiveLocked($pdo, $wallet, $now, $op, $usage, $hold, 'unavailable', $reason);
                     return null;
@@ -107,7 +117,8 @@ class Execution
                 $snapshotIdentity = $this->decryptSnapshot($op);
 
                 // Revalidate original actor authorization, rejection status, and unchanged pre-dispatch inputs (D19, D21, D24).
-                $precheck = $this->preDispatchCheck($pdo, $tenantId, $op, $snapshotIdentity, $now);
+                $precheck = $hasTask ? $this->deliveryAuthorizationCheck($pdo, $tenantId, $op, $snapshotIdentity)
+                    : $this->preDispatchCheck($pdo, $tenantId, $op, $snapshotIdentity, $now);
                 if ($precheck !== 'ok') {
                     $this->waiveLocked($pdo, $wallet, $now, $op, $usage, $hold, 'cancelled', $precheck);
                     return null;
@@ -117,14 +128,21 @@ class Execution
                     return null;
                 }
 
+                if ($hasTask && ((int) $op['poll_count'] >= 10 || ($op['next_poll_at'] !== null && $op['next_poll_at'] > $now))) {
+                    return null;
+                }
+                if ($kind === Kind::EMAIL && !ProviderLimit::claim($pdo, $now, $hasTask)) return null;
+
                 $token = bin2hex(random_bytes(24));
                 $leaseUntil = min(Operations::after($now, 30), $op['deadline_at']);
                 $pdo->prepare("UPDATE phone_verification_operation
-                    SET state = 'claimed', claim_token = ?, claimed_at = ?, lease_until = ?
+                    SET state = 'claimed', claim_token = ?, claimed_at = COALESCE(claimed_at, ?), lease_until = ?,
+                        poll_count = poll_count + ?
                     WHERE id = ? AND tenant_id = ?")->execute([
                         $token,
                         $now,
                         $leaseUntil,
+                        $hasTask ? 1 : 0,
                         $operationId,
                         $tenantId,
                     ]);
@@ -133,6 +151,8 @@ class Execution
                     'id' => $operationId,
                     'token' => $token,
                     'identity' => $snapshotIdentity,
+                    'kind' => $kind,
+                    'taskId' => $hasTask ? $this->crypt->decrypt($op['supplier_task_ciphertext']) : null,
                 ];
             },
         );
@@ -161,7 +181,9 @@ class Execution
                     return null;
                 }
                 $snapshotIdentity = $this->decryptSnapshot($op);
-                $precheck = $this->preDispatchCheck($pdo, $tenantId, $op, $snapshotIdentity, $now);
+                $hasTask = ($op['verification_kind'] ?? Kind::PHONE) === Kind::EMAIL && $op['supplier_task_ciphertext'] !== null;
+                $precheck = $hasTask ? $this->deliveryAuthorizationCheck($pdo, $tenantId, $op, $snapshotIdentity)
+                    : $this->preDispatchCheck($pdo, $tenantId, $op, $snapshotIdentity, $now);
                 if ($precheck !== 'ok') {
                     $this->waiveLocked($pdo, $wallet, $now, $op, $usage, $hold, 'cancelled', $precheck);
                     return null;
@@ -175,10 +197,10 @@ class Execution
     }
 
     /**
-     * Persist provider result and atomically settle 8.0000 on completed checks or 0.0000 on failed/waived checks.
+     * Publish the result and atomically settle the kind-specific price; failed/waived checks cost zero.
      * Late results after closure are ignored and never reopen an operation (D11–D12, D19, D24).
      */
-    public function record(string $tenantId, string $operationId, string $token, VerificationResult $result): void
+    public function record(string $tenantId, string $operationId, string $token, VerificationResult | EmailResult $result): void
     {
         GrantInput::identity($tenantId);
         GrantInput::identity($operationId);
@@ -209,7 +231,27 @@ class Execution
                     return;
                 }
 
-                if (!$result->billable || $result->fieldOutcomes === null) {
+                $kind = $op['verification_kind'] ?? Kind::PHONE;
+                $emailResult = $result instanceof EmailResult;
+                if ($emailResult && $kind === Kind::EMAIL && $result->status === 'pending') {
+                    if ($op['supplier_task_ciphertext'] !== null &&
+                        !hash_equals($this->crypt->decrypt($op['supplier_task_ciphertext']), $result->taskId ?? '')) {
+                        $this->waiveLocked($pdo, $wallet, $now, $op, $usage, $hold, 'failed', 'provider_failed');
+                        return;
+                    }
+                    $next = Operations::after($now, 30);
+                    if ($result->tryAgainAt !== null) {
+                        $next = max($next, gmdate('Y-m-d H:i:s', $result->tryAgainAt));
+                    }
+                    $pdo->prepare("UPDATE phone_verification_operation SET state = 'awaiting', supplier_task_ciphertext = ?,
+                        next_poll_at = ?, claim_token = NULL, lease_until = NULL WHERE id = ? AND tenant_id = ?")
+                        ->execute([$this->crypt->encrypt($result->taskId), min($next, $op['deadline_at']), $operationId, $tenantId]);
+                    return;
+                }
+                $valid = $emailResult
+                    ? $kind === Kind::EMAIL && $result->status === 'completed' && $result->evidence !== null
+                    : $kind === Kind::PHONE && $result->billable && $result->fieldOutcomes !== null;
+                if (!$valid) {
                     $this->waiveLocked(
                         $pdo,
                         $wallet,
@@ -218,13 +260,13 @@ class Execution
                         $usage,
                         $hold,
                         'failed',
-                        $result->failureReason ?? 'provider_failed',
+                        $emailResult ? 'provider_failed' : ($result->failureReason ?? 'provider_failed'),
                     );
                     return;
                 }
 
                 // D19: Identity inputs were frozen at dispatch; later edits do not cancel a completed check.
-                $evidencePayload = [
+                $evidencePayload = $emailResult ? $result->evidence : [
                     'matchedFields' => array_values($result->matchedFields),
                     'fieldOutcomes' => $result->fieldOutcomes,
                 ];
@@ -232,6 +274,15 @@ class Execution
                 $evidenceHash = Operations::evidenceHash($tenantId, $operationId, $result->outcome, $evidencePayload);
                 $freshUntil = Operations::after($now, CapabilityGate::FRESH_REUSE_SECONDS);
                 $retentionExpiresAt = Operations::after($now, CapabilityGate::RETENTION_SECONDS);
+                if ($emailResult) {
+                    if ($op['supplier_task_ciphertext'] !== null &&
+                        !hash_equals($this->crypt->decrypt($op['supplier_task_ciphertext']), $result->taskId ?? '')) {
+                        $this->waiveLocked($pdo, $wallet, $now, $op, $usage, $hold, 'failed', 'provider_failed');
+                        return;
+                    }
+                    $pdo->prepare('UPDATE phone_verification_operation SET supplier_task_ciphertext = ? WHERE id = ?')
+                        ->execute([$this->crypt->encrypt($result->taskId), $operationId]);
+                }
 
                 $pdo->prepare("UPDATE phone_verification_operation
                     SET state = 'completed', outcome = ?, failure_reason = NULL, completed_at = ?,
@@ -253,7 +304,7 @@ class Execution
                     $now,
                     $usage,
                     $hold,
-                    Amount::fromString(CapabilityGate::PRICE_CREDITS),
+                    Amount::fromString(Kind::price($kind)),
                 );
             },
         );
@@ -275,13 +326,15 @@ class Execution
         if ($limit < 1 || $limit > 100) {
             throw new \InvalidArgumentException('Invalid phone verification job batch.');
         }
-        $q = $this->entityManager->getPDO()->query(
+        $q = $this->entityManager->getPDO()->prepare(
             "SELECT o.id, o.tenant_id, o.state FROM phone_verification_operation o
              JOIN credit_usage u ON u.id = o.usage_id AND u.tenant_id = o.tenant_id
              WHERE o.deleted = FALSE AND u.deleted = FALSE AND u.state = 'admitted'
-             AND o.state IN ('admitted', 'claimed')
+              AND o.state IN ('admitted', 'claimed', 'awaiting')
+              AND (o.state <> 'awaiting' OR o.next_poll_at <= ? OR o.deadline_at <= ?)
              ORDER BY o.admitted_at, o.id LIMIT " . $limit
         );
+        $q->execute([$this->clock->now(), $this->clock->now()]);
         return $q->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -293,9 +346,9 @@ class Execution
         $now = $this->clock->now();
         $this->entityManager->getPDO()->prepare(
             'UPDATE phone_verification_operation
-             SET identity_ciphertext = NULL, evidence_ciphertext = NULL, erased_at = COALESCE(erased_at, ?)
+             SET identity_ciphertext = NULL, evidence_ciphertext = NULL, supplier_task_ciphertext = NULL, erased_at = COALESCE(erased_at, ?)
              WHERE retention_expires_at <= ?
-             AND (identity_ciphertext IS NOT NULL OR evidence_ciphertext IS NOT NULL)'
+             AND (identity_ciphertext IS NOT NULL OR evidence_ciphertext IS NOT NULL OR supplier_task_ciphertext IS NOT NULL)'
         )->execute([$now, $now]);
     }
 
@@ -314,7 +367,7 @@ class Execution
         $staleCutoff = Operations::after($now, -360);
         $q = $pdo->prepare(
             "SELECT COUNT(*) FROM phone_verification_operation
-             WHERE deleted = FALSE AND state IN ('admitted', 'claimed') AND admitted_at <= ?"
+             WHERE deleted = FALSE AND state IN ('admitted', 'claimed', 'awaiting') AND admitted_at <= ?"
         );
         $q->execute([$staleCutoff]);
         $staleOpenCount = (int) $q->fetchColumn();
@@ -331,10 +384,10 @@ class Execution
         }
 
         $q = $pdo->query(
-            'SELECT state, outcome, failure_reason, COUNT(*) AS count
+            'SELECT verification_kind, state, outcome, failure_reason, COUNT(*) AS count, SUM(poll_count) AS poll_count
              FROM phone_verification_operation
              WHERE deleted = FALSE
-             GROUP BY state, outcome, failure_reason'
+             GROUP BY verification_kind, state, outcome, failure_reason'
         );
         $breakdown = $q->fetchAll(PDO::FETCH_ASSOC);
 
@@ -410,6 +463,11 @@ class Execution
         }
         try {
             $access = $this->actors->forActor($op['actor_id']);
+            if (($op['verification_kind'] ?? Kind::PHONE) === Kind::EMAIL) {
+                $contact = $access->contact($tenantId, $op['contact_id'], Kind::EMAIL);
+                $resolved = $access->resolveSource($pdo, $tenantId, $contact, $snapshot['source'], Kind::EMAIL);
+                return $resolved['value'] === $snapshot['email'] ? 'ok' : 'identity_changed';
+            }
             $contact = $access->contact($tenantId, $op['contact_id']);
             $identity = $access->contactIdentity($contact, $now);
             if (!$identity['nameReady'] || !$identity['dateOfBirthValid']) {
@@ -447,6 +505,12 @@ class Execution
     {
         try {
             $access = $this->actors->forActor($op['actor_id']);
+            if (($op['verification_kind'] ?? Kind::PHONE) === Kind::EMAIL) {
+                $contact = $access->contact($tenantId, $op['contact_id'], Kind::EMAIL);
+                $access->authorizeEmailSource($pdo, $tenantId, $contact, $snapshot['source']);
+                return $access->isEmailOwnershipRejected($pdo, $tenantId, $op['contact_id'], $snapshot['email'])
+                    ? 'ownership_rejected' : 'ok';
+            }
             $contact = $access->contact($tenantId, $op['contact_id']);
             $identity = $access->contactIdentity($contact, $this->clock->now());
             if (($snapshot['dateOfBirth'] ?? null) !== null && !$identity['dateOfBirthReadable']) {
@@ -520,7 +584,8 @@ class Execution
         if ($erase) {
             $pdo->prepare("UPDATE phone_verification_operation
                 SET state = 'waived', outcome = ?, failure_reason = ?, completed_at = ?,
-                    identity_ciphertext = NULL, evidence_ciphertext = NULL, erased_at = COALESCE(erased_at, ?)
+                    identity_ciphertext = NULL, evidence_ciphertext = NULL, supplier_task_ciphertext = NULL,
+                    evidence_hash = NULL, fresh_until = NULL, erased_at = COALESCE(erased_at, ?)
                 WHERE id = ? AND tenant_id = ?")->execute([
                     $outcome,
                     $failureReason,
@@ -532,11 +597,13 @@ class Execution
         } else {
             $pdo->prepare("UPDATE phone_verification_operation
                 SET state = 'waived', outcome = ?, failure_reason = ?, completed_at = ?,
-                    evidence_ciphertext = NULL, evidence_hash = NULL, fresh_until = NULL
+                    evidence_ciphertext = NULL, evidence_hash = NULL, fresh_until = NULL,
+                    supplier_task_ciphertext = NULL, retention_expires_at = ?
                 WHERE id = ? AND tenant_id = ?")->execute([
                     $outcome,
                     $failureReason,
                     $now,
+                    Operations::after($now, CapabilityGate::RETENTION_SECONDS),
                     $op['id'],
                     $op['tenant_id'],
                 ]);
