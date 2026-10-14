@@ -75,6 +75,12 @@ final class Quotes
             try {
                 $target = $this->access->target($input);
                 $plan = $this->previewPlan($input, $target);
+                if (!$input->isDiscovery()) {
+                    $available = $this->availability->inspect($params['tenantId'], $params['targetType'],
+                        $input->data['products'], $plan['identity'], true);
+                    $row['providers'] = SelectedProviders::options($input->data['products'], $available,
+                        $this->catalog->current()->ratesFor($params['targetType']), $plan['routes']);
+                }
                 $row['available'] = (bool) array_filter($plan['routes']);
                 $row['reason'] = $row['available'] ? null : 'noRoute';
                 $row['startingCredits'] = $row['available'] ? $plan['maximum'] : null;
@@ -169,8 +175,9 @@ final class Quotes
             if ($row['confirmed_at'] === null) throw new Conflict('Confirm enrichment terms before admission.');
             $identity = $input->isDiscovery() ? $this->access->discoveryIdentity($input, $target) : $this->access->identity($target);
             $availability = $this->availability->inspect($tenantId, $input->data['targetType'],
-                $input->data['products'], $identity, $input->data['waterfall']);
-            if (!$input->isDiscovery() && !$input->data['waterfall']) $availability = array_intersect_key($availability, ['apollo' => true]);
+                $input->data['products'], $identity, isset($input->data['sources']) || $input->data['waterfall']);
+            if (isset($input->data['sources'])) $availability = SelectedProviders::availability($input->data['sources'], $availability);
+            elseif (!$input->isDiscovery() && !$input->data['waterfall']) $availability = array_intersect_key($availability, ['apollo' => true]);
             if ($input->isDiscovery()) $availability = array_intersect_key($availability, $saved['availability']);
             if ($input->isDiscovery() && self::hash($this->access->discoveryPermissions($input, $target)) !== self::hash($saved['permissions'])) {
                 throw new Conflict('Discovery permissions changed; request and confirm a new quote.');
@@ -224,6 +231,13 @@ final class Quotes
                 'permissions' => $this->access->discoveryPermissions($input, $target), ...$plan];
         }
         $identity = $this->access->identity($target);
+        if (isset($request['sources'])) {
+            $availability = SelectedProviders::availability($request['sources'], $this->availability->inspect(
+                $request['tenantId'], $request['targetType'], $request['products'], $identity, true));
+            return ['request' => $request, 'actorId' => $this->access->actorId(), 'identity' => $identity,
+                'policyId' => $card->id, 'routingPolicy' => $card->definition['routingPolicy'], 'availability' => $availability,
+                ...SelectedProviders::plan($request['products'], $availability, $card->ratesFor($request['targetType']))];
+        }
         $availability = $this->availability->inspect($request['tenantId'], $request['targetType'], $request['products'], $identity, $request['waterfall']);
         if (!$request['waterfall']) $availability = array_intersect_key($availability, ['apollo' => true]);
         $allRates = $card->ratesFor($request['targetType']);
@@ -316,6 +330,7 @@ final class Quotes
                 $children = array_values(array_filter($attempts,static fn ($a) => $a['product'] === $product));
                 $states = array_column($children,'state');
                 $state = match (true) {
+                    isset($snapshot['request']['sources']) && $hold['state'] === 'held' => $children ? 'running' : 'queued',
                     in_array('matched',$states,true) => $hold['state'] === 'settled' ? 'purchased' : 'pending_purchase',
                     in_array('reused',$states,true) => 'purchased',
                     in_array('waived',$states,true) => 'waived',
@@ -359,6 +374,7 @@ final class Quotes
         return ['id' => $row['id'], 'tenantId' => $snapshot['request']['tenantId'],
             'targetType' => $snapshot['request']['targetType'], 'targetId' => $snapshot['request']['targetId'],
             'products' => $snapshot['request']['products'], 'waterfall' => $snapshot['request']['waterfall'],
+            ...(isset($snapshot['request']['sources']) ? ['sources' => $snapshot['request']['sources']] : []),
             'refresh' => $snapshot['request']['refresh'], 'budget' => $snapshot['budget'],
             'maximum' => $snapshot['maximum'], 'routes' => $snapshot['routes'], 'policyId' => $snapshot['policyId'],
             'createdAt' => $row['created_at'], 'confirmedAt' => $row['confirmed_at'],

@@ -14,7 +14,7 @@ final class CustomerProjection
         return array_intersect_key($value, array_flip($keys));
     }
 
-    /** Number sources by first appearance in the original quote, never by a global alias. */
+    /** Explicit selections keep their preview IDs; historical quotes retain first-appearance numbering. */
     public static function source(array $terms, string $provider): int
     {
         $sources = [];
@@ -25,6 +25,11 @@ final class CustomerProjection
         }
         $index = array_search($provider, $sources, true);
         if ($index === false) throw new Conflict('Enrichment source is unavailable.');
+        if (isset($terms['request']['sources']) || isset($terms['sources'])) {
+            $source = array_search($provider, SelectedProviders::SOURCES, true);
+            if ($source === false) throw new Conflict('Unknown selected enrichment source.');
+            return $source;
+        }
         return $index + 1;
     }
 
@@ -44,7 +49,7 @@ final class CustomerProjection
     {
         $result = self::only($receipt, ['id', 'tenantId', 'targetType', 'targetId', 'products', 'waterfall',
             'refresh', 'budget', 'maximum', 'createdAt', 'confirmedAt', 'state', 'confirmable', 'admission',
-            'dispatchAllowed', 'usageId', 'reservationId', 'reservedCredits', 'admittedAt', 'count']);
+            'dispatchAllowed', 'usageId', 'reservationId', 'reservedCredits', 'admittedAt', 'count', 'sources']);
         $result['routes'] = [];
         foreach ($receipt['routes'] as $product => $steps) {
             $result['routes'][$product] = array_map(static fn (array $step): array => [
