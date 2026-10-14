@@ -756,7 +756,10 @@ class Service implements Crud,
             }
         }
 
-        if ($params->getVersionNumber() !== null) {
+        if (
+            $params->getVersionNumber() !== null &&
+            $this->metadata->get(['entityDefs', $this->entityType, 'optimisticConcurrencyControl'])
+        ) {
             $this->processConcurrencyControl($entity, $params->getVersionNumber());
         }
 

@@ -7,7 +7,7 @@ require __DIR__ . '/../../../vendor/autoload.php';
 
 use Espo\Core\Application;
 use Espo\Core\Application\ApplicationParams;
-use Espo\Core\Exceptions\Conflict;
+use Espo\Core\Record\UpdateParams;
 use Espo\Core\Utils\File\Manager;
 use Espo\Modules\FeatureLiveRecords\Persistence\Observer;
 
@@ -66,8 +66,9 @@ $check($types === \Espo\Modules\FeatureLiveRecords\Scope::RECORD_TYPES, 'Registr
 foreach ($types as $type) {
     $check($metadata->get(['entityDefs', $type, 'mutationObserverClassName']) === Observer::class,
         "$type observer missing.");
-    $check($em->getMetadata()->get($type, 'concurrencyAttribute') === 'versionNumber',
-        "$type atomic version mapping missing.");
+    $check($em->getMetadata()->get($type, 'versionAttribute') === 'versionNumber',
+        "$type revision mapping missing.");
+    $check(!$em->getMetadata()->get($type, 'concurrencyAttribute'), "$type unexpectedly rejects stale saves.");
     $em->getRDBRepository($type); // Resolve real repository + observer dependencies through the application factory.
 }
 fwrite(STDOUT, 'Merged live record types: ' . json_encode($types, JSON_THROW_ON_ERROR) . "\n");
@@ -85,13 +86,40 @@ $check($latestAccount->get('versionNumber') > $originalAccountVersion, 'Native r
 $check($latestContact->get('versionNumber') > $originalContactVersion, 'Native relation did not advance foreign version.');
 $check($relation->isRelated($contact), 'Native relation was not persisted.');
 
-try {
-    $account->set('name', 'stale overwrite');
-    $em->saveEntity($account);
-    throw new RuntimeException('Stale object overwrote a native relation version.');
-} catch (Conflict) {
-    $checks++;
+$account->set('name', 'stale snapshot edit');
+$em->saveEntity($account);
+$check($em->getEntityById('Account', $account->getId())->get('name') === 'stale snapshot edit',
+    'Stale edit did not persist.');
+$check($account->get('versionNumber') > $latestAccount->get('versionNumber'),
+    'Stale edit did not advance the stored revision.');
+$check($relation->isRelated($contact), 'Stale edit removed an unrelated native relation.');
+
+$contactService = $app->getContainer()->get('recordServiceContainer')->get('Contact');
+$contactService->update($contact->getId(), (object) ['lastName' => 'Stale header edit'],
+    UpdateParams::create()->withVersionNumber($originalContactVersion)->withRequiredVersion());
+$check($em->getEntityById('Contact', $contact->getId())->get('lastName') === 'Stale header edit',
+    'Ordinary Contact edit with a stale version header did not persist.');
+$contactService->update($contact->getId(), (object) ['description' => 'No version needed'],
+    UpdateParams::create()->withRequiredVersion());
+$check($em->getEntityById('Contact', $contact->getId())->get('description') === 'No version needed',
+    'Ordinary Contact edit required a version header.');
+
+$contactService->update($contact->getId(), (object) ['channelIdentitiesData' => [
+    (object) ['channelType' => 'linkedin', 'sourceId' => 'https://www.linkedin.com/in/live-record-test', 'isPrimary' => true],
+    (object) ['channelType' => 'whatsapp', 'sourceId' => '+5511999990001', 'isPrimary' => true],
+    (object) ['channelType' => 'email', 'sourceId' => 'primary@example.test', 'isPrimary' => true],
+]]);
+$items = [];
+foreach ($em->getRDBRepository('ContactChannelIdentity')->where(['contactId' => $contact->getId()])->find() as $item) {
+    $items[] = (object) ['id' => $item->getId(), 'channelType' => $item->get('channelType'),
+        'sourceId' => $item->get('sourceId'), 'isPrimary' => $item->get('isPrimary')];
 }
+$items[] = (object) ['channelType' => 'email', 'sourceId' => 'second@example.test', 'isPrimary' => false];
+$contactService->update($contact->getId(), (object) ['channelIdentitiesData' => $items]);
+$check($em->getRDBRepository('ContactChannelIdentity')->where(['contactId' => $contact->getId()])->count() === 4,
+    'Adding a channel identity did not preserve the submitted list.');
+$check($em->getEntityById('Contact', $contact->getId())->get('emailAddress') === 'primary@example.test',
+    'Adding a secondary email changed the primary address.');
 
 $pdo = $em->getPDO();
 $before = (int) $pdo->query('SELECT COUNT(*) FROM live_record_outbox')->fetchColumn();

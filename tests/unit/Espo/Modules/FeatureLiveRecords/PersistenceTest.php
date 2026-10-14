@@ -44,7 +44,7 @@ final class PersistenceTest extends TestCase
             tenant_id VARCHAR(64), name VARCHAR(255), version_number INTEGER DEFAULT 0)');
         $this->pdo->exec('CREATE TABLE live_record_outbox (id VARCHAR(17) PRIMARY KEY, tenant_id VARCHAR(64),
             intent TEXT, created_at TIMESTAMP, due_at TIMESTAMP, attempts INTEGER)');
-        $defs = ['concurrencyAttribute' => 'versionNumber', 'attributes' => [
+        $defs = ['versionAttribute' => 'versionNumber', 'attributes' => [
             'id' => ['type' => 'varchar'], 'deleted' => ['type' => 'bool'],
             'tenantId' => ['type' => 'varchar'], 'name' => ['type' => 'varchar'],
             'versionNumber' => ['type' => 'int'],
@@ -85,23 +85,46 @@ final class PersistenceTest extends TestCase
         $this->repository->save($record, ['skipAll' => true]);
     }
 
-    public function testCompetingSnapshotsCannotOverwriteAndSkipHooksCannotBypassOutbox(): void
+    public function testCompetingSnapshotsUseLastWriteWinsAndSkipHooksCannotBypassOutbox(): void
     {
         $this->createRecord();
         $first = $this->repository->getById('record');
         $second = $this->repository->getById('record');
-        $first->set('name', 'winner');
+        $first->set('name', 'first edit');
         $this->repository->save($first, ['skipAll' => true]);
-        $second->set('name', 'loser');
-        try {
-            $this->repository->save($second, ['skipAll' => true]);
-            self::fail('Competing save was accepted.');
-        } catch (Conflict $e) {
-            self::assertStringNotContainsString('winner', $e->getMessage());
-        }
-        self::assertSame('winner', $this->repository->getById('record')->get('name'));
-        self::assertSame(2, $this->repository->getById('record')->get('versionNumber'));
-        self::assertSame(2, (int) $this->pdo->query('SELECT COUNT(*) FROM live_record_outbox')->fetchColumn());
+        $second->set('name', 'last edit');
+        $this->repository->save($second, ['skipAll' => true]);
+        self::assertSame('last edit', $this->repository->getById('record')->get('name'));
+        self::assertSame(3, $second->get('versionNumber'));
+        self::assertSame(3, $this->repository->getById('record')->get('versionNumber'));
+        self::assertSame(3, (int) $this->pdo->query('SELECT COUNT(*) FROM live_record_outbox')->fetchColumn());
+    }
+
+    public function testStaleSavePreservesAttributesChangedByAnotherWriter(): void
+    {
+        $this->createRecord();
+        $first = $this->repository->getById('record');
+        $second = $this->repository->getById('record');
+        $first->set('tenantId', 'tenant-b');
+        $this->repository->save($first);
+        $second->set('name', 'last edit');
+        $this->repository->save($second);
+        $latest = $this->repository->getById('record');
+        self::assertSame('tenant-b', $latest->get('tenantId'));
+        self::assertSame('last edit', $latest->get('name'));
+        self::assertSame(3, $latest->get('versionNumber'));
+    }
+
+    public function testPartialEntitySaveAdvancesTheStoredRevision(): void
+    {
+        $this->createRecord();
+        $record = $this->factory->create('LiveTestRecord');
+        $record->set('id', 'record');
+        $record->setAsNotNew();
+        $record->set('name', 'partial edit');
+        $this->repository->save($record, ['skipAll' => true]);
+        self::assertSame('partial edit', $this->repository->getById('record')->get('name'));
+        self::assertSame(2, $record->get('versionNumber'));
     }
 
     public function testOutboxFailureRollsBackTheRepositoryMutation(): void

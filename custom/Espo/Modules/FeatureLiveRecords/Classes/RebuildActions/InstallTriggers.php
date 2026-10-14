@@ -24,7 +24,8 @@ final class InstallTriggers implements RebuildAction
             $orm = $this->em->getMetadata()->get($type);
             if (!isset($orm['attributes']['tenantId']) || !empty($orm['attributes']['tenantId']['notStorable'])) continue;
             $table = \Espo\Core\Utils\Util::toUnderScore($type);
-            $targets[$table] = ['type' => $type, 'versioned' => isset($orm['concurrencyAttribute'])];
+            $targets[$table] = ['type' => $type,
+                'versioned' => isset($orm['versionAttribute']) || isset($orm['concurrencyAttribute'])];
         }
         TriggerSql::removeObsolete($pdo, array_map(fn ($target) => $target['versioned'], $targets));
         foreach ($targets as $table => $target) {

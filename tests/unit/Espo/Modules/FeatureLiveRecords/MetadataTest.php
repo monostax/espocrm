@@ -24,6 +24,11 @@ final class MetadataTest extends TestCase
         self::assertCount(8, $data->app->liveRecords->recordTypes);
         foreach (Scope::all() as $type) {
             self::assertSame(Observer::class, $data->entityDefs->$type->mutationObserverClassName);
+            self::assertObjectNotHasProperty('optimisticConcurrencyControl', $data->entityDefs->$type);
+            self::assertObjectNotHasProperty('atomicConcurrencyControl', $data->entityDefs->$type);
+        }
+        foreach ([...Scope::RECORD_TYPES, 'ContactChannelIdentity'] as $type) {
+            self::assertTrue($data->entityDefs->$type->versionNumberEnabled);
         }
         foreach ($excluded as $type) {
             self::assertObjectNotHasProperty('mutationObserverClassName', $data->entityDefs->$type);

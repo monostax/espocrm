@@ -1297,7 +1297,8 @@ class BaseMapper implements RDBMapper
      */
     private function insertInternal(Entity $entity, ?array $onDuplicateUpdateAttributeList = null): void
     {
-        $versionAttribute = $this->metadata->get($entity->getEntityType(), 'concurrencyAttribute');
+        $versionAttribute = $this->metadata->get($entity->getEntityType(), 'versionAttribute') ??
+            $this->metadata->get($entity->getEntityType(), 'concurrencyAttribute');
         if ($versionAttribute) $entity->set($versionAttribute, 1);
         $update = null;
 
@@ -1473,8 +1474,9 @@ class BaseMapper implements RDBMapper
             $where[self::ATTR_DELETED] = false;
         }
 
-        $versionAttribute = $this->metadata->get($entity->getEntityType(), 'concurrencyAttribute');
-        if ($versionAttribute) {
+        $concurrencyAttribute = $this->metadata->get($entity->getEntityType(), 'concurrencyAttribute');
+        $versionAttribute = $concurrencyAttribute ?? $this->metadata->get($entity->getEntityType(), 'versionAttribute');
+        if ($concurrencyAttribute) {
             $previous = $entity->hasFetched($versionAttribute) ? $entity->getFetched($versionAttribute) : null;
             if (!$entity->hasFetched($versionAttribute)) {
                 // Internal partial-entity writers have no edit baseline. They
@@ -1486,6 +1488,11 @@ class BaseMapper implements RDBMapper
             }
             $where[$versionAttribute] = $previous;
             $valueMap[$versionAttribute] = (int) $previous + 1;
+        } elseif ($versionAttribute) {
+            // Increment the stored revision atomically, independently of the
+            // caller's snapshot. Only changed attributes are overwritten.
+            unset($valueMap[$versionAttribute]);
+            $valueMap[$versionAttribute . ':'] = 'ADD:(COALESCE:(' . $versionAttribute . ', 0), 1)';
         }
 
         $query = UpdateBuilder::create()
@@ -1499,7 +1506,11 @@ class BaseMapper implements RDBMapper
             if ($statement->rowCount() !== 1) {
                 throw new \Espo\ORM\Exception\ConcurrencyConflict('Record changed or removed.');
             }
-            $entity->set($versionAttribute, $valueMap[$versionAttribute]);
+            $version = $concurrencyAttribute ? $valueMap[$versionAttribute] :
+                $this->selectOne(SelectBuilder::create()->from($entity->getEntityType())
+                    ->select([self::ATTR_ID, $versionAttribute])
+                    ->where([self::ATTR_ID => $entity->getId()])->withDeleted()->build())?->get($versionAttribute);
+            $entity->set($versionAttribute, $version);
         }
     }
 

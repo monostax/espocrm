@@ -24,8 +24,9 @@ final class LiveRecords implements AdditionalBuilder
             $defs->transactionalSave = true;
             if (in_array($type, [...$records, 'Note', 'Document', 'ContactChannelIdentity', 'CrmTag',
                 'Funnel', 'OpportunityStage', 'InitiativeType', 'Journey'], true)) {
-                $defs->optimisticConcurrencyControl = true;
-                $defs->atomicConcurrencyControl = true;
+                // Live updates need revisions, not stale-edit rejection. Ordinary
+                // saves use last-write-wins; concurrency control remains opt-in.
+                $defs->versionNumberEnabled = true;
             }
         }
         $data->app ??= new stdClass();

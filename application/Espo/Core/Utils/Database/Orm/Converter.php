@@ -541,7 +541,12 @@ class Converter
         }
 
         // @todo Refactor.
-        if ($this->metadata->get(['entityDefs', $entityType, 'optimisticConcurrencyControl'])) {
+        $versionNumberEnabled = $this->metadata->get(['entityDefs', $entityType, 'versionNumberEnabled']);
+
+        if ($versionNumberEnabled || $this->metadata->get(['entityDefs', $entityType, 'optimisticConcurrencyControl'])) {
+            if ($versionNumberEnabled) {
+                $ormMetadata[$entityType]['versionAttribute'] = Field::VERSION_NUMBER;
+            }
             if ($this->metadata->get(['entityDefs', $entityType, 'atomicConcurrencyControl'])) {
                 $ormMetadata[$entityType]['concurrencyAttribute'] = Field::VERSION_NUMBER;
             }

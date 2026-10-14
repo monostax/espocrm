@@ -30,7 +30,10 @@ final class Observer implements MutationObserver
                         if ($entity instanceof BaseEntity && $entity->isBeingSaved()) {
                             continue;
                         }
-                        if (!$this->em->getMetadata()->get($entity->getEntityType(), 'concurrencyAttribute')) {
+                        if (
+                            !$this->em->getMetadata()->get($entity->getEntityType(), 'versionAttribute') &&
+                            !$this->em->getMetadata()->get($entity->getEntityType(), 'concurrencyAttribute')
+                        ) {
                             continue;
                         }
 
