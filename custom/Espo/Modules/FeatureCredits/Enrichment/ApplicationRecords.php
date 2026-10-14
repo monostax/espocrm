@@ -85,13 +85,18 @@ class ApplicationRecords
     public function create(string $tenant,array $facts,array $fields): string
     {
         if (!$this->acl->checkScope('Contact','create')) throw new Forbidden('Contact creation access required.');
+        if (isset($fields['dateOfBirth'])) {
+            $fields['dataNascimento'] = $fields['dateOfBirth']; unset($fields['dateOfBirth']);
+        } elseif (isset($facts['dateOfBirth']) && $this->acl->checkField('Contact','dataNascimento','edit')) {
+            $fields['dataNascimento'] = $facts['dateOfBirth'];
+        }
         $forbidden = ['cpf','emailAddress','phoneNumber','channelIdentitiesData','tenantId','accountId','id','name'];
         foreach ($fields as $field => $value) {
             $definition = $this->metadata->get(['entityDefs','Contact','fields',$field]);
-            $standard = in_array($field,['firstName','lastName','teamsIds'],true);
+            $standard = in_array($field,['firstName','lastName','teamsIds','dataNascimento'],true);
             if (in_array($field,$forbidden,true) || (!$standard && (!($definition['required'] ?? false) ||
                 !in_array($definition['type'] ?? '',self::SCALAR_TYPES,true)))) {
-                throw new BadRequest('Only names, teams and mandatory scalar Contact fields may be supplied.');
+                throw new BadRequest('Only names, date of birth, teams and mandatory scalar Contact fields may be supplied.');
             }
             $this->field($field === 'teamsIds' ? 'teams' : $field,'edit');
         }
@@ -115,6 +120,27 @@ class ApplicationRecords
         return $id;
     }
 
+    /** Apply reviewed birth dates and missing QSA identity through normal CRM validation. */
+    public function update(string $tenant,string $id,array $facts,array $fields): void
+    {
+        $this->contactAccess($tenant,$id);
+        $contact = $this->em->getEntityById('Contact',$id);
+        $data = [];
+        if (isset($facts['cpf'])) {
+            $this->field('cpf','read');
+            if (!$contact->get('cpf')) {
+                $this->field('cpf','edit'); $data['cpf'] = $facts['cpf'];
+            }
+        }
+        if (isset($fields['dateOfBirth'])) {
+            $this->field('dataNascimento','edit'); $data['dataNascimento'] = $fields['dateOfBirth'];
+        } elseif (isset($facts['dateOfBirth']) && !$contact->get('dataNascimento') &&
+            $this->acl->checkField('Contact','dataNascimento','edit')) {
+            $data['dataNascimento'] = $facts['dateOfBirth'];
+        }
+        if ($data) $this->records->get('Contact')->update($id,(object) $data);
+    }
+
     /** Read-only form projection after purchased-source authorization; writes still use normal CRM validation. */
     public function creationForm(string $tenant): array
     {
@@ -122,14 +148,14 @@ class ApplicationRecords
         $fields = [];
         foreach ($this->metadata->get(['entityDefs','Contact','fields'],[]) as $name => $definition) {
             if (in_array($name,['name','tenant','teams'],true)) continue;
-            $standard = in_array($name,['firstName','lastName'],true);
+            $standard = in_array($name,['firstName','lastName','dataNascimento'],true);
             $required = $name === 'lastName' || ($definition['required'] ?? false);
             if (!$standard && !$required) continue;
             $allowed = !in_array($name,['cpf','emailAddress','phoneNumber','channelIdentitiesData','account','id'],true) &&
                 in_array($definition['type'] ?? '',self::SCALAR_TYPES,true) &&
                 !($definition['readOnly'] ?? false) && $this->acl->checkField('Contact',$name,'edit');
             if (!$allowed) { if ($required) $available = false; continue; }
-            $fields[] = ['name' => $name,'type' => $definition['type'],'required' => $required,
+            $fields[] = ['name' => $name === 'dataNascimento' ? 'dateOfBirth' : $name,'type' => $definition['type'],'required' => $required,
                 'options' => $definition['type'] === 'enum' ? array_values($definition['options'] ?? []) : [],
                 'maxLength' => $definition['maxLength'] ?? null];
         }

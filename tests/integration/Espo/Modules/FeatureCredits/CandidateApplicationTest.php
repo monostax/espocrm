@@ -200,11 +200,92 @@ class CandidateApplicationTest extends TestCase
         $this->assertContains($this->team,array_column($form['teams'],'id'));
         $receipt = $this->service(CandidateApplication::class)->apply(new ApplicationInput((object) [
             'tenantId' => $this->tenant,'purchaseId' => $purchase['id'],'createIfUnmatched' => true,
-            'contactData' => (object) ['lastName' => 'Reviewed human choice','teamsIds' => [$this->team]],
+            'contactData' => (object) ['lastName' => 'Reviewed human choice','teamsIds' => [$this->team],'dateOfBirth' => '1987-04-12'],
         ]));
         $contact = $this->em->getEntityById('Contact',$receipt['contactId']);
         $this->assertSame('Reviewed human choice',$contact->get('lastName'));
         $this->assertSame($this->tenant,$contact->get('tenantId'));
+        $this->assertContains('dateOfBirth',array_column($form['fields'],'name'));
+        $this->assertSame('1987-04-12',$contact->get('dataNascimento'));
+    }
+
+    public function testSelectedSocioContactUpdateIsAtomicAndReplayCannotRetargetIt(): void
+    {
+        $purchase = $this->purchased(['role' => 'Sócio-Administrador']);
+        $contact = $this->em->createEntity('Contact',['firstName' => 'Existing','lastName' => 'Person',
+            'tenantId' => $this->tenant,'teamsIds' => [$this->team]]);
+        $input = new ApplicationInput((object) ['tenantId' => $this->tenant,'purchaseId' => $purchase['id'],
+            'createIfUnmatched' => false,'contactId' => $contact->getId(),'contactData' => (object) ['dateOfBirth' => '1989-09-15']]);
+        $service = $this->service(CandidateApplication::class); $pdo = $this->em->getPDO();
+        $pdo->exec("ALTER TABLE enrichment_purchase ADD CONSTRAINT injected_selected_application CHECK (id<>'" . $purchase['id'] . "' OR application_receipt IS NULL)");
+        try { $service->apply($input); $this->fail('Selected Contact update escaped the receipt transaction.'); }
+        catch (PDOException $e) { $this->assertStringContainsString('injected_selected_application',$e->getMessage()); }
+        finally { $this->dropCheck($pdo,'enrichment_purchase','injected_selected_application'); }
+        $this->assertNull($this->em->getEntityById('Contact',$contact->getId())->get('cpf'));
+        $this->assertNull($this->em->getEntityById('Contact',$contact->getId())->get('dataNascimento'));
+        $this->assertSame(0,$this->countRecords('record_relation'));
+        $receipt = $service->apply($input);
+        $this->assertSame($contact->getId(),$receipt['contactId']);
+        $this->assertSame($receipt,$service->apply($input));
+        $this->assertSame(1,$this->countRecords('contact'));
+        $this->assertCount(2,$receipt['relationIds']);
+        $updated = $this->em->getEntityById('Contact',$contact->getId());
+        $this->assertSame('52998224725',$updated->get('cpf'));
+        $this->assertSame('Existing',$updated->get('firstName'));
+        $this->assertSame('Person',$updated->get('lastName'));
+        $this->assertSame('1989-09-15',$updated->get('dataNascimento'));
+        $other = $this->em->createEntity('Contact',['lastName' => 'Other','tenantId' => $this->tenant,'teamsIds' => [$this->team]]);
+        try {
+            $service->apply(new ApplicationInput((object) ['tenantId' => $this->tenant,'purchaseId' => $purchase['id'],'contactId' => $other->getId()]));
+            $this->fail('Applied candidate was retargeted.');
+        } catch (Conflict) {}
+        $this->assertNull($this->em->getEntityById('Contact',$other->getId())->get('cpf'));
+        $this->assertSame($receipt,$service->apply($input));
+        $this->assertSame([], $this->service(\Espo\Modules\FeatureCredits\Accounting\ConsistencyAudit::class)->inspect($this->tenant)['findings']);
+    }
+
+    public function testPurchasedBirthDateIsSavedWhenCreatingWithoutAFormOverride(): void
+    {
+        $purchase = $this->purchased(['dateOfBirth' => '1982-02-28']);
+        $result = $this->service(CandidateApplication::class)->apply($this->input($purchase));
+        $this->assertSame('1982-02-28',$this->em->getEntityById('Contact',$result['contactId'])->get('dataNascimento'));
+    }
+
+    public function testPurchasedBirthDateDoesNotEraseAnExistingDateWhenUpdateIsBlank(): void
+    {
+        $purchase = $this->purchased(['dateOfBirth' => '1982-02-28']);
+        $contact = $this->em->createEntity('Contact',['lastName' => 'Existing','dataNascimento' => '1982-03-01',
+            'tenantId' => $this->tenant,'teamsIds' => [$this->team]]);
+        $this->service(CandidateApplication::class)->apply(new ApplicationInput((object) [
+            'tenantId' => $this->tenant,'purchaseId' => $purchase['id'],'contactId' => $contact->getId(),
+        ]));
+        $this->assertSame('1982-03-01',$this->em->getEntityById('Contact',$contact->getId())->get('dataNascimento'));
+    }
+
+    public function testMistakenSocioContactSelectionDoesNotQuarantineThePurchase(): void
+    {
+        $purchase = $this->purchased();
+        $wrong = $this->em->createEntity('Contact',['lastName' => 'Different identity','cpf' => '11144477735',
+            'tenantId' => $this->tenant,'teamsIds' => [$this->team]]);
+        $foreignTenant = $this->em->createEntity('Tenant',['name' => 'Other workspace']);
+        $foreign = $this->em->createEntity('Contact',['lastName' => 'Foreign','tenantId' => $foreignTenant->getId()]);
+        $service = $this->service(CandidateApplication::class);
+        $reviewer = $this->service(\Espo\Modules\FeatureCredits\Enrichment\PurchasedReview::class);
+        foreach ([$wrong->getId(),$foreign->getId()] as $id) {
+            try {
+                $service->apply(new ApplicationInput((object) ['tenantId' => $this->tenant,'purchaseId' => $purchase['id'],'contactId' => $id]));
+                $this->fail('Incompatible selected Contact accepted.');
+            } catch (Conflict) {}
+            $review = $reviewer->read($this->tenant,$purchase['id']);
+            $this->assertNull($review['conflict']);
+            $this->assertTrue($review['application']['available']);
+            $this->assertSame(0,$this->countRecords('record_relation'));
+        }
+        $this->assertSame('11144477735',$this->em->getEntityById('Contact',$wrong->getId())->get('cpf'));
+        $correct = $this->em->createEntity('Contact',['lastName' => 'Correct','tenantId' => $this->tenant,'teamsIds' => [$this->team]]);
+        $receipt = $service->apply(new ApplicationInput((object) ['tenantId' => $this->tenant,'purchaseId' => $purchase['id'],'contactId' => $correct->getId()]));
+        $this->assertSame($correct->getId(),$receipt['contactId']);
+        $this->assertSame('52998224725',$this->em->getEntityById('Contact',$correct->getId())->get('cpf'));
     }
 
     public function testExplicitRegistrantApplicationAndReplayNeverOverwriteLaterManualCnpj(): void

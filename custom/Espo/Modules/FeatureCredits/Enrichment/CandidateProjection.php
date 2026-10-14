@@ -14,7 +14,7 @@ final class CandidateProjection
     {
         $allowed = match ($product) {
             'employees' => ['name','linkedinUrl','title','department','seniority','currentEmployment'],
-            'socios' => ['name','cpf','linkedinUrl','role','ownershipPercentage','since','until'],
+            'socios' => ['name','cpf','linkedinUrl','dateOfBirth','role','ownershipPercentage','since','until'],
             'cnpj' => ['cnpj'],
             default => throw new InvalidArgumentException('Unsupported discovery projection.'),
         };
@@ -38,9 +38,9 @@ final class CandidateProjection
                 }
                 $value = rtrim(rtrim(number_format((float) $value,4,'.',''),'0'),'.');
             }
-            if (in_array($field,['since','until'],true)) {
+            if (in_array($field,['since','until','dateOfBirth'],true)) {
                 $date = \DateTimeImmutable::createFromFormat('!Y-m-d',$value);
-                if (!$date || $date->format('Y-m-d') !== $value) throw new InvalidArgumentException('Invalid relationship date.');
+                if (!$date || $date->format('Y-m-d') !== $value) throw new InvalidArgumentException('Invalid candidate date.');
             }
         }
         unset($value);

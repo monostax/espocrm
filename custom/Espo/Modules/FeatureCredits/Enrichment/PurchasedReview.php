@@ -26,7 +26,7 @@ final class PurchasedReview
             $target = $this->access->target($input);
             $permissions = $this->access->discoveryPermissions($input,$target);
             $values = $saved['values']; $redacted = [];
-            foreach (['cpf','linkedinUrl'] as $field) {
+            foreach (['cpf','linkedinUrl','dateOfBirth'] as $field) {
                 if (array_key_exists($field,$values) && !($permissions['candidateRead'][$field] ?? false)) {
                     unset($values[$field]); $redacted[] = $field;
                 }

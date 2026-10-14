@@ -61,7 +61,7 @@ final class Purchases
             if (Quotes::hash($identity) !== Quotes::hash($terms['identity']) || Quotes::hash($permissions) !== Quotes::hash($terms['permissions'])) {
                 throw new Conflict('Discovery input or purchaser permissions changed.');
             }
-            foreach (['cpf','linkedinUrl'] as $field) {
+            foreach (['cpf','linkedinUrl','dateOfBirth'] as $field) {
                 if (isset($values[$field]) && !($permissions['candidateRead'][$field] ?? false)) throw new Conflict('Purchased field is not readable.');
             }
             $available = $this->availability->inspect($tenant,'Account',[$product],$identity,$input->data['waterfall']);

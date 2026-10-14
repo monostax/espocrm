@@ -107,7 +107,8 @@ class Access
             $this->acl->checkField('ContactChannelIdentity', 'channelType', 'read') &&
             $this->acl->checkField('ContactChannelIdentity', 'sourceId', 'read');
         $socios = $input->data['products'] === ['socios'];
-        return ['candidateRead' => ['cpf' => $socios && $this->acl->checkField('Contact', 'cpf', 'read'), 'linkedinUrl' => $linkedinRead],
+        return ['candidateRead' => ['cpf' => $socios && $this->acl->checkField('Contact', 'cpf', 'read'), 'linkedinUrl' => $linkedinRead,
+                'dateOfBirth' => $this->acl->checkField('Contact', 'dataNascimento', 'read')],
             'application' => ['humanRequired' => true, 'actorIsHuman' => !$this->user->isApi(),
                 'contactCreateScopeAllowed' => $this->acl->checkScope('Contact', 'create'),
                 'contactEditScopeAllowed' => $this->acl->checkScope('Contact', 'edit'),

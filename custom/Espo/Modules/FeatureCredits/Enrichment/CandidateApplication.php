@@ -48,7 +48,7 @@ final class CandidateApplication
                 if ($purchase['erased']) throw new Conflict('Purchased candidate data was erased.');
                 if ($purchase['conflict'] !== null) throw new Conflict('Candidate identity is blocked.');
                 foreach ($purchase['values'] as $field => $value) {
-                    if (in_array($field,['cpf','linkedinUrl'],true) && !($permissions['candidateRead'][$field] ?? false)) {
+                    if (in_array($field,['cpf','linkedinUrl','dateOfBirth'],true) && !($permissions['candidateRead'][$field] ?? false)) {
                         throw new Forbidden('Candidate identity field access required for application.');
                     }
                     if ($field === 'role') { $roles[$value] = true; continue; }
@@ -73,6 +73,17 @@ final class CandidateApplication
             } catch (ApplicationIdentityConflict) {
                 return CandidateConflicts::blockLocked($pdo,$tenant,[$selected['candidateGroup']],$this->clock->now(),'identity_contradiction');
             }
+            if (isset($data['contactId'])) {
+                if ($contact !== null && $contact !== $data['contactId']) {
+                    throw new Conflict('Selected Contact differs from the candidate identity or previous application.');
+                }
+                try {
+                    $contact = $this->records->resolve($tenant,$facts,$data['contactId']);
+                } catch (ApplicationIdentityConflict) {
+                    // A mistaken manual selection must not permanently block the purchased candidate.
+                    throw new Conflict('Selected Contact is unavailable or has a conflicting identity.');
+                }
+            }
             if ($saved['application_hash'] !== null) {
                 $receipt = json_decode($saved['application_receipt'],true,32,JSON_THROW_ON_ERROR);
                 if ($contact !== ($receipt['contactId'] ?? null) || ($receipt['purchaseId'] ?? null) !== $id ||
@@ -85,6 +96,8 @@ final class CandidateApplication
             if ($contact === null) {
                 if (!$data['createIfUnmatched']) throw new BadRequest('No matching Contact; enable contact creation and complete the required fields.');
                 $contact = $this->records->create($tenant,$facts,$data['contactData']);
+            } else {
+                $this->records->update($tenant,$contact,$facts,$data['contactData']);
             }
             $this->records->link($tenant,$contact,$account);
             $relations = $this->records->relationships($tenant,$contact,$account,$relationships,$id);

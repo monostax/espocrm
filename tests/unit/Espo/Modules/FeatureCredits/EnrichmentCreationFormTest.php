@@ -56,6 +56,16 @@ class EnrichmentCreationFormTest extends TestCase
         self::assertSame(['base','other'],array_column($result['teams'],'id'));
     }
 
+    public function testOptionalBirthDateIsAlwaysOfferedWithItsApplicationFieldName(): void
+    {
+        $definitions = ['lastName' => ['type' => 'varchar'],'dataNascimento' => ['type' => 'date']];
+        $result = $this->form($definitions);
+        self::assertSame(['lastName','dateOfBirth'],array_column($result['fields'],'name'));
+        self::assertSame('date',$result['fields'][1]['type']);
+        self::assertFalse($result['fields'][1]['required']);
+        self::assertSame(['lastName'],array_column($this->form($definitions,'dataNascimento')['fields'],'name'));
+    }
+
     public function testRequiredDeniedOrUnsupportedFieldDisablesCreationWithoutExposingIt(): void
     {
         $definitions = ['lastName' => ['type' => 'varchar'],'secret' => ['type' => 'varchar','required' => true]];
