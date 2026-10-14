@@ -27,6 +27,7 @@ class OpportunityGroupSummary
         'funnel' => ['funnelId', 'funnel'],
         'assignee' => ['assignedUserId', 'assignedUser'],
         'status' => ['status', 'status'],
+        'followupStatus' => ['followupStatus', 'followupStatus'],
     ];
 
     public function __construct(
@@ -58,6 +59,11 @@ class OpportunityGroupSummary
             'none' => Expr::value('all'),
             'readStatus' => $this->readStatus($query, $scope),
             'activity' => Expr::concat('activity:', $bucket),
+            'followupStatus' => Expr::if(
+                Expr::equal(Expr::column('followupStatus'), 'FollowupActive'),
+                'followupStatus:FollowupActive',
+                'followupStatus:FollowupInactive',
+            ),
             default => Expr::concat($groupBy . ':', Expr::ifNull(Expr::column(self::FIELDS[$groupBy][0]), '')),
         };
         $canReadAmount = $this->acl->checkField('Opportunity', 'amount');
