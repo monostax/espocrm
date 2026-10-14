@@ -47,7 +47,7 @@ class OperationSourceTest extends TestCase
 
     public static function sourceCases(): iterable
     {
-        foreach (['ChatwootAiAgentRun', 'Opportunity'] as $scope) {
+        foreach (['ChatwootAiAgentRun', 'Opportunity', 'Contact'] as $scope) {
             yield $scope => [$scope, 'allowed'];
             yield "$scope hidden name" => [$scope, 'name-denied'];
         }

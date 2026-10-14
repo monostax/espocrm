@@ -110,6 +110,8 @@ final class ConsistencyAudit
             'credit_transaction' => 'CreditTransaction', 'credit_usage' => 'CreditUsage',
             'credit_reservation' => 'CreditReservation', 'credit_allocation' => 'CreditAllocation',
             'credit_request' => 'CreditRequest',
+            'phone_verification_operation' => 'PhoneVerificationOperation',
+            'phone_verification_request' => 'PhoneVerificationRequest',
         ];
         foreach ($tables as $table => $entity) {
             yield ['record.deleted', $entity, "SELECT r.id FROM $table r WHERE r.tenant_id = ? AND r.deleted = TRUE"];
@@ -188,6 +190,32 @@ final class ConsistencyAudit
               r.purchase_kind NOT IN ('candidate','supplement') OR NOT EXISTS
                 (SELECT 1 FROM enrichment_candidate_cache c WHERE c.id=r.candidate_cache_id AND c.tenant_id=r.tenant_id
                  AND c.provider=r.provider AND c.product=r.product AND c.acquired_at=r.acquired_at))))"];
+        yield ['usage.verification', 'CreditUsage', "SELECT r.id FROM credit_usage r WHERE r.tenant_id = ? AND
+            r.operation_type = 'verification' AND (r.state NOT IN ('admitted', 'settled') OR
+             r.source_type <> 'Contact' OR r.source_id IS NULL OR NOT EXISTS
+                (SELECT 1 FROM phone_verification_operation o WHERE o.usage_id = r.id AND o.tenant_id = r.tenant_id
+                 AND o.deleted = FALSE AND o.contact_id = r.source_id AND o.price_credits = 8.0000
+                 AND r.operation_key = CONCAT('verification:', o.id) AND r.execution_id = CONCAT('verification:', o.id)
+                 AND ((r.state = 'admitted' AND o.state IN ('admitted', 'claimed') AND r.settled_credits IS NULL) OR
+                      (r.state = 'settled' AND o.state = 'completed' AND r.settled_credits = 8.0000) OR
+                      (r.state = 'settled' AND o.state = 'waived' AND r.settled_credits = 0.0000))))"];
+        yield ['verification.binding', 'PhoneVerificationOperation', "SELECT r.id FROM phone_verification_operation r WHERE r.tenant_id = ? AND
+            (r.deleted = TRUE OR r.price_credits <> 8.0000 OR r.state NOT IN ('admitted', 'claimed', 'completed', 'waived') OR
+             (r.erased_at IS NOT NULL AND (r.identity_ciphertext IS NOT NULL OR r.evidence_ciphertext IS NOT NULL)) OR
+             (r.erased_at IS NULL AND r.identity_ciphertext IS NULL) OR
+             (r.state IN ('admitted', 'claimed') AND (r.completed_at IS NOT NULL OR r.outcome IS NOT NULL OR r.evidence_ciphertext IS NOT NULL)) OR
+             (r.state = 'completed' AND (r.completed_at IS NULL OR r.claimed_at IS NULL OR r.claimed_at > r.completed_at OR
+              r.outcome NOT IN ('verified', 'not_verified', 'insufficient_data') OR r.fresh_until IS NULL OR r.retention_expires_at IS NULL OR
+              r.evidence_hash IS NULL OR (r.erased_at IS NULL AND r.evidence_ciphertext IS NULL))) OR
+             (r.state = 'waived' AND (r.completed_at IS NULL OR r.outcome NOT IN ('failed', 'cancelled', 'unavailable') OR
+              r.evidence_ciphertext IS NOT NULL OR r.evidence_hash IS NOT NULL OR r.fresh_until IS NOT NULL)) OR
+             NOT EXISTS (SELECT 1 FROM credit_usage u JOIN credit_reservation h ON h.usage_id = u.id AND h.tenant_id = u.tenant_id
+              WHERE u.id = r.usage_id AND h.id = r.reservation_id AND u.tenant_id = r.tenant_id AND u.deleted = FALSE AND h.deleted = FALSE
+               AND u.operation_type = 'verification' AND u.source_type = 'Contact' AND u.source_id = r.contact_id))"];
+        yield ['verification.request', 'PhoneVerificationRequest', "SELECT r.id FROM phone_verification_request r WHERE r.tenant_id = ? AND
+            (r.deleted = TRUE OR r.resolution NOT IN ('admitted', 'joined', 'reused') OR NOT EXISTS
+                (SELECT 1 FROM phone_verification_operation o WHERE o.id = r.operation_id AND o.tenant_id = r.tenant_id
+                 AND o.contact_id = r.contact_id AND o.deleted = FALSE))"];
         yield ['allocation.partition', 'CreditAllocation', 'SELECT r.id FROM credit_allocation r WHERE r.tenant_id = ? AND
             (r.reserved_credits < 0 OR r.consumed_credits < 0 OR r.released_credits < 0 OR r.expired_credits < 0 OR
              (r.settled_at IS NULL AND (r.consumed_credits <> 0 OR r.released_credits <> 0 OR r.expired_credits <> 0)) OR

@@ -194,7 +194,7 @@ test('source navigation is ACL resolved, allowlisted and ignores stale or duplic
     assert.equal(page.navigation.length, 0);
     const valid = {tenantId: 'a', id: 'op', source: {scope: 'Opportunity', id: 'source'}};
     assert.equal(helpers.sourceRoute(valid, 'a', 'op'), 'Opportunity/view/source');
-    for (const scope of ['ChatwootConversation', 'Note', 'ChatwootAccountUserMembership']) {
+    for (const scope of ['Contact', 'ChatwootConversation', 'Note', 'ChatwootAccountUserMembership']) {
         assert.equal(helpers.sourceRoute({...valid, source: {scope, id: 'source'}}, 'a', 'op'), `${scope}/view/source`);
     }
     assert.equal(helpers.sourceRoute(valid, 'b', 'op'), null);

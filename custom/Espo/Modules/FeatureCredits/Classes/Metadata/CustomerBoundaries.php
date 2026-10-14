@@ -16,7 +16,8 @@ final class CustomerBoundaries implements AdditionalBuilder
     public const CONTROLLERS = ['Credits', 'CreditWorkspace', 'CreditBalance', 'CreditHistory', 'CreditGrants',
         'CreditReservations', 'CreditRequests', 'CreditOperations', 'CreditOperationSource', 'CreditBilling',
         'CreditCheckout', 'CreditSubscriptions', 'CreditEnrichmentPreview', 'CreditEnrichmentQuotes',
-        'CreditEnrichmentReview', 'CreditEnrichmentHistory', 'CreditEnrichmentFields', 'CreditEnrichmentApplication', 'AiUsage'];
+        'CreditEnrichmentReview', 'CreditEnrichmentHistory', 'CreditEnrichmentFields', 'CreditEnrichmentApplication',
+        'CreditPhoneVerification', 'AiUsage'];
 
     public function build(stdClass $data): void
     {

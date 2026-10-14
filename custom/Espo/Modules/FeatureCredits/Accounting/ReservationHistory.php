@@ -75,7 +75,7 @@ final class ReservationHistory
                 }
                 $closed = in_array($row['state'], ['settled', 'released'], true);
                 if ($row['deleted'] || $row['parent_id'] === null || $row['parent_deleted'] ||
-                    !in_array($row['operation_type'], ['ai', 'apollo', 'enrichment'], true) ||
+                    !in_array($row['operation_type'], ['ai', 'apollo', 'enrichment', 'verification'], true) ||
                     $reserved->compareTo($zero) < 0 ||
                     (!$closed && ($row['state'] !== 'held' || $row['usage_state'] !== 'admitted' ||
                         $row['settled_at'] !== null || $row['usage_settled_at'] !== null || ($settled !== null && $purchased === null) ||
@@ -86,6 +86,20 @@ final class ReservationHistory
                         $settled->compareTo(Amount::settlement($accrued)) !== 0)) ||
                     ($row['state'] === 'released' && (!$accrued->isZero() || $settled->compareTo($zero) !== 0))) {
                     throw new LogicException('Invalid reservation projection or usage parent.');
+                }
+                if ($row['operation_type'] === 'verification') {
+                    if ($row['state'] === 'released') {
+                        throw new LogicException('Verification reservations cannot be pre-request released.');
+                    }
+                    if ($row['state'] === 'settled') {
+                        $verifiedCharge = FixedSettlement::verificationCharge($pdo, $input->tenantId, $row['usage_id']);
+                        if ($settled === null || $verifiedCharge->compareTo($settled) !== 0 || $accrued->compareTo((string) $verifiedCharge) !== 0) {
+                            throw new LogicException('Invalid settled verification reservation projection.');
+                        }
+                    } elseif ((string) $reserved !== '8.0000' || $settled !== null || !$accrued->isZero() ||
+                        !FixedSettlement::openVerificationValid($pdo, $input->tenantId, $row['usage_id'])) {
+                        throw new LogicException('Invalid open verification reservation projection.');
+                    }
                 }
                 if ($index === $input->limit) {
                     break;

@@ -67,7 +67,7 @@ final class OperationHistory
             $zero = Amount::fromString('0');
             foreach ($rows as $index => $row) {
                 if ($row['deleted'] || $row['reservation_id'] === null || $row['reservation_deleted'] ||
-                    !in_array($row['operation_type'], ['ai', 'apollo', 'enrichment'], true) ||
+                    !in_array($row['operation_type'], ['ai', 'apollo', 'enrichment', 'verification'], true) ||
                     $row['billing_regime'] !== 'unified-prepaid-v1' ||
                     !preg_match('/^(0|[1-9][0-9]*)(\.[0-9]+)?$/D', $row['accrued_credits_exact'])) {
                     throw new LogicException('Invalid operation or reservation projection.');
@@ -79,6 +79,20 @@ final class OperationHistory
                     FixedSettlement::purchasedTotal($pdo,$input->tenantId,$row['id']) : null;
                 if ($purchased !== null && ($purchased->compareTo($settled) !== 0 || $accrued->compareTo((string) $purchased) !== 0)) {
                     throw new LogicException('Invalid purchased operation projection.');
+                }
+                if ($row['operation_type'] === 'verification') {
+                    if ($row['state'] === 'released') {
+                        throw new LogicException('Verification operations cannot be pre-request released.');
+                    }
+                    if ($row['state'] === 'settled') {
+                        $verifiedCharge = FixedSettlement::verificationCharge($pdo, $input->tenantId, $row['id']);
+                        if ($settled === null || $verifiedCharge->compareTo($settled) !== 0 || $accrued->compareTo((string) $verifiedCharge) !== 0) {
+                            throw new LogicException('Invalid settled verification operation projection.');
+                        }
+                    } elseif ((string) $reserved !== '8.0000' || $settled !== null || !$accrued->isZero() ||
+                        !FixedSettlement::openVerificationValid($pdo, $input->tenantId, $row['id'])) {
+                        throw new LogicException('Invalid open verification operation projection.');
+                    }
                 }
                 $closed = in_array($row['state'], ['settled', 'released'], true);
                 if ($reserved->compareTo($zero) < 0 ||

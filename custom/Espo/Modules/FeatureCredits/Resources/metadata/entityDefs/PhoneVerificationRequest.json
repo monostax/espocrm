@@ -1,0 +1,23 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true},
+        "contact": {"type": "link", "notNull": true},
+        "actor": {"type": "link", "notNull": true},
+        "requestKey": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "commandHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "resolution": {"type": "varchar", "maxLength": 16, "notNull": true},
+        "operation": {"type": "link", "notNull": true},
+        "createdAt": {"type": "datetime", "notNull": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "contact": {"type": "belongsTo", "entity": "Contact"},
+        "actor": {"type": "belongsTo", "entity": "User"},
+        "operation": {"type": "belongsTo", "entity": "PhoneVerificationOperation"}
+    },
+    "indexes": {
+        "requestUnique": {"columns": ["tenantId", "requestKey"], "unique": true},
+        "operation": {"columns": ["tenantId", "operationId"]}
+    }
+}

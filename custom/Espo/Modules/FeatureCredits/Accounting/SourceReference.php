@@ -11,7 +11,7 @@ use PDO;
 /** Supplied only by a trusted admission caller, never inferred from telemetry keys. */
 final readonly class SourceReference
 {
-    public const TABLES = ['ChatwootAiAgentRun' => 'chatwoot_ai_agent_run', 'Opportunity' => 'opportunity'];
+    public const TABLES = ['ChatwootAiAgentRun' => 'chatwoot_ai_agent_run', 'Opportunity' => 'opportunity', 'Contact' => 'contact'];
     public const LINKED_TYPES = ['ChatwootConversation', 'Note', 'ChatwootAccountUserMembership'];
     private const PARENTS = ['Opportunity' => 'opportunity', 'Initiative' => 'initiative',
         'Account' => 'account', 'Contact' => 'contact', 'AiSession' => 'ai_session'];

@@ -45,7 +45,7 @@ class ChannelIdentitiesLoader implements LoaderInterface
         $identities = $this->entityManager
             ->getRDBRepository('ContactChannelIdentity')
             ->where(['contactId' => $entity->getId()])
-            ->select(['id', 'channelType', 'sourceId', 'handle', 'label', 'isPrimary', 'whatsappLid'])
+            ->select(['id', 'channelType', 'sourceId', 'handle', 'label', 'isPrimary', 'whatsappLid', 'ownershipStatus'])
             ->order('isPrimary', 'DESC')
             ->order('createdAt', 'ASC')
             ->find();
@@ -61,6 +61,7 @@ class ChannelIdentitiesLoader implements LoaderInterface
                 'label' => $identity->get('label'),
                 'isPrimary' => (bool) $identity->get('isPrimary'),
                 'whatsappLid' => $identity->get('whatsappLid'),
+                'ownershipStatus' => $identity->get('ownershipStatus') ?? 'unverified',
             ];
         }
 

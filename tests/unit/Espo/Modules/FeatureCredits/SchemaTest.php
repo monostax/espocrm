@@ -52,8 +52,8 @@ trait SchemaFixture
         $data = [];
         foreach (['entityDefs', 'scopes', 'recordDefs'] as $category) {
             foreach (glob(self::ROOT . "$category/*.json") as $path) {
-                // Role extends the core entity; it is not a credit accounting table.
-                if ($category === 'entityDefs' && basename($path) === 'Role.json') continue;
+                // Role and Contact extend core entities; they are not credit accounting tables.
+                if ($category === 'entityDefs' && in_array(basename($path), ['Role.json', 'Contact.json'], true)) continue;
                 $data[$category][basename($path, '.json')] = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
             }
         }
@@ -121,7 +121,7 @@ class SchemaTest extends TestCase
     public function testGeneratedFinancialSchema(string $dialect): void
     {
         $schema = $this->schema($dialect);
-        $this->assertCount(31, $schema->getTables());
+        $this->assertCount(33, $schema->getTables());
         foreach ($schema->getTables() as $table) {
             if (!in_array($table->getName(), ['ai_model_credit_rate', 'enrichment_credit_catalog',
                 'credit_billing_catalog', 'credit_billing_product', 'credit_market_offer', 'credit_billing_event'], true)) {
@@ -163,6 +163,8 @@ class SchemaTest extends TestCase
             'enrichment_purchase' => ['quote_id', 'purchase_key'],
             'enrichment_candidate_cache' => ['tenant_id', 'scope_hash', 'provider', 'source_key'],
             'enrichment_discovery_call' => ['quote_id', 'provider', 'kind', 'slot_key'],
+            'phone_verification_operation' => ['usage_id'],
+            'phone_verification_request' => ['tenant_id', 'request_key'],
             'tenant_credit_balance' => ['tenant_id'],
             'tenant_credit_cutover' => ['tenant_id'],
             'credit_execution_route' => ['run_id'],

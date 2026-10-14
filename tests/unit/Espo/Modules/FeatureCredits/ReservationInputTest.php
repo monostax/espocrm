@@ -18,6 +18,7 @@ class ReservationInputTest extends TestCase
         $this->assertSame($make('0.1')->hash, $make('0.1000')->hash);
         $this->assertNotSame($make('0.1')->hash, $make('0.2')->hash);
         $this->assertSame('0.0001', (new ReservationInput('tenant', 'apollo', 'op', 'exec', 'rate', '0.0001'))->credits);
+        $this->assertSame('8.0000', (new ReservationInput('tenant', 'verification', 'verification:op', 'verification:op', 'rate', '8', new \Espo\Modules\FeatureCredits\Accounting\SourceReference('Contact', 'contact')))->credits);
     }
 
     public static function invalidInputs(): iterable

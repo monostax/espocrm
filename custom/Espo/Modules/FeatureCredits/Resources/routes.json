@@ -1,4 +1,10 @@
 [
+    {"route": "/CreditPhoneVerification/context", "method": "post", "params": {"controller": "CreditPhoneVerification", "action": "context"}},
+    {"route": "/CreditPhoneVerification", "method": "post", "params": {"controller": "CreditPhoneVerification", "action": "start"}},
+    {"route": "/CreditPhoneVerification/status", "method": "get", "params": {"controller": "CreditPhoneVerification", "action": "status"}},
+    {"route": "/CreditPhoneVerification/history", "method": "get", "params": {"controller": "CreditPhoneVerification", "action": "history"}},
+    {"route": "/CreditPhoneVerificationConfiguration", "method": "get", "params": {"controller": "CreditPhoneVerificationConfiguration", "action": "read"}},
+    {"route": "/CreditPhoneVerificationConfiguration", "method": "post", "params": {"controller": "CreditPhoneVerificationConfiguration", "action": "publish"}},
     {"route": "/CreditEnrichmentPreview", "method": "get", "params": {"controller": "CreditEnrichmentPreview", "action": "read"}},
     {"route": "/CreditWorkspace", "method": "get", "params": {"controller": "CreditWorkspace", "action": "read"}},
     {"route": "/CreditWorkspace/conversation", "method": "get", "params": {"controller": "CreditWorkspace", "action": "conversation"}},

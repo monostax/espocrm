@@ -3,6 +3,10 @@
         "featureCreditsAiCatalog": {
             "level": "system",
             "readOnly": true
+        },
+        "featureCreditsPhoneVerification": {
+            "level": "system",
+            "readOnly": true
         }
     }
 }

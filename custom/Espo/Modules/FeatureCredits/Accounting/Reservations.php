@@ -136,6 +136,9 @@ final class Reservations
             if ($usage['state'] !== 'admitted' || $receipt['state'] !== 'held' || (int) $query->fetchColumn() !== 0) {
                 throw new Conflict('Only pre-request operations may be released.');
             }
+            if ($usage['operation_type'] === 'verification') {
+                throw new Conflict('Verification operations require durable verification closure.');
+            }
             if ($usage['operation_type'] === 'enrichment') {
                 $query = $pdo->prepare('SELECT COUNT(*) FROM enrichment_attempt a JOIN enrichment_quote q ON q.id=a.quote_id WHERE q.usage_id=?');
                 $query->execute([$usageId]);

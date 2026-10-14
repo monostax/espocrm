@@ -1,0 +1,13 @@
+{
+    "entity": true,
+    "layouts": false,
+    "tab": false,
+    "acl": true,
+    "aclStrict": true,
+    "customizable": false,
+    "importable": false,
+    "exportable": false,
+    "notifications": false,
+    "object": false,
+    "module": "FeatureCredits"
+}

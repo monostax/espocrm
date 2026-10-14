@@ -93,6 +93,39 @@ class PurchasedErasure
                 ->execute([$now,$tenant,$quote]);
             $this->close($pdo,$tenant,$quote,$now);
         }
+        if ($type === 'Contact') {
+            $this->eraseVerifications($pdo,$tenant,$id,$now);
+        }
+    }
+
+    private function eraseVerifications(PDO $pdo,string $tenant,string $contactId,string $now): void
+    {
+        $q = $pdo->prepare('SELECT * FROM phone_verification_operation WHERE tenant_id=? AND contact_id=? ORDER BY id FOR UPDATE');
+        $q->execute([$tenant,$contactId]);
+        $operations = $q->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($operations as $op) {
+            $open = in_array($op['state'],['admitted','claimed'],true);
+            if ($open) {
+                $pdo->prepare("UPDATE phone_verification_operation
+                    SET identity_ciphertext=NULL,evidence_ciphertext=NULL,erased_at=COALESCE(erased_at,?),
+                        state='waived',outcome='cancelled',failure_reason='contact_erased',completed_at=?
+                    WHERE id=? AND tenant_id=?")->execute([$now,$now,$op['id'],$tenant]);
+            } else {
+                $pdo->prepare("UPDATE phone_verification_operation
+                    SET identity_ciphertext=NULL,evidence_ciphertext=NULL,erased_at=COALESCE(erased_at,?)
+                    WHERE id=? AND tenant_id=?")->execute([$now,$op['id'],$tenant]);
+            }
+            if (!$open) continue;
+            $q = $pdo->prepare('SELECT * FROM credit_usage WHERE id=? AND tenant_id=?');
+            $q->execute([$op['usage_id'],$tenant]); $usage = $q->fetch(PDO::FETCH_ASSOC);
+            if (!$usage || $usage['state'] !== 'admitted') continue;
+            $q = $pdo->prepare('SELECT * FROM credit_reservation WHERE id=? AND tenant_id=? AND usage_id=?');
+            $q->execute([$op['reservation_id'],$tenant,$usage['id']]); $hold = $q->fetch(PDO::FETCH_ASSOC);
+            $q = $pdo->prepare('SELECT * FROM tenant_credit_balance WHERE tenant_id=? FOR UPDATE');
+            $q->execute([$tenant]); $wallet = $q->fetch(PDO::FETCH_ASSOC);
+            if (!$hold || !$wallet || $wallet['deleted']) throw new Conflict('Verification erasure financial binding is unavailable.');
+            $this->settlement->settleLocked($pdo,$wallet,$now,$usage,$hold,Amount::fromString('0'));
+        }
     }
 
     private function close(PDO $pdo,string $tenant,string $quote,string $now): void

@@ -30,6 +30,67 @@ final class FixedSettlement
         return $total;
     }
 
+    public static function verificationCharge(PDO $pdo, string $tenant, string $usage): Amount
+    {
+        $q = $pdo->prepare('SELECT o.*, u.operation_type, u.operation_key, u.execution_id, u.source_type, u.source_id, u.deleted AS usage_deleted
+            FROM phone_verification_operation o LEFT JOIN credit_usage u ON u.id=o.usage_id AND u.tenant_id=o.tenant_id WHERE o.usage_id=?');
+        $q->execute([$usage]);
+        $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+        if (count($rows) !== 1) throw new \LogicException('Invalid phone verification receipt count.');
+        $op = $rows[0];
+        if ($op['deleted'] || $op['usage_deleted'] || $op['tenant_id'] !== $tenant ||
+            $op['operation_type'] !== 'verification' ||
+            $op['operation_key'] !== 'verification:' . $op['id'] ||
+            $op['execution_id'] !== 'verification:' . $op['id'] ||
+            $op['source_type'] !== 'Contact' || $op['source_id'] !== $op['contact_id'] ||
+            (string) Amount::fromString($op['price_credits']) !== '8.0000' ||
+            $op['completed_at'] === null || $op['admitted_at'] > $op['completed_at']) {
+            throw new \LogicException('Invalid phone verification operation binding.');
+        }
+        $erased = $op['erased_at'] !== null;
+        if ($erased && ($op['identity_ciphertext'] !== null || $op['evidence_ciphertext'] !== null)) {
+            throw new \LogicException('Erased phone verification operation retains ciphertext.');
+        }
+        if ($op['state'] === 'completed') {
+            if (!in_array($op['outcome'], ['verified', 'not_verified', 'insufficient_data'], true) ||
+                $op['claimed_at'] === null || $op['claimed_at'] > $op['completed_at'] ||
+                $op['fresh_until'] === null || $op['retention_expires_at'] === null ||
+                $op['evidence_hash'] === null || (!$erased && ($op['identity_ciphertext'] === null || $op['evidence_ciphertext'] === null))) {
+                throw new \LogicException('Invalid completed phone verification receipt.');
+            }
+            return Amount::fromString('8.0000');
+        }
+        if ($op['state'] === 'waived') {
+            if (!in_array($op['outcome'], ['failed', 'cancelled', 'unavailable'], true) ||
+                $op['evidence_ciphertext'] !== null || $op['evidence_hash'] !== null || $op['fresh_until'] !== null ||
+                (!$erased && $op['identity_ciphertext'] === null)) {
+                throw new \LogicException('Invalid waived phone verification receipt.');
+            }
+            return Amount::fromString('0.0000');
+        }
+        throw new \LogicException('Phone verification operation is not terminal.');
+    }
+
+    public static function openVerificationValid(PDO $pdo, string $tenant, string $usage): bool
+    {
+        $q = $pdo->prepare('SELECT o.*, u.operation_type, u.operation_key, u.execution_id, u.source_type, u.source_id
+            FROM phone_verification_operation o JOIN credit_usage u ON u.id=o.usage_id AND u.tenant_id=o.tenant_id WHERE o.usage_id=?');
+        $q->execute([$usage]);
+        $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+        if (count($rows) !== 1) return false;
+        $op = $rows[0];
+        return !$op['deleted'] && $op['tenant_id'] === $tenant &&
+            $op['operation_type'] === 'verification' &&
+            $op['operation_key'] === 'verification:' . $op['id'] &&
+            $op['execution_id'] === 'verification:' . $op['id'] &&
+            $op['source_type'] === 'Contact' && $op['source_id'] === $op['contact_id'] &&
+            (string) Amount::fromString($op['price_credits']) === '8.0000' &&
+            in_array($op['state'], ['admitted', 'claimed'], true) &&
+            $op['completed_at'] === null && $op['outcome'] === null &&
+            $op['evidence_ciphertext'] === null && $op['evidence_hash'] === null &&
+            $op['erased_at'] === null && $op['identity_ciphertext'] !== null;
+    }
+
     public function settleLocked(PDO $pdo, array $wallet, string $now, array $usage, array $reservation, Amount $charge): void
     {
         $this->applyLocked($pdo, $wallet, $now, $usage, $reservation, $charge, null);
@@ -44,7 +105,7 @@ final class FixedSettlement
 
     private function applyLocked(PDO $pdo, array $wallet, string $now, array $usage, array $reservation, Amount $charge, ?string $purchaseId): void
     {
-        if (!$pdo->inTransaction() || $usage['operation_type'] !== 'enrichment' || $usage['state'] !== 'admitted' ||
+        if (!$pdo->inTransaction() || !in_array($usage['operation_type'], ['enrichment', 'verification'], true) || $usage['state'] !== 'admitted' ||
             $usage['tenant_id'] !== $wallet['tenant_id'] || $reservation['usage_id'] !== $usage['id'] ||
             $reservation['tenant_id'] !== $usage['tenant_id'] || $reservation['state'] !== 'held' ||
             $reservation['execution_id'] !== $usage['execution_id'] || $usage['deleted'] || $reservation['deleted'] ||
@@ -60,23 +121,40 @@ final class FixedSettlement
         }
         $q = $pdo->prepare('SELECT * FROM enrichment_purchase WHERE usage_id=?'); $q->execute([$usage['id']]);
         $purchases = $q->fetchAll(PDO::FETCH_ASSOC); $purchased = Amount::fromString('0'); $current = null;
-        foreach ($purchases as $purchase) {
-            if ($purchase['deleted'] || $purchase['tenant_id'] !== $tenant || Amount::fromString($purchase['credits'])->compareTo(Amount::fromString('0')) <= 0) {
-                throw new Conflict('Invalid incremental purchase receipt.');
+        if ($usage['operation_type'] === 'verification') {
+            if ($purchaseId !== null || $purchases !== [] || $usage['settled_credits'] !== null ||
+                (string) $previous !== '0.0000' || (string) Amount::fromString($reservation['reserved_credits']) !== '8.0000') {
+                throw new Conflict('Invalid verification settlement state.');
             }
-            $purchased = $purchased->plus(Amount::fromString($purchase['credits']));
-            if ($purchase['id'] === $purchaseId) $current = $purchase;
-        }
-        if ($purchaseId !== null) {
-            if (!$current || $current['credits'] !== (string) $charge || $current['purchased_at'] !== $now ||
-                $purchased->compareTo($previous->plus($charge)) !== 0) throw new Conflict('Incremental purchase is not bound to its atomic receipt.');
-        } elseif ($purchased->compareTo($previous) !== 0 || ($purchases && (string) $charge !== '0.0000')) {
-            throw new Conflict('Incremental closure cannot charge again.');
+            try {
+                $expected = self::verificationCharge($pdo, $tenant, $usage['id']);
+            } catch (\LogicException $e) {
+                throw new Conflict($e->getMessage());
+            }
+            $q = $pdo->prepare('SELECT completed_at FROM phone_verification_operation WHERE usage_id=? AND tenant_id=?');
+            $q->execute([$usage['id'], $tenant]);
+            if ($charge->compareTo($expected) !== 0 || $q->fetchColumn() !== $now) {
+                throw new Conflict('Verification settlement does not match its atomic operation record.');
+            }
+        } else {
+            foreach ($purchases as $purchase) {
+                if ($purchase['deleted'] || $purchase['tenant_id'] !== $tenant || Amount::fromString($purchase['credits'])->compareTo(Amount::fromString('0')) <= 0) {
+                    throw new Conflict('Invalid incremental purchase receipt.');
+                }
+                $purchased = $purchased->plus(Amount::fromString($purchase['credits']));
+                if ($purchase['id'] === $purchaseId) $current = $purchase;
+            }
+            if ($purchaseId !== null) {
+                if (!$current || $current['credits'] !== (string) $charge || $current['purchased_at'] !== $now ||
+                    $purchased->compareTo($previous->plus($charge)) !== 0) throw new Conflict('Incremental purchase is not bound to its atomic receipt.');
+            } elseif ($purchased->compareTo($previous) !== 0 || ($purchases && (string) $charge !== '0.0000')) {
+                throw new Conflict('Incremental closure cannot charge again.');
+            }
+            if ((self::purchasedTotal($pdo,$tenant,$usage['id']) ?? Amount::fromString('0'))->compareTo($purchased) !== 0) {
+                throw new Conflict('Invalid purchase receipt parent binding.');
+            }
         }
         $cumulative = $previous->plus($charge);
-        if ((self::purchasedTotal($pdo,$tenant,$usage['id']) ?? Amount::fromString('0'))->compareTo($purchased) !== 0) {
-            throw new Conflict('Invalid purchase receipt parent binding.');
-        }
         $q = $pdo->prepare('SELECT COUNT(*) FROM credit_request WHERE usage_id=?'); $q->execute([$usage['id']]);
         if ((int) $q->fetchColumn() !== 0) throw new Conflict('Fixed-action operation contains incompatible AI requests.');
         $balance = $this->funding->expireLocked($pdo, $tenant, Amount::fromString($wallet['balance']), $now);
@@ -119,8 +197,8 @@ final class FixedSettlement
                 $left = $left->minus($take);
                 $unused = $amount->minus($take);
                 $expired = $purchaseId === null && $grant['expires_at'] !== null && $grant['expires_at'] <= $now ? $unused : Amount::fromString('0');
-                $debit = $this->post($pdo, $tenant, $usage['id'], $allocation, 'debit', $take, $now, $purchaseId);
-                $expiry = $this->post($pdo, $tenant, $usage['id'], $allocation, 'expiration', $expired, $now);
+                $debit = $this->post($pdo, $tenant, $usage['id'], $allocation, 'debit', $take, $now, $purchaseId, $usage['operation_type']);
+                $expiry = $this->post($pdo, $tenant, $usage['id'], $allocation, 'expiration', $expired, $now, null, $usage['operation_type']);
                 $remaining = Amount::fromString($grant['remaining_credits'])->minus($take)->minus($expired);
                 $held = Amount::fromString($grant['reserved_credits'])->minus($purchaseId === null ? $amount : $take);
                 WalletLock::assertProjection((string) $remaining, (string) $held);
@@ -153,16 +231,18 @@ final class FixedSettlement
             ->execute([(string) $balance, (string) $held, $now, $wallet['id']]);
     }
 
-    private function post(PDO $pdo, string $tenant, string $usage, array $allocation, string $type, Amount $amount, string $now, ?string $purchaseId = null): ?string
+    private function post(PDO $pdo, string $tenant, string $usage, array $allocation, string $type, Amount $amount, string $now, ?string $purchaseId = null, string $operationType = 'enrichment'): ?string
     {
         if ((string) $amount === '0.0000') return null;
         $id = RecordId::generate(); $key = 'settle:' . $allocation['id'];
+        $formula = $operationType === 'verification' ? 'verification-fixed-v1' : 'enrichment-fixed-v1';
+        $debitReason = $operationType === 'verification' ? 'phone_identity_verification' : 'requested_product_purchase';
         $pdo->prepare('INSERT INTO credit_transaction
             (id, tenant_id, type, idempotency_key, input_hash, credits, usage_id, grant_id, allocation_id, occurred_at, posted_at, evidence)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')->execute([$id, $tenant, $type, $key,
                 hash('sha256', $tenant . ':' . $type . ':' . $key . ':' . $amount), (string) Amount::fromString('0')->minus($amount),
                 $usage, $allocation['grant_id'], $allocation['id'], $now, $now,
-                json_encode(['formula' => 'enrichment-fixed-v1', 'reason' => $type === 'debit' ? 'requested_product_purchase' : 'settlement_late_release',
+                json_encode(['formula' => $formula, 'reason' => $type === 'debit' ? $debitReason : 'settlement_late_release',
                     ...($purchaseId === null ? [] : ['purchaseId' => $purchaseId])], JSON_THROW_ON_ERROR)]);
         return $id;
     }

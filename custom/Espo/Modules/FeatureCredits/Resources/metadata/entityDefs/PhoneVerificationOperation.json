@@ -1,0 +1,46 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type": "link", "notNull": true},
+        "contact": {"type": "link", "notNull": true},
+        "actor": {"type": "link", "notNull": true},
+        "usage": {"type": "link", "notNull": true},
+        "reservation": {"type": "link", "notNull": true},
+        "policyVersion": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "priceCredits": {"type": "decimal", "precision": 14, "scale": 4, "notNull": true},
+        "subjectHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "fingerprintHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "hasDateOfBirth": {"type": "bool", "notNull": true},
+        "identityCiphertext": {"type": "text"},
+        "identityHash": {"type": "varchar", "maxLength": 64, "notNull": true},
+        "state": {"type": "varchar", "maxLength": 24, "notNull": true},
+        "outcome": {"type": "varchar", "maxLength": 24},
+        "failureReason": {"type": "varchar", "maxLength": 32},
+        "claimToken": {"type": "varchar", "maxLength": 64},
+        "claimedAt": {"type": "datetime"},
+        "leaseUntil": {"type": "datetime"},
+        "admittedAt": {"type": "datetime", "notNull": true},
+        "deadlineAt": {"type": "datetime", "notNull": true},
+        "completedAt": {"type": "datetime"},
+        "freshUntil": {"type": "datetime"},
+        "retentionExpiresAt": {"type": "datetime"},
+        "erasedAt": {"type": "datetime"},
+        "evidenceCiphertext": {"type": "text"},
+        "evidenceHash": {"type": "varchar", "maxLength": 64}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "contact": {"type": "belongsTo", "entity": "Contact"},
+        "actor": {"type": "belongsTo", "entity": "User"},
+        "usage": {"type": "belongsTo", "entity": "CreditUsage"},
+        "reservation": {"type": "belongsTo", "entity": "CreditReservation"}
+    },
+    "indexes": {
+        "usageUnique": {"columns": ["usageId"], "unique": true},
+        "tenantFingerprint": {"columns": ["tenantId", "fingerprintHash", "state"]},
+        "tenantSubject": {"columns": ["tenantId", "subjectHash", "completedAt"]},
+        "tenantContact": {"columns": ["tenantId", "contactId", "admittedAt"]},
+        "due": {"columns": ["tenantId", "state", "deadlineAt"]},
+        "retention": {"columns": ["retentionExpiresAt"]}
+    }
+}

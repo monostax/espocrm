@@ -16,5 +16,11 @@
         "isSystem": true,
         "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\FeatureCredits\\Jobs\\DispatchEnrichment"
+    },
+    "DispatchPhoneVerification": {
+        "name": "Dispatch and Recover Phone Verification",
+        "isSystem": true,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureCredits\\Jobs\\DispatchPhoneVerification"
     }
 }

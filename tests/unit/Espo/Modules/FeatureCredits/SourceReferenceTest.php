@@ -21,6 +21,7 @@ class SourceReferenceTest extends TestCase
         $this->assertNotSame($make()->hash, $make($source)->hash);
         $this->assertNotSame($make($source)->hash, $make(new SourceReference('Opportunity', 'other'))->hash);
         $this->assertNotSame($make($source)->hash, $make(new SourceReference('ChatwootAiAgentRun', 'source'))->hash);
+        $this->assertNotSame($make($source)->hash, $make(new SourceReference('Contact', 'source'))->hash);
         $summary = new SourceReference('Opportunity', 'source', str_repeat('a', 64));
         $this->assertNotSame($make($source)->hash, $make($summary)->hash);
         $this->assertNotSame($make($summary)->hash, $make(new SourceReference('Opportunity', 'source', str_repeat('b', 64)))->hash);

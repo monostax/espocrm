@@ -1,0 +1,8 @@
+{
+    "fields": {
+        "dateOfBirth": {
+            "type": "date",
+            "isPersonalData": true
+        }
+    }
+}
