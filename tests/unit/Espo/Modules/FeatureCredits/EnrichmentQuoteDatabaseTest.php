@@ -42,6 +42,7 @@ require_once __DIR__ . '/EnrichmentCandidateCacheCases.php';
 require_once __DIR__ . '/EnrichmentDiscoveryCallCases.php';
 require_once __DIR__ . '/EnrichmentDiscoveryExecutionCases.php';
 require_once __DIR__ . '/EnrichmentDiscoveryAdmissionCases.php';
+require_once __DIR__ . '/EnrichmentPreviewCases.php';
 
 class EnrichmentQuoteDatabaseTest extends TestCase
 {
@@ -55,6 +56,7 @@ class EnrichmentQuoteDatabaseTest extends TestCase
     use EnrichmentDiscoveryCallCases;
     use EnrichmentDiscoveryExecutionCases;
     use EnrichmentDiscoveryAdmissionCases;
+    use EnrichmentPreviewCases;
 
     private string $now = '2026-10-11 12:00:00';
     private string $actor = 'user';
@@ -68,6 +70,7 @@ class EnrichmentQuoteDatabaseTest extends TestCase
     private array $deniedScopes = [];
     private array $deniedWrites = [];
     private bool $apiActor = false;
+    private ?ProviderAvailability $providerAvailability = null;
 
     public static function dialects(): iterable
     {
@@ -157,7 +160,7 @@ class EnrichmentQuoteDatabaseTest extends TestCase
         $catalog = new Catalog($manager, $clock);
         $lock = new \Espo\Modules\FeatureCredits\Accounting\WalletLock($manager, $clock);
         $reservations = new \Espo\Modules\FeatureCredits\Accounting\Reservations($lock, new \Espo\Modules\FeatureCredits\Accounting\Funding($lock));
-        return [new Quotes($manager, $clock, $access, $catalog, $availability, new RoutePlanner(), $lock, $reservations), $catalog];
+        return [new Quotes($manager, $clock, $access, $catalog, $this->providerAvailability ?? $availability, new RoutePlanner(), $lock, $reservations), $catalog];
     }
 
     private function input(array $changes = []): QuoteInput
