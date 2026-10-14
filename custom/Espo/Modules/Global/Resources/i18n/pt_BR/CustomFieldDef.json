@@ -80,7 +80,8 @@
             "Contact": "Contato",
             "Lead": "Lead",
             "Account": "Conta",
-            "Opportunity": "Oportunidade"
+            "Opportunity": "Oportunidade",
+            "Initiative": "Iniciativa"
         },
         "type": {
             "varchar": "Texto (uma linha)",

@@ -1,5 +1,5 @@
 {
-    "fields": { "initiativeType": "Initiative Type", "stage": "Stage", "status": "Status", "tenant": "Tenant" },
+    "fields": { "initiativeType": "Initiative Type", "stage": "Stage", "status": "Status", "customFields": "Custom Fields", "tenant": "Tenant" },
     "links": { "initiativeType": "Initiative Type", "stage": "Stage", "relations": "Related Records" },
     "labels": { "Create Initiative": "Create Initiative" },
     "options": { "status": { "Open": "Planned", "In Progress": "In Progress", "Paused": "Paused", "Completed": "Completed", "Canceled": "Canceled" } },

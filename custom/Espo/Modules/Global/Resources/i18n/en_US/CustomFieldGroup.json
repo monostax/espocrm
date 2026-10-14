@@ -43,7 +43,8 @@
             "Contact": "Contact",
             "Lead": "Lead",
             "Account": "Account",
-            "Opportunity": "Opportunity"
+            "Opportunity": "Opportunity",
+            "Initiative": "Initiative"
         }
     }
 }

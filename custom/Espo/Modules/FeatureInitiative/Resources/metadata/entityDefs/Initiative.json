@@ -41,6 +41,14 @@
         },
         "assignedUser": { "type": "link", "view": "views/fields/assigned-user", "audited": true },
         "description": { "type": "text" },
+        "customFields": {
+            "type": "jsonObject",
+            "view": "global:views/fields/custom-fields",
+            "tooltip": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        },
         "tenant": { "type": "link", "readOnly": true },
         "createdAt": { "type": "datetime", "readOnly": true },
         "modifiedAt": { "type": "datetime", "readOnly": true },

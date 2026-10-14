@@ -3,7 +3,8 @@
         "Contact",
         "Lead",
         "Account",
-        "Opportunity"
+        "Opportunity",
+        "Initiative"
     ],
     "attributeName": "customFields",
     "allowedTypes": [

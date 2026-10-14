@@ -43,7 +43,8 @@
             "Contact": "Contato",
             "Lead": "Lead",
             "Account": "Conta",
-            "Opportunity": "Oportunidade"
+            "Opportunity": "Oportunidade",
+            "Initiative": "Iniciativa"
         }
     }
 }

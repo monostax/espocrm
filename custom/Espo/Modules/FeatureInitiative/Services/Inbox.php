@@ -274,7 +274,7 @@ class Inbox
         $this->workspace($request);
         if (!$this->acl->checkScope('Initiative', 'read')) throw new Forbidden();
         $fields = [];
-        foreach (['name', 'initiativeType', 'stage', 'status', 'assignedUser', 'tags', 'description', 'createdAt', 'modifiedAt', 'createdBy'] as $name) {
+        foreach (['name', 'initiativeType', 'stage', 'status', 'assignedUser', 'tags', 'description', 'customFields', 'createdAt', 'modifiedAt', 'createdBy'] as $name) {
             if (!$this->acl->checkField('Initiative', $name)) continue;
             $def = $this->metadata->get(['entityDefs', 'Initiative', 'fields', $name]) ?? [];
             $fields[$name] = array_intersect_key($def, array_flip(['type', 'options', 'required', 'readOnly', 'readOnlyAfterCreate', 'maxLength']));

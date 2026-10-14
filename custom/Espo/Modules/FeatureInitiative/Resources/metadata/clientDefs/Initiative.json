@@ -11,5 +11,31 @@
             "unlinkDisabled": true,
             "createAttributeMap": { "id": "initiativeId", "name": "initiativeName" }
         }
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            }
+        ],
+        "detailSmall": [
+            {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            }
+        ],
+        "edit": [
+            {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            }
+        ],
+        "editSmall": [
+            {
+                "name": "customFieldsPanel",
+                "reference": "customFields"
+            }
+        ]
     }
 }

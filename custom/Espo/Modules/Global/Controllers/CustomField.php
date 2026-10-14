@@ -20,6 +20,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Acl;
 use Espo\Core\ORM\Entity as CoreEntity;
+use Espo\Core\Record\ServiceContainer;
 use Espo\Entities\User;
 use Espo\Modules\Global\Tools\CustomField\ConditionSchema;
 use Espo\Modules\Global\Tools\CustomField\MetaProvider;
@@ -55,6 +56,7 @@ class CustomField
         private Acl $acl,
         private User $user,
         private ConditionSchema $conditionSchema,
+        private ServiceContainer $serviceContainer,
     ) {}
 
     /**
@@ -66,7 +68,106 @@ class CustomField
 
         $tenantId = $this->resolveTenantId($request, $entityType);
 
-        return $this->metaProvider->getGroupedMeta($entityType, $tenantId);
+        $meta = $this->metaProvider->getGroupedMeta($entityType, $tenantId);
+        $meta['canCreate'] = $this->canCreateDef($tenantId);
+
+        return $meta;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function postActionCreate(Request $request, Response $response): array
+    {
+        $data = $request->getParsedBody();
+        $bodyEntityType = is_string($data->entityType ?? null) ? $data->entityType : null;
+        $entityType = $this->requireEnabledEntityType($request, $bodyEntityType);
+
+        $tenantId = $this->resolveTenantId($request, $entityType, $data);
+
+        if ($tenantId === null || $tenantId === '' || !$this->canCreateDef($tenantId)) {
+            throw new Forbidden('No permission to create custom fields.');
+        }
+
+        $label = is_string($data->label ?? null) ? trim($data->label) : '';
+
+        if ($label === '') {
+            throw new BadRequest('label is required.');
+        }
+
+        $label = mb_substr($label, 0, 100);
+
+        $type = is_string($data->type ?? null) ? trim($data->type) : '';
+
+        if ($type === '' || !in_array($type, $this->metaProvider->getAllowedTypes(), true)) {
+            throw new BadRequest("Invalid custom field type '{$type}'.");
+        }
+
+        $options = [];
+
+        if (in_array($type, ['enum', 'multiEnum'], true)) {
+            $rawOptions = $data->options ?? null;
+
+            if (is_object($rawOptions)) {
+                $rawOptions = array_values((array) $rawOptions);
+            }
+
+            if (is_array($rawOptions)) {
+                foreach ($rawOptions as $opt) {
+                    if (is_string($opt) || is_int($opt) || is_float($opt)) {
+                        $trimmed = trim((string) $opt);
+
+                        if ($trimmed !== '' && !in_array($trimmed, $options, true)) {
+                            $options[] = $trimmed;
+                        }
+                    }
+                }
+            }
+
+            if ($options === []) {
+                throw new BadRequest('options must not be empty for enum/multiEnum fields.');
+            }
+        }
+
+        [$name, $sortOrder] = $this->generateUniqueFieldNameAndSortOrder($tenantId, $entityType, $label);
+        $teamIds = $this->resolveTenantTeamIds($tenantId);
+
+        $payload = (object) [
+            'entityType' => $entityType,
+            'name' => $name,
+            'valueKey' => $name,
+            'label' => $label,
+            'type' => $type,
+            'teamsIds' => $teamIds,
+            'tenantId' => $tenantId,
+            'sortOrder' => $sortOrder,
+            'isActive' => true,
+            'isRequired' => false,
+            'isTemplateEnabled' => true,
+        ];
+
+        if (in_array($type, ['enum', 'multiEnum'], true)) {
+            $payload->options = $options;
+        }
+
+        $entity = $this->serviceContainer->get('CustomFieldDef')->create($payload)->getEntity();
+
+        $meta = $this->metaProvider->getGroupedMeta($entityType, $tenantId);
+        $meta['canCreate'] = $this->canCreateDef($tenantId);
+
+        return [
+            'field' => [
+                'id' => (string) $entity->getId(),
+                'name' => (string) $entity->get('name'),
+                'label' => (string) $entity->get('label'),
+                'type' => (string) $entity->get('type'),
+                'valueKey' => (string) $entity->get('valueKey'),
+                'options' => $options,
+                'isRequired' => (bool) $entity->get('isRequired'),
+                'sortOrder' => (int) ($entity->get('sortOrder') ?? $sortOrder),
+            ],
+            'meta' => $meta,
+        ];
     }
 
     public function getActionConditionAttributes(Request $request, Response $response): array
@@ -136,9 +237,9 @@ class CustomField
         ];
     }
 
-    private function requireEnabledEntityType(Request $request): string
+    private function requireEnabledEntityType(Request $request, ?string $fallback = null): string
     {
-        $entityType = $request->getQueryParam('entityType');
+        $entityType = $fallback ?? $request->getQueryParam('entityType');
 
         if (!$entityType || !is_string($entityType)) {
             throw new BadRequest('entityType is required.');
@@ -163,9 +264,9 @@ class CustomField
         return true;
     }
 
-    private function resolveTenantId(Request $request, string $entityType): ?string
+    private function resolveTenantId(Request $request, string $entityType, ?object $data = null): ?string
     {
-        $explicit = $request->getQueryParam('tenantId');
+        $explicit = $data->tenantId ?? $request->getQueryParam('tenantId');
 
         if (is_string($explicit) && trim($explicit) !== '') {
             $tenantId = trim($explicit);
@@ -188,13 +289,51 @@ class CustomField
             return $tenantId;
         }
 
-        $teamIds = $this->parseTeamIds($request->getQueryParam('teamIds'));
+        $rawAccountId = $data->accountId ?? $request->getQueryParam('accountId');
+        $accountId = filter_var($rawAccountId, FILTER_VALIDATE_INT);
 
-        // Prefer client-supplied record teams (host model.teamsIds).
+        if ($accountId && $accountId > 0) {
+            $accounts = $this->entityManager
+                ->getRDBRepository('ChatwootAccount')
+                ->where(['chatwootAccountId' => $accountId])
+                ->limit(0, 2)
+                ->find();
+
+            if (count($accounts) !== 1) {
+                throw new BadRequest('Workspace not found.');
+            }
+
+            $account = iterator_to_array($accounts, false)[0];
+            $accountTenantId = $account->get('tenantId');
+
+            if (
+                !is_string($accountTenantId) ||
+                trim($accountTenantId) === '' ||
+                !$account->get('platformId') ||
+                (!$this->user->isAdmin() && (
+                    !$this->acl->checkEntityRead($account) ||
+                    !$this->userTenantResolver->canActForTenant($this->user, trim($accountTenantId))
+                ))
+            ) {
+                throw new Forbidden('No access to the requested workspace.');
+            }
+
+            return trim($accountTenantId);
+        }
+
+        $teamIds = $this->parseTeamIds($data->teamIds ?? $request->getQueryParam('teamIds'));
+
+        // Prefer client-supplied record tenant or record teams.
         if ($teamIds === []) {
-            $recordId = $request->getQueryParam('recordId');
+            $recordId = $data->recordId ?? $request->getQueryParam('recordId');
 
             if (is_string($recordId) && $recordId !== '') {
+                $recordTenantId = $this->loadRecordTenantId($entityType, $recordId);
+
+                if ($recordTenantId !== null) {
+                    return $recordTenantId;
+                }
+
                 $teamIds = $this->loadRecordTeamIds($entityType, $recordId);
             }
         }
@@ -218,6 +357,208 @@ class CustomField
         }
 
         return $this->tenantResolver->resolveFromTeamIds($teamIds);
+    }
+
+    private function loadRecordTenantId(string $entityType, string $recordId): ?string
+    {
+        $entity = $this->entityManager->getEntityById($entityType, $recordId);
+
+        if (!$entity) {
+            return null;
+        }
+
+        if (!$this->user->isAdmin() && !$this->acl->check($entity, 'read')) {
+            return null;
+        }
+
+        $tenantId = $entity->get('tenantId');
+
+        if (!is_string($tenantId) || trim($tenantId) === '') {
+            return null;
+        }
+
+        return trim($tenantId);
+    }
+
+    private function canCreateDef(?string $tenantId): bool
+    {
+        if ($tenantId === null || $tenantId === '') {
+            return false;
+        }
+
+        if (!$this->user->isAdmin() && !$this->acl->checkScope('CustomFieldDef', 'create')) {
+            return false;
+        }
+
+        return $this->resolveTenantTeamIds($tenantId) !== [];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveTenantTeamIds(string $tenantId): array
+    {
+        if ($tenantId === '') {
+            return [];
+        }
+
+        if (!$this->user->isAdmin() && !$this->userTenantResolver->canActForTenant($this->user, $tenantId)) {
+            return [];
+        }
+
+        $tenant = $this->entityManager->getEntityById('Tenant', $tenantId);
+
+        if (!$tenant) {
+            return [];
+        }
+
+        $baseTeamId = $tenant->get('baseUserTeamId');
+        $baseTeamId = is_string($baseTeamId) && trim($baseTeamId) !== '' ? trim($baseTeamId) : null;
+
+        if ($this->user->isAdmin()) {
+            if ($baseTeamId !== null) {
+                return [$baseTeamId];
+            }
+
+            if ($tenant instanceof CoreEntity) {
+                try {
+                    $otherIds = $tenant->getLinkMultipleIdList('otherUserTeams');
+
+                    if (is_array($otherIds) && $otherIds !== []) {
+                        return [(string) $otherIds[0]];
+                    }
+                } catch (\Throwable) {
+                }
+            }
+
+            return [];
+        }
+
+        $userTeams = array_flip($this->getUserTeamIds());
+
+        if ($baseTeamId !== null && isset($userTeams[$baseTeamId])) {
+            return [$baseTeamId];
+        }
+
+        if ($tenant instanceof CoreEntity) {
+            try {
+                $otherIds = $tenant->getLinkMultipleIdList('otherUserTeams');
+
+                if (is_array($otherIds)) {
+                    foreach ($otherIds as $id) {
+                        if (is_string($id) && $id !== '' && isset($userTeams[$id])) {
+                            return [$id];
+                        }
+                    }
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        return $baseTeamId !== null ? [$baseTeamId] : [];
+    }
+
+    /**
+     * @return array{0: string, 1: int}
+     */
+    private function generateUniqueFieldNameAndSortOrder(
+        string $tenantId,
+        string $entityType,
+        string $label,
+    ): array {
+        $base = $this->slugifyLabel($label);
+
+        $existing = $this->entityManager
+            ->getRDBRepository('CustomFieldDef')
+            ->where([
+                'tenantId' => $tenantId,
+                'entityType' => $entityType,
+            ])
+            ->find();
+
+        $taken = [];
+        $maxSortOrder = 0;
+
+        foreach ($existing as $record) {
+            $existingName = $record->get('name');
+            $existingKey = $record->get('valueKey');
+            $sortOrder = (int) ($record->get('sortOrder') ?? 0);
+
+            if ($sortOrder > $maxSortOrder) {
+                $maxSortOrder = $sortOrder;
+            }
+
+            if (is_string($existingName) && $existingName !== '') {
+                $taken[$existingName] = true;
+            }
+
+            if (is_string($existingKey) && $existingKey !== '') {
+                $taken[$existingKey] = true;
+            }
+        }
+
+        $candidate = $base;
+        $suffix = 2;
+
+        while (isset($taken[$candidate])) {
+            $candidate = $base . $suffix;
+            $suffix++;
+        }
+
+        return [$candidate, $maxSortOrder + 10];
+    }
+
+    private function slugifyLabel(string $label): string
+    {
+        $translit = strtr($label, [
+            'Á' => 'A', 'À' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A', 'Å' => 'A',
+            'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a', 'ª' => 'a',
+            'É' => 'E', 'È' => 'E', 'Ê' => 'E', 'Ë' => 'E',
+            'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'Í' => 'I', 'Ì' => 'I', 'Î' => 'I', 'Ï' => 'I',
+            'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+            'Ó' => 'O', 'Ò' => 'O', 'Ô' => 'O', 'Õ' => 'O', 'Ö' => 'O', 'Ø' => 'O',
+            'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o', 'ø' => 'o', 'º' => 'o',
+            'Ú' => 'U', 'Ù' => 'U', 'Û' => 'U', 'Ü' => 'U',
+            'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+            'Ç' => 'C', 'ç' => 'c',
+            'Ñ' => 'N', 'ñ' => 'n',
+            'Ý' => 'Y', 'ý' => 'y', 'ÿ' => 'y',
+            'ß' => 'ss',
+        ]);
+
+        if (function_exists('iconv')) {
+            $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $translit);
+
+            if (is_string($converted) && $converted !== '') {
+                $translit = $converted;
+            }
+        }
+
+        $tokens = preg_split('/[^a-zA-Z0-9]+/', $translit, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $camel = '';
+
+        foreach ($tokens as $token) {
+            if ($camel === '') {
+                $cleaned = preg_replace('/^[^a-zA-Z]+/', '', $token) ?? '';
+
+                if ($cleaned === '') {
+                    continue;
+                }
+
+                $camel = strtolower($cleaned);
+            } else {
+                $camel .= ucfirst(strtolower($token));
+            }
+        }
+
+        $base = substr($camel, 0, 50);
+
+        if ($base === '' || !preg_match('/^[a-z][a-zA-Z0-9_]*$/', $base)) {
+            return 'field';
+        }
+
+        return $base;
     }
 
     /**

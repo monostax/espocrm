@@ -17,7 +17,7 @@
         "entityType": {
             "type": "enum",
             "required": true,
-            "options": ["Contact", "Lead", "Account", "Opportunity"],
+            "options": ["Contact", "Lead", "Account", "Opportunity", "Initiative"],
             "default": "Contact",
             "view": "views/fields/enum"
         },

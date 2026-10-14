@@ -1,5 +1,5 @@
 {
-    "fields": { "initiativeType": "Tipo de Iniciativa", "stage": "Etapa", "status": "Status", "tenant": "Workspace" },
+    "fields": { "initiativeType": "Tipo de Iniciativa", "stage": "Etapa", "status": "Status", "customFields": "Campos Personalizados", "tenant": "Workspace" },
     "links": { "initiativeType": "Tipo de Iniciativa", "stage": "Etapa", "relations": "Registros Relacionados" },
     "labels": { "Create Initiative": "Criar Iniciativa" },
     "options": { "status": { "Open": "Planejada", "In Progress": "Em andamento", "Paused": "Pausada", "Completed": "Concluída", "Canceled": "Cancelada" } },

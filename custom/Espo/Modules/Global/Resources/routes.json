@@ -11,5 +11,13 @@
             "controller": "CustomField",
             "action": "meta"
         }
+    },
+    {
+        "route": "/CustomField/action/create",
+        "method": "post",
+        "params": {
+            "controller": "CustomField",
+            "action": "create"
+        }
     }
 ]
