@@ -42,14 +42,14 @@ trait EnrichmentSelectedProviderCases
             $params = ['tenantId' => 'tenant', 'targetType' => 'Contact', 'targetId' => 'contact'];
             $preview = $quotes->preview($params)['actions'][2];
             $this->assertSame([
-                ['source' => 2, 'prices' => ['email' => '4.0000', 'phone' => '4.0000'], 'selected' => true],
-                ['source' => 3, 'prices' => ['email' => '10.0000', 'phone' => '10.0000'], 'selected' => false],
+                ['source' => 2, 'prices' => ['email' => '3.0000', 'phone' => '3.0000'], 'selected' => true],
+                ['source' => 3, 'prices' => ['email' => '8.0000', 'phone' => '8.0000'], 'selected' => false],
             ], $preview['providers']);
             try { $quotes->quote($this->selectedInput(['sources' => [1]])); $this->fail('Ineligible Apollo selected.'); }
             catch (Conflict) {}
             $input = $this->selectedInput();
             $quote = $quotes->quote($input);
-            $this->assertSame('28.0000', $quote['maximum']);
+            $this->assertSame('22.0000', $quote['maximum']);
             $this->assertSame($quote['maximum'], $quote['budget']);
             $public = CustomerProjection::quote($quote);
             $this->assertSame([2, 3], $public['sources']);
@@ -65,7 +65,7 @@ trait EnrichmentSelectedProviderCases
             $pdo->exec("INSERT INTO contact_channel_identity (id, contact_id, tenant_id, channel_type, source_id)
                 VALUES ('linkedin', 'contact', 'tenant', 'linkedin', 'https://linkedin.com/in/person')");
             $actions = $quotes->preview($params)['actions'];
-            foreach ([['email', ['email'], '5.0000'], ['phone', ['phone'], '12.0000'], ['combined', ['email', 'phone'], '17.0000']] as [$action, $products, $maximum]) {
+            foreach ([['email', ['email'], '4.0000'], ['phone', ['phone'], '11.0000'], ['combined', ['email', 'phone'], '15.0000']] as [$action, $products, $maximum]) {
                 $options = array_values(array_filter($actions, static fn ($row) => $row['action'] === $action))[0]['providers'];
                 foreach ($options as $option) $this->assertSame($products, array_keys($option['prices']));
                 $scoped = $quotes->quote($this->selectedInput(['sources' => [1, 2], 'products' => $products, 'requestKey' => $action]));
@@ -87,9 +87,9 @@ trait EnrichmentSelectedProviderCases
             $this->now = '2026-10-15 00:00:00';
             $this->fundAdmission($pdo, '100');
             $quote = $quotes->quote($this->selectedInput(['sources' => [1, 2, 3], 'refresh' => true]));
-            $this->assertSame('37.0000', $quote['maximum']);
+            $this->assertSame('31.0000', $quote['maximum']);
             $quotes->confirm('tenant', $quote['id']);
-            $this->assertSame('37.0000', $quotes->admit('tenant', $quote['id'])['reservedCredits']);
+            $this->assertSame('31.0000', $quotes->admit('tenant', $quote['id'])['reservedCredits']);
             $execution = $this->executor($pdo);
             $this->supplierResults = [new Result('match', ['same@example.test']),
                 new Result('match', ['same@example.test', 'second@example.test']), new Result('match', ['third@example.test']),
@@ -97,7 +97,7 @@ trait EnrichmentSelectedProviderCases
             $execution->run('tenant', $quote['id']);
             $this->assertSame([['apollo','email','lookup'], ['cpfcnpj','email','lookup'], ['hub','email','lookup'],
                 ['apollo','phone','lookup'], ['cpfcnpj','phone','lookup'], ['hub','phone','lookup']], $this->supplierCalls);
-            $this->assertExecuted($pdo, '23.0000');
+            $this->assertExecuted($pdo, '20.0000');
             $this->assertSame(4, (int) $pdo->query('SELECT COUNT(*) FROM enrichment_attempt WHERE purchased_at IS NOT NULL')->fetchColumn());
             [,,,,,,$history,$review] = $this->purchaseServices($pdo);
             $list = $history->read(['tenantId' => 'tenant', 'targetType' => 'Contact', 'targetId' => 'contact', 'product' => 'email'])['list'];
@@ -124,7 +124,7 @@ trait EnrichmentSelectedProviderCases
             $this->supplierResults = [new Result('match', ['one@example.test'], hidden: ['phone' => ['+5511999998888']]),
                 new Result('match', ['two@example.test'], hidden: ['phone' => ['+5511999997777']])];
             $execution->run('tenant', $quote['id']);
-            $this->assertExecuted($pdo, '28.0000');
+            $this->assertExecuted($pdo, '22.0000');
             $this->assertSame([['cpfcnpj','email','lookup'], ['hub','email','lookup']], $this->supplierCalls);
             $this->assertSame(4, (int) $pdo->query('SELECT COUNT(*) FROM enrichment_attempt WHERE purchased_at IS NOT NULL')->fetchColumn());
             $repeat = $quotes->quote($this->selectedInput(['products' => ['phone'], 'requestKey' => 'reuse']));
@@ -132,7 +132,7 @@ trait EnrichmentSelectedProviderCases
             $execution->run('tenant', $repeat['id']);
             $this->assertCount(2, $this->supplierCalls);
             $this->assertSame(2, (int) $pdo->query("SELECT COUNT(*) FROM enrichment_attempt WHERE state='reused'")->fetchColumn());
-            $this->assertSame('72.0000', $pdo->query('SELECT balance FROM tenant_credit_balance')->fetchColumn());
+            $this->assertSame('78.0000', $pdo->query('SELECT balance FROM tenant_credit_balance')->fetchColumn());
             $this->assertSame('0.0000', $pdo->query('SELECT reserved_credits FROM tenant_credit_balance')->fetchColumn());
             $this->assertAdmissionAudit($pdo);
         });
@@ -156,7 +156,7 @@ trait EnrichmentSelectedProviderCases
             $execution->run('tenant', $quote['id']);
             $this->assertSame([['hub','email','lookup']], $this->supplierCalls);
             $execution->record('tenant', $quote['id'], $claim['id'], $claim['token'], new Result('match', ['late@example.test']));
-            $this->assertExecuted($pdo, '10.0000');
+            $this->assertExecuted($pdo, '8.0000');
         });
     }
 }

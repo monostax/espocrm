@@ -17,19 +17,23 @@ require_once __DIR__ . '/EnrichmentFixtures.php';
 
 class EnrichmentRateCardTest extends TestCase
 {
-    public function testBrazilianSupplierPricesMeetEightyPercentMarginAcrossAllBrlOffers(): void
+    public function testExplicitContactPricesAndAccountMarginFloor(): void
     {
         $resources = __DIR__ . '/../../../../../custom/Espo/Modules/FeatureCredits/Resources/';
         $card = new RateCard(json_decode(file_get_contents($resources . 'enrichment/integer-2026-10-14.json'), true, 32, JSON_THROW_ON_ERROR));
+        foreach (['email', 'phone'] as $product) {
+            $this->assertSame('3.0000', $card->ratesFor('Contact')['cpfcnpj'][$product]['credits']);
+            $this->assertSame('8.0000', $card->ratesFor('Contact')['hub'][$product]['credits']);
+        }
         $billing = json_decode(file_get_contents($resources . 'billing/launch-2026-10-13.json'), true, 32, JSON_THROW_ON_ERROR);
         $products = [];
         foreach ($billing['products'] as $product) $products[$product['productId'] . ':' . $product['productVersion']] = $product['credits'];
         $offers = array_values(array_filter($billing['offers'], static fn ($offer) => $offer['currency'] === 'BRL'));
         $this->assertNotEmpty($offers);
-        // User-supplied per-request BRL costs, shared by products using the same supplier package.
-        $costs = ['cpfcnpj:21' => '0.27', 'cpfcnpj:6' => '0.51', 'hub:cadastropf' => '0.75', 'hub:cnpj' => '0.03'];
+        // Account draft retains its margin floor; Contact uses explicit user-approved prices.
+        $costs = ['cpfcnpj:6' => '0.51', 'hub:cnpj' => '0.03'];
         foreach ($card->definition['rates'] as $rate) {
-            if (!in_array($rate['provider'], ['cpfcnpj', 'hub'], true)) continue;
+            if ($rate['target'] !== 'Account' || !in_array($rate['provider'], ['cpfcnpj', 'hub'], true)) continue;
             $credits = BigDecimal::of($rate['credits']);
             $this->assertMatchesRegularExpression('/^[1-9][0-9]*\.0000$/D', $rate['credits']);
             $cost = BigDecimal::of($costs[$rate['provider'] . ':' . $rate['lookup']]);

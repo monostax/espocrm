@@ -53,7 +53,7 @@ trait EnrichmentPreviewCases
             $this->assertCount(3, $preview['actions']);
             $this->assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM enrichment_quote')->fetchColumn());
             foreach ($preview['actions'] as $row) {
-                $price = $row['action'] === 'combined' ? '8.0000' : '4.0000';
+                $price = $row['action'] === 'combined' ? '6.0000' : '3.0000';
                 $this->assertTrue($row['available']);
                 $this->assertNull($row['reason']);
                 $this->assertSame($price, $row['startingCredits']);
@@ -64,7 +64,7 @@ trait EnrichmentPreviewCases
                 $this->assertSame($price, $quote['maximum']);
                 foreach ($quote['routes'] as $route) {
                     $this->assertSame(['cpfcnpj'], array_column($route, 'provider'));
-                    $this->assertSame(['4.0000'], array_column($route, 'credits'));
+                    $this->assertSame(['3.0000'], array_column($route, 'credits'));
                 }
                 $this->assertTrue($quotes->confirm('tenant', $quote['id'])['confirmable']);
             }

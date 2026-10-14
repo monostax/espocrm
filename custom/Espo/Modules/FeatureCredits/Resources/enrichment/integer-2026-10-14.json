@@ -1,12 +1,12 @@
 {
-    "version": "enrichment-brl-margin80-2026-10-14",
+    "version": "enrichment-integer-2026-10-14-v2",
     "effectiveFrom": "2026-10-15 00:00:00",
     "routingPolicy": "br-discovery-v2",
     "rates": [
-        {"provider": "cpfcnpj", "target": "Contact", "lookup": "21", "product": "email", "credits": "4"},
-        {"provider": "cpfcnpj", "target": "Contact", "lookup": "21", "product": "phone", "credits": "4"},
-        {"provider": "hub", "target": "Contact", "lookup": "cadastropf", "product": "email", "credits": "10"},
-        {"provider": "hub", "target": "Contact", "lookup": "cadastropf", "product": "phone", "credits": "10"},
+        {"provider": "cpfcnpj", "target": "Contact", "lookup": "21", "product": "email", "credits": "3"},
+        {"provider": "cpfcnpj", "target": "Contact", "lookup": "21", "product": "phone", "credits": "3"},
+        {"provider": "hub", "target": "Contact", "lookup": "cadastropf", "product": "email", "credits": "8"},
+        {"provider": "hub", "target": "Contact", "lookup": "cadastropf", "product": "phone", "credits": "8"},
         {"provider": "hub", "target": "Account", "lookup": "cnpj", "product": "email", "credits": "1"},
         {"provider": "hub", "target": "Account", "lookup": "cnpj", "product": "phone", "credits": "1"},
         {"provider": "cpfcnpj", "target": "Account", "lookup": "6", "product": "email", "credits": "7"},
