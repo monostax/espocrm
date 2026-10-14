@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace tests\unit\Espo\Modules\FeatureCredits;
 
+use Brick\Math\BigDecimal;
 use Espo\Modules\FeatureCredits\Accounting\Amount;
 use Espo\Modules\FeatureCredits\Enrichment\RateCard;
 use Espo\Modules\FeatureCredits\Enrichment\RoutePlanner;
@@ -16,6 +17,38 @@ require_once __DIR__ . '/EnrichmentFixtures.php';
 
 class EnrichmentRateCardTest extends TestCase
 {
+    public function testBrazilianSupplierPricesMeetEightyPercentMarginAcrossAllBrlOffers(): void
+    {
+        $resources = __DIR__ . '/../../../../../custom/Espo/Modules/FeatureCredits/Resources/';
+        $card = new RateCard(json_decode(file_get_contents($resources . 'enrichment/integer-2026-10-14.json'), true, 32, JSON_THROW_ON_ERROR));
+        $billing = json_decode(file_get_contents($resources . 'billing/launch-2026-10-13.json'), true, 32, JSON_THROW_ON_ERROR);
+        $products = [];
+        foreach ($billing['products'] as $product) $products[$product['productId'] . ':' . $product['productVersion']] = $product['credits'];
+        $offers = array_values(array_filter($billing['offers'], static fn ($offer) => $offer['currency'] === 'BRL'));
+        $this->assertNotEmpty($offers);
+        // User-supplied per-request BRL costs, shared by products using the same supplier package.
+        $costs = ['cpfcnpj:21' => '0.27', 'cpfcnpj:6' => '0.51', 'hub:cadastropf' => '0.75', 'hub:cnpj' => '0.03'];
+        foreach ($card->definition['rates'] as $rate) {
+            if (!in_array($rate['provider'], ['cpfcnpj', 'hub'], true)) continue;
+            $credits = BigDecimal::of($rate['credits']);
+            $this->assertMatchesRegularExpression('/^[1-9][0-9]*\.0000$/D', $rate['credits']);
+            $cost = BigDecimal::of($costs[$rate['provider'] . ':' . $rate['lookup']]);
+            $lowerWouldMissTarget = false;
+            foreach ($offers as $offer) {
+                $quantity = $products[$offer['productId'] . ':' . $offer['productVersion']];
+                // Revenue >= 5 * cost means margin >= 80%. Cross-multiply to avoid rounded unit prices.
+                $required = $cost->multipliedBy('5')->multipliedBy($quantity);
+                $this->assertTrue($credits->multipliedBy($offer['price'])->isGreaterThanOrEqualTo($required),
+                    $rate['provider'] . ':' . $rate['lookup'] . ':' . $rate['product'] . ' misses margin on ' . $offer['offerId']);
+                $lowerWouldMissTarget = $lowerWouldMissTarget ||
+                    $credits->minus('1')->multipliedBy($offer['price'])->isLessThan($required);
+            }
+            $this->assertTrue($lowerWouldMissTarget, 'Use the smallest whole-credit price that meets the target.');
+        }
+        $this->assertSame('1.0000', $card->ratesFor('Contact')['apollo']['email']['credits']);
+        $this->assertSame('8.0000', $card->ratesFor('Contact')['apollo']['phone']['credits']);
+    }
+
     public function testCanonicalSnapshotsAreImmutableAndKeepEntitySpecificRates(): void
     {
         $input = EnrichmentFixtures::definition();
