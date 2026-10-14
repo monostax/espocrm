@@ -1,0 +1,4 @@
+{
+    "additionalBuilderClassNameList": ["__APPEND__", "Espo\\Modules\\FeatureCredits\\Classes\\Metadata\\CustomerBoundaries"],
+    "frontendHiddenPathList": ["__APPEND__", ["app", "enrichment"]]
+}

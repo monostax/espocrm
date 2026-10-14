@@ -82,4 +82,14 @@ final class CustomerProjectionTest extends TestCase
         $this->expectExceptionMessage('Enrichment source is unavailable.');
         CustomerProjection::purchase(['provider' => 'private-supplier'], ['routes' => []]);
     }
+
+    public function testPaymentHandoffKeepsVerifiedDestinationAndDropsInternalStatus(): void
+    {
+        $public = ['tenantId' => 'tenant', 'obligationId' => 'obligation', 'environment' => 'sandbox',
+            'state' => 'pending', 'invoiceUrl' => 'https://payment.example/invoice'];
+        self::assertSame($public, BillingProjection::payment($public + [
+            'providerStatus' => 'private-status', 'provider' => 'private-supplier', 'externalId' => 'private-id']));
+        self::assertSame(['id' => 'purchase', 'fields' => ['emailAddress']], CustomerProjection::application([
+            'id' => 'purchase', 'fields' => ['emailAddress'], 'provider' => 'private-supplier', 'raw' => ['private']]));
+    }
 }

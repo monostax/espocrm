@@ -64,7 +64,6 @@ class Service
             $result['analytics'] = [
                 'totals' => Analytics::summarize($ledger['runs']),
                 'filtered' => Analytics::summarize($filtered),
-                'models' => Analytics::grouped($filtered, 'model'),
                 'outcomes' => Analytics::grouped($filtered, 'outcome'),
                 'daily' => Analytics::grouped($filtered, 'day'),
             ];

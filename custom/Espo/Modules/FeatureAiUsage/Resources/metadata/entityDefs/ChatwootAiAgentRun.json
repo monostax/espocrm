@@ -1,0 +1,9 @@
+{
+    "fields": {
+        "model": {"exportDisabled": true, "directAccessDisabled": true, "utility": true, "filterDisabled": true},
+        "modelUsage": {"exportDisabled": true, "directAccessDisabled": true, "utility": true, "filterDisabled": true},
+        "hatchetEventId": {"exportDisabled": true, "directAccessDisabled": true, "utility": true, "filterDisabled": true},
+        "hatchetWorkflowRunId": {"exportDisabled": true, "directAccessDisabled": true, "utility": true, "filterDisabled": true},
+        "billingWaiverReason": {"exportDisabled": true, "directAccessDisabled": true, "utility": true, "filterDisabled": true}
+    }
+}

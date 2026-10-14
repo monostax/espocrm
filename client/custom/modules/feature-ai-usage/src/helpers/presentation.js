@@ -27,7 +27,7 @@ export function presentMetrics(metrics, format, t) {
 function presentAnalytics(analytics, format, t) {
     if (!analytics) return null;
     const fields = ['runs', 'totalTokens', 'inputTokens', 'outputTokens', 'cachedInputTokens', 'tokenCacheHitPct', 'requests', 'requestCacheHitPct', 'requestCoveragePct', 'avgDurationMs'];
-    const tables = ['models', 'outcomes', 'daily'].map(dimension => ({
+    const tables = ['outcomes', 'daily'].map(dimension => ({
         label: t('analytics_' + dimension), headers: fields.map(t),
         rows: analytics[dimension].map(row => ({
             name: dimension === 'daily' ? format.date(row.key) : dimension === 'outcomes' ? t('outcome_' + (row.key || 'unknown')) : row.key || t('unattributed'),

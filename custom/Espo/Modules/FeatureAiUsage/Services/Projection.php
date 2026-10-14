@@ -69,7 +69,7 @@ class Projection
     public function activity(array $row, ?array $group = null): array
     {
         $result = ['id' => $row['id']];
-        $fields = ['runAt', 'kind', 'model', 'durationMs', 'usageMetricsVersion', 'modelRequestCount'];
+        $fields = ['runAt', 'kind', 'durationMs', 'usageMetricsVersion', 'modelRequestCount'];
         // Tenant administrators are not necessarily EspoCRM instance administrators.
         // Omit token fields entirely for non-admins in both list and detail responses.
         if ($this->canViewAnalytics()) {

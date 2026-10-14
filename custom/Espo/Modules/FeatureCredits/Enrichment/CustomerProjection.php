@@ -34,6 +34,12 @@ final class CustomerProjection
             ['source' => self::source($terms, $receipt['provider'])];
     }
 
+    public static function application(array $receipt): array
+    {
+        return self::only($receipt, ['id', 'source', 'tenantId', 'targetType', 'targetId', 'fields',
+            'purchaseId', 'accountId', 'contactId', 'relationIds', 'sourcePurchaseIds', 'actorId', 'appliedAt']);
+    }
+
     public static function quote(array $receipt): array
     {
         $result = self::only($receipt, ['id', 'tenantId', 'targetType', 'targetId', 'products', 'waterfall',

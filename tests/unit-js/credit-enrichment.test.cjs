@@ -10,7 +10,7 @@ const client = 'client/custom/modules/feature-credits/';
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 function load(file, imports = {}, globals = {}) {
     const exports = {};
-    vm.runInNewContext(ts.transpileModule(read(file), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS}}).outputText,
+    vm.runInNewContext(ts.transpileModule(read(file), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, esModuleInterop: true}}).outputText,
         {exports, require: key => imports[key], crypto: require('node:crypto').webcrypto, ...globals});
     return exports;
 }

@@ -68,7 +68,7 @@ trait EnrichmentCandidateCacheCases
             $this->assertSame('admitted',$pdo->query('SELECT state FROM credit_usage')->fetchColumn());
             $pdo->beginTransaction(); $erasure->erase($entity); $pdo->commit();
             $read = $review->read('tenant',$receipt['id']);
-            $this->assertSame($receipt,$read['receipt']); $this->assertTrue($read['erased']);
+            $this->assertSame(\Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::purchase($receipt,$quote),$read['receipt']); $this->assertTrue($read['erased']);
             $this->assertSame([],(array) $read['values']); $this->assertSame('data_erased',$read['application']['reason']);
             $this->assertSame(0,(int) $pdo->query('SELECT COUNT(*) FROM enrichment_candidate_cache WHERE payload_ciphertext IS NOT NULL')->fetchColumn());
             $this->assertSame('settled',$pdo->query('SELECT state FROM credit_usage')->fetchColumn());
@@ -133,7 +133,7 @@ trait EnrichmentCandidateCacheCases
             $blocked = $review->read('tenant',$receipt['id']);
             $this->assertSame('identity_contradiction',$blocked['conflict']['reason']);
             $this->assertSame('identity_conflict',$blocked['application']['reason']);
-            $this->assertSame($receipt,$blocked['receipt']);
+            $this->assertSame(\Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::purchase($receipt,$quote),$blocked['receipt']);
             $this->assertSame('52998224725',$blocked['values']->cpf);
             $extra = $this->cached($cache,$quote['id'],'extra',['cpf' => '52998224725','ownershipPercentage' => '25'],'hub');
             try { $purchases->purchaseCached('tenant',$quote['id'],$extra['id']); $this->fail('Blocked group bought a supplement.'); } catch (Conflict) {}
@@ -180,7 +180,7 @@ trait EnrichmentCandidateCacheCases
             $receipt = $purchases->purchaseCached('tenant',$quote['id'],$source['id']); $purchases->close('tenant',$quote['id']);
             $this->actor = 'another-user'; $this->available = false;
             $read = $review->read('tenant',$receipt['id']);
-            $this->assertSame($receipt,$read['receipt']); $this->assertNull($read['conflict']);
+            $this->assertSame(\Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::purchase($receipt,$quote),$read['receipt']); $this->assertNull($read['conflict']);
             $this->assertStringNotContainsString('hidden',json_encode($read));
             $controller = new \Espo\Modules\FeatureCredits\Controllers\CreditEnrichmentReview($review,$this->purchaseServices($pdo)[7]);
             $request = $this->createStub(\Espo\Core\Api\Request::class);

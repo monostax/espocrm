@@ -46,8 +46,7 @@ final class CreditCheckout
             return (object) match ($action) {
                 'context' => CustomerProjection::context($this->checkout->context($input['tenantId'])),
                 'read' => CustomerProjection::checkout($this->checkout->read($input['tenantId'], $input['obligationId'])),
-                // M4 blocker: hosted payment handoff still discloses the processor.
-                'payment' => $this->checkout->payment($input['tenantId'], $input['obligationId']),
+                'payment' => CustomerProjection::payment($this->checkout->payment($input['tenantId'], $input['obligationId'])),
             };
         } catch (\InvalidArgumentException | \JsonException $e) { throw new BadRequest($e->getMessage()); }
     }

@@ -41,7 +41,7 @@ export default class extends ModalView {
             metered: row.usageMetricsVersion === 1,
             showTokenUsage: this.getUser().isAdmin(),
             analytics: this.getUser().isAdmin() ? presentMetrics(row.analytics, f, t) : null,
-            model: row.model || '—', requests: f.number(row.modelRequestCount),
+            requests: f.number(row.modelRequestCount),
             input: f.number(row.inputTokens), output: f.number(row.outputTokens), cached: f.number(row.cachedInputTokens),
             duration: row.durationMs !== null ? (row.durationMs / 1000).toFixed(1) + ' s' : '—',
         };

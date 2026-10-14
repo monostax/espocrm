@@ -107,9 +107,9 @@ class EnrichmentCatalogDatabaseTest extends TestCase
             $this->assertSame($first, $catalog->publish((object) $input, 'another-admin'));
             $read = $this->createStub(Request::class);
             $read->method('getQueryParams')->willReturn(['policyId' => $first['policy']['policyId']]);
-            $this->assertEquals((object) $first['policy'], $controller->getActionRead($read, $response));
+            $this->assertEquals((object) ($first['policy'] + ['inactiveRateIndexes' => []]), $controller->getActionRead($read, $response));
             $readCurrent = $this->createStub(Request::class); $readCurrent->method('getQueryParams')->willReturn([]);
-            $this->assertEquals((object) $second['policy'], $controller->getActionRead($readCurrent, $response));
+            $this->assertEquals((object) ($second['policy'] + ['inactiveRateIndexes' => [9, 10]]), $controller->getActionRead($readCurrent, $response));
             foreach (['tenant_credit_balance', 'credit_usage', 'credit_grant', 'credit_transaction', 'credit_reservation'] as $table) {
                 $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn());
             }

@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureCredits\Controllers;
 use Espo\Core\Api\{Request,Response};
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Modules\FeatureCredits\Enrichment\FieldApplication;
+use Espo\Modules\FeatureCredits\Enrichment\CustomerProjection;
 use InvalidArgumentException;
 
 final class CreditEnrichmentFields
@@ -18,7 +19,7 @@ final class CreditEnrichmentFields
         $response->setHeader('Cache-Control','private, no-store');
         $data = $request->getParsedBody();
         if (!$data instanceof \stdClass) throw new BadRequest('An application object is required.');
-        try { return (object) $this->application->apply($data); }
+        try { return (object) CustomerProjection::application($this->application->apply($data)); }
         catch (InvalidArgumentException $e) { throw new BadRequest($e->getMessage()); }
     }
 }

@@ -73,4 +73,10 @@ final class CustomerProjection
         }
         return $result;
     }
+
+    /** The external payment destination is intentional; internal processor status/bindings are not. */
+    public static function payment(array $value): array
+    {
+        return self::only($value, ['tenantId', 'obligationId', 'environment', 'state', 'invoiceUrl']);
+    }
 }

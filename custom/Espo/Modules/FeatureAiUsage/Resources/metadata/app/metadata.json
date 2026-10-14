@@ -1,0 +1,9 @@
+{
+    "frontendHiddenPathList": ["__APPEND__",
+        ["entityDefs", "ChatwootAiAgentRun", "fields", "model"],
+        ["entityDefs", "ChatwootAiAgentRun", "fields", "modelUsage"],
+        ["entityDefs", "ChatwootAiAgentRun", "fields", "hatchetEventId"],
+        ["entityDefs", "ChatwootAiAgentRun", "fields", "hatchetWorkflowRunId"],
+        ["entityDefs", "ChatwootAiAgentRun", "fields", "billingWaiverReason"]
+    ]
+}

@@ -69,7 +69,7 @@ class ProjectionTest extends TestCase
             'id' => 'r', 'day' => '2026-09-01', 'runAt' => '2026-09-01 10:00:00', 'kind' => 'customer-message',
             'model' => 'secret-model', 'conversationId' => 'c', 'toolsUsed' => ['secret-tool'], 'wasTransferred' => true,
         ]);
-        $this->assertNull($row['model']);
+        $this->assertArrayNotHasKey('model', $row);
         $this->assertNull($row['conversation']);
         $this->assertSame(['transfer'], $row['actions']);
     }
@@ -84,7 +84,10 @@ class ProjectionTest extends TestCase
             $projection = new Projection($this->createMock(EntityManager::class), $acl, $this->createMock(SelectBuilderFactory::class), $user);
             foreach ([null, ['billing' => ['covered' => 1, 'overage' => 0, 'charges' => []]]] as $group) {
                 $tokens = ['inputTokens' => 1234, 'outputTokens' => 0, 'cachedInputTokens' => null];
-                $row = $projection->activity(['id' => 'r', 'day' => '2026-10-08'] + $tokens, $group);
+                $row = $projection->activity(['id' => 'r', 'day' => '2026-10-08', 'model' => 'private-supplier-model',
+                    'modelUsage' => ['provider' => 'private-supplier']] + $tokens, $group);
+                $this->assertStringNotContainsString('private-supplier', json_encode($row));
+                $this->assertArrayNotHasKey('model', $row);
                 $this->assertSame($isAdmin, array_key_exists('analytics', $row));
                 foreach (\Espo\Modules\FeatureAiUsage\Services\Analytics::FIELDS as $field) {
                     $this->assertSame($isAdmin, array_key_exists($field, $row));

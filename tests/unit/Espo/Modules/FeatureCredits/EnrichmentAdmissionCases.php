@@ -73,12 +73,12 @@ trait EnrichmentAdmissionCases
             $this->assertSame('admitted', $receipt['admission']);
             $this->assertFalse($receipt['dispatchAllowed']);
             $this->assertSame('8.0000', $receipt['reservedCredits']);
-            $this->assertSame($terms['routes'], $receipt['routes']);
-            $this->assertSame($terms['policyId'], $receipt['policyId']);
+            $this->assertSame(\Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::quote($terms)['routes'], $receipt['routes']);
+            $this->assertArrayNotHasKey('policyId', $receipt);
             $this->revision = str_repeat('b', 64); // Replays reauthorize, never restart or replace accepted work.
-            $this->assertSame($receipt, $quotes->admit('tenant', $terms['id']));
-            $this->assertSame($receipt, $quotes->confirm('tenant', $terms['id']));
-            $this->assertSame($receipt, $quotes->quote($this->input()));
+            $this->assertSame($receipt, \Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::quote($quotes->admit('tenant', $terms['id'])));
+            $this->assertSame($receipt, \Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::quote($quotes->confirm('tenant', $terms['id'])));
+            $this->assertSame($receipt, \Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::quote($quotes->quote($this->input())));
             $this->assertSame('8.0000', $pdo->query('SELECT reserved_credits FROM tenant_credit_balance')->fetchColumn());
             foreach (['credit_usage', 'credit_reservation', 'credit_allocation'] as $table) {
                 $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn());

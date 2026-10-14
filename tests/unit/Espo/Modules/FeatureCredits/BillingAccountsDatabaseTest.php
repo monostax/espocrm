@@ -149,8 +149,10 @@ final class BillingAccountsDatabaseTest extends TestCase
                 'tenantId' => $args[0], 'requestKey' => $args[1], 'revision' => $args[2], 'catalogId' => $args[3], 'offerId' => $args[4], 'termsId' => $args[5],
             ], JSON_THROW_ON_ERROR));
             $receipt = (array) $controller->postActionAccept($request, $this->createStub(Response::class));
-            $this->assertFalse($receipt['dispatchAllowed']); $this->assertSame('asaas', $receipt['provider']);
-            $this->assertSame('test-asaas', $receipt['integrationId']); $this->assertSame('100.0000', $receipt['terms']['credits']);
+            $this->assertFalse($receipt['dispatchAllowed']); $this->assertArrayNotHasKey('provider', $receipt);
+            $this->assertArrayNotHasKey('integrationId', $receipt); $this->assertSame('100.0000', $receipt['terms']['credits']);
+            $this->assertSame('asaas', $pdo->query('SELECT provider FROM credit_billing_obligation')->fetchColumn());
+            $this->assertSame('test-asaas', $pdo->query('SELECT integration_id FROM credit_billing_obligation')->fetchColumn());
             $this->assertSame('admin', $pdo->query('SELECT created_by_id FROM credit_billing_obligation')->fetchColumn());
             $withdraw = BillingFixtures::definition('withdraw', '2026-10-14 00:00:00'); $withdraw->products = $withdraw->offers = [];
             $catalog->publish($withdraw, 'admin'); $this->now = '2026-10-14 00:00:00';
@@ -161,7 +163,8 @@ final class BillingAccountsDatabaseTest extends TestCase
             $before = $this->snapshot($pdo);
             $this->assertSame($receipt, (array) $controller->postActionAccept($request, $this->createStub(Response::class)));
             $this->assertSame($before, $this->snapshot($pdo));
-            $this->assertSame($receipt, $accounts->readObligation('tenant', $receipt['obligationId'])['acceptance']);
+            $this->assertSame($receipt, \Espo\Modules\FeatureCredits\Billing\CustomerProjection::acceptance(
+                $accounts->readObligation('tenant', $receipt['obligationId'])['acceptance']));
             $this->assertTrue($accounts->context('tenant')['routeMismatch']);
             try { $accounts->readObligation('other', $receipt['obligationId']); $this->fail('Cross-tenant read allowed.'); } catch (NotFound) {}
             foreach (['credit_grant', 'credit_transaction', 'credit_reservation', 'tenant_credit_balance'] as $table) $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn());
@@ -180,7 +183,8 @@ final class BillingAccountsDatabaseTest extends TestCase
                 'tenantId' => 'tenant', 'requestKey' => 'override', 'revision' => 1, 'providerOverride' => 'stripe',
             ], JSON_THROW_ON_ERROR));
             $receipt = (array) $controller->postActionOverride($request, $this->createStub(Response::class));
-            $this->assertSame('stripe', $receipt['after']['effectiveProvider']);
+            $this->assertArrayNotHasKey('effectiveProvider', $receipt['after']);
+            $this->assertSame('stripe', $accounts->context('tenant')['effectiveProvider']);
             $this->assertSame('root-admin', $pdo->query("SELECT created_by_id FROM credit_billing_change WHERE kind='override'")->fetchColumn());
             $this->assertSame($receipt, (array) $controller->postActionOverride($request, $this->createStub(Response::class)));
         });

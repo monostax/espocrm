@@ -43,7 +43,10 @@ final class CreditEnrichmentConfiguration
         }
         try {
             $card = isset($query['policyId']) ? $this->catalog->resolve($query['policyId']) : $this->catalog->current();
-            return (object) $card->receipt();
+            $receipt = $card->receipt();
+            $receipt['inactiveRateIndexes'] = array_keys(array_filter($receipt['rates'], static fn (array $rate): bool =>
+                $rate['provider'] === 'registrobr' || ($rate['provider'] === 'hub' && $rate['product'] === 'socios')));
+            return (object) $receipt;
         } catch (InvalidArgumentException $e) {
             throw new BadRequest($e->getMessage());
         }

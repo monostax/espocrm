@@ -203,10 +203,13 @@ class EnrichmentQuoteDatabaseTest extends TestCase
             $request = $this->createStub(Request::class);
             $request->method('getBodyContents')->willReturn(json_encode($this->input()->data, JSON_THROW_ON_ERROR));
             $quoted = (array) $controller->postActionQuote($request, $this->createStub(Response::class));
-            $this->assertSame($quoted, $quotes->quote($this->input()));
+            $this->assertSame($quoted, \Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::quote($quotes->quote($this->input())));
             $this->assertSame('8.0000', $quoted['maximum']);
             $this->assertSame(['email', 'phone'], $quoted['products']);
-            $this->assertSame(['cpfcnpj', 'hub', 'apollo'], array_column($quoted['routes']['email'], 'provider'));
+            $this->assertSame([1, 2, 3], array_column($quoted['routes']['email'], 'source'));
+            foreach (['cpfcnpj', 'hub', 'apollo', 'policyId', 'provider'] as $private) {
+                $this->assertStringNotContainsString($private, json_encode($quoted));
+            }
             $this->assertStringNotContainsString('52998224725', json_encode($quoted));
             $this->assertStringNotContainsString('person@example.test', json_encode($quoted));
             $confirm = $this->createStub(Request::class);
@@ -217,7 +220,7 @@ class EnrichmentQuoteDatabaseTest extends TestCase
             $this->assertFalse($receipt['dispatchAllowed']);
             $catalog->publish((object) EnrichmentFixtures::definition('v2', '2026-10-13 00:00:00'), 'admin');
             $this->now = '2026-10-13 00:00:00';
-            $this->assertSame($receipt, $quotes->confirm('tenant', $quoted['id']));
+            $this->assertSame($receipt, \Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::quote($quotes->confirm('tenant', $quoted['id'])));
             $this->assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM enrichment_quote')->fetchColumn());
             foreach (['tenant_credit_balance', 'credit_reservation', 'credit_usage', 'credit_transaction'] as $table) {
                 $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn());

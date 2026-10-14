@@ -70,7 +70,8 @@ final class BillingPaymentsDatabaseTest extends TestCase
             $cancelled = (array) $controller->postActionCancel($request, $this->createStub(\Espo\Core\Api\Response::class));
             $this->assertSame('cancelled', $cancelled['state']); $this->assertFalse($cancelled['cancellationPending']);
             $this->assertSame('stripe', $f->accounts->context('tenant')['effectiveProvider']);
-            $this->assertSame($cancelled, $f->subscriptions->cancel('tenant', $obligation, 'stop', 'admin'));
+            $this->assertSame($cancelled, \Espo\Modules\FeatureCredits\Billing\CustomerProjection::subscription(
+                $f->subscriptions->cancel('tenant', $obligation, 'stop', 'admin')));
             $this->assertSame($funded, $f->read($id));
             $this->assertSame('cancelled', $f->accounts->readObligation('tenant', $obligation)['state']);
             $this->assertSame('stripe', $f->accounts->context('tenant')['effectiveProvider']);

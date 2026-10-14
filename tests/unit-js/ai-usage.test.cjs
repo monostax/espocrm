@@ -16,7 +16,7 @@ const pt = JSON.parse(read(resources + 'i18n/pt_BR/AiUsage.json')).labels;
 
 function load(file, imports = {}, globals = {}) {
     const exports = {};
-    const {outputText} = ts.transpileModule(read(file), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS}});
+    const {outputText} = ts.transpileModule(read(file), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, esModuleInterop: true}});
     vm.runInNewContext(outputText, {exports, require: key => imports[key], Intl, Date, console, URLSearchParams, ...globals}, {filename: file});
     return exports;
 }
@@ -207,7 +207,7 @@ test('internal dashboard renders filtered metrics, sources and grouped intellige
         assert.ok(admin.includes(labels.internalAnalytics));
         assert.ok(admin.includes(labels.outcome_failed));
         assert.ok(admin.includes('data-au-day="2026-09-01"'));
-        assert.ok(admin.includes('&lt;script&gt;model&lt;/script&gt;'));
+        assert.ok(!admin.includes('&lt;script&gt;model&lt;/script&gt;'));
         assert.ok(admin.includes(labels.previousTokens));
         assert.ok(admin.includes(labels.adminOnly));
         assert.ok(!admin.includes('EspoCRM'));

@@ -89,7 +89,7 @@ export default class extends MainView {
             card: this.card, command: this.command, published: this.published, pending: this.pending,
             canEdit: this.command && !this.pending,
             rates: (this.command?.rates || this.card?.rates || []).map((rate,index) => ({...rate,index,
-                inactive: rate.provider === 'registrobr' || (rate.provider === 'hub' && rate.product === 'socios'),
+                inactive: (this.card?.inactiveRateIndexes || []).includes(index),
             })),
             routes: this.card ? [
                 {name: 'waterfallOff', providers: this.card.routing.waterfallOff.join(' → ')},

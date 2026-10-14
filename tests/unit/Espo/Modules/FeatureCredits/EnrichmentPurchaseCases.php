@@ -29,7 +29,8 @@ trait EnrichmentPurchaseCases
         $crypt = new Crypt($config);
         $purchases = new Purchases($lock,new FixedSettlement($funding),$actors,$availability,$crypt);
         $readLock = new \Espo\Modules\FeatureCredits\Enrichment\ReviewLock($manager);
-        $review = new \Espo\Modules\FeatureCredits\Enrichment\PurchasedReview($readLock,$this->executionAccess,$purchases);
+        $review = new \Espo\Modules\FeatureCredits\Enrichment\PurchasedReview($readLock,$this->executionAccess,$purchases,
+            $this->createStub(\Espo\Modules\FeatureCredits\Enrichment\ApplicationRecords::class));
         $fields = new \Espo\Modules\FeatureCredits\Enrichment\FieldReview($readLock,$this->executionAccess,$crypt);
         return [$purchases,new Reservations($lock,$funding),$funding,$crypt,
             new \Espo\Modules\FeatureCredits\Enrichment\CandidateCache($lock,$crypt,$actors,$availability),

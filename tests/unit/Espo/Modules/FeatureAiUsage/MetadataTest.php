@@ -83,4 +83,25 @@ class MetadataTest extends TestCase
             $this->assertSame($noteId, $row['sourceNoteId']);
         }
     }
+
+    public function testPrivateTelemetryAndFinancialStorageAreProtectedInMergedMetadata(): void
+    {
+        $metadata = $this->metadata();
+        foreach (['model', 'modelUsage', 'hatchetEventId'] as $field) {
+            $defs = $metadata->entityDefs->ChatwootAiAgentRun->fields->$field;
+            self::assertTrue($defs->exportDisabled);
+            self::assertTrue($defs->directAccessDisabled);
+            self::assertContains(['entityDefs', 'ChatwootAiAgentRun', 'fields', $field], $metadata->app->metadata->frontendHiddenPathList);
+        }
+        self::assertContains(\Espo\Modules\FeatureAiUsage\Classes\Record\CustomerOutput::class,
+            $metadata->recordDefs->ChatwootAiAgentRun->outputFilterClassNameList);
+        self::assertContains(\Espo\Modules\FeatureCredits\Classes\Metadata\CustomerBoundaries::class,
+            $metadata->app->metadata->additionalBuilderClassNameList);
+        (new \Espo\Modules\FeatureCredits\Classes\Metadata\CustomerBoundaries())->build($metadata);
+        foreach (['CreditBillingObligation', 'EnrichmentQuote', 'EnrichmentPurchase', 'AiModelCreditRate', 'CreditRequest'] as $type) {
+            self::assertTrue($metadata->recordDefs->$type->exportDisabled);
+            self::assertContains(['entityDefs', $type], $metadata->app->metadata->frontendHiddenPathList);
+        }
+        self::assertContains(['app', 'enrichment'], $metadata->app->metadata->frontendHiddenPathList);
+    }
 }

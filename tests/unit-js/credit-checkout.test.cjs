@@ -12,7 +12,7 @@ const en = JSON.parse(read('custom/Espo/Modules/FeatureCredits/Resources/i18n/en
 const pt = JSON.parse(read('custom/Espo/Modules/FeatureCredits/Resources/i18n/pt_BR/CreditCheckout.json')).labels;
 function load(file, imports = {}, globals = {}) {
     const exports = {};
-    const {outputText} = ts.transpileModule(read(file), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS}});
+    const {outputText} = ts.transpileModule(read(file), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, esModuleInterop: true}});
     vm.runInNewContext(outputText, {exports, require: key => imports[key], URLSearchParams, ...globals}, {filename: file});
     return exports;
 }
@@ -86,7 +86,7 @@ test('customer checkout omits routing identities and controls, even with a histo
         const render = () => handlebars.compile(read(client + 'res/templates/checkout.tpl'))(p.data());
         assert.ok(!render().includes('data-checkout-override'));
         admin(p); const html = render();
-        assert.ok(!html.includes(labels.provider_stripe));
+        assert.doesNotMatch(html, /\b(?:asaas|stripe|apollo|cpf\.cnpj)\b/i);
         assert.ok(!html.includes(labels.effectiveProvider));
         assert.ok(!html.includes('data-checkout-override'));
     }

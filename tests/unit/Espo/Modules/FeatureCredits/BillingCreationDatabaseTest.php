@@ -325,7 +325,8 @@ final class BillingCreationDatabaseTest extends TestCase
                 $accept = ['tenantId' => 'tenant', 'requestKey' => 'configured-checkout', 'revision' => 1,
                     'catalogId' => $card->id, 'offerId' => 'monthly-br', 'termsId' => $card->offers['monthly-br']->termsId];
                 $accepted = $this->checkout($controller, 'postActionAccept', $accept);
-                $this->assertSame('configured-asaas', $accepted['integrationId']);
+                $this->assertArrayNotHasKey('integrationId', $accepted);
+                $this->assertSame('configured-asaas', $accounts->readObligation('tenant', $accepted['obligationId'])['acceptance']['integrationId']);
                 $payer = ['tenantId' => 'tenant', 'obligationId' => $accepted['obligationId'], 'payer' => AsaasTestTransport::profile()];
                 $customer = $this->checkout($controller, 'postActionCustomer', $payer);
                 $charge = ['tenantId' => 'tenant', 'obligationId' => $accepted['obligationId'], 'customerCreationId' => $customer['creationId'], 'billingType' => 'BOLETO', 'dueDate' => '2026-10-15'];

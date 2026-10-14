@@ -1,8 +1,11 @@
 # M5 customer response contracts
 
-Status: enrichment source labels and billing receipt projections implemented locally.
-This is **not** completion of the customer-surface audit or a confidentiality guarantee.
-M4 hosted checkout remains a release dependency.
+Status: customer-surface corrections implemented; deployment verification is separate.
+
+Checkout scope clarified with the customer: our subscription and credit-package screens
+must be provider-neutral. The existing secure external payment page remains available.
+Its destination, bank/payment artifacts and processor notifications are external payment
+disclosures, not an anonymous-payment guarantee. No redirect/proxy is presented as anonymity.
 
 ## Rules
 
@@ -20,40 +23,60 @@ M4 hosted checkout remains a release dependency.
 ## Customer route inventory
 
 Routes are from `Resources/routes.json`, plus the existing FeatureAiUsage controller.
-“Pending” below means the surface has not been certified supplier-free.
+Every customer controller is registered with `CustomerResponse`, which replaces technical
+exception messages/bodies/reason headers with neutral error codes and retains diagnostics
+in internal logs. Successful responses retain private/no-store caching.
 
 | Surface | Public contract / status |
 | --- | --- |
 | CreditEnrichmentPreview | Existing explicit action, availability, neutral reason, starting cost, unit projection. |
 | CreditEnrichmentQuotes, /confirm, /admit | `Enrichment/CustomerProjection::quote`: record/quote IDs, products, options, exact budget/maximum, times, admission, source-numbered prices and progress. No provider/version/policy/availability maps. Same projection on replay. |
-| CreditEnrichmentReview, CreditEnrichmentHistory | Verified receipt projected through `CustomerProjection::purchase`: IDs, product, exact credits, dates, quote-local source. Existing ACL-filtered values, provenance, application permissions remain; history excludes values. Broader nested contract review pending. |
-| CreditEnrichmentFields, CreditEnrichmentApplication | Application receipts/recovery: pending full nested audit. |
+| CreditEnrichmentReview, CreditEnrichmentHistory | Verified receipt projected through `CustomerProjection::purchase`: IDs, product, exact credits, dates, quote-local source. Review services construct explicit provenance, conflict and application-status fields; normalized purchased values retain current field ACLs. History excludes values. |
+| CreditEnrichmentFields, CreditEnrichmentApplication | `CustomerProjection::application`: allowlisted record/purchase/relationship IDs, applied fields, actor and time. Projection occurs after application/replay binding checks. |
 | CreditBilling/context, CreditCheckout/context | `Billing/CustomerProjection::context`: account/country/revision, catalog and commercial offers, generic checkout eligibility; checkout history projects every original acceptance. |
 | CreditBilling/obligation, /accept | Obligation state and allowlisted acceptance: original command/catalog/terms IDs, country, revision, dates, exact commercial terms. No provider/integration IDs. |
 | CreditBilling/country, /cancel | Allowlisted change receipt and before/after account state, including replay. |
 | CreditBilling/customer, /charge, /recoverCreation | Internal creation IDs, tenant/obligation, kind, state, environment, dispatch flag. No external resource IDs or integration bindings. |
 | CreditCheckout | Allowlisted original acceptance, creation summaries, subscription status, earliest due date. |
 | CreditSubscriptions/cancel, /reconcile | Tenant/obligation IDs, local state, cancellation pending, observed time, bounded neutral status. |
-| CreditCheckout/payment | **M4 blocker:** still returns verified processor-hosted URL/status. Existing hosted page, payment disclosures, URL validator and checkout notices identify the processor. No proxy workaround or absolute guarantee. |
-| Credits/context, CreditWorkspace, /conversation | Existing explicit context/balance/operation summaries; pending full audit. |
-| CreditBalance, CreditHistory, CreditGrants, CreditReservations, CreditRequests, CreditOperations, CreditOperationSource | Pending contract audit of ledger/history/source-reference fields and error paths. |
-| AiUsage/context, /summary, /detail | **Open leak:** FeatureAiUsage Service selects `model` and groups analytics by model. Needs neutral grouping and compatible UI contracts. |
+| CreditCheckout/payment | Allowlisted tenant/obligation IDs, environment, neutral payment state and verified external payment URL. No raw processor status or integration binding. Both checkout translations use neutral copy. |
+| Credits/context, CreditWorkspace, /conversation | Explicit tenant/membership, balance and operation-state summaries; conversation records retain existing ACL checks. |
+| CreditBalance, CreditHistory, CreditGrants, CreditReservations, CreditRequests, CreditOperations | Existing explicit numeric/date/state projections. Stored pricing snapshots, evidence, external references and provider bindings are read only for internal checks, never returned. |
+| CreditOperationSource | Explicit source scope/ID/name and internal request identity after source-record and tenant checks. No evidence object returned. |
+| AiUsage/context, /summary, /detail | Model names removed from activity projections for every role. Analytics groups only outcomes/time and customer-selected operational dimensions; model grouping is removed from API and UI. Billing-model enums describe the commercial charging method, not an AI supplier/model. |
 
 ## Operator and machine surfaces
 
 - CreditConfiguration, CreditEnrichmentConfiguration, CreditBillingConfiguration and
-  CreditBilling/override currently require `User::isAdmin()`. Verify this is exclusively
-  platform-operator authority in deployed direct and embedded CRM contexts. Customer
+  CreditBilling/override require instance-administrator `User::isAdmin()`, separate from
+  tenant financial-admin access/membership used by customer endpoints. Customer
   checkout no longer renders routing/override controls. Previously saved operator
   override commands remain recoverable with the existing instance-admin check.
-- CreditMigration, CreditReversals, CreditDispatch, CreditExecution and CreditAsaasEvents
-  need a separate authorization review; they must not become customer receipt contracts.
-- Generic entity reads, exports and metadata are **not certified** by these custom
-  controller projections. `aclStrict`, non-exportable scopes and mutation-denial hooks
-  alone do not prove that supplier-bearing entity fields are unreadable to every role.
-- Browser-delivered admin assets/translations, notifications, and technical exception
-  messages still require review. Customer controllers currently forward some service
-  exception messages; neutral error contracts and internal diagnostic logging are pending.
+- CreditMigration and CreditReversals require instance administrators. CreditDispatch
+  and CreditExecution verify timestamped HMAC signatures; payment webhooks verify the
+  originating integration's access token. They are not customer receipt contracts.
+- `CustomerBoundaries` disables generic record endpoints and exports for every
+  FeatureCredits storage entity (including future ones). Output filters also reject
+  financial records returned through relationship reads. Frontend metadata hides their
+  definitions and the supplier implementation map in `app.enrichment`.
+- Generic AI-run record output has an attribute allowlist. Model names, raw model usage,
+  workflow/event IDs and internal waiver diagnostics are excluded. Their fields are
+  non-exportable, non-filterable, direct-access-disabled and hidden from frontend metadata;
+  future non-allowlisted fields inherit these restrictions at metadata build time.
+- Enrichment rate-editor supplier-specific availability rules are now returned by its
+  operator-only endpoint rather than encoded in browser JavaScript. Customer enrichment
+  journals contain no suppliers or responses. Existing operator-only override journals
+  retain original commands for recovery.
+- FeatureCredits does not dispatch its own customer notification messages. The optional
+  payment-processor notifications are part of the external payment flow described above.
+
+## Checkout reference
+
+The processor's [payment documentation](https://docs.asaas.com/docs/payments-overview)
+supports both hosted invoices and transparent checkout. It does not establish anonymous
+payment artifacts or mandatory-disclosure removal. The approved implementation keeps
+verified hosted payments and removes provider names from our checkout screens; it does
+not replace payment processing or alter already accepted purchases/subscriptions.
 
 ## Verification and release
 
@@ -62,6 +85,13 @@ Routes are from `Resources/routes.json`, plus the existing FeatureAiUsage contro
   and recovery projections.
 - CRM tests cover journals, uncertain replies, account isolation and provider-free
   routing presentation. Chatwoot tests cover translated source-number presentation.
-- Still required: database-backed receipt/recovery tests, direct/embedded browser network
-  inspection, remaining surface corrections, supported white-label checkout verification,
-  compatible asset builds, deployment and deployed-response checks.
+- Boundary tests cover merged metadata, generic-read denial before queries, export flags,
+  future-field exclusion, technical error sanitization and customer/admin model exclusion.
+- Verified locally against MariaDB and PostgreSQL: the 355-test affected PHP run passed
+  except for two outdated rate-editor expectations; after correcting those expectations,
+  all 14 catalog tests passed (192 assertions). No errors remained in the affected run.
+- Checkout, enrichment and AI-usage JavaScript regression tests passed. Production
+  transpilation built 10 credit modules and 6 AI-usage modules; changed PHP files passed syntax checks.
+- Release requires metadata cache rebuild and compatible frontend assets. Direct/embedded
+  deployed browser/network checks must be recorded with the deployed version; local tests
+  are not deployment evidence.

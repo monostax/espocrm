@@ -44,13 +44,14 @@ trait EnrichmentDiscoveryQuoteCases
                 $request->method('getBodyContents')->willReturn(json_encode($input->data, JSON_THROW_ON_ERROR));
                 $receipt = (array) $controller->postActionQuote($request, $this->createStub(Response::class));
                 $this->assertSame($maximum, $receipt['maximum']);
-                $this->assertSame($receipt, $quotes->quote($input));
+                $this->assertSame($receipt, \Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::quote($quotes->quote($input)));
                 $this->assertSame([$product], array_keys($receipt['routes']));
                 $this->assertTrue($receipt['confirmable']);
                 $this->assertTrue($receipt['discovery']['admissionSupported']);
                 $this->assertTrue($receipt['discovery']['explicitApplicationRequired']);
                 $public = json_encode($receipt, JSON_THROW_ON_ERROR);
-                foreach (['11222333000181', 'linkedin.com', 'example.com.br', 'person@example.test', 'snapshot', '"identity"', $this->revision] as $hidden) {
+                foreach (['11222333000181', 'linkedin.com', 'example.com.br', 'person@example.test', 'snapshot', '"identity"', $this->revision,
+                    'cpfcnpj', 'apollo', 'registrobr', '"provider"', 'plannedProviders', 'unavailableProviders'] as $hidden) {
                     $this->assertStringNotContainsString($hidden, $public);
                 }
                 $q = $pdo->prepare('SELECT snapshot FROM enrichment_quote WHERE id=?'); $q->execute([$receipt['id']]);
