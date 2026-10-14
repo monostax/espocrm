@@ -70,14 +70,18 @@ final class Quotes
                 'products' => $action === 'combined' ? ['email', 'phone'] : [$action],
                 'requestKey' => 'preview',
                 ...(in_array($action, ['employees', 'socios'], true) ? ['count' => 1] : [])]);
-            $row = ['action' => $action, 'available' => false, 'reason' => null, 'startingCredits' => null,
+            $row = ['action' => $action, 'available' => false, 'reason' => null, 'startingCredits' => null, 'settings' => null,
                 'unit' => match ($action) { 'employees' => 'candidate', 'socios' => 'useful_provider_contribution', default => 'record' }];
             try {
                 $target = $this->access->target($input);
-                $plan = $this->snapshot($input, $target);
+                $plan = $this->previewPlan($input, $target);
                 $row['available'] = (bool) array_filter($plan['routes']);
                 $row['reason'] = $row['available'] ? null : 'noRoute';
                 $row['startingCredits'] = $row['available'] ? $plan['maximum'] : null;
+                if ($row['available']) {
+                    $row['settings'] = ['waterfall' => $plan['request']['waterfall']];
+                    if ($plan['request']['budget'] !== null) $row['settings']['budget'] = $plan['request']['budget'];
+                }
             } catch (\Espo\Core\Exceptions\Forbidden) {
                 $row['reason'] = 'forbidden';
             } catch (Conflict | \Espo\Core\Exceptions\ServiceUnavailable) {
@@ -86,6 +90,33 @@ final class Quotes
             $rows[] = $row;
         }
         return ['actions' => $rows];
+    }
+
+    /** Offer an affordable identifier route when the default cannot cover the requested products. */
+    private function previewPlan(QuoteInput $input, Entity $target): array
+    {
+        $plan = $this->snapshot($input, $target);
+        $request = $input->data;
+        if ($input->isDiscovery() || $request['products'] === ['company'] ||
+            count(array_filter($plan['routes'])) === count($request['products'])) return $plan;
+
+        $card = $this->catalog->current();
+        $rates = $card->ratesFor($request['targetType']);
+        $availability = $this->availability->inspect($request['tenantId'], $request['targetType'],
+            $request['products'], $plan['identity'], true);
+        $providers = RoutingPolicy::definition($card->definition['routingPolicy'])[$request['targetType']];
+        $budget = Amount::fromString('0');
+        foreach ($request['products'] as $product) {
+            // Budget for the first executable source per product, in the approved route order.
+            foreach ($providers as $provider) {
+                if (!isset($availability[$provider][$product])) continue;
+                $budget = $budget->plus(Amount::fromString($rates[$provider][$product]['credits']));
+                break;
+            }
+        }
+        if ($budget->compareTo(Amount::fromString('0')) === 0) return $plan;
+        return $this->snapshot(new QuoteInput((object) [...$request,
+            'waterfall' => true, 'budget' => (string) $budget]), $target);
     }
 
     /** Same quote ID is the idempotency identity; callers cannot submit prices or altered settings. */

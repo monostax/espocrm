@@ -1,0 +1,24 @@
+{
+    "version": "enrichment-integer-2026-10-14",
+    "effectiveFrom": "2026-10-15 00:00:00",
+    "routingPolicy": "br-discovery-v2",
+    "rates": [
+        {"provider": "cpfcnpj", "target": "Contact", "lookup": "21", "product": "email", "credits": "3"},
+        {"provider": "cpfcnpj", "target": "Contact", "lookup": "21", "product": "phone", "credits": "3"},
+        {"provider": "hub", "target": "Contact", "lookup": "cadastropf", "product": "email", "credits": "8"},
+        {"provider": "hub", "target": "Contact", "lookup": "cadastropf", "product": "phone", "credits": "8"},
+        {"provider": "hub", "target": "Account", "lookup": "cnpj", "product": "email", "credits": "6"},
+        {"provider": "hub", "target": "Account", "lookup": "cnpj", "product": "phone", "credits": "6"},
+        {"provider": "cpfcnpj", "target": "Account", "lookup": "6", "product": "email", "credits": "6"},
+        {"provider": "cpfcnpj", "target": "Account", "lookup": "6", "product": "phone", "credits": "6"},
+        {"provider": "apollo", "target": "Contact", "lookup": "person", "product": "email", "credits": "1"},
+        {"provider": "apollo", "target": "Contact", "lookup": "person", "product": "phone", "credits": "8"},
+        {"provider": "apollo", "target": "Account", "lookup": "organization", "product": "email", "credits": "1"},
+        {"provider": "apollo", "target": "Account", "lookup": "organization", "product": "phone", "credits": "8"},
+        {"provider": "apollo", "target": "Account", "lookup": "organization", "product": "company", "credits": "1"},
+        {"provider": "apollo", "target": "Account", "lookup": "people", "product": "employees", "credits": "2"},
+        {"provider": "cpfcnpj", "target": "Account", "lookup": "6", "product": "socios", "credits": "6"},
+        {"provider": "hub", "target": "Account", "lookup": "cnpj", "product": "socios", "credits": "6"},
+        {"provider": "registrobr", "target": "Account", "lookup": "domain", "product": "cnpj", "credits": "2"}
+    ]
+}

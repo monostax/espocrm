@@ -29,7 +29,7 @@ in internal logs. Successful responses retain private/no-store caching.
 
 | Surface | Public contract / status |
 | --- | --- |
-| CreditEnrichmentPreview | Existing explicit action, availability, neutral reason, starting cost, unit projection. |
+| CreditEnrichmentPreview | Explicit action, availability, neutral reason, starting cost, unit, and recommended waterfall/budget settings. |
 | CreditEnrichmentQuotes, /confirm, /admit | `Enrichment/CustomerProjection::quote`: record/quote IDs, products, options, exact budget/maximum, times, admission, source-numbered prices and progress. No provider/version/policy/availability maps. Same projection on replay. |
 | CreditEnrichmentReview, CreditEnrichmentHistory | Verified receipt projected through `CustomerProjection::purchase`: IDs, product, exact credits, dates, quote-local source. Review services construct explicit provenance, conflict and application-status fields; normalized purchased values retain current field ACLs. History excludes values. |
 | CreditEnrichmentFields, CreditEnrichmentApplication | `CustomerProjection::application`: allowlisted record/purchase/relationship IDs, applied fields, actor and time. Projection occurs after application/replay binding checks. |
