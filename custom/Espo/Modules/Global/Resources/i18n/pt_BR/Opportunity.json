@@ -12,6 +12,7 @@
         "followupStatus": "Status de Follow-up",
         "followupTimer": "Próximo Follow-up",
         "followupCount": "Contagem de Follow-up",
+        "followupLifetimeCount": "Total Acumulado de Follow-ups",
         "followupBreakoutLimit": "Limite de Follow-up",
         "followupAiAgent": "Agente de IA do Follow-up",
         "funnel": "Funil",
@@ -75,9 +76,8 @@
             "Lost": "Perdida"
         },
         "followupStatus": {
-            "ActionNeeded": "Follow-up Inativo",
-            "FollowupActive": "Follow-up Ativo",
-            "Ended": "Encerrado"
+            "FollowupInactive": "Follow-up Inativo",
+            "FollowupActive": "Follow-up Ativo"
         },
         "sourceChannel": {
             "": "",
@@ -91,9 +91,10 @@
     "tooltips": {
         "stage": "Este campo está obsoleto. Por favor, use o campo de link 'Estágio', que permite estágios personalizados.",
         "status": "O status atual da oportunidade. Definido automaticamente com base na probabilidade do estágio (0 = Perdida, 100 = Ganha, outro = Aberta).",
-        "followupStatus": "O estado atual do fluxo de follow-up. Definido pelo usuário e automaticamente alterado para 'Encerrado' quando a oportunidade é Ganha ou Perdida.",
-        "followupTimer": "O momento mais cedo em que o funcionário digital pode enviar o próximo follow-up nesta oportunidade. Limpo automaticamente quando o status de follow-up sai de 'Aguardando Resposta'.",
-        "followupCount": "Número de follow-ups consecutivos enviados sem receber resposta. Reiniciado para 0 sempre que o status de follow-up sai de 'Aguardando Resposta'.",
+        "followupStatus": "Estado derivado (somente leitura) do follow-up automático: 'Follow-up Ativo' quando Próximo Follow-up está preenchido e 'Follow-up Inativo' quando está vazio (inclusive quando a oportunidade é Ganha ou Perdida).",
+        "followupTimer": "O momento mais cedo em que o funcionário digital pode enviar o próximo follow-up nesta oportunidade. Definir uma data/hora ativa o follow-up e reinicia a contagem do ciclo atual para 0; limpar o campo interrompe o follow-up e preserva a contagem. Limpo automaticamente quando a oportunidade é Ganha ou Perdida.",
+        "followupCount": "Número de follow-ups enviados no ciclo atual desde o último agendamento explícito. Reiniciado para 0 quando um novo Próximo Follow-up é agendado ou quando o cliente responde; preservado ao parar o follow-up ou encerrar a oportunidade.",
+        "followupLifetimeCount": "Total de follow-ups enviados em todos os ciclos desta oportunidade desde o início do rastreamento acumulado (inicializado a partir da contagem do ciclo em andamento na migração). Nunca é zerado por novos agendamentos, respostas do cliente, paradas, transferências ou fechamento do negócio.",
         "followupBreakoutLimit": "Número máximo de follow-ups consecutivos que o funcionário digital pode enviar antes de parar de contatar o prospecto. Funciona como rede de segurança por oportunidade. Deixe vazio para herdar o padrão do funcionário digital condutor (ou 3 quando ele não tiver nenhum); um valor definido aqui — pelo funcionário digital ou via atualização em massa — sempre prevalece sobre o padrão.",
         "followupAiAgent": "O funcionário digital que está conduzindo o ciclo de follow-up desta oportunidade. NULO quando o ciclo é conduzido por um operador ou está inativo.",
         "funnel": "O funil de vendas ao qual esta oportunidade pertence. Os estágios serão filtrados com base no funil selecionado.",

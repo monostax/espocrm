@@ -17,14 +17,15 @@ use Espo\ORM\Entity;
 use Espo\ORM\Repository\Option\SaveOptions;
 
 /**
- * Auto-flips `followupStatus` to 'Ended' whenever `status` transitions to
- * 'Won' or 'Lost'.
+ * Clears `followupTimer` (and derives `followupStatus = 'FollowupInactive'`)
+ * whenever an opportunity is closed (`status` in 'Won' or 'Lost'), including
+ * attempts to schedule a follow-up timer on an already-closed opportunity.
  *
  * Runs AFTER {@see SyncFromOpportunityStage} (which sets `status` based on
- * probability, $order = 6) so that we observe the post-sync `status` value.
- *
- * Users remain free to set `followupStatus` to any of the four values for
- * still-open opportunities; this hook only intervenes on the close transition.
+ * probability, $order = 6) so that we observe the post-sync `status` value,
+ * and BEFORE {@see ResetFollowupCountOnStatusChange} ($order = 19) and
+ * {@see EnforceFollowupTimerInvariant} ($order = 20) so `followupCount` is
+ * preserved and the derived badge is `FollowupInactive`.
  *
  * @implements BeforeSave<Opportunity>
  */
@@ -39,23 +40,18 @@ class AutoSetFollowupStatusOnClose implements BeforeSave
      */
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
-        if (!$entity->isNew() && !$entity->isAttributeChanged('status')) {
-            return;
-        }
-
         $status = $entity->get('status');
 
         if (!in_array($status, self::CLOSED_STATUSES, true)) {
             return;
         }
 
-        // Only overwrite if the user hasn't explicitly set it in this same save,
-        // or if it's still at a non-final value. Users may legitimately want
-        // 'Ended' to stick once set, so we always normalise on close.
-        if ($entity->get('followupStatus') === 'Ended') {
-            return;
+        if ($entity->get('followupTimer') !== null) {
+            $entity->set('followupTimer', null);
         }
 
-        $entity->set('followupStatus', 'Ended');
+        if ($entity->get('followupStatus') !== 'FollowupInactive') {
+            $entity->set('followupStatus', 'FollowupInactive');
+        }
     }
 }

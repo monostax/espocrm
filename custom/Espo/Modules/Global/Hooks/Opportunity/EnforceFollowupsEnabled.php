@@ -24,10 +24,10 @@ use Espo\ORM\Repository\Option\SaveOptions;
  *   • `ChatwootAccountUserMembership.followupsEnabled`   — AI-agent level
  *
  * When EITHER toggle is OFF for an Opportunity (its funnel, or the AI
- * agent stamped on `followupAiAgentId`), the row must never enter
- * `followupStatus = 'FollowupActive'`. Any write attempting it —
+ * agent stamped on `followupAiAgentId`), the row must never schedule a
+ * follow-up timer. Any write attempting a non-null `followupTimer` —
  * AI tool call, operator UI edit, API client — is silently coerced to
- * `'ActionNeeded'` with a NULL timer ("always inactive" semantics).
+ * a NULL timer (`followupStatus = 'FollowupInactive'`, count preserved).
  *
  * Coercion (not rejection) is deliberate: the AI-side tools also coerce
  * and continue the turn (creating/updating the opportunity is still
@@ -35,10 +35,10 @@ use Espo\ORM\Repository\Option\SaveOptions;
  * here would fail the whole entity save.
  *
  * Runs at $order = 18 — after {@see AutoSetFollowupStatusOnClose}
- * ($order = 10) and {@see ResetFollowupCountOnStatusChange}
- * ($order = 15), and BEFORE {@see EnforceFollowupTimerInvariant}
- * ($order = 20) so the invariant hook observes the post-coercion state
- * (non-active status + null timer) and never throws for this path.
+ * ($order = 10), and BEFORE {@see ResetFollowupCountOnStatusChange}
+ * ($order = 19) and {@see EnforceFollowupTimerInvariant} ($order = 20)
+ * so coercing a requested timer to null preserves `followupCount` and
+ * derives `followupStatus = 'FollowupInactive'`.
  *
  * The companion `ResetFollowupsOnDisable` AfterSave hooks (on Funnel
  * and ChatwootAccountUserMembership) handle rows that were ALREADY
@@ -62,7 +62,7 @@ class EnforceFollowupsEnabled implements BeforeSave
      */
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
-        if ($entity->get('followupStatus') !== 'FollowupActive') {
+        if ($entity->get('followupTimer') === null) {
             return;
         }
 
@@ -72,7 +72,6 @@ class EnforceFollowupsEnabled implements BeforeSave
         // hooks + the scheduler-side filter).
         if (
             !$entity->isNew()
-            && !$entity->isAttributeChanged('followupStatus')
             && !$entity->isAttributeChanged('followupTimer')
             && !$entity->isAttributeChanged('funnelId')
             && !$entity->isAttributeChanged('followupAiAgentId')
@@ -81,8 +80,8 @@ class EnforceFollowupsEnabled implements BeforeSave
         }
 
         if ($this->isFollowupDisabled($entity)) {
-            $entity->set('followupStatus', 'ActionNeeded');
             $entity->set('followupTimer', null);
+            $entity->set('followupStatus', 'FollowupInactive');
         }
     }
 

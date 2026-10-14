@@ -17,17 +17,12 @@ use Espo\ORM\EntityManager;
 use Throwable;
 
 /**
- * Backfills Opportunity.followupStatus = 'Ended' for opportunities that were
- * already closed (status IN ('Won', 'Lost')) before the followupStatus field
- * was introduced.
+ * Normalizes closed (Won/Lost) opportunities to the binary timer-driven
+ * follow-up model: clears `followup_timer = NULL` and derives
+ * `followup_status = 'FollowupInactive'` while preserving `followup_count`.
  *
- * The new field declares default = 'ActionNeeded', which is semantically
- * wrong for historical closed opportunities. The AutoSetFollowupStatusOnClose
- * hook only fires on future status transitions, so a one-shot backfill is
- * required to normalise existing data.
- *
- * Idempotent: only touches rows where followup_status != 'Ended' AND
- * status IN ('Won', 'Lost').
+ * Idempotent: only touches non-deleted Won/Lost rows where `followup_timer`
+ * is non-null or `followup_status` is null / not `'FollowupInactive'`.
  */
 class BackfillOpportunityFollowupStatus implements RebuildAction
 {
@@ -38,7 +33,7 @@ class BackfillOpportunityFollowupStatus implements RebuildAction
 
     public function process(): void
     {
-        $this->log->info('Global Module: Starting Opportunity.followupStatus backfill...');
+        $this->log->info('Global Module: Starting Opportunity.followupStatus closed-deal normalization...');
 
         $pdo = $this->entityManager->getPDO();
 
@@ -46,7 +41,7 @@ class BackfillOpportunityFollowupStatus implements RebuildAction
             $countStmt = $pdo->query(
                 "SELECT COUNT(*) FROM opportunity "
                 . "WHERE status IN ('Won', 'Lost') "
-                . "AND (followup_status IS NULL OR followup_status != 'Ended') "
+                . "AND (followup_timer IS NOT NULL OR followup_status IS NULL OR followup_status != 'FollowupInactive') "
                 . "AND deleted = false"
             );
             $remaining = (int) $countStmt->fetchColumn();
@@ -62,22 +57,21 @@ class BackfillOpportunityFollowupStatus implements RebuildAction
         }
 
         if ($remaining === 0) {
-            $this->log->info('Global Module: No Opportunities need followupStatus backfill.');
+            $this->log->info('Global Module: No closed Opportunities need followupStatus normalization.');
 
             return;
         }
 
-        $this->log->info("Global Module: {$remaining} Opportunity(ies) need followupStatus backfill.");
+        $this->log->info("Global Module: {$remaining} closed Opportunity(ies) need followupStatus normalization.");
 
         try {
-            // Raw UPDATE to skip hooks — this is pure data migration, not a
-            // user-driven change. The AutoSetFollowupStatusOnClose hook would
-            // produce the same result, but firing it per-row is wasteful here.
+            // Raw UPDATE to skip hooks — pure data migration. Preserves followup_count.
             $stmt = $pdo->prepare(
                 "UPDATE opportunity "
-                . "SET followup_status = 'Ended' "
+                . "SET followup_timer = NULL, "
+                . "    followup_status = 'FollowupInactive' "
                 . "WHERE status IN ('Won', 'Lost') "
-                . "AND (followup_status IS NULL OR followup_status != 'Ended') "
+                . "AND (followup_timer IS NOT NULL OR followup_status IS NULL OR followup_status != 'FollowupInactive') "
                 . "AND deleted = false"
             );
             $stmt->execute();
@@ -85,11 +79,11 @@ class BackfillOpportunityFollowupStatus implements RebuildAction
             $updated = $stmt->rowCount();
 
             $this->log->info(
-                "Global Module: Opportunity.followupStatus backfill complete. Updated: {$updated}."
+                "Global Module: Opportunity.followupStatus closed-deal normalization complete. Updated: {$updated}."
             );
         } catch (Throwable $e) {
             $this->log->error(
-                'Global Module: Opportunity.followupStatus backfill failed: ' . $e->getMessage()
+                'Global Module: Opportunity.followupStatus closed-deal normalization failed: ' . $e->getMessage()
             );
         }
     }

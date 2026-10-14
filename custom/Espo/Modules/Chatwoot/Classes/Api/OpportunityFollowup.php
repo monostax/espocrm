@@ -50,7 +50,7 @@ final class OpportunityFollowup implements MiddlewareInterface
             $record = $records[$row->id] ?? null;
             $row->canEdit = $record && $this->acl->checkEntityEdit($record);
             $row->followupEditableFields = [];
-            foreach (['followupStatus', 'followupTimer', 'followupBreakoutLimit', 'followupAiAgent'] as $field) {
+            foreach (['followupTimer', 'followupBreakoutLimit', 'followupAiAgent'] as $field) {
                 if ($field === 'followupAiAgent' && !$this->acl->checkScope('ChatwootAccountUserMembership', 'read')) continue;
                 if ($row->canEdit && $this->acl->checkField('Opportunity', $field) &&
                     $this->acl->checkField('Opportunity', $field, 'edit')) $row->followupEditableFields[] = $field;

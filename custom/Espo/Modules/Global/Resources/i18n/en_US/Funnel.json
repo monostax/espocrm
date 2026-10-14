@@ -27,7 +27,7 @@
     },
     "tooltips": {
         "isDefault": "If checked, this funnel will be automatically selected for new opportunities within the team",
-        "followupsEnabled": "When disabled, opportunities in this funnel never run automated follow-ups: the AI does not arm new opportunities with a follow-up loop, scheduled follow-ups stop firing, and opportunities currently in 'Follow-up Active' are reset to 'Action Needed' the moment you disable it. The AI can still create and update opportunities in this funnel normally."
+        "followupsEnabled": "When disabled, opportunities in this funnel never run automated follow-ups: the AI does not schedule follow-up timers on new opportunities, scheduled follow-ups stop firing, and any active follow-ups in this funnel have their timer cleared (becoming 'Follow-up Inactive' while preserving the sent count) the moment you disable it. The AI can still create and update opportunities in this funnel normally."
     },
     "boolFilters": {
         "onlyMy": "Only My",

@@ -168,20 +168,19 @@
         "followupStatus": {
             "type": "enum",
             "options": [
-                "ActionNeeded",
-                "FollowupActive",
-                "Ended"
+                "FollowupInactive",
+                "FollowupActive"
             ],
-            "default": "ActionNeeded",
+            "default": "FollowupInactive",
             "required": true,
+            "readOnly": true,
             "audited": true,
             "displayAsLabel": true,
             "labelType": "state",
             "tooltip": true,
             "style": {
-                "ActionNeeded": "warning",
-                "FollowupActive": "primary",
-                "Ended": "default"
+                "FollowupInactive": "default",
+                "FollowupActive": "primary"
             }
         },
         "followupTimer": {
@@ -192,6 +191,14 @@
             "tooltip": true
         },
         "followupCount": {
+            "type": "int",
+            "required": true,
+            "default": 0,
+            "min": 0,
+            "readOnly": true,
+            "tooltip": true
+        },
+        "followupLifetimeCount": {
             "type": "int",
             "required": true,
             "default": 0,
@@ -325,30 +332,6 @@
                 "followupTimer",
                 "deleted"
             ]
-        }
-    },
-    "dynamicLogic": {
-        "fields": {
-            "followupTimer": {
-                "visible": {
-                    "conditionGroup": [
-                        {
-                            "type": "equals",
-                            "attribute": "followupStatus",
-                            "value": "FollowupActive"
-                        }
-                    ]
-                },
-                "required": {
-                    "conditionGroup": [
-                        {
-                            "type": "equals",
-                            "attribute": "followupStatus",
-                            "value": "FollowupActive"
-                        }
-                    ]
-                }
-            }
         }
     }
 }

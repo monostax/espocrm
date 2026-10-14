@@ -17,8 +17,8 @@ use Espo\ORM\Query\Part\Where\OrGroupBuilder;
 use Espo\ORM\Query\Part\Condition as Cond;
 
 /**
- * Bool filter for opportunities awaiting a human/AI action.
- * Matches followupStatus = 'ActionNeeded'.
+ * Bool filter for opportunities with inactive automated follow-up.
+ * Matches followupStatus = 'FollowupInactive'.
  *
  * @noinspection PhpUnused
  */
@@ -27,7 +27,7 @@ class FollowupActionNeeded implements Filter
     public function apply(QueryBuilder $queryBuilder, OrGroupBuilder $orGroupBuilder): void
     {
         $orGroupBuilder->add(
-            Cond::equal(Cond::column('followupStatus'), 'ActionNeeded')
+            Cond::equal(Cond::column('followupStatus'), 'FollowupInactive')
         );
     }
 }

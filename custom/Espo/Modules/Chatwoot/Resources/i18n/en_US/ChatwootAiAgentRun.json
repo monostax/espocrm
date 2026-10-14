@@ -147,7 +147,7 @@
         "createdOpportunity": "True if the run invoked the create_opportunity tool at least once. Path 3 split — supersedes the legacy hadOpportunity union flag; query the OR of the three per-action flags when you need 'any opportunity activity'.",
         "updatedOpportunity": "True if the run invoked the update_opportunity tool at least once.",
         "deletedOpportunity": "True if the run invoked the delete_opportunity tool at least once.",
-        "sentFollowupMessage": "True if the run invoked the send_followup_message tool — i.e. the AI agent actually emitted a follow-up message rather than terminating via a deliberate opportunity update (Ended / ActionNeeded) or a silent-done failure. Always false on customer-message runs (the tool is only registered on the follow-up arm).",
+        "sentFollowupMessage": "True if the run invoked the send_followup_message tool — i.e. the AI agent actually emitted a follow-up message rather than terminating via a deliberate opportunity update (clearing followupTimer) or a silent-done failure. Always false on customer-message runs (the tool is only registered on the follow-up arm).",
         "hatchetEventId": "UUID of the originating Hatchet `chatwoot://agent_completed` event in the v1_events_olap table. Use it to cross-reference this row with Hatchet's UI / logs / REST API. Always set for backfilled rows; populated by the live consumer via a per-run REST lookup of event.list({workflowRunIds:[ctx.workflowRunId()]})."
     },
     "options": {

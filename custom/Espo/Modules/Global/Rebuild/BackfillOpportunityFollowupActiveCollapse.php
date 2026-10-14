@@ -17,27 +17,23 @@ use Espo\ORM\EntityManager;
 use Throwable;
 
 /**
- * FollowupActive collapse backfill.
+ * Binary timer-driven follow-up state normalization.
  *
- * Collapses the legacy two-status active set (`WaitingReply`,
- * `FollowupScheduled`) onto the single `FollowupActive` value introduced by
- * the Phase 10 follow-up status collapse (see plan-followup-active-collapse.md).
+ * Idempotently normalizes all non-deleted opportunities so `followup_status`
+ * is strictly derived from `followup_timer` nullability while preserving
+ * `followup_count`:
  *
- * Pre-conditions:
- *   • Phase 0 has widened the `followup_status` enum/varchar column to the
- *     5-value union so `'FollowupActive'` is a writable value.
- *   • Phase B has added the `followup_ai_agent_id` FK column. This backfill
- *     does NOT touch that column — rows stay NULL until the next AI write
- *     populates the provenance (goal §1).
- *
- * The UPDATE is raw (skips the Espo Hook layer) because this is pure data
- * migration, not a user-driven change. The Phase A tolerant reads keep the
- * scheduler functioning before, during, and after this UPDATE.
- *
- * Idempotent: a second invocation finds zero rows in the legacy active set
- * and short-circuits. Phase E reruns this action inside its maintenance
- * window to mop up any drift caused by operators flipping rows back to the
- * legacy values via the still-wide UI dropdown between Phase C and Phase E.
+ *   1. Clear timers on closed Won/Lost opportunities and set `FollowupInactive`.
+ *   2. With `followup_timer IS NULL`, derive `FollowupInactive` (including legacy
+ *      `ActionNeeded`, `Ended`, `WaitingReply`, `FollowupScheduled`, and NULL).
+ *   3. With `followup_timer IS NOT NULL`, derive `FollowupActive`.
+ *   4. Initialize `followup_lifetime_count` to `COALESCE(followup_count, 0)`
+ *      when NULL or smaller than `followup_count`. (Durable per-opportunity
+ *      send records across prior reset cycles do not exist — `chatwoot_ai_agent_run`
+ *      only links `opportunity_id` on `opportunity-mention` runs and
+ *      `sent_followup_message` is a tool-invocation boolean — so lifetime
+ *      tracking starts from the introduction of `followup_lifetime_count`,
+ *      seeded with any surviving current-cycle count.)
  */
 class BackfillOpportunityFollowupActiveCollapse implements RebuildAction
 {
@@ -48,65 +44,93 @@ class BackfillOpportunityFollowupActiveCollapse implements RebuildAction
 
     public function process(): void
     {
-        $this->log->info('Global Module: Starting Opportunity FollowupActive collapse backfill...');
+        $this->log->info('Global Module: Starting Opportunity binary follow-up state normalization...');
 
         $pdo = $this->entityManager->getPDO();
 
         try {
             $countStmt = $pdo->query(
                 "SELECT COUNT(*) FROM opportunity "
-                . "WHERE followup_status IN ('WaitingReply', 'FollowupScheduled') "
-                . "AND deleted = false"
+                . "WHERE deleted = false AND ("
+                . "  (status IN ('Won', 'Lost') AND (followup_timer IS NOT NULL OR followup_status IS NULL OR followup_status != 'FollowupInactive')) "
+                . "  OR (followup_timer IS NULL AND (followup_status IS NULL OR followup_status != 'FollowupInactive')) "
+                . "  OR (status NOT IN ('Won', 'Lost') AND followup_timer IS NOT NULL AND (followup_status IS NULL OR followup_status != 'FollowupActive'))"
+                . ")"
             );
             $remaining = (int) $countStmt->fetchColumn();
         } catch (Throwable $e) {
-            // Column may not yet exist on a fresh install before rebuild
-            // applies the schema diff, or may not yet permit 'FollowupActive'
-            // (Phase 0 not applied). Skip silently — there is nothing safe
-            // to backfill until those preconditions hold.
             $this->log->info(
-                'Global Module: Opportunity.followup_status column not ready for '
-                . 'FollowupActive collapse; skipping backfill. ' . $e->getMessage()
+                'Global Module: Opportunity follow-up columns not ready for binary normalization; skipping. '
+                . $e->getMessage()
             );
 
             return;
         }
 
-        if ($remaining === 0) {
+        if ($remaining > 0) {
             $this->log->info(
-                'Global Module: No Opportunities need FollowupActive collapse backfill.'
+                "Global Module: {$remaining} Opportunity(ies) need binary follow-up state normalization."
             );
 
-            return;
-        }
+            try {
+                $closedStmt = $pdo->prepare(
+                    "UPDATE opportunity "
+                    . "SET followup_timer = NULL, "
+                    . "    followup_status = 'FollowupInactive' "
+                    . "WHERE status IN ('Won', 'Lost') "
+                    . "AND (followup_timer IS NOT NULL OR followup_status IS NULL OR followup_status != 'FollowupInactive') "
+                    . "AND deleted = false"
+                );
+                $closedStmt->execute();
+                $closedUpdated = $closedStmt->rowCount();
 
-        $this->log->info(
-            "Global Module: {$remaining} Opportunity(ies) need FollowupActive collapse backfill."
-        );
+                $inactiveStmt = $pdo->prepare(
+                    "UPDATE opportunity "
+                    . "SET followup_status = 'FollowupInactive' "
+                    . "WHERE followup_timer IS NULL "
+                    . "AND (followup_status IS NULL OR followup_status != 'FollowupInactive') "
+                    . "AND deleted = false"
+                );
+                $inactiveStmt->execute();
+                $inactiveUpdated = $inactiveStmt->rowCount();
+
+                $activeStmt = $pdo->prepare(
+                    "UPDATE opportunity "
+                    . "SET followup_status = 'FollowupActive' "
+                    . "WHERE followup_timer IS NOT NULL "
+                    . "AND (followup_status IS NULL OR followup_status != 'FollowupActive') "
+                    . "AND deleted = false"
+                );
+                $activeStmt->execute();
+                $activeUpdated = $activeStmt->rowCount();
+
+                $this->log->info(
+                    "Global Module: Opportunity binary follow-up state normalization complete. "
+                    . "Closed cleared: {$closedUpdated}, Inactive derived: {$inactiveUpdated}, Active derived: {$activeUpdated}."
+                );
+            } catch (Throwable $e) {
+                $this->log->error(
+                    'Global Module: Opportunity binary follow-up state normalization failed: '
+                    . $e->getMessage()
+                );
+            }
+        } else {
+            $this->log->info(
+                'Global Module: No Opportunities need binary follow-up state normalization.'
+            );
+        }
 
         try {
-            // Raw UPDATE to skip hooks — pure data migration. The Phase A
-            // tolerant reads ensure the scheduler continues to recognise
-            // these rows as "active" both before and after the collapse.
-            // `followup_ai_agent_id` is intentionally NOT touched here: rows
-            // stay NULL until the next AI-driven write populates provenance.
-            $stmt = $pdo->prepare(
+            $lifetimeStmt = $pdo->prepare(
                 "UPDATE opportunity "
-                . "SET followup_status = 'FollowupActive' "
-                . "WHERE followup_status IN ('WaitingReply', 'FollowupScheduled') "
+                . "SET followup_lifetime_count = COALESCE(followup_count, 0) "
+                . "WHERE (followup_lifetime_count IS NULL OR followup_lifetime_count < COALESCE(followup_count, 0)) "
                 . "AND deleted = false"
             );
-            $stmt->execute();
-
-            $updated = $stmt->rowCount();
-
-            $this->log->info(
-                "Global Module: Opportunity FollowupActive collapse backfill complete. "
-                . "Updated: {$updated}."
-            );
+            $lifetimeStmt->execute();
         } catch (Throwable $e) {
-            $this->log->error(
-                'Global Module: Opportunity FollowupActive collapse backfill failed: '
+            $this->log->info(
+                'Global Module: Opportunity.followup_lifetime_count column not ready; skipping initialization. '
                 . $e->getMessage()
             );
         }

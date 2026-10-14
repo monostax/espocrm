@@ -117,14 +117,16 @@
                     "name": "followupCount"
                 },
                 {
-                    "name": "followupBreakoutLimit"
+                    "name": "followupLifetimeCount"
                 }
             ],
             [
                 {
-                    "name": "followupAiAgent"
+                    "name": "followupBreakoutLimit"
                 },
-                false
+                {
+                    "name": "followupAiAgent"
+                }
             ]
         ]
     },

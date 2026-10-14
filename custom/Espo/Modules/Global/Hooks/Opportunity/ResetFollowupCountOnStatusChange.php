@@ -17,56 +17,35 @@ use Espo\ORM\Entity;
 use Espo\ORM\Repository\Option\SaveOptions;
 
 /**
- * Resets `followupCount` to 0 and clears `followupTimer` whenever
- * `followupStatus` transitions OUT of `FollowupActive` into any other
- * value.
+ * Resets `followupCount` (current cycle) to 0 whenever `followupTimer`
+ * changes to a non-null datetime (explicit scheduling / re-arming via
+ * CRM, Chatwoot, or AI opportunity tools).
  *
- * Post Phase E of `plan-followup-active-collapse.md`, the MySQL ENUM
- * for `followup_status` has been narrowed to
- * `('ActionNeeded', 'FollowupActive', 'Ended')`, and the two legacy
- * active values from the pre-collapse schema are no longer reachable
- * via operator UI or backend code. The active set therefore collapses
- * to the single value `['FollowupActive']`, and this hook becomes a
- * strict equality check.
+ * Clearing `followupTimer` to null preserves `followupCount` (manual
+ * stop, deal closure, or disabling follow-ups). `followupLifetimeCount`
+ * is never reset here.
  *
- * The counter only has meaning while the deal is in `FollowupActive` —
- * once the prospect engages (status flips to ActionNeeded), the user
- * picks a new workflow state, or the deal is closed (auto-flipped to
- * Ended by {@see AutoSetFollowupStatusOnClose}), the counter and timer
- * are stale.
- *
- * Runs AFTER {@see AutoSetFollowupStatusOnClose} ($order = 10), so the
- * close-transition flip from `FollowupActive` → `Ended` is also
- * captured here.
+ * Runs at $order = 19 — AFTER {@see AutoSetFollowupStatusOnClose}
+ * ($order = 10) and {@see EnforceFollowupsEnabled} ($order = 18) so a
+ * timer that was coerced to null on a closed or follow-up-disabled
+ * opportunity does not reset `followupCount`.
  *
  * @implements BeforeSave<Opportunity>
  */
 class ResetFollowupCountOnStatusChange implements BeforeSave
 {
-    public static int $order = 15;
+    public static int $order = 19;
 
     /**
      * @param Opportunity $entity
      */
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
-        if ($entity->isNew()) {
-            return;
+        if (
+            $entity->isAttributeChanged('followupTimer')
+            && $entity->get('followupTimer') !== null
+        ) {
+            $entity->set('followupCount', 0);
         }
-
-        if (!$entity->isAttributeChanged('followupStatus')) {
-            return;
-        }
-
-        $previous = $entity->getFetched('followupStatus');
-        $current = $entity->get('followupStatus');
-
-        // Only reset when leaving FollowupActive for something else.
-        if ($previous !== 'FollowupActive' || $current === 'FollowupActive') {
-            return;
-        }
-
-        $entity->set('followupCount', 0);
-        $entity->set('followupTimer', null);
     }
 }

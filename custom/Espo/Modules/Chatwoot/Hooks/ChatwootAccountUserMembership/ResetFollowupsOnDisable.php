@@ -23,22 +23,16 @@ use Espo\ORM\Repository\Option\SaveOptions;
  * follow-up toggle (`followupsEnabled`) is switched OFF.
  *
  * Every Opportunity currently in `followupStatus = 'FollowupActive'`
- * whose follow-up loop is DRIVEN by this membership
- * (`followupAiAgentId = this membership`) is reset to `'ActionNeeded'`
- * with a NULL timer, so the scheduler never dispatches it again and the
- * row surfaces in the human "action needed" queue instead of silently
- * sitting active.
+ * (or with a non-null timer) whose follow-up loop is DRIVEN by this
+ * membership (`followupAiAgentId = this membership`) is stopped
+ * (`followupStatus = 'FollowupInactive'`, `followupTimer = NULL`) while
+ * preserving `followupCount`, `followupLifetimeCount`, and
+ * `followupAiAgentId` provenance. `version_number` is bumped so the AI
+ * tools' optimistic concurrency can never clobber the stop.
  *
- * Semantics mirror the backend's `resetActiveFollowupsForConversation`
- * (drizzle.crm.app/helpers.ts): status → 'ActionNeeded', count → 0,
- * timer → NULL, `version_number` bumped so the AI tools' optimistic
- * concurrency (send_followup_message bookkeeping PUTs) can never
- * clobber the reset. Raw UPDATE on purpose — this is a bulk state
- * normalisation, and per-row hook firing (e.g. audit stream spam)
- * is not desired; `followupAiAgentId` provenance is kept (Decision #10).
- *
- * Re-enabling the toggle does NOT resurrect the loops — a reset row
- * stays 'ActionNeeded' until a human or the AI re-arms it.
+ * Re-enabling the toggle does NOT resurrect the stopped timers — a row
+ * stays 'FollowupInactive' until a human or the AI explicitly schedules
+ * a new timer.
  *
  * @implements AfterSave<Entity>
  */
@@ -75,14 +69,13 @@ class ResetFollowupsOnDisable implements AfterSave
 
         $stmt = $pdo->prepare(
             "UPDATE opportunity "
-            . "SET followup_status = 'ActionNeeded', "
-            . "    followup_count = 0, "
+            . "SET followup_status = 'FollowupInactive', "
             . "    followup_timer = NULL, "
             . "    modified_at = NOW(), "
             . "    modified_by_id = :modifiedById, "
             . "    version_number = COALESCE(version_number, 0) + 1 "
             . "WHERE followup_ai_agent_id = :membershipId "
-            . "  AND followup_status = 'FollowupActive' "
+            . "  AND (followup_status = 'FollowupActive' OR followup_timer IS NOT NULL) "
             . "  AND deleted = false"
         );
 
@@ -95,7 +88,7 @@ class ResetFollowupsOnDisable implements AfterSave
 
         $this->log->info(
             "Chatwoot Module: followupsEnabled disabled on membership {$entity->getId()} — "
-            . "reset {$count} FollowupActive opportunity(ies) to ActionNeeded."
+            . "stopped {$count} active follow-up opportunity(ies) (set to FollowupInactive)."
         );
     }
 }

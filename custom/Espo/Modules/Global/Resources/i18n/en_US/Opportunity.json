@@ -12,6 +12,7 @@
         "followupStatus": "Follow-up Status",
         "followupTimer": "Next Follow-up",
         "followupCount": "Follow-up Count",
+        "followupLifetimeCount": "Lifetime Follow-up Count",
         "followupBreakoutLimit": "Follow-up Breakout Limit",
         "followupAiAgent": "Follow-up AI Agent",
         "funnel": "Funnel",
@@ -75,9 +76,8 @@
             "Lost": "Lost"
         },
         "followupStatus": {
-            "ActionNeeded": "Follow-up Inactive",
-            "FollowupActive": "Follow-up Active",
-            "Ended": "Ended"
+            "FollowupInactive": "Follow-up Inactive",
+            "FollowupActive": "Follow-up Active"
         },
         "sourceChannel": {
             "": "",
@@ -91,9 +91,10 @@
     "tooltips": {
         "stage": "This field is deprecated. Please use the 'Stage' link field instead, which allows custom stages.",
         "status": "The current status of the opportunity. Automatically set based on the stage's probability (0 = Lost, 100 = Won, other = Open).",
-        "followupStatus": "The current follow-up workflow state. Set by the user and automatically flipped to 'Ended' when the opportunity is Won or Lost.",
-        "followupTimer": "The earliest moment the AI is allowed to send the next follow-up message on this opportunity. Cleared automatically when the follow-up status leaves 'Waiting Reply'.",
-        "followupCount": "Number of consecutive follow-ups sent without receiving a reply. Resets to 0 whenever the follow-up status leaves 'Waiting Reply'.",
+        "followupStatus": "Derived read-only state of automated follow-up: 'Follow-up Active' when Next Follow-up is set, and 'Follow-up Inactive' when Next Follow-up is empty (including when the opportunity is Won or Lost).",
+        "followupTimer": "The earliest moment the AI is allowed to send the next follow-up message on this opportunity. Setting a new datetime activates follow-up and resets the current-cycle count to 0; clearing it stops follow-up and preserves the count. Cleared automatically when the opportunity is Won or Lost.",
+        "followupCount": "Number of follow-ups sent in the current cycle since the latest explicit scheduling trigger. Resets to 0 when a new Next Follow-up datetime is explicitly set or when the customer replies; preserved when follow-up is stopped or the opportunity closes.",
+        "followupLifetimeCount": "Total follow-ups sent across all cycles for this opportunity since lifetime tracking began (seeded from the in-progress cycle count at migration). Never resets on scheduling, customer replies, stops, transfers, or deal closure.",
         "followupBreakoutLimit": "Maximum number of consecutive follow-ups the AI may send before it must stop contacting the prospect. Acts as a per-deal safety net. Leave empty to inherit the driving AI agent's default (or 3 when it has none); a value set here — by the AI or via mass-update — always wins over the agent default.",
         "followupAiAgent": "The AI agent currently driving this opportunity's follow-up loop. NULL when the loop is operator-driven or inactive.",
         "funnel": "The sales funnel this opportunity belongs to. Stages will be filtered based on the selected funnel.",
