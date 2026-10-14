@@ -16,6 +16,7 @@ use Espo\Core\Exceptions\NotFound;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Tools\ContactReconciler;
+use Espo\Modules\FeatureRecordKnowledge\Services\Access as KnowledgeAccess;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -33,6 +34,7 @@ class OpportunityConversations
         private UserTenantResolver $tenants,
         private ChatwootApiClient $apiClient,
         private ContactReconciler $channels,
+        private KnowledgeAccess $knowledgeAccess,
     ) {}
 
     public function getActionList(Request $request): object
@@ -136,8 +138,7 @@ class OpportunityConversations
     {
         $eligible = array_fill_keys(array_keys($records), false);
         if (!$this->aclManager->checkScope($this->user, 'Opportunity', 'read') ||
-            !$this->aclManager->checkScope($this->user, 'ChatwootConversation', 'read') ||
-            !$this->canReadRelationship()) return $eligible;
+            !$this->aclManager->checkScope($this->user, 'ChatwootConversation', 'read')) return $eligible;
 
         $accounts = $this->entityManager->getRDBRepository('ChatwootAccount')->where([
             'chatwootAccountId' => $accountId,
@@ -162,25 +163,20 @@ class OpportunityConversations
         ])->findOne();
         if (!$viewer) return $eligible;
 
+        $linkedPairs = $this->followupConversationPairs($ids, $account);
+        if (!$linkedPairs) return $eligible;
         $scopeData = $this->tableFactory->create($this->user)->getScopeData('ChatwootConversation');
-        $linked = $this->entityManager->getRDBRepository('ChatwootConversation')
-            ->join('opportunities', 'linkedOpportunity')
-            ->where(['linkedOpportunity.id' => $ids, 'chatwootAccountId' => $account->getId()])->distinct()->find();
-        $allowed = [];
+        $linked = $this->entityManager->getRDBRepository('ChatwootConversation')->where([
+            'id' => array_keys($linkedPairs), 'chatwootAccountId' => $account->getId(),
+        ])->find();
         $pairs = [];
         foreach ($linked as $conversation) {
             if ($this->channels->mapChannelType($conversation->get('inboxChannelType')) !== 'whatsapp' ||
                 !$this->canReadConversation($conversation, $scopeData)) continue;
             $remoteId = (int) $conversation->get('chatwootConversationId');
-            if ($remoteId > 0) $allowed[$conversation->getId()] = $remoteId;
-        }
-        if (!$allowed) return $eligible;
-        $query = SelectBuilder::create()->from('Opportunity')
-            ->join('chatwootConversations', 'conversation')
-            ->select([['id', 'opportunityId'], ['conversation.id', 'conversationId']])
-            ->where(['id' => $ids, 'conversation.id' => array_keys($allowed)])->distinct()->build();
-        foreach ($this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $pair) {
-            $pairs[$allowed[$pair['conversationId']]][] = $pair['opportunityId'];
+            if ($remoteId > 0) {
+                $pairs[$remoteId] = ($pairs[$remoteId] ?? []) + $linkedPairs[$conversation->getId()];
+            }
         }
         foreach (array_chunk(array_keys($pairs), 100) as $batch) {
             $page = 1;
@@ -192,13 +188,49 @@ class OpportunityConversations
                 foreach ($payload as $conversation) {
                     $remoteId = (int) ($conversation['id'] ?? 0);
                     $seen[$remoteId] = true;
-                    foreach ($pairs[$remoteId] ?? [] as $id) $eligible[$id] = true;
+                    foreach (array_keys($pairs[$remoteId] ?? []) as $id) $eligible[$id] = true;
                 }
                 $meta = $response['meta'];
                 $total = $meta['mine_count'] + $meta['unassigned_count'] + $meta['others_count'];
             } while ($payload && count($seen) > $before && count($seen) < $total);
         }
         return $eligible;
+    }
+
+    /** Match the relationship cards: native links plus readable confirmed knowledge relations in either direction. */
+    private function followupConversationPairs(array $ids, Entity $account): array
+    {
+        $pairs = [];
+        if ($this->canReadRelationship()) {
+            $query = SelectBuilder::create()->from('Opportunity')
+                ->join('chatwootConversations', 'conversation')
+                ->select([['id', 'opportunityId'], ['conversation.id', 'conversationId']])
+                ->where(['id' => $ids, 'conversation.chatwootAccountId' => $account->getId()])->distinct()->build();
+            foreach ($this->entityManager->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $pair) {
+                $pairs[$pair['conversationId']][$pair['opportunityId']] = true;
+            }
+        }
+
+        $relations = $this->entityManager->getRDBRepository('RecordRelation')->where([
+            'tenantId' => $account->get('tenantId'), 'status' => 'confirmed',
+            'OR' => [
+                ['subjectType' => 'Opportunity', 'subjectId' => $ids, 'objectType' => 'ChatwootConversation'],
+                ['objectType' => 'Opportunity', 'objectId' => $ids, 'subjectType' => 'ChatwootConversation'],
+            ],
+        ])->find();
+        foreach ($relations as $relation) {
+            try {
+                // Reuse knowledge endpoint/evidence/tenant permissions, independently of the native link field ACL.
+                $this->knowledgeAccess->claim($relation);
+            } catch (Forbidden|NotFound|BadRequest) {
+                continue;
+            }
+            $outgoing = $relation->get('subjectType') === 'Opportunity';
+            $opportunityId = $relation->get($outgoing ? 'subjectId' : 'objectId');
+            $conversationId = $relation->get($outgoing ? 'objectId' : 'subjectId');
+            $pairs[$conversationId][$opportunityId] = true;
+        }
+        return $pairs;
     }
 
     protected function entityType(): string
