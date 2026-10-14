@@ -67,13 +67,15 @@ class Execution
             }
             $remaining = Amount::fromString($terms['maximum'])->minus($spent);
             if ($remaining->compareTo(Amount::fromString('0')) < 0) throw new Conflict('Enrichment shared budget exceeded.');
+            $allSelected = isset($terms['request']['sources']);
             foreach ($terms['request']['products'] as $product) {
                 $children = array_values(array_filter($attempts, static fn ($a) => $a['product'] === $product));
-                if (array_intersect(array_column($children, 'state'), ['matched', 'waived', 'reused'])) continue;
+                if (!$allSelected && array_intersect(array_column($children, 'state'), ['matched', 'waived', 'reused'])) continue;
                 foreach ($children as $attempt) {
                     if (!in_array($attempt['state'], ['claimed', 'pending'], true)) continue;
                     if ($attempt['deadline_at'] <= $now) {
                         $this->waive($pdo, $attempt['id'], $now);
+                        if ($allSelected) continue; // Each selected provider has independent consent and funding.
                         continue 2; // An ambiguous/deadline child never falls back to another provider.
                     }
                     if ($attempt['state'] === 'claimed' || $attempt['lease_until'] > $now || $attempt['poll_after'] > $now) return null;
@@ -100,6 +102,7 @@ class Execution
                                 (id,tenant_id,quote_id,product,provider,state,claim_token,claimed_at,deadline_at,lease_until,credits,completed_at,source_attempt_id)
                                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute([$id,$tenantId,$quoteId,$product,$route['provider'],
                                     'reused',bin2hex(random_bytes(24)),$now,$now,$now,'0.0000',$now,$cached['purchaseId']]);
+                            if ($allSelected) continue;
                             continue 2;
                         }
                         $binding = ['source_attempt_id' => $cached['sourceAttemptId'], 'acquisition_quote_id' => $cached['acquisitionQuoteId'], 'acquired_at' => $cached['acquiredAt']];
@@ -112,6 +115,7 @@ class Execution
                                 FieldCache::resultHash($tenantId,$quoteId,$id,$route['provider'],$product,$cached['values'],$binding),
                                 $cached['expiresAt'],$now,$cached['sourceAttemptId'],$cached['acquisitionQuoteId'],$cached['acquiredAt']]);
                         $remaining = $remaining->minus(Amount::fromString($route['credits']));
+                        if ($allSelected) continue;
                         continue 2;
                     }
                     if ($available && !$dispatch) return null;
@@ -278,10 +282,11 @@ class Execution
                 $this->waive($pdo,$attempt['id'],$now);
                 continue;
             }
-            if (isset($products[$attempt['product']]) || $attempt['result_ciphertext'] === null) {
+            $key = $attempt['product'] . (isset($terms['request']['sources']) ? ':' . $attempt['provider'] : '');
+            if (isset($products[$key]) || $attempt['result_ciphertext'] === null) {
                 throw new Conflict('Invalid enrichment purchase result.');
             }
-            $products[$attempt['product']] = true;
+            $products[$key] = true;
             $charge = $charge->plus(Amount::fromString($attempt['credits']));
         }
         $this->settlement->settleLocked($pdo,$wallet,$now,$usage,$hold,$charge);

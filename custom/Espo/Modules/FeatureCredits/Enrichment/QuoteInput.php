@@ -18,7 +18,7 @@ final class QuoteInput
         $data = get_object_vars($input);
         $required = ['tenantId', 'targetType', 'targetId', 'products', 'requestKey'];
         if (array_diff($required, array_keys($data)) ||
-            array_diff(array_keys($data), [...$required, 'waterfall', 'budget', 'refresh', 'count', 'filters'])) {
+            array_diff(array_keys($data), [...$required, 'waterfall', 'budget', 'refresh', 'count', 'filters', 'sources'])) {
             throw new InvalidArgumentException('Invalid enrichment quote fields.');
         }
         foreach (['tenantId', 'targetId'] as $key) {
@@ -66,6 +66,12 @@ final class QuoteInput
             $data['filters'] = $filters;
         }
         $data += ['waterfall' => false, 'budget' => null, 'refresh' => false];
+        if (array_key_exists('sources', $data)) {
+            if ($finder || $data['products'] === ['cnpj'] || $data['waterfall'] !== false || $data['budget'] !== null) {
+                throw new InvalidArgumentException('Source selection applies to field lookups with an automatically summed budget.');
+            }
+            $data['sources'] = SelectedProviders::normalize($data['sources']);
+        }
         if (!is_bool($data['waterfall']) || !is_bool($data['refresh'])) {
             throw new InvalidArgumentException('Boolean enrichment settings required.');
         }

@@ -43,6 +43,7 @@ require_once __DIR__ . '/EnrichmentDiscoveryCallCases.php';
 require_once __DIR__ . '/EnrichmentDiscoveryExecutionCases.php';
 require_once __DIR__ . '/EnrichmentDiscoveryAdmissionCases.php';
 require_once __DIR__ . '/EnrichmentPreviewCases.php';
+require_once __DIR__ . '/EnrichmentSelectedProviderCases.php';
 
 class EnrichmentQuoteDatabaseTest extends TestCase
 {
@@ -57,6 +58,7 @@ class EnrichmentQuoteDatabaseTest extends TestCase
     use EnrichmentDiscoveryExecutionCases;
     use EnrichmentDiscoveryAdmissionCases;
     use EnrichmentPreviewCases;
+    use EnrichmentSelectedProviderCases;
 
     private string $now = '2026-10-11 12:00:00';
     private string $actor = 'user';
