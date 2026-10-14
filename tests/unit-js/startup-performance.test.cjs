@@ -201,7 +201,7 @@ test('authenticated startup reuses App/user settings and user data, with no extr
     app.acl = {set() {}};
     app.appParams = {setAll() {}};
     app.setCookieAuth = (user, token) => calls.push(['cookie', user, token]);
-    app.redirectLegacyCrmRoute = () => false;
+    app.redirectNonAdminToChatwoot = () => false;
     let ready = 0;
     await app.initUserData(null, () => { ready++; });
     assert.equal(requests, 1);

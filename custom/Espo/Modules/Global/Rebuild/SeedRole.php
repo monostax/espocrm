@@ -1242,12 +1242,14 @@ class SeedRole implements RebuildAction
                 'staticId' => 'tenant',
                 'name' => 'tenant',
                 ...$tenantBase,
+                'useEnrichmentCreditsPermission' => 'yes',
             ],
             // Tenant Admin role - inherits from tenant, can manage users in their team
             [
                 'staticId' => 'tenant-admin',
                 'name' => 'tenant-admin',
                 ...$tenantBase,
+                'useEnrichmentCreditsPermission' => 'yes',
                 // Native list/report exports require this permission in addition
                 // to the existing entity, field and tenant read access checks.
                 'exportPermission' => 'yes',

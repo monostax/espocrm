@@ -169,7 +169,7 @@ class StreamAgent
             $entry = (object) ['id' => $activity->id, 'kind' => $activity->kind, 'status' => $activity->status,
                 'startedAt' => $this->timestamp($activity->startedAt ?? null)];
             if (isset($activity->entity)) {
-                if (!in_array($activity->entity, ['Opportunity', 'Initiative', 'Account', 'Contact', 'Task', 'Meeting', 'Call',
+                if (!in_array($activity->entity, ['User', 'Opportunity', 'Initiative', 'Account', 'Contact', 'Task', 'Meeting', 'Call',
                     'Journey', 'JourneyRecord', 'JourneyStage', 'JourneyStageAction', 'JourneyTransition', 'Document',
                     'KnowledgeBaseArticle', 'KnowledgeBaseCategory', 'Automation', 'AutomationRun', 'Email', 'EmailTemplate',
                     'TargetList', 'EmailCampaign', 'WhatsAppCampaign', 'Report', 'AiUsage',

@@ -550,7 +550,7 @@ class App {
 
         const chatRedirect = localStorage.getItem('chat_redirect');
 
-        if (chatRedirect && this.auth) {
+        if (chatRedirect && this.auth && window.self === window.top) {
             localStorage.removeItem('chat_redirect');
 
             this.redirectToChatwoot(chatRedirect, () => {
@@ -1062,7 +1062,7 @@ class App {
 
                 const chatRedirect = localStorage.getItem('chat_redirect');
 
-                if (chatRedirect) {
+                if (chatRedirect && window.self === window.top) {
                     localStorage.removeItem('chat_redirect');
 
                     this.redirectToChatwoot(chatRedirect, () => {
@@ -1264,32 +1264,33 @@ class App {
     }
 
     /**
-     * Redirect a top-level CRM route into the account-scoped Chatwoot shell.
+     * Only EspoCRM admins may use the standalone CRM after authentication.
+     * Regular users access CRM routes through the Chatwoot shell's iframes.
      *
      * @private
-     * @param {function} fallback
      * @return {boolean}
      */
-    redirectLegacyCrmRoute(fallback) {
-        if (window.self !== window.top) {
+    redirectNonAdminToChatwoot() {
+        if (!this.auth || this.user.isAdmin() || window.self !== window.top) {
             return false;
         }
 
         const crmRoute = window.location.hash.replace(/^#/, '');
         const crmEntity = crmRoute.split(/[/?]/)[0];
         const accountId = this.appParams.get('chatwootAccountId');
+        const frontendUrl = this.appParams.get('chatwootFrontendUrl') || 'https://chat.app.monostax.ai';
+        let chatRedirect = '/app';
 
-        if (!crmEntity || !accountId) {
-            return false;
+        if (crmEntity && accountId) {
+            const navbar = crmEntity.charAt(0).toLowerCase() + crmEntity.slice(1);
+            chatRedirect =
+                `/app/accounts/${encodeURIComponent(accountId)}` +
+                `/crm/${encodeURIComponent(crmEntity)}` +
+                `?navbar=${encodeURIComponent(navbar)}#${crmRoute}`;
         }
 
-        const navbar = crmEntity.charAt(0).toLowerCase() + crmEntity.slice(1);
-        const chatRedirect =
-            `/app/accounts/${encodeURIComponent(accountId)}` +
-            `/crm/${encodeURIComponent(crmEntity)}` +
-            `?navbar=${encodeURIComponent(navbar)}#${crmRoute}`;
-
-        this.redirectToChatwoot(chatRedirect, fallback, true);
+        // A missing Chatwoot account or failed SSO must never open the standalone CRM.
+        this.redirectToChatwoot(chatRedirect, () => window.location.replace(frontendUrl), true);
 
         return true;
     }
@@ -1371,7 +1372,7 @@ class App {
         const [username, token] = Base64.decode(this.auth).split(":");
         this.setCookieAuth(username, token);
 
-        if (this.redirectLegacyCrmRoute(callback)) {
+        if (this.redirectNonAdminToChatwoot()) {
             return;
         }
 
