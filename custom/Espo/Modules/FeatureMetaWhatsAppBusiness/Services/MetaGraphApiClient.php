@@ -13,6 +13,9 @@ namespace Espo\Modules\FeatureMetaWhatsAppBusiness\Services;
 
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Log;
+use Espo\Core\Utils\Config;
+use Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateDeadline;
+use Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateFailure;
 
 /**
  * HTTP client for Meta Graph API (WhatsApp Business).
@@ -25,6 +28,7 @@ use Espo\Core\Utils\Log;
 class MetaGraphApiClient
 {
     public const DEFAULT_API_VERSION = 'v22.0';
+    public const TEMPLATE_API_VERSION = 'v23.0';
     private const GRAPH_API_BASE = 'https://graph.facebook.com';
     private const TIMEOUT_SECONDS = 10;
 
@@ -54,6 +58,7 @@ class MetaGraphApiClient
 
     public function __construct(
         private Log $log,
+        private ?Config $config = null,
     ) {}
 
     /**
@@ -178,14 +183,218 @@ class MetaGraphApiClient
     public function getMessageTemplates(
         string $accessToken,
         string $businessAccountId,
-        string $apiVersion = self::DEFAULT_API_VERSION,
+        ?string $apiVersion = null,
+        ?TemplateDeadline $deadline = null,
     ): array {
-        $url = self::GRAPH_API_BASE . "/{$apiVersion}/{$businessAccountId}/message_templates"
-            . '?fields=id,name,language,status,category,components';
+        $deadline ??= new TemplateDeadline();
+        $cursor = null;
+        $seen = [];
+        $templates = [];
+        for ($page = 0; $page < 100; $page++) {
+            $result = $this->getMessageTemplatePage($accessToken, $businessAccountId, $cursor, $deadline, $apiVersion);
+            foreach ($result['list'] as $template) {
+                if (!isset($template['id'])) {
+                    throw new TemplateFailure('dependency', 'Meta returned a template without an ID.');
+                }
+                $templates[(string) $template['id']] = $template;
+            }
+            if (!$result['hasMore']) {
+                return array_values($templates);
+            }
+            $cursor = $result['nextCursor'];
+            if (isset($seen[$cursor])) {
+                throw new TemplateFailure('pagination', 'Meta repeated a template cursor; catalog is incomplete.');
+            }
+            $seen[$cursor] = true;
+        }
+        throw new TemplateFailure('pagination', 'Template catalog exceeds the 100-page traversal limit.');
+    }
 
-        $response = $this->request($url, $accessToken);
+    public function getMessageTemplatePage(
+        string $token,
+        string $wabaId,
+        ?string $cursor = null,
+        ?TemplateDeadline $deadline = null,
+        ?string $version = null,
+    ): array {
+        $this->templateId($wabaId);
+        $query = [
+            'fields' => 'id,name,language,status,category,parameter_format,components',
+            'limit' => 100,
+        ];
+        if ($cursor !== null && $cursor !== '') {
+            if (strlen($cursor) > 4096) {
+                throw new \Espo\Core\Exceptions\BadRequest('Invalid template cursor.');
+            }
+            $query['after'] = $cursor;
+        }
+        $data = $this->templateRequest('GET', $wabaId . '/message_templates', $token, $query, null,
+            $deadline ?? new TemplateDeadline(), false, 10, $version);
+        if (!isset($data['data']) || !is_array($data['data']) || !array_is_list($data['data'])) {
+            throw new TemplateFailure('dependency', 'Meta returned an invalid template page.');
+        }
+        $more = !empty($data['paging']['next']);
+        $next = $more ? ($data['paging']['cursors']['after'] ?? null) : null;
+        if ($more && (!is_string($next) || $next === '' || $next === $cursor)) {
+            throw new TemplateFailure('pagination', 'Meta returned an invalid or repeated cursor.');
+        }
+        // Only the opaque cursor is returned. Never follow paging.next URLs.
+        return ['list' => $data['data'], 'nextCursor' => $next, 'hasMore' => $more];
+    }
 
-        return $response['data'] ?? [];
+    public function getExactTemplate(
+        string $token, string $wabaId, string $name, string $language, ?TemplateDeadline $deadline = null,
+    ): ?array {
+        foreach ($this->getMessageTemplates($token, $wabaId, null, $deadline) as $template) {
+            if (($template['name'] ?? null) === $name && ($template['language'] ?? null) === $language) {
+                return $template;
+            }
+        }
+        return null;
+    }
+
+    public function createTemplate(string $token, string $wabaId, array $definition, TemplateDeadline $deadline): array
+    {
+        $this->templateId($wabaId);
+        $result = $this->templateRequest('POST', $wabaId . '/message_templates', $token, [], $definition, $deadline, true);
+        if (empty($result['id'])) {
+            throw new TemplateFailure('uncertain', 'Meta response did not confirm creation. Refresh before retrying.', 504);
+        }
+        return $result;
+    }
+
+    public function updateTemplate(string $token, string $id, array $definition, TemplateDeadline $deadline): array
+    {
+        $this->templateId($id);
+        return $this->confirmedMutation($this->templateRequest('POST', $id, $token, [], $definition, $deadline, true));
+    }
+
+    public function deleteTemplate(string $token, string $wabaId, string $id, string $name, TemplateDeadline $deadline): array
+    {
+        $this->templateId($wabaId);
+        $this->templateId($id);
+        return $this->confirmedMutation($this->templateRequest('DELETE', $wabaId . '/message_templates', $token,
+            ['hsm_id' => $id, 'name' => $name], null, $deadline, true));
+    }
+
+    private function confirmedMutation(array $response): array
+    {
+        if (($response['success'] ?? false) !== true) {
+            throw new TemplateFailure('uncertain', 'Meta did not confirm the operation. Refresh before retrying.', 504);
+        }
+        return $response;
+    }
+
+    public function uploadTemplateSample(string $token, string $appId, array $sample, TemplateDeadline $deadline): string
+    {
+        if (!preg_match('/^[0-9]+$/D', $appId)) {
+            throw new TemplateFailure('upload', 'The linked OAuth provider needs a Meta app ID for sample uploads.', 422);
+        }
+        $extension = match ($sample['mime']) {
+            'image/jpeg' => 'jpg', 'image/png' => 'png', 'video/mp4' => 'mp4', default => 'pdf',
+        };
+        $session = $this->templateRequest('POST', $appId . '/uploads', $token, [
+            'file_name' => 'sample.' . $extension,
+            'file_length' => $sample['size'],
+            'file_type' => $sample['mime'],
+        ], null, $deadline);
+        $id = $session['id'] ?? '';
+        if (!is_string($id) || !str_starts_with($id, 'upload:')) {
+            throw new TemplateFailure('upload', 'Meta could not start a sample upload. Check the linked app/token permissions.');
+        }
+        $bytes = file_get_contents($sample['path']);
+        if ($bytes === false) {
+            throw new TemplateFailure('upload', 'Could not read the temporary sample.');
+        }
+        // Some Meta sessions include a signed query. Preserve only that query on the fixed host.
+        [$sessionId, $signature] = array_pad(explode('?', $id, 2), 2, '');
+        parse_str($signature, $sessionQuery);
+        if (array_diff(array_keys($sessionQuery), ['sig']) ||
+            (isset($sessionQuery['sig']) && !is_string($sessionQuery['sig']))) {
+            throw new TemplateFailure('upload', 'Meta returned an invalid upload session.');
+        }
+        $result = $this->templateRequest('POST', 'upload:' . rawurlencode(substr($sessionId, 7)),
+            $token, $sessionQuery, $bytes, $deadline, false, 60);
+        if (!is_string($result['h'] ?? null) || $result['h'] === '') {
+            throw new TemplateFailure('upload', 'Meta did not return a sample handle. Check the linked app/token permissions.');
+        }
+        return $result['h'];
+    }
+
+    private function templateId(string $id): void
+    {
+        if (!preg_match('/^[0-9]+$/D', $id)) {
+            throw new \Espo\Core\Exceptions\BadRequest('Invalid Meta resource ID.');
+        }
+    }
+
+    /** Single attempt; a timed-out mutation may already have taken effect at Meta. */
+    protected function templateRequest(
+        string $method, string $path, string $token, array $query, array|string|null $body,
+        TemplateDeadline $deadline, bool $mutation = false, int $callLimit = 10, ?string $version = null,
+    ): array {
+        $version ??= $this->config?->get('whatsAppTemplateGraphApiVersion') ?? self::TEMPLATE_API_VERSION;
+        if (!preg_match('/^v[0-9]+\.[0-9]+$/D', $version)) {
+            throw new TemplateFailure('configuration', 'Invalid template Graph API version configuration.');
+        }
+        $timeout = $deadline->milliseconds($callLimit);
+        $url = self::GRAPH_API_BASE . '/' . $version . '/' . $path;
+        if ($query) {
+            $url .= '?' . http_build_query($query);
+        }
+        $binary = is_string($body);
+        $headers = ['Authorization: ' . ($binary ? 'OAuth ' : 'Bearer ') . $token];
+        if ($binary) {
+            $headers[] = 'file_offset: 0';
+            $headers[] = 'Content-Type: application/octet-stream';
+        } elseif ($body !== null) {
+            $headers[] = 'Content-Type: application/json';
+        }
+        [$raw, $status] = $this->templateHttpRequest($url, $method, $headers,
+            $body === null ? null : ($binary ? $body : json_encode($body, JSON_THROW_ON_ERROR)), $timeout);
+        $data = is_string($raw) ? json_decode($raw, true) : null;
+        if ($raw === false || !is_array($data) || $status >= 500) {
+            throw new TemplateFailure($mutation ? 'uncertain' : 'dependency', $mutation
+                ? 'Meta outcome is unknown. Refresh the catalog before retrying.'
+                : 'Meta could not complete the request. Check the connection and try again.', $mutation ? 504 : 502);
+        }
+        if ($status < 200 || $status >= 300 || isset($data['error'])) {
+            $code = isset($data['error']['code']) ? (int) $data['error']['code'] : null;
+            $subcode = isset($data['error']['error_subcode']) ? (int) $data['error']['error_subcode'] : null;
+            [$kind, $http, $message] = match (true) {
+                $status === 429, in_array($code, [4, 17, 32, 613, 80007], true) =>
+                    ['rateLimit', 429, 'Meta rate limit reached. Try again later.'],
+                in_array($code, [10, 190, 200], true), $status === 403 =>
+                    ['access', 403, 'Meta refused access. Check the linked app/token and permissions.'],
+                $status === 404, $code === 803 => ['missing', 404, 'Meta resource not found. Refresh the catalog.'],
+                $status === 409, $subcode === 2388024 => ['conflict', 409, 'Template already exists. Refresh the catalog.'],
+                default => ['validation', 422, 'Meta refused the template operation. Check the definition, status and edit restrictions in Meta Manager.'],
+            };
+            throw new TemplateFailure($kind, $message, $http, $code, $subcode);
+        }
+        return $data;
+    }
+
+    /** Transport seam for deterministic Meta integration tests. No retries or redirects. */
+    protected function templateHttpRequest(string $url, string $method, array $headers, ?string $body, int $timeout): array
+    {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_TIMEOUT_MS => $timeout,
+            CURLOPT_CONNECTTIMEOUT_MS => min(10000, $timeout),
+            CURLOPT_HTTPHEADER => $headers,
+        ]);
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
+        $raw = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return [$raw, $status];
     }
 
     /**
@@ -228,7 +437,7 @@ class MetaGraphApiClient
         string $accessToken,
         string $businessAccountId,
         string $templateName,
-        string $apiVersion = self::DEFAULT_API_VERSION,
+        ?string $apiVersion = null,
     ): ?array {
         $templates = $this->getMessageTemplates($accessToken, $businessAccountId, $apiVersion);
 

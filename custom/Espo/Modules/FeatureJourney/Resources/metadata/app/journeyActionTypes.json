@@ -307,6 +307,8 @@
                         "templateLanguage",
                         "templateCategory",
                         "parameterMapping",
+                        "headerParameterMapping",
+                        "templateHeader",
                         "templateBody",
                         "headerMediaUrl",
                         "headerMediaType"

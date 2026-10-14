@@ -99,6 +99,8 @@ class ValidateMessageConfiguration
             'templateCategory' => null,
             'templateBody' => null,
             'parameterMapping' => null,
+            'headerParameterMapping' => null,
+            'templateHeader' => null,
             'headerMediaUrl' => null,
             'headerMediaType' => null,
         ]);

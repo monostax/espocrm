@@ -51,6 +51,13 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
         /** @var JourneyWhatsAppOutbound $outbound */
         $outbound = $this->injectableFactory->create(JourneyWhatsAppOutbound::class);
         $resolved = $outbound->resolveParameterMapping($mapping, $target);
+        $resolvedHeader = $outbound->resolveParameterMapping($data->headerParameterMapping ?? [], $target);
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved($resolved, true);
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved($resolvedHeader, true);
+        $renderedHeader = (string) ($data->templateHeader ?? '');
+        foreach ($resolvedHeader as $num => $value) {
+            $renderedHeader = str_replace('{{' . $num . '}}', $value, $renderedHeader);
+        }
 
         $renderedBody = $templateBody;
 
@@ -59,6 +66,10 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
                 $renderedBody = str_replace('{{' . $num . '}}', $value, $renderedBody);
             }
         }
+
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved(
+            array_filter([$renderedHeader, $renderedBody], static fn ($text) => $text !== ''), true
+        );
 
         $headerUrl = isset($data->headerMediaUrl) ? trim((string) $data->headerMediaUrl) : '';
         $headerType = isset($data->headerMediaType) ? trim((string) $data->headerMediaType) : '';
@@ -73,6 +84,8 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
                 : null,
             'templateBody' => $templateBody,
             'resolvedParams' => (object) $resolved,
+            'resolvedHeaderParams' => (object) $resolvedHeader,
+            'renderedHeader' => $renderedHeader,
             'renderedBody' => $renderedBody,
             'headerMediaUrl' => $headerUrl !== '' ? $headerUrl : null,
             'headerMediaType' => $headerType !== '' ? $headerType : null,

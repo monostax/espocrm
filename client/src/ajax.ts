@@ -50,7 +50,7 @@ interface Options {
     timeout?: number,
     headers?: Record<string, string>,
     dataType?: 'json' | 'text',
-    contentType?: string,
+    contentType?: string | false,
     resolveWithXhr?: boolean,
 }
 
@@ -79,7 +79,7 @@ const Ajax = {
     ): AjaxPromise {
 
         const timeout = 'timeout' in options ? options.timeout : defaultTimeout;
-        const contentType = options.contentType || 'application/json';
+        const contentType = data instanceof FormData ? false : (options.contentType ?? 'application/json');
 
         let body: any;
 
@@ -118,7 +118,9 @@ const Ajax = {
         }
 
         xhr.open(method, urlObj);
-        xhr.setRequestHeader('Content-Type', contentType);
+        if (contentType !== false) {
+            xhr.setRequestHeader('Content-Type', contentType);
+        }
 
         if (options.headers) {
             for (const key in options.headers) {
@@ -228,7 +230,7 @@ const Ajax = {
         options?: Options & Record<string, any>,
     ): Promise<any> & AjaxPromise {
 
-        if (data) {
+        if (data && !(data instanceof FormData)) {
             data = JSON.stringify(data);
         }
 

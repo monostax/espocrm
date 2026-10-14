@@ -16,8 +16,7 @@
             "readOnly": true
         },
         "status": {
-            "type": "enum",
-            "options": ["APPROVED", "REJECTED", "PENDING"],
+            "type": "varchar",
             "readOnly": true,
             "style": {
                 "APPROVED": "success",
@@ -36,6 +35,13 @@
             "notStorable": true,
             "layoutListDisabled": true
         },
+        "parameterFormat": {"type": "varchar", "readOnly": true, "notStorable": true},
+        "businessAccountId": {"type": "varchar", "readOnly": true, "notStorable": true},
+        "oAuthAccountId": {"type": "varchar", "maxLength": 36, "readOnly": true, "notStorable": true},
+        "oAuthAccountName": {"type": "varchar", "readOnly": true, "notStorable": true},
+        "supported": {"type": "bool", "readOnly": true, "notStorable": true},
+        "canEdit": {"type": "bool", "readOnly": true, "notStorable": true},
+        "canDelete": {"type": "bool", "readOnly": true, "notStorable": true},
         "credentialId": {
             "type": "varchar",
             "maxLength": 24,

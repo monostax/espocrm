@@ -470,6 +470,8 @@ define(
                             templateCategory: model.get("templateCategory"),
                             templateBody: model.get("templateBody"),
                             parameterMapping: model.get("parameterMapping"),
+                            headerParameterMapping: model.get("headerParameterMapping"),
+                            templateHeader: model.get("templateHeader"),
                             headerMediaUrl: model.get("headerMediaUrl"),
                             headerMediaType: model.get("headerMediaType"),
                         };

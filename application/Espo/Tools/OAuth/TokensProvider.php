@@ -60,7 +60,7 @@ class TokensProvider
      * @throws NoToken
      * @throws TokenObtainingFailure
      */
-    public function get(string $id): Tokens
+    public function get(string $id, ?float $requestTimeout = null): Tokens
     {
         $account = $this->fetch($id);
 
@@ -71,7 +71,7 @@ class TokensProvider
                 DateTime::createNow()->addSeconds(self::EXPIRATION_LEAD_TIME)
             )
         ) {
-            $this->refresh($account);
+            $this->refresh($account, $requestTimeout);
         }
 
         if (!$account->getAccessToken()) {
@@ -133,19 +133,19 @@ class TokensProvider
      * @throws TokenObtainingFailure
      * @noinspection PhpDocRedundantThrowsInspection
      */
-    private function refresh(OAuthAccount $account): void
+    private function refresh(OAuthAccount $account, ?float $requestTimeout = null): void
     {
         $this->entityManager
             ->getTransactionManager()
-            ->run(function () use ($account) {
-                $this->refreshInTransaction($account);
+            ->run(function () use ($account, $requestTimeout) {
+                $this->refreshInTransaction($account, $requestTimeout);
             });
     }
 
     /**
      * @throws TokenObtainingFailure
      */
-    private function refreshInTransaction(OAuthAccount $account): void
+    private function refreshInTransaction(OAuthAccount $account, ?float $requestTimeout = null): void
     {
         $refreshToken = $account->getRefreshToken();
 
@@ -164,6 +164,13 @@ class TokensProvider
             ->find();
 
         $genericProvider = $this->genericProviderFactory->create($account->getProvider());
+        // Optional per-operation budget; ordinary OAuth callers retain their existing client defaults.
+        if ($requestTimeout !== null) {
+            $genericProvider->setHttpClient(new \GuzzleHttp\Client([
+                'timeout' => max(0.001, $requestTimeout),
+                'connect_timeout' => max(0.001, min(10, $requestTimeout)),
+            ]));
+        }
 
         try {
             $tokens = $genericProvider->getAccessToken('refresh_token', ['refresh_token' => $refreshToken]);

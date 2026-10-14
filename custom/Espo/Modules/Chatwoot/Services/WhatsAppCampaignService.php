@@ -38,6 +38,7 @@ class WhatsAppCampaignService
         private Log $log,
         private JobSchedulerFactory $jobSchedulerFactory,
         private WhatsAppCampaignOpportunityService $opportunityService,
+        private \Espo\Modules\FeatureMetaWhatsAppBusiness\Services\TemplateSendPreflight $templatePreflight,
     ) {}
 
     /**
@@ -56,10 +57,11 @@ class WhatsAppCampaignService
         string $accessToken,
         string $wabaId
     ): array {
-        $template = $this->metaGraphApiClient->getTemplateByName(
+        $template = $this->metaGraphApiClient->getExactTemplate(
             $accessToken,
             $wabaId,
-            $templateName
+            $templateName,
+            $language
         );
 
         if (!$template) {
@@ -1016,11 +1018,10 @@ class WhatsAppCampaignService
     }
 
     /**
-     * Pull the latest Meta templates into Chatwoot's cache before sending.
+     * Require live Meta approval and a matching Chatwoot cache before sending.
      *
-     * No-op for free-text campaigns and for QR (WAHA) channels, which have no
-     * Meta WABA to sync from — calling the Chatwoot template sync endpoint for
-     * a QR inbox would fail on every launch.
+     * Free-text campaigns (including QR/WAHA) do not use the Meta catalog.
+     * A template-mode campaign must have a compatible, ready connection.
      */
     private function syncTemplatesIfSupported(
         \Espo\ORM\Entity $campaign,
@@ -1035,24 +1036,30 @@ class WhatsAppCampaignService
             ->getEntityById('ChatwootPlatform', $chatwootAccount->get('platformId'));
 
         if (!$platform) {
-            return;
+            throw new Error('Chatwoot platform is required for template preflight.');
         }
 
         $whatsappInbox = $this->resolveCampaignInbox($campaign, $chatwootAccountId);
 
         if (!$whatsappInbox) {
-            return;
+            throw new Error('WhatsApp inbox is required for template preflight.');
         }
 
         if (!WhatsAppChannel::supportsTemplates($whatsappInbox->get('channelType'))) {
-            return;
+            throw new Error('This inbox cannot send Meta templates.');
         }
 
-        $this->chatwootApiClient->syncInboxTemplates(
+        $this->templatePreflight->check(
+            $whatsappInbox,
             $platform->get('backendUrl'),
             $chatwootAccount->get('apiKey'),
             (int) $chatwootAccount->get('chatwootAccountId'),
-            (int) $whatsappInbox->get('chatwootInboxId')
+            (string) $campaign->get('templateName'),
+            (string) $campaign->get('templateLanguage'),
+            $campaign->get('parameterMapping'),
+            $campaign->get('headerParameterMapping'),
+            $campaign->get('headerMediaUrl') ?: null,
+            $campaign->get('headerMediaType') ?: null,
         );
     }
 

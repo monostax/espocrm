@@ -1,5 +1,25 @@
 [
     {
+        "route": "/WhatsAppBusinessAccountMessageTemplate/action/listPage",
+        "method": "get",
+        "params": {"controller": "WhatsAppBusinessAccountMessageTemplate", "action": "listPage"}
+    },
+    {
+        "route": "/WhatsAppBusinessAccountMessageTemplate/action/createTemplate",
+        "method": "post",
+        "params": {"controller": "WhatsAppBusinessAccountMessageTemplate", "action": "createTemplate"}
+    },
+    {
+        "route": "/WhatsAppBusinessAccountMessageTemplate/action/updateTemplate",
+        "method": "post",
+        "params": {"controller": "WhatsAppBusinessAccountMessageTemplate", "action": "updateTemplate"}
+    },
+    {
+        "route": "/WhatsAppBusinessAccountMessageTemplate/action/deleteTemplate",
+        "method": "post",
+        "params": {"controller": "WhatsAppBusinessAccountMessageTemplate", "action": "deleteTemplate"}
+    },
+    {
         "route": "/MetaWhatsAppWebhook/configure",
         "method": "post",
         "params": {

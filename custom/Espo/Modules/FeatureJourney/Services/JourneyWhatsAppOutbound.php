@@ -64,6 +64,7 @@ class JourneyWhatsAppOutbound
         private TemplateRendererFactory $templateRendererFactory,
         private TemplateBridge $templateBridge,
         private Log $log,
+        private \Espo\Modules\FeatureMetaWhatsAppBusiness\Services\TemplateSendPreflight $templatePreflight,
     ) {}
 
     /**
@@ -325,6 +326,15 @@ class JourneyWhatsAppOutbound
      * @param array<string, string> $params number => value
      * @return array{message_id: mixed, conversation_id: mixed}
      */
+    public function preflightTemplate(array $conn, string $name, string $language, array $params): array
+    {
+        return $this->templatePreflight->check(
+            $conn['inbox'], $conn['platformUrl'], $conn['accountApiKey'], $conn['externalAccountId'],
+            $name, $language, $params['parameterMapping'] ?? null, $params['headerParameterMapping'] ?? null,
+            ($params['headerMediaUrl'] ?? null) ?: null, ($params['headerMediaType'] ?? null) ?: null,
+        );
+    }
+
     public function sendTemplate(
         array $conn,
         string $phone,
@@ -337,7 +347,11 @@ class JourneyWhatsAppOutbound
         ?string $headerMediaUrl = null,
         ?string $headerMediaType = null,
         ?array $journeyContext = null,
+        array $headerParams = [],
     ): array {
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::processed(
+            $params, $headerParams, $headerMediaUrl, $headerMediaType
+        );
         $contact = $this->chatwootApiClient->findOrCreateContact(
             $conn['platformUrl'],
             $conn['accountApiKey'],
@@ -365,6 +379,7 @@ class JourneyWhatsAppOutbound
             $content,
             $headerMediaUrl,
             $headerMediaType,
+            $headerParams,
         );
 
         $this->stampJourneyOutbound($conn, $result, $journeyContext);

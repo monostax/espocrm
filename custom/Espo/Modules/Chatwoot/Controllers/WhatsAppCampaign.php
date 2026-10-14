@@ -104,9 +104,10 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
             throw new BadRequest('Missing credentialId query parameter.');
         }
 
-        $credentialResolver = $this->injectableFactory->create(CredentialResolver::class);
-        $credentialData = $credentialResolver->resolve($credentialId);
-        $wabaId = $credentialData->businessAccountId ?? null;
+        $context = $this->injectableFactory->create(
+            \Espo\Modules\FeatureMetaWhatsAppBusiness\Services\TemplateAccess::class
+        )->resolve(['credentialId' => $credentialId]);
+        $wabaId = $context['businessAccountId'];
 
         if (!$wabaId) {
             throw new Error('Credential does not contain a businessAccountId (WABA ID).');
@@ -184,9 +185,10 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
                 }
 
                 if (!$wabaId && $credentialId) {
-                    $credentialResolver = $this->injectableFactory->create(CredentialResolver::class);
-                    $credentialData = $credentialResolver->resolve($credentialId);
-                    $wabaId = $credentialData->businessAccountId ?? null;
+                    $context = $this->injectableFactory->create(
+                        \Espo\Modules\FeatureMetaWhatsAppBusiness\Services\TemplateAccess::class
+                    )->resolve(['credentialId' => $credentialId]);
+                    $wabaId = $context['businessAccountId'];
                 }
             }
         }
@@ -255,9 +257,11 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
             throw new BadRequest('Missing required fields: templateName, language, credentialId, wabaId.');
         }
 
-        $credentialResolver = $this->injectableFactory->create(CredentialResolver::class);
-        $credentialData = $credentialResolver->resolve($credentialId);
-        $accessToken = $credentialData->accessToken ?? null;
+        $context = $this->injectableFactory->create(
+            \Espo\Modules\FeatureMetaWhatsAppBusiness\Services\TemplateAccess::class
+        )->resolve(['credentialId' => $credentialId, 'wabaId' => $wabaId]);
+        $accessToken = $this->injectableFactory->create(\Espo\Tools\OAuth\TokensProvider::class)
+            ->get($context['oAuthAccountId'])->getAccessToken();
 
         if (!$accessToken) {
             throw new Error('Credential does not contain an access token.');

@@ -235,6 +235,10 @@ class ProcessWhatsAppCampaignChunk implements Job
             'headerMediaUrl' => $headerMediaUrl,
             'headerMediaType' => $headerMediaType,
             'parameterMapping' => $parameterMapping,
+            'headerParameterMapping' => \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::mapping(
+                $campaign->get('headerParameterMapping')
+            ),
+            'templateHeader' => (string) $campaign->get('templateHeader'),
             'createOpportunity' => (bool) $campaign->get('createOpportunity'),
             'delayMinMs' => $delayMinMs,
             'delayMaxMs' => $delayMaxMs,
@@ -604,6 +608,11 @@ class ProcessWhatsAppCampaignChunk implements Job
         );
 
         $content = $this->renderTemplateContent($ctx['templateBody'], $params);
+        $headerParams = $this->resolveParameterMapping(
+            $ctx['headerParameterMapping'], $campaignContact->get('contactId')
+        );
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved($params, true);
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved($headerParams, true);
 
         $result = $this->chatwootApiClient->sendTemplateMessage(
             $ctx['platformUrl'],
@@ -617,7 +626,8 @@ class ProcessWhatsAppCampaignChunk implements Job
             $ctx['templateCategory'],
             $content,
             $ctx['headerMediaUrl'],
-            $ctx['headerMediaType']
+            $ctx['headerMediaType'],
+            $headerParams,
         );
 
         return [$result, $params];

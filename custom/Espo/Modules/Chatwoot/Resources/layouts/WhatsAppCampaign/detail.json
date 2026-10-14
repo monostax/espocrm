@@ -160,6 +160,9 @@
                     "name": "parameterMapping",
                     "fullWidth": true
                 }
+            ],
+            [
+                {"name": "headerParameterMapping", "fullWidth": true}
             ]
         ]
     }

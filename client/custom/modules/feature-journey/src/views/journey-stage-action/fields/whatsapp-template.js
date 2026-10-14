@@ -47,7 +47,7 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
                 '<div class="journey-wa-render-result" style="margin-top:10px">' +
                     '<div class="text-muted small" style="margin-bottom:4px">{{previewLabel}}</div>' +
                     '<div class="journey-wa-bubble" style="background:#dcf8c6;border-radius:8px;padding:10px 12px;white-space:pre-wrap;font-size:13px;max-width:420px">' +
-                        '{{renderedBody}}' +
+                        '<strong>{{renderedHeader}}</strong>\n{{renderedBody}}' +
                     '</div>' +
                     '{{#if headerMediaUrl}}' +
                     '<div class="text-muted small" style="margin-top:6px">' +
@@ -119,16 +119,16 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
 
             if (result) {
                 data.renderedBody = result.renderedBody || "";
+                data.renderedHeader = result.renderedHeader || "";
                 data.headerMediaUrl = result.headerMediaUrl || "";
                 data.headerMediaType = result.headerMediaType || "";
                 data.previewTemplateName = result.templateName || "";
                 data.previewLanguage = result.templateLanguage || "";
                 data.previewCategory = result.templateCategory || "";
-                data.hasResolvedParams =
-                    result.resolvedParams &&
-                    Object.keys(result.resolvedParams).length > 0;
+                data.hasResolvedParams = Object.keys(result.resolvedParams || {}).length > 0 ||
+                    Object.keys(result.resolvedHeaderParams || {}).length > 0;
                 data.resolvedParamsJson = data.hasResolvedParams
-                    ? JSON.stringify(result.resolvedParams, null, 2)
+                    ? JSON.stringify({body: result.resolvedParams, header: result.resolvedHeaderParams}, null, 2)
                     : "";
             }
 
@@ -233,6 +233,8 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
                 templateCategory: this.model.get("templateCategory") || "UTILITY",
                 templateBody: this.model.get("templateBody") || "",
                 parameterMapping: this.model.get("parameterMapping") || {},
+                headerParameterMapping: this.model.get("headerParameterMapping") || {},
+                templateHeader: this.model.get("templateHeader") || "",
                 headerMediaUrl: this.model.get("headerMediaUrl") || null,
                 headerMediaType: this.model.get("headerMediaType") || null,
             };
@@ -291,4 +293,3 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
         },
     });
 });
-

@@ -10,7 +10,36 @@
         "credentialName": "Credencial"
     },
     "links": {},
-    "labels": {},
+    "labels": {
+        "create": "Criar modelo", "edit": "Editar", "delete": "Excluir", "inspect": "Inspecionar",
+        "refresh": "Atualizar", "loadMore": "Carregar mais", "metaManager": "Gerenciador da Meta",
+        "loading": "Carregando modelos…", "empty": "Nenhum modelo encontrado.", "submit": "Enviar para a Meta",
+        "name": "Nome", "language": "Idioma", "category": "Categoria", "status": "Status",
+        "header": "Cabeçalho", "body": "Corpo (1.024 caracteres)", "footer": "Rodapé (60 caracteres)",
+        "none": "Nenhum", "sample": "Nova amostra de mídia", "preview": "Prévia com exemplos",
+        "sampleHint": "JPEG/PNG: 5.000.000 bytes. MP4/PDF: 16.000.000 bytes. Selecione um novo arquivo a cada envio.",
+        "variablesHint": "Use variáveis posicionais consecutivas a partir de {{1}} em cada componente. Cabeçalho: no máximo uma. Informe um exemplo para cada variável.",
+        "buttons": "Botões", "buttonLabel": "Rótulo (25 caracteres)", "buttonValue": "URL estática ou telefone internacional",
+        "remove": "Remover", "addButton": "Adicionar botão", "example": "Exemplo"
+    },
+    "messages": {
+        "accepted": "A Meta aceitou a operação. Aprovação e disponibilidade para envio são etapas separadas. Atualize para consultar o status atual.",
+        "editWarning": "As alterações afetam toda a WABA e podem interromper campanhas, jornadas e envios de IA. Vale a última gravação aceita. Alterações não enviadas não são armazenadas.",
+        "submitWarning": "Enviar esta definição completa para a Meta? Alterações podem interromper envios existentes. A Meta controla a análise e as restrições de edição.",
+        "deleteWarning": "Excluir esta variante exata de nome/idioma desta WABA para todos os usuários? Envios existentes podem falhar. A exclusão pode ficar pendente; nomes aprovados podem não estar disponíveis para reutilização imediata.",
+        "unknownOutcome": "O resultado é desconhecido. Atualize o catálogo antes de tentar novamente; a Meta pode já ter aceitado a operação.",
+        "catalogIncomplete": "Não foi possível carregar o catálogo completo. Atualize e tente novamente; as seleções salvas foram preservadas.",
+        "catalogDeadline": "O carregamento do catálogo excedeu o tempo limite.",
+        "catalogProgress": "Carregando página {page} · {count} modelos…",
+        "invalidName": "Use de 1 a 512 letras minúsculas, números ou sublinhados no nome.",
+        "invalidLanguage": "Selecione um idioma de modelo compatível.",
+        "invalidText": "Preencha o texto respeitando o limite do componente (URLs de botões: 2.000 caracteres).",
+        "invalidVariables": "As variáveis devem ser consecutivas a partir de {{1}} em cada componente. Cabeçalho aceita uma; rodapé e botões não aceitam variáveis.",
+        "invalidExamples": "Informe um exemplo para cada variável.",
+        "invalidSample": "Selecione JPEG/PNG não vazio (até 5.000.000 bytes), MP4 ou PDF (até 16.000.000 bytes) correspondente ao cabeçalho.",
+        "invalidButtons": "Use no máximo 10 botões, duas URLs HTTP(S) estáticas e um telefone internacional. Agrupe as respostas rápidas.",
+        "unsupported": "Este formato permite apenas consulta no CRM. Use o Gerenciador da Meta."
+    },
     "options": {
         "status": {
             "APPROVED": "Aprovado",

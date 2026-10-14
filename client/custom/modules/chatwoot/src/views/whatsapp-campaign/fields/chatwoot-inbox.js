@@ -120,6 +120,8 @@ define('chatwoot:views/whatsapp-campaign/fields/chatwoot-inbox', ['views/fields/
                         attrs.templateCategory = null;
                         attrs.templateBody = null;
                         attrs.parameterMapping = null;
+                        attrs.headerParameterMapping = null;
+                        attrs.templateHeader = null;
                         attrs.headerMediaUrl = null;
                         attrs.headerMediaType = null;
                     }
@@ -139,7 +141,7 @@ define('chatwoot:views/whatsapp-campaign/fields/chatwoot-inbox', ['views/fields/
                     }
 
                     Espo.Ui.error(msg);
-                    this.clearDerivedAttrs();
+                    // A dependency failure must not erase the saved template or mappings.
                 });
         },
 
@@ -156,6 +158,8 @@ define('chatwoot:views/whatsapp-campaign/fields/chatwoot-inbox', ['views/fields/
                 templateCategory: null,
                 templateBody: null,
                 parameterMapping: null,
+                headerParameterMapping: null,
+                templateHeader: null,
                 headerMediaUrl: null,
                 headerMediaType: null,
             });

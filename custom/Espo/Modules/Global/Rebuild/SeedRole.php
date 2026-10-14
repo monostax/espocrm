@@ -547,8 +547,8 @@ class SeedRole implements RebuildAction
                     'delete' => 'team',
                 ],
                 // Meta / WhatsApp Business — virtual entities (Graph API proxies).
-                // RecordDefs mark these readOnly/createDisabled, so granting only
-                // read at the role level keeps the UI consistent with the backend.
+                // Templates use explicit remote actions authorized by connection read access.
+                // Other virtual entities and generic local template CRUD remain read-only.
                 'WhatsAppBusinessAccount' => [
                     'create' => 'no',
                     'read' => 'team',
@@ -556,10 +556,10 @@ class SeedRole implements RebuildAction
                     'delete' => 'no',
                 ],
                 'WhatsAppBusinessAccountMessageTemplate' => [
-                    'create' => 'no',
+                    'create' => 'yes',
                     'read' => 'team',
-                    'edit' => 'no',
-                    'delete' => 'no',
+                    'edit' => 'team',
+                    'delete' => 'team',
                 ],
                 'WhatsAppBusinessAccountPhoneNumber' => [
                     'create' => 'no',

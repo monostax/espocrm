@@ -198,6 +198,8 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                         "templateLanguage",
                         "templateCategory",
                         "parameterMapping",
+                        "headerParameterMapping",
+                        "templateHeader",
                         "templateBody",
                         "headerMediaUrl",
                         "headerMediaType",
@@ -236,6 +238,13 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                             value: this.getHelper().escapeString(
                                 JSON.stringify(params.parameterMapping)
                             ),
+                        });
+                    }
+
+                    if (params.headerParameterMapping) {
+                        rows.push({
+                            label: this.translate('headerParameterMapping', 'fields', 'WhatsAppCampaign'),
+                            value: this.getHelper().escapeString(JSON.stringify(params.headerParameterMapping)),
                         });
                     }
 
@@ -726,6 +735,8 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                 "templateLanguage",
                 "templateCategory",
                 "parameterMapping",
+                "headerParameterMapping",
+                "templateHeader",
                 "templateBody",
                 "headerMediaUrl",
                 "headerMediaType",
@@ -1420,6 +1431,8 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                                   "templateLanguage",
                                   "templateCategory",
                                   "parameterMapping",
+                                  "headerParameterMapping",
+                                  "templateHeader",
                                   "templateBody",
                                   "headerMediaUrl",
                                   "headerMediaType",

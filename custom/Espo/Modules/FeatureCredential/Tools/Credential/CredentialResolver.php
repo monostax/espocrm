@@ -41,7 +41,7 @@ class CredentialResolver
      * @throws NotFound
      * @throws Error
      */
-    public function resolve(string $credentialId): stdClass
+    public function resolve(string $credentialId, ?float $requestTimeout = null): stdClass
     {
         $credential = $this->entityManager->getEntityById('Credential', $credentialId);
 
@@ -75,7 +75,7 @@ class CredentialResolver
             return $config;
         }
 
-        return $this->mergeOAuthTokens($config, $credentialType, $credentialId, (string) $oAuthAccountId);
+        return $this->mergeOAuthTokens($config, $credentialType, $credentialId, (string) $oAuthAccountId, $requestTimeout);
     }
 
     /**
@@ -100,6 +100,7 @@ class CredentialResolver
         Entity $credentialType,
         string $credentialId,
         string $oAuthAccountId,
+        ?float $requestTimeout = null,
     ): stdClass {
         $mappingRaw = $credentialType->get('tokenFieldMapping');
 
@@ -116,7 +117,7 @@ class CredentialResolver
         }
 
         try {
-            $tokens = $this->tokensProvider->get($oAuthAccountId);
+            $tokens = $this->tokensProvider->get($oAuthAccountId, $requestTimeout);
         } catch (AccountNotFound $e) {
             throw new Error("OAuth account not found for credential '{$credentialId}'.", 0, $e);
         } catch (ProviderNotAvailable $e) {

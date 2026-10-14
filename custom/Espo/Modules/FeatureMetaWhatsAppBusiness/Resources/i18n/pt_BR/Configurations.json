@@ -1,12 +1,15 @@
 {
     "labels": {
         "Meta": "Meta",
-        "WhatsApp Accounts": "WhatsApp / Contas"
+        "WhatsApp Accounts": "WhatsApp / Contas",
+        "WhatsApp Templates": "Modelos do WhatsApp"
     },
     "descriptions": {
-        "whatsAppBusinessAccounts": "Gerenciar contas Meta WhatsApp Business e números de telefone."
+        "whatsAppBusinessAccounts": "Gerenciar contas Meta WhatsApp Business e números de telefone.",
+        "whatsAppMessageTemplates": "Selecione uma conta WhatsApp Business e abra Templates de Mensagem para criar, editar, excluir ou consultar seus modelos."
     },
     "keywords": {
-        "whatsAppBusinessAccounts": "meta,whatsapp,business,conta,waba,telefone"
+        "whatsAppBusinessAccounts": "meta,whatsapp,business,conta,waba,telefone",
+        "whatsAppMessageTemplates": "meta,whatsapp,modelo,template,mensagem,waba,cabeçalho,corpo,marketing,utilidade"
     }
 }

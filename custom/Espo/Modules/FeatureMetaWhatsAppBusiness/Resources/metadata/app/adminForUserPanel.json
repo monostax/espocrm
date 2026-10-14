@@ -1,4 +1,21 @@
 {
+    "conversations": {
+        "sections": {
+            "messaging": {
+                "label": "Messaging",
+                "order": 30,
+                "itemList": [
+                    {
+                        "url": "#Configurations/WhatsAppBusinessAccount",
+                        "label": "WhatsApp Templates",
+                        "iconClass": "ti ti-template",
+                        "description": "whatsAppMessageTemplates",
+                        "roles": ["tenant", "tenant-admin"]
+                    }
+                ]
+            }
+        }
+    },
     "integrations": {
         "sections": {
             "accounts": {

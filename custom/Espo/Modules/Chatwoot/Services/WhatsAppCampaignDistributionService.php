@@ -413,6 +413,8 @@ class WhatsAppCampaignDistributionService
                 'templateCategory' => $variantData->templateCategory ?? null,
                 'templateBody' => $variantData->templateBody ?? null,
                 'parameterMapping' => $variantData->parameterMapping ?? null,
+                'headerParameterMapping' => $variantData->headerParameterMapping ?? null,
+                'templateHeader' => $variantData->templateHeader ?? null,
                 'headerMediaUrl' => $variantData->headerMediaUrl ?? null,
                 'headerMediaType' => $variantData->headerMediaType ?? null,
                 'createOpportunity' => (bool) $campaign->get('createOpportunity'),

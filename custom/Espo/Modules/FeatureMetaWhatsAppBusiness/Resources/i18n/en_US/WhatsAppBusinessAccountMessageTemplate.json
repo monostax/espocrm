@@ -10,7 +10,36 @@
         "credentialName": "Credential"
     },
     "links": {},
-    "labels": {},
+    "labels": {
+        "create": "Create template", "edit": "Edit", "delete": "Delete", "inspect": "Inspect",
+        "refresh": "Refresh", "loadMore": "Load more", "metaManager": "Meta Manager",
+        "loading": "Loading templates…", "empty": "No templates found.", "submit": "Submit to Meta",
+        "name": "Name", "language": "Language", "category": "Category", "status": "Status",
+        "header": "Header", "body": "Body (1,024 characters)", "footer": "Footer (60 characters)",
+        "none": "None", "sample": "Fresh media sample", "preview": "Example preview",
+        "sampleHint": "JPEG/PNG: 5,000,000 bytes. MP4/PDF: 16,000,000 bytes. Select a fresh file for each submission.",
+        "variablesHint": "Use contiguous positional variables starting at {{1}} in each component. Header: at most one. Supply an example for every variable.",
+        "buttons": "Buttons", "buttonLabel": "Label (25 characters)", "buttonValue": "Static URL or international phone number",
+        "remove": "Remove", "addButton": "Add button", "example": "Example"
+    },
+    "messages": {
+        "accepted": "Meta accepted the operation. Approval and send readiness are separate. Refresh to check the current status.",
+        "editWarning": "Changes affect this WABA account-wide and can break campaigns, journeys and AI sends. Last accepted save wins. Unsaved changes are not stored.",
+        "submitWarning": "Submit this complete definition to Meta? Changes may break existing sends. Meta controls review and editing restrictions.",
+        "deleteWarning": "Delete this exact name/language variant from this WABA for all users? Existing sends may break. Deletion can remain pending; approved names may not be immediately reusable.",
+        "unknownOutcome": "The outcome is unknown. Refresh the catalog before retrying; Meta may already have accepted the operation.",
+        "catalogIncomplete": "Could not load the complete template catalog. Refresh and try again; saved selections are preserved.",
+        "catalogDeadline": "Template catalog loading exceeded the time limit.",
+        "catalogProgress": "Loading page {page} · {count} templates…",
+        "invalidName": "Use 1–512 lowercase letters, digits or underscores for the template name.",
+        "invalidLanguage": "Select a supported template language.",
+        "invalidText": "Provide nonempty text within the displayed component limit (button URLs: 2,000 characters).",
+        "invalidVariables": "Variables must be contiguous from {{1}} in each component. Header supports one; footer and buttons support none.",
+        "invalidExamples": "Provide an example for every variable.",
+        "invalidSample": "Select a nonempty JPEG/PNG (up to 5,000,000 bytes), MP4 or PDF (up to 16,000,000 bytes) matching the header.",
+        "invalidButtons": "Use at most 10 buttons, two static HTTP(S) URLs and one international phone number. Group quick replies together.",
+        "unsupported": "This format is view-only in CRM. Use Meta Manager."
+    },
     "options": {
         "status": {
             "APPROVED": "Approved",

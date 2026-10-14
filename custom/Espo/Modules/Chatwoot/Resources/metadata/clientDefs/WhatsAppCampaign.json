@@ -302,6 +302,17 @@
                     ]
                 }
             },
+            "headerParameterMapping": {
+                "visible": {
+                    "conditionGroup": [
+                        {"type": "isNotEmpty", "attribute": "headerParameterMapping"},
+                        {"type": "notEquals", "attribute": "messageMode", "value": "FreeText"}
+                    ]
+                },
+                "readOnly": {
+                    "conditionGroup": [{"type": "notEquals", "attribute": "status", "value": "Draft"}]
+                }
+            },
             "parameterMapping": {
                 "visible": {
                     "conditionGroup": [

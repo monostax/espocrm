@@ -74,6 +74,16 @@ class WhatsAppOAuthHelper
         return $oAuthAccount;
     }
 
+    public function validateTemplateAccountAccess(string $id): Entity
+    {
+        $account = $this->validateOAuthAccountAccess($id);
+        $provider = $this->entityManager->getEntityById('OAuthProvider', $account->get('providerId'));
+        if (!in_array($provider?->get('provider'), ['meta-whatsapp', 'meta-whatsapp-coexistence'], true)) {
+            throw new BadRequest('A supported WhatsApp OAuth provider is required.');
+        }
+        return $account;
+    }
+
     /**
      * Get all active OAuthAccounts accessible to the current user.
      *

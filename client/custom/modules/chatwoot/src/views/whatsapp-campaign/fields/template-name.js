@@ -22,12 +22,14 @@
  *
  * In detail/list mode, falls back to standard varchar rendering.
  */
-define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/varchar'], function (Dep) {
+define('chatwoot:views/whatsapp-campaign/fields/template-name', [
+    'views/fields/varchar', 'feature-meta-whatsapp-business:template-catalog',
+], function (Dep, Catalog) {
 
     return Dep.extend({
 
         editTemplateContent:
-            '<select class="main-element form-control" data-name="{{name}}">' +
+            '<select class="main-element form-control" data-name="{{name}}" {{#if catalogUnavailable}}disabled{{/if}}>' +
                 '<option value="">{{selectPlaceholder}}</option>' +
                 '{{#each templateOptions}}' +
                 '<option value="{{optionValue}}"' +
@@ -73,11 +75,11 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 '{{#each templateParams}}' +
                 '<div class="form-group param-row" style="margin-bottom: 6px;">' +
                     '<label class="control-label small" style="margin-bottom: 2px;">' +
-                        '<code style="color: #c7254e;">{{paramPlaceholder}}</code> ' +
+                        '<code style="color: #c7254e;">{{componentType}} {{paramPlaceholder}}</code> ' +
                         '<span class="text-muted">{{contextHint}}</span>' +
                     '</label>' +
                     '<input type="text" class="form-control input-sm param-mapping-input"' +
-                        ' data-param-number="{{paramNumber}}"' +
+                        ' data-param-number="{{paramNumber}}" data-component="{{componentType}}"' +
                         ' value="{{currentValue}}">' +
                 '</div>' +
                 '{{/each}}' +
@@ -106,6 +108,11 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 selected: opt.name === currentName && opt.language === currentLang,
             }));
             data.isLoading = this.isLoading;
+            data.catalogUnavailable = this.isLoading || !!this.loadError;
+            if (currentName && !data.templateOptions.some(o => o.selected)) {
+                data.templateOptions.unshift({optionValue: currentName + '::' + (currentLang || ''),
+                    label: currentName + ' (' + (currentLang || '') + ')', selected: true});
+            }
             data.loadingMessage = this.loadingMessage || 'Loading...';
             data.loadError = this.loadError;
             data.noInbox = !this.isLoading && !this.loadError && !hasAuth;
@@ -136,6 +143,8 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                     this.model.set('templateName', null);
                     this.model.set('templateLanguage', null);
                     this.model.set('parameterMapping', null);
+                    this.model.set('headerParameterMapping', null);
+                    this.model.set('templateHeader', null);
                     this.model.set('headerMediaUrl', null);
                     this.model.set('headerMediaType', null);
                     this.currentTemplateParams = [];
@@ -220,16 +229,18 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 templateLanguage: language,
                 templateCategory: selectedOpt ? selectedOpt.category : null,
                 templateBody: templateBody,
+                templateHeader: (this.templateComponentsMap[compositeKey] || [])
+                    .find(c => c.type === 'HEADER' && c.format === 'TEXT')?.text || null,
                 parameterMapping: null,
+                headerParameterMapping: null,
                 headerMediaUrl: null,
                 headerMediaType: this.currentHeaderMedia ? this.currentHeaderMedia.type : null,
             };
 
             this.model.set(attrs, {silent: true});
-
-            if (this.currentTemplateParams.length > 0 || this.currentHeaderMedia) {
-                this.reRender();
-            }
+            if (compositeKey) this.parseTemplateParameters(compositeKey);
+            this.trigger('change');
+            this.reRender();
         },
 
         parseTemplateParameters: function (compositeKey) {
@@ -243,6 +254,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
 
             const params = [];
             const existingMapping = this.model.get('parameterMapping') || {};
+            const existingHeaderMapping = this.model.get('headerParameterMapping') || {};
             const mediaFormats = ['IMAGE', 'VIDEO', 'DOCUMENT'];
 
             this.currentHeaderMedia = null;
@@ -269,6 +281,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
 
                 while ((match = regex.exec(text)) !== null) {
                     const paramNumber = match[1];
+                    if (params.some(p => p.componentType === type && p.paramNumber === paramNumber)) continue;
                     const pos = match.index;
                     const before = text.substring(Math.max(0, pos - 20), pos).replace(/\n/g, ' ');
                     const after = text.substring(pos + match[0].length, pos + match[0].length + 20).replace(/\n/g, ' ');
@@ -279,7 +292,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                         paramPlaceholder: '{{' + paramNumber + '}}',
                         contextHint: contextHint,
                         componentType: type,
-                        currentValue: existingMapping[paramNumber] || '',
+                        currentValue: (type === 'HEADER' ? existingHeaderMapping : existingMapping)[paramNumber] || '',
                     });
                 }
             }
@@ -298,19 +311,20 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
 
         onMappingInputChange: function () {
             const mapping = {};
-            let hasAny = false;
+            const headerMapping = {};
+            if (!this.$el.find('.param-mapping-input').length) return;
 
             this.$el.find('.param-mapping-input').each((i, el) => {
                 const paramNum = el.getAttribute('data-param-number');
                 const value = (el.value || '').trim();
 
                 if (paramNum && value) {
-                    mapping[paramNum] = value;
-                    hasAny = true;
+                    (el.getAttribute('data-component') === 'HEADER' ? headerMapping : mapping)[paramNum] = value;
                 }
             });
 
-            this.model.set('parameterMapping', hasAny ? mapping : null);
+            this.model.set('parameterMapping', Object.keys(mapping).length ? mapping : null);
+            this.model.set('headerParameterMapping', Object.keys(headerMapping).length ? headerMapping : null);
         },
         resolveAndFetchTemplates: function () {
             const credentialId = this.model.get('credentialId');
@@ -319,6 +333,10 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
             const inboxId = this.model.get('chatwootInboxId');
 
             if (!credentialId && !(oAuthAccountId && wabaId) && !inboxId) {
+                if (this.currentRequest) {
+                    this.currentRequest.abort();
+                    this.currentRequest = null;
+                }
                 this.templateOptions = [];
                 this.isLoading = false;
                 this.loadError = null;
@@ -359,9 +377,11 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 this.currentRequest = Espo.Ajax.getRequest('WhatsAppCampaign/action/resolveInbox', {
                     chatwootInboxId: inboxId,
                 });
+                const resolvingRequest = this.currentRequest;
 
                 this.currentRequest
                     .then(result => {
+                        if (resolvingRequest !== this.currentRequest) return;
                         this.currentRequest = null;
 
                         this.model.set({
@@ -389,6 +409,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                         }
                     })
                     .catch(xhr => {
+                        if (resolvingRequest !== this.currentRequest) return;
                         this.currentRequest = null;
                         this.isLoading = false;
 
@@ -422,9 +443,11 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
             this.currentRequest = Espo.Ajax.getRequest('WhatsAppCampaign/action/resolveCredential', {
                 credentialId: credentialId,
             });
+            const resolvingRequest = this.currentRequest;
 
             this.currentRequest
                 .then(result => {
+                    if (resolvingRequest !== this.currentRequest) return;
                     this.currentRequest = null;
 
                     const wabaId = result.wabaId;
@@ -441,6 +464,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                     this.fetchTemplates({credentialId: credentialId, wabaId: wabaId});
                 })
                 .catch(xhr => {
+                    if (resolvingRequest !== this.currentRequest) return;
                     this.currentRequest = null;
                     this.isLoading = false;
 
@@ -460,6 +484,8 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
 
         fetchTemplates: function (params) {
             this.isLoading = true;
+            this.loadError = null;
+            this.templateOptions = [];
             this.loadingMessage = 'Loading templates...';
             this.reRender();
 
@@ -468,13 +494,16 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 this.currentRequest = null;
             }
 
-            this.currentRequest = Espo.Ajax.getRequest(
-                'WhatsAppBusinessAccountMessageTemplate',
-                params
-            );
+            this.currentRequest = Catalog.load(params, (page, count) => {
+                this.loadingMessage = this.translate('catalogProgress', 'messages', 'WhatsAppBusinessAccountMessageTemplate')
+                    .replace('{page}', page).replace('{count}', count);
+                this.reRender();
+            });
+            const request = this.currentRequest;
 
             this.currentRequest
                 .then(response => {
+                    if (request !== this.currentRequest) return;
                     this.currentRequest = null;
                     this.isLoading = false;
 
@@ -533,6 +562,7 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                     this.reRender();
                 })
                 .catch(xhr => {
+                    if (request !== this.currentRequest) return;
                     this.currentRequest = null;
                     this.isLoading = false;
 
@@ -550,6 +580,14 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
         },
 
         fetch: function () {
+            if (this.isLoading || this.loadError || !this.templateOptions.length ||
+                (this.model.get(this.name) && !this.templateOptions.some(option =>
+                    option.name === this.model.get(this.name) && option.language === this.model.get('templateLanguage')))) {
+                return Object.fromEntries([
+                    this.name, 'templateLanguage', 'templateCategory', 'parameterMapping',
+                    'headerParameterMapping', 'templateBody', 'templateHeader', 'headerMediaUrl', 'headerMediaType',
+                ].map(key => [key, this.model.get(key) ?? null]));
+            }
             const $select = this.$el.find('select[data-name="' + this.name + '"]');
 
             if ($select.length) {
@@ -565,22 +603,23 @@ define('chatwoot:views/whatsapp-campaign/fields/template-name', ['views/fields/v
                 const data = {};
                 data[this.name] = templateName;
                 data['templateLanguage'] = language;
-                data['templateCategory'] = selectedOpt ? selectedOpt.category : null;
+                data['templateCategory'] = selectedOpt ? selectedOpt.category : this.model.get('templateCategory');
 
                 const mapping = {};
-                let hasMapping = false;
+                const headerMapping = {};
 
                 this.$el.find('.param-mapping-input').each((i, el) => {
                     const paramNum = el.getAttribute('data-param-number');
                     const value = (el.value || '').trim();
 
                     if (paramNum && value) {
-                        mapping[paramNum] = value;
-                        hasMapping = true;
+                        (el.getAttribute('data-component') === 'HEADER' ? headerMapping : mapping)[paramNum] = value;
                     }
                 });
 
-                data['parameterMapping'] = hasMapping ? mapping : null;
+                data['parameterMapping'] = Object.keys(mapping).length ? mapping : null;
+                data['headerParameterMapping'] = Object.keys(headerMapping).length ? headerMapping : null;
+                data['templateHeader'] = this.model.get('templateHeader') || null;
                 data['templateBody'] = this.model.get('templateBody') || null;
 
                 const $mediaUrl = this.$el.find('.header-media-url-input');

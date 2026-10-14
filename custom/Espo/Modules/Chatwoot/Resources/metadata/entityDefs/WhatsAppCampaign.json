@@ -176,6 +176,17 @@
             "default": false,
             "tooltip": true
         },
+        "templateHeader": {
+            "type": "text",
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true
+        },
+        "headerParameterMapping": {
+            "type": "jsonObject",
+            "view": "chatwoot:views/whatsapp-campaign/fields/parameter-mapping",
+            "tooltip": true
+        },
         "createOpportunity": {
             "type": "bool",
             "default": false,

@@ -156,12 +156,13 @@ class ChatwootApiClient
      * @return array{code: int, body: array<string, mixed>}
      * @throws Error
      */
-    private function executeRequest(
+    protected function executeRequest(
         string $url,
         string $method,
         ?string $payload = null,
         array $headers = [],
-        bool $followLocation = true
+        bool $followLocation = true,
+        ?\Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateDeadline $templateDeadline = null,
     ): array {
         $ch = curl_init($url);
 
@@ -178,6 +179,11 @@ class ChatwootApiClient
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        if ($templateDeadline) {
+            $milliseconds = $templateDeadline->milliseconds();
+            curl_setopt($ch, CURLOPT_TIMEOUT_MS, $milliseconds);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, min(10000, $milliseconds));
+        }
         curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS | CURLPROTO_HTTP);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
@@ -207,7 +213,7 @@ class ChatwootApiClient
         
         if ($body === null && json_last_error() !== JSON_ERROR_NONE) {
             // Only log warning if it's not an empty response and not a successful status
-            if ($httpCode < 200 || $httpCode >= 300) {
+            if (!$templateDeadline && ($httpCode < 200 || $httpCode >= 300)) {
                 $this->log->warning('Chatwoot API returned non-JSON response (HTTP ' . $httpCode . '): ' . $result);
             }
             $body = ['raw_response' => $result];
@@ -3219,8 +3225,13 @@ public function deleteConversation(
         string $category = 'UTILITY',
         string $content = '',
         ?string $headerMediaUrl = null,
-        ?string $headerMediaType = null
+        ?string $headerMediaType = null,
+        array $headerParams = [],
     ): array {
+        // Validate before creating a conversation or posting a message.
+        $processedParams = \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::processed(
+            $params, $headerParams, $headerMediaUrl, $headerMediaType
+        );
         // Step 1: Create a conversation with the contact
         $conversation = $this->createConversation($platformUrl, $accountApiKey, $accountId, $contactId, $inboxId);
         $conversationId = $conversation['id'] ?? $conversation['display_id'] ?? null;
@@ -3237,23 +3248,6 @@ public function deleteConversation(
         // object (hash), never a JSON array. An empty PHP array encodes as `[]`,
         // which Chatwoot rejects with "processed params must be of type hash".
         // Use stdClass so an empty payload serializes as `{}`.
-        $processedParams = new \stdClass();
-
-        if (!empty($params)) {
-            $bodyParams = new \stdClass();
-            foreach ($params as $key => $value) {
-                $k = (string) $key;
-                $bodyParams->$k = (string) $value;
-            }
-            $processedParams->body = $bodyParams;
-        }
-
-        if ($headerMediaUrl && $headerMediaType) {
-            $processedParams->header = [
-                'media_url' => $headerMediaUrl,
-                'media_type' => $headerMediaType,
-            ];
-        }
 
         $messageData = [
             'content' => $content,
@@ -3558,6 +3552,43 @@ public function deleteConversation(
                 "Chatwoot: Template sync failed for inbox {$inboxId}, account {$accountId}: " . $e->getMessage()
             );
         }
+    }
+
+    /** Strict, single-attempt refresh used by campaign/journey preflight. */
+    public function refreshTemplateCatalog(
+        string $url, string $key, int $account, int $inbox,
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateDeadline $deadline,
+    ): void {
+        $this->templateCatalogRequest($url, $key, $account, $inbox, $deadline, true);
+    }
+
+    public function readTemplateCatalog(
+        string $url, string $key, int $account, int $inbox,
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateDeadline $deadline,
+    ): array {
+        $data = $this->templateCatalogRequest($url, $key, $account, $inbox, $deadline, false);
+        if (!isset($data['message_templates']) || !is_array($data['message_templates'])) {
+            throw new Error('Chatwoot did not return a usable template catalog.');
+        }
+        return $data['message_templates'];
+    }
+
+    private function templateCatalogRequest(
+        string $url, string $key, int $account, int $inbox,
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateDeadline $deadline, bool $refresh,
+    ): array {
+        $url = rtrim($url, '/') . "/api/v1/accounts/{$account}/inboxes/{$inbox}" . ($refresh ? '/sync_templates' : '');
+        try {
+            $response = $this->executeRequest($url, $refresh ? 'POST' : 'GET', null,
+                ['api_access_token: ' . $key, 'Content-Type: application/json'], false, $deadline);
+        } catch (\Throwable) {
+            throw new Error('Chatwoot template preflight request failed. No messages were sent.');
+        }
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Chatwoot refused template ' . ($refresh ? 'refresh' : 'catalog read') .
+                ' (HTTP ' . $response['code'] . '). No messages were sent.');
+        }
+        return $response['body'];
     }
 
     /* -------------------------------------------------------------------------- */

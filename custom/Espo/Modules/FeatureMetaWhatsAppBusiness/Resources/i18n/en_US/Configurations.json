@@ -1,12 +1,15 @@
 {
     "labels": {
         "Meta": "Meta",
-        "WhatsApp Accounts": "WhatsApp Accounts"
+        "WhatsApp Accounts": "WhatsApp Accounts",
+        "WhatsApp Templates": "WhatsApp Templates"
     },
     "descriptions": {
-        "whatsAppBusinessAccounts": "Manage Meta WhatsApp Business accounts and phone numbers."
+        "whatsAppBusinessAccounts": "Manage Meta WhatsApp Business accounts and phone numbers.",
+        "whatsAppMessageTemplates": "Choose a WhatsApp Business account, then open Message Templates to create, edit, delete or inspect its templates."
     },
     "keywords": {
-        "whatsAppBusinessAccounts": "meta,whatsapp,business,account,waba,phone"
+        "whatsAppBusinessAccounts": "meta,whatsapp,business,account,waba,phone",
+        "whatsAppMessageTemplates": "meta,whatsapp,template,message,waba,header,body,marketing,utility"
     }
 }

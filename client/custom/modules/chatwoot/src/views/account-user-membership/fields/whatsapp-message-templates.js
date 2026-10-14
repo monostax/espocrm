@@ -22,7 +22,8 @@
  */
 define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates', [
     'views/fields/base',
-], function (Dep) {
+    'feature-meta-whatsapp-business:template-catalog',
+], function (Dep, Catalog) {
 
     const ALLOWED_CHANNEL_TYPES = ['whatsappCloudApi', 'whatsappCoexistence'];
 
@@ -58,6 +59,7 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
             '{{/if}}',
 
         editTemplateContent:
+            '{{#if catalogUnavailable}}<ul class="list-unstyled">{{#each selectedLabels}}<li><code>{{this}}</code></li>{{/each}}</ul>{{/if}}' +
             '{{#if isLoading}}' +
             '<span class="text-muted small">' +
                 '<span class="fas fa-spinner fa-spin"></span> {{loadingMessage}}' +
@@ -117,6 +119,7 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
             });
 
             data.isLoading = this.isLoading;
+            data.catalogUnavailable = this.isLoading || !!this.loadError;
             data.loadingMessage = this.loadingMessage ||
                 this.translate('whatsappTemplatesLoading', 'messages', 'ChatwootAccountUserMembership');
             data.loadError = this.loadError;
@@ -128,7 +131,7 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
                 'ChatwootAccountUserMembership'
             );
             data.linkedInboxSummary = this.linkedInboxSummary;
-            data.inboxGroups = (this.inboxGroups || []).map(group => ({
+            data.inboxGroups = (this.isLoading || this.loadError ? [] : this.inboxGroups || []).map(group => ({
                 inboxName: group.inboxName,
                 inboxPlatformId: group.inboxPlatformId,
                 channelType: group.channelType,
@@ -196,6 +199,7 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
         },
 
         onCheckboxChange: function () {
+            if (this.isLoading || this.loadError) return;
             const byKey = {};
             (this.inboxGroups || []).forEach(group => {
                 (group.options || []).forEach(opt => {
@@ -203,7 +207,8 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
                 });
             });
 
-            const selected = [];
+            // Preserve saved entries unavailable in this catalog; never erase them during a failed load.
+            const selected = this.getSelectedEntries().filter(entry => !byKey[compositeKey(entry)]);
             this.$el.find('input.template-option:checked').each((i, el) => {
                 const key = el.getAttribute('data-key');
                 if (key && byKey[key]) {
@@ -346,20 +351,15 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
                         params.credentialId = resolved.credentialId;
                         params.wabaId = resolved.wabaId;
                     } else {
-                        return {
-                            inboxName,
-                            inboxPlatformId,
-                            channelType,
-                            options: [],
-                            emptyMessage: this.translate(
-                                'whatsappTemplatesNoMetaCredentials',
-                                'messages',
-                                'ChatwootAccountUserMembership'
-                            ),
-                        };
+                        throw new Error('Missing Meta credentials.');
                     }
 
-                    return Espo.Ajax.getRequest('WhatsAppBusinessAccountMessageTemplate', params)
+                    return Catalog.load(params, (page, count) => {
+                        this.loadingMessage = inboxName + ': ' +
+                            this.translate('catalogProgress', 'messages', 'WhatsAppBusinessAccountMessageTemplate')
+                                .replace('{page}', page).replace('{count}', count);
+                        this.reRender();
+                    })
                         .then(tplResponse => {
                             const list = (tplResponse && tplResponse.list) || [];
                             const options = list
@@ -398,21 +398,6 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
                                     ),
                             };
                         });
-                })
-                .catch(xhr => {
-                    const msg = (xhr && xhr.responseJSON && xhr.responseJSON.message) ||
-                        this.translate(
-                            'whatsappTemplatesLoadTemplatesFailed',
-                            'messages',
-                            'ChatwootAccountUserMembership'
-                        );
-                    return {
-                        inboxName,
-                        inboxPlatformId,
-                        channelType,
-                        options: [],
-                        emptyMessage: msg,
-                    };
                 });
         },
 

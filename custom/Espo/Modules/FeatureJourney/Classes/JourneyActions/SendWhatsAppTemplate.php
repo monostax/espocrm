@@ -81,7 +81,13 @@ class SendWhatsAppTemplate implements Action
         );
 
         $mapping = $params['parameterMapping'] ?? [];
+        // Exactly once per action, before iterating over recipient phone numbers.
+        $liveTemplate = $this->outbound->preflightTemplate($conn, $templateName, $language, $params);
+        $category = $liveTemplate['category'];
         $resolved = $this->outbound->resolveParameterMapping($mapping, $target);
+        $resolvedHeader = $this->outbound->resolveParameterMapping($params['headerParameterMapping'] ?? [], $target);
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved($resolved, true);
+        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved($resolvedHeader, true);
 
         $headerUrl = isset($params['headerMediaUrl']) ? (string) $params['headerMediaUrl'] : null;
         $headerType = isset($params['headerMediaType']) ? (string) $params['headerMediaType'] : null;
@@ -123,6 +129,7 @@ class SendWhatsAppTemplate implements Action
                     $headerUrl,
                     $headerType,
                     $journeyContext,
+                    $resolvedHeader,
                 );
                 $sent++;
             } catch (Throwable $e) {
