@@ -3,8 +3,6 @@
     {"route": "/CreditEmailVerification", "method": "post", "params": {"controller": "CreditEmailVerification", "action": "start"}},
     {"route": "/CreditEmailVerification/status", "method": "get", "params": {"controller": "CreditEmailVerification", "action": "status"}},
     {"route": "/CreditEmailVerification/history", "method": "get", "params": {"controller": "CreditEmailVerification", "action": "history"}},
-    {"route": "/CreditEmailVerificationConfiguration", "method": "get", "params": {"controller": "CreditEmailVerificationConfiguration", "action": "read"}},
-    {"route": "/CreditEmailVerificationConfiguration", "method": "post", "params": {"controller": "CreditEmailVerificationConfiguration", "action": "publish"}},
     {"route": "/CreditPhoneVerification/context", "method": "post", "params": {"controller": "CreditPhoneVerification", "action": "context"}},
     {"route": "/CreditPhoneVerification", "method": "post", "params": {"controller": "CreditPhoneVerification", "action": "start"}},
     {"route": "/CreditPhoneVerification/status", "method": "get", "params": {"controller": "CreditPhoneVerification", "action": "status"}},

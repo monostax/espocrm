@@ -19,37 +19,29 @@ establish identity or ownership. Email checks never read or save names/DOB.
    `supplierTaskCiphertext`, `nextPollAt`, and `VerificationProviderWindow` are new.
    Keep existing receipt hashes and request bindings intact.
 2. Build/deploy the CRM frontend and Chatwoot assets together with the backend.
-3. Supply `VERIFICATION_BOUNCEBAN_API_KEY` to both CRM HTTP and job processes through
-   the platform's server-secret configuration. It is independent of Twilio/tenant
-   VoIP credentials. Never put it in customer metadata or browser configuration.
+3. Set `crmVerificationBounceBanApiKey` in
+   `gitops/ai-monostax/ai-monostax-app/secrets.nix` and redeploy. The shared
+   `gitops/ai-monostax/:tenant/crm/add.crm.Deployment.nix` template supplies it as
+   `VERIFICATION_BOUNCEBAN_API_KEY` to CRM web and daemon containers. The separate
+   production daemon inherits that environment. Dev namespaces have the same secret
+   entry in their own `secrets.nix`. Init, WebSocket, and live-records containers do
+   not receive this key.
 4. Ensure the existing `DispatchPhoneVerification` scheduled job runs every minute.
    It dispatches admitted operations, schedules due status reads, closes expired
    holds, removes expired evidence, and records the recovery heartbeat.
-5. Validate the platform account's credentials, standard API result shapes,
-   immediate/pending completion, address encoding, tariff, and rate limits before
-   publishing an activation approval. This implementation performs no live probe
-   during deployment or context reads.
-6. As an instance administrator, publish to `POST /CreditEmailVerificationConfiguration`:
 
-   ```json
-   {
-     "enabled": true,
-     "providerValidated": true,
-     "releaseApprovalRef": "email-pilot-approved-reference",
-     "allowlistedTenantIds": ["approvedTenantId"]
-   }
-   ```
-
-Email starts disabled. `GET /CreditEmailVerificationConfiguration` returns its
-configuration and sanitized shared diagnostics. `killSwitch: true` stops new email
-admissions and unclaimed submissions. `VERIFICATION_KILL_SWITCH=true` stops new
-dispatch for both kinds. Already submitted email tasks may finish through free
-status retrieval; authorization revocation and erasure still stop delivery.
+A non-empty API key enables email verification for authorized tenants with credits.
+An empty key leaves it unavailable. No configuration POST, approval reference, or
+tenant allowlist is required. No live provider probe runs on deployment/context reads.
+`VERIFICATION_KILL_SWITCH=true` stops new dispatch for both kinds. Already submitted
+email tasks may finish through free status retrieval; authorization revocation and
+erasure still stop delivery. Shared operational diagnostics are available through
+the existing instance-admin `CreditPhoneVerificationConfiguration` GET endpoint.
 
 Both kinds share the limits configured through `CreditPhoneVerificationConfiguration`:
 5 outstanding operations, 10 admissions/minute, 100/day per tenant by default, with
 a 60-second same-fingerprint cooldown. Email activation does not require phone
-activation. Email cannot publish separate pilot counters.
+activation; its availability ignores phone-specific approval and allowlist settings.
 
 Account-wide submit and status limits each default to 25 requests/second. Set
 `VERIFICATION_BOUNCEBAN_SUBMIT_PER_SECOND` and

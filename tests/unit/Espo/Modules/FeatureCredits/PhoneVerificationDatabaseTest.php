@@ -106,6 +106,8 @@ final class PhoneVerificationDatabaseTest extends TestCase
 
         $schema = $this->schema($dialect);
         $platform = $dialect === 'Mysql' ? new MySQL80Platform() : new PostgreSQLPlatform();
+        $previousKillSwitch = getenv('VERIFICATION_KILL_SWITCH');
+        putenv('VERIFICATION_KILL_SWITCH');
 
         try {
             foreach ($schema->toSql($platform) as $sql) {
@@ -175,8 +177,6 @@ final class PhoneVerificationDatabaseTest extends TestCase
                 'releaseApprovalRef' => 'ADR-2026-10-14',
                 'allowlistedTenantIds' => ['tenant', 'other'],
             ], 'admin');
-            $gate->publish((object) ['enabled' => true, 'providerValidated' => true,
-                'releaseApprovalRef' => 'email-test', 'allowlistedTenantIds' => ['tenant', 'other']], 'admin', Kind::EMAIL);
             $funding->grant(new GrantInput(
                 'tenant',
                 'purchase',
@@ -189,6 +189,7 @@ final class PhoneVerificationDatabaseTest extends TestCase
 
             $test($pdo, $operations, $execution, $gate, $funding, $crypt, $manager, $acl);
         } finally {
+            putenv($previousKillSwitch === false ? 'VERIFICATION_KILL_SWITCH' : 'VERIFICATION_KILL_SWITCH=' . $previousKillSwitch);
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
@@ -459,12 +460,12 @@ final class PhoneVerificationDatabaseTest extends TestCase
             $this->now = Operations::after($this->now, 31);
             $execution->recover('tenant', $id);
             $pdo->exec("UPDATE contact SET first_name = 'Changed', email_address = NULL WHERE id = 'contact'");
-            $gate->publish((object) ['killSwitch' => true], 'admin', Kind::EMAIL);
+            putenv('VERIFICATION_KILL_SWITCH=true');
             $this->emailResult = new EmailResult('completed', 'task1', 'unknown', ['score' => 0, 'flags' => []]);
             $execution->run('tenant', $id);
             self::assertSame(['person@example.com', 'task1'], $this->emailCalls[1]);
             self::assertSame('2.0000', $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'operationId' => $id], Kind::EMAIL)['operation']['settledCredits']);
-            $gate->publish((object) ['killSwitch' => false], 'admin', Kind::EMAIL);
+            putenv('VERIFICATION_KILL_SWITCH');
             $pdo->exec("UPDATE contact SET email_address = 'changed@example.com' WHERE id = 'contact'");
             $next = $this->emailStart($operations, 'deadline');
             $this->emailResult = new EmailResult('pending', 'task2');

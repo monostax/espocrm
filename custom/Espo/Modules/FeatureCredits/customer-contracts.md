@@ -53,9 +53,9 @@ in internal logs. Successful responses retain private/no-store caching.
   tenant financial-admin access/membership used by customer endpoints. Customer
   checkout no longer renders routing/override controls. Previously saved operator
   override commands remain recoverable with the existing instance-admin check.
-- CreditPhoneVerificationConfiguration and CreditEmailVerificationConfiguration are
-  independently gated instance-administrator surfaces. Their secrets stay in server
-  environment configuration. See [verification operations](Verification/README.md).
+- CreditPhoneVerificationConfiguration is an instance-administrator surface. Email
+  availability is determined by the server BounceBan key, without a separate
+  configuration/approval endpoint. See [verification operations](Verification/README.md).
 - CreditMigration and CreditReversals require instance administrators. CreditDispatch
   and CreditExecution verify timestamped HMAC signatures; payment webhooks verify the
   originating integration's access token. They are not customer receipt contracts.

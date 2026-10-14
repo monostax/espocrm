@@ -4,16 +4,57 @@ declare(strict_types=1);
 
 namespace tests\unit\Espo\Modules\FeatureCredits;
 
+use Espo\Core\Utils\Config;
+use Espo\Modules\FeatureCredits\Accounting\Clock;
 use Espo\Modules\FeatureCredits\Enrichment\Providers\Response;
 use Espo\Modules\FeatureCredits\Verification\BounceBanCredentials;
 use Espo\Modules\FeatureCredits\Verification\BounceBanLookup;
 use Espo\Modules\FeatureCredits\Verification\BounceBanTransport;
 use Espo\Modules\FeatureCredits\Verification\Kind;
+use Espo\Modules\FeatureCredits\Verification\CapabilityGate;
+use Espo\Modules\FeatureCredits\Verification\TwilioCredentials;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class EmailVerificationUnitTest extends TestCase
 {
+    public function testApiKeyAloneEnablesEmailWithSharedLimitsAndGlobalStop(): void
+    {
+        $savedKey = getenv('VERIFICATION_BOUNCEBAN_API_KEY');
+        $savedStop = getenv('VERIFICATION_KILL_SWITCH');
+        try {
+            putenv('VERIFICATION_KILL_SWITCH');
+            putenv('VERIFICATION_BOUNCEBAN_API_KEY');
+            $config = $this->createStub(Config::class);
+            $config->method('get')->willReturn(null);
+            $phoneCredentials = $this->createStub(TwilioCredentials::class);
+            $phoneCredentials->method('get')->willReturn([]);
+            $clock = $this->createStub(Clock::class);
+            $clock->method('now')->willReturn('2026-10-14 12:00:00');
+            $gate = new CapabilityGate($config, $phoneCredentials, $clock);
+
+            self::assertFalse($gate->inspect('tenant', Kind::EMAIL)['available']);
+            self::assertSame('provider_unavailable', $gate->inspect('tenant', Kind::EMAIL)['reason']);
+            putenv('VERIFICATION_BOUNCEBAN_API_KEY=test-key');
+            $capability = $gate->inspect('tenant', Kind::EMAIL);
+            self::assertTrue($capability['available']);
+            self::assertNull($capability['reason']);
+            self::assertSame('2.0000', $capability['priceCredits']);
+            self::assertTrue($gate->inspect('another-tenant', Kind::EMAIL)['available']);
+            self::assertFalse($gate->inspect('tenant')['available']);
+
+            $gate->publish((object) ['killSwitch' => true, 'maxOutstandingPerTenant' => 3], 'admin');
+            self::assertTrue($gate->inspect('tenant', Kind::EMAIL)['available']);
+            self::assertSame(3, $gate->inspect('tenant', Kind::EMAIL)['limits']['maxOutstandingPerTenant']);
+            putenv('VERIFICATION_KILL_SWITCH=true');
+            self::assertFalse($gate->inspect('tenant', Kind::EMAIL)['available']);
+            self::assertSame('kill_switch', $gate->inspect('tenant', Kind::EMAIL)['reason']);
+        } finally {
+            putenv($savedKey === false ? 'VERIFICATION_BOUNCEBAN_API_KEY' : 'VERIFICATION_BOUNCEBAN_API_KEY=' . $savedKey);
+            putenv($savedStop === false ? 'VERIFICATION_KILL_SWITCH' : 'VERIFICATION_KILL_SWITCH=' . $savedStop);
+        }
+    }
+
     private static function completed(): array
     {
         return ['id' => 'task1', 'status' => 'success', 'email' => 'person@example.com', 'result' => 'deliverable',

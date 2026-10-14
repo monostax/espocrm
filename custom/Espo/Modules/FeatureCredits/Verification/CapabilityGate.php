@@ -12,13 +12,12 @@ use InvalidArgumentException;
 use stdClass;
 
 /**
- * Operator-controlled activation, pilot allowlist, rate limits, and dispatch kill switch (D9, D20, D25).
- * Deployed disabled by default until minimal Brazil inputs and pricing are validated and approved.
+ * Phone activation, shared rate limits, and dispatch kill switch.
+ * Email is available when the platform BounceBan API key is configured.
  */
 class CapabilityGate
 {
     public const CONFIG_KEY = 'featureCreditsPhoneVerification';
-    public const EMAIL_CONFIG_KEY = 'featureCreditsEmailVerification';
     public const PRICE_CREDITS = '8.0000';
     public const PROVIDER_TIMEOUT_MS = 30000;
     public const OPERATION_DEADLINE_SECONDS = 300;
@@ -29,7 +28,7 @@ class CapabilityGate
     public const DEFAULT_MAX_PER_DAY = 100;
     public const DEFAULT_COOLDOWN_SECONDS = 60;
 
-    private array $published = [];
+    private ?array $published = null;
 
     public function __construct(
         private Config $config,
@@ -39,14 +38,11 @@ class CapabilityGate
         private ?BounceBanCredentials $emailCredentials = null,
     ) {}
 
-    public function configuration(string $kind = Kind::PHONE): array
+    public function configuration(): array
     {
-        $configKey = $kind === Kind::EMAIL ? self::EMAIL_CONFIG_KEY : self::CONFIG_KEY;
-        $raw = $this->published[$kind] ?? $this->config->get($configKey);
+        $raw = $this->published ?? $this->config->get(self::CONFIG_KEY);
         $data = $raw instanceof stdClass ? (array) $raw : (is_array($raw) ? $raw : []);
-        $envKill = getenv('VERIFICATION_KILL_SWITCH');
-        $killSwitch = (bool) ($data['killSwitch'] ?? false) ||
-            (is_string($envKill) && in_array(strtolower(trim($envKill)), ['1', 'true', 'yes'], true));
+        $killSwitch = (bool) ($data['killSwitch'] ?? false) || $this->globalKillSwitch();
         $allowlist = [];
         foreach (is_array($data['allowlistedTenantIds'] ?? null) ? $data['allowlistedTenantIds'] : [] as $tenantId) {
             if (is_string($tenantId) && preg_match('/\A[a-zA-Z0-9_-]{1,24}\z/', $tenantId)) {
@@ -56,19 +52,17 @@ class CapabilityGate
         $allowlist = array_values(array_unique($allowlist));
         sort($allowlist, SORT_STRING);
 
-        $validationKey = $kind === Kind::EMAIL ? 'providerValidated' : 'brazilMinimalInputValidated';
-        $limits = $kind === Kind::EMAIL ? $this->configuration() : $data;
         return [
             'enabled' => (bool) ($data['enabled'] ?? false),
             'killSwitch' => $killSwitch,
-            $validationKey => (bool) ($data[$validationKey] ?? false),
+            'brazilMinimalInputValidated' => (bool) ($data['brazilMinimalInputValidated'] ?? false),
             'releaseApprovalRef' => is_string($data['releaseApprovalRef'] ?? null) && $data['releaseApprovalRef'] !== ''
                 ? $data['releaseApprovalRef'] : null,
             'allowlistedTenantIds' => $allowlist,
-            'maxOutstandingPerTenant' => $this->boundedInt($limits['maxOutstandingPerTenant'] ?? null, self::DEFAULT_MAX_OUTSTANDING, 1, 100),
-            'maxPerMinutePerTenant' => $this->boundedInt($limits['maxPerMinutePerTenant'] ?? null, self::DEFAULT_MAX_PER_MINUTE, 1, 1000),
-            'maxPerDayPerTenant' => $this->boundedInt($limits['maxPerDayPerTenant'] ?? null, self::DEFAULT_MAX_PER_DAY, 1, 10000),
-            'sameInputCooldownSeconds' => $this->boundedInt($limits['sameInputCooldownSeconds'] ?? null, self::DEFAULT_COOLDOWN_SECONDS, 1, 3600),
+            'maxOutstandingPerTenant' => $this->boundedInt($data['maxOutstandingPerTenant'] ?? null, self::DEFAULT_MAX_OUTSTANDING, 1, 100),
+            'maxPerMinutePerTenant' => $this->boundedInt($data['maxPerMinutePerTenant'] ?? null, self::DEFAULT_MAX_PER_MINUTE, 1, 1000),
+            'maxPerDayPerTenant' => $this->boundedInt($data['maxPerDayPerTenant'] ?? null, self::DEFAULT_MAX_PER_DAY, 1, 10000),
+            'sameInputCooldownSeconds' => $this->boundedInt($data['sameInputCooldownSeconds'] ?? null, self::DEFAULT_COOLDOWN_SECONDS, 1, 3600),
             'updatedAt' => is_string($data['updatedAt'] ?? null) ? $data['updatedAt'] : null,
             'updatedById' => is_string($data['updatedById'] ?? null) ? $data['updatedById'] : null,
             'lastRecoveryAt' => is_string($data['lastRecoveryAt'] ?? null) ? $data['lastRecoveryAt'] : null,
@@ -77,13 +71,16 @@ class CapabilityGate
 
     public function inspect(string $tenantId, string $kind = Kind::PHONE): array
     {
-        $cfg = $this->configuration($kind);
+        $cfg = $this->configuration();
         $creds = $kind === Kind::EMAIL ? ($this->emailCredentials ?? new BounceBanCredentials())->get() : $this->credentials->get();
         $hasCreds = $creds !== [];
         $allowlisted = in_array($tenantId, $cfg['allowlistedTenantIds'], true);
-        $approved = $cfg[$kind === Kind::EMAIL ? 'providerValidated' : 'brazilMinimalInputValidated'] && $cfg['releaseApprovalRef'] !== null;
-        $available = $cfg['enabled'] && !$cfg['killSwitch'] && $approved && $hasCreds && $allowlisted;
-        $reason = match (true) {
+        $approved = $cfg['brazilMinimalInputValidated'] && $cfg['releaseApprovalRef'] !== null;
+        $reason = $kind === Kind::EMAIL ? match (true) {
+            $this->globalKillSwitch() => 'kill_switch',
+            !$hasCreds => 'provider_unavailable',
+            default => null,
+        } : match (true) {
             $cfg['killSwitch'] => 'kill_switch',
             !$cfg['enabled'] || !$approved => 'verification_disabled',
             !$allowlisted => 'tenant_not_allowlisted',
@@ -92,7 +89,7 @@ class CapabilityGate
         };
 
         return [
-            'available' => $available,
+            'available' => $reason === null,
             'reason' => $reason,
             'priceCredits' => Kind::price($kind),
             'policyVersion' => $this->policyVersion($kind),
@@ -122,15 +119,14 @@ class CapabilityGate
         ], JSON_THROW_ON_ERROR));
     }
 
-    public function publish(stdClass $input, string $actorId, string $kind = Kind::PHONE): array
+    public function publish(stdClass $input, string $actorId): array
     {
         GrantInput::identity($actorId);
         $vars = get_object_vars($input);
-        $validationKey = $kind === Kind::EMAIL ? 'providerValidated' : 'brazilMinimalInputValidated';
         $allowedKeys = [
             'enabled',
             'killSwitch',
-            $validationKey,
+            'brazilMinimalInputValidated',
             'releaseApprovalRef',
             'allowlistedTenantIds',
             'maxOutstandingPerTenant',
@@ -138,14 +134,11 @@ class CapabilityGate
             'maxPerDayPerTenant',
             'sameInputCooldownSeconds',
         ];
-        if ($kind === Kind::EMAIL) {
-            $allowedKeys = array_diff($allowedKeys, ['maxOutstandingPerTenant', 'maxPerMinutePerTenant', 'maxPerDayPerTenant', 'sameInputCooldownSeconds']);
-        }
         if (array_diff(array_keys($vars), $allowedKeys)) {
             throw new InvalidArgumentException('Unknown phone verification configuration parameter.');
         }
-        $current = $this->configuration($kind);
-        foreach (['enabled', 'killSwitch', $validationKey] as $boolKey) {
+        $current = $this->configuration();
+        foreach (['enabled', 'killSwitch', 'brazilMinimalInputValidated'] as $boolKey) {
             if (array_key_exists($boolKey, $vars)) {
                 if (!is_bool($vars[$boolKey])) {
                     throw new InvalidArgumentException("Boolean value required for $boolKey.");
@@ -189,14 +182,14 @@ class CapabilityGate
                 $current[$intKey] = $vars[$intKey];
             }
         }
-        if ($current['enabled'] && (!$current[$validationKey] || $current['releaseApprovalRef'] === null)) {
+        if ($current['enabled'] && (!$current['brazilMinimalInputValidated'] || $current['releaseApprovalRef'] === null)) {
             throw new InvalidArgumentException('Enabling paid verification requires validated provider capability and a release approval reference.');
         }
         $current['updatedAt'] = $this->clock->now();
         $current['updatedById'] = $actorId;
-        $this->published[$kind] = $current;
+        $this->published = $current;
         if ($this->configWriter !== null) {
-            $this->configWriter->set($kind === Kind::EMAIL ? self::EMAIL_CONFIG_KEY : self::CONFIG_KEY, $current);
+            $this->configWriter->set(self::CONFIG_KEY, $current);
             $this->configWriter->save();
         }
         return $current;
@@ -206,12 +199,18 @@ class CapabilityGate
     {
         $current = $this->configuration();
         $current['lastRecoveryAt'] = $now;
-        $this->published[Kind::PHONE] = $current;
+        $this->published = $current;
         if ($this->configWriter === null) {
             return;
         }
         $this->configWriter->set(self::CONFIG_KEY, $current);
         $this->configWriter->save();
+    }
+
+    private function globalKillSwitch(): bool
+    {
+        $value = getenv('VERIFICATION_KILL_SWITCH');
+        return is_string($value) && in_array(strtolower(trim($value)), ['1', 'true', 'yes'], true);
     }
 
     private function boundedInt(mixed $value, int $default, int $min, int $max): int
