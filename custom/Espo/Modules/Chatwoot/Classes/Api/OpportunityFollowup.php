@@ -39,6 +39,20 @@ final class OpportunityFollowup implements MiddlewareInterface
         foreach ($this->em->getRDBRepository('Opportunity')->where([
             'id' => array_map(fn ($row) => $row->id, $rows),
         ])->find() as $record) $records[$record->getId()] = $record;
+        $agentIds = [];
+        foreach ($records as $record) {
+            if ($record->get('followupBreakoutLimit') === null && $record->get('followupAiAgentId')) {
+                $agentIds[$record->get('followupAiAgentId')] = true;
+            }
+        }
+        $agentLimits = [];
+        if ($agentIds) {
+            foreach ($this->em->getRDBRepository('ChatwootAccountUserMembership')->where([
+                'id' => array_keys($agentIds),
+            ])->find() as $agent) {
+                $agentLimits[$agent->getId()] = $agent->get('followupBreakoutLimit');
+            }
+        }
         $eligible = [];
         try {
             $eligible = $this->conversations->whatsappEligibility($records, $accountId);
@@ -48,6 +62,16 @@ final class OpportunityFollowup implements MiddlewareInterface
         foreach ($rows as $row) {
             $row->hasAccessibleWhatsappConversation = $eligible[$row->id] ?? false;
             $record = $records[$row->id] ?? null;
+            if ($record && $this->acl->checkField('Opportunity', 'followupCount')) {
+                $row->followupCount = (int) ($record->get('followupCount') ?? 0);
+            }
+            if ($record && $this->acl->checkField('Opportunity', 'followupBreakoutLimit')) {
+                $agentId = $record->get('followupAiAgentId');
+                $limit = $record->get('followupBreakoutLimit')
+                    ?? ($agentId ? ($agentLimits[$agentId] ?? null) : null)
+                    ?? 3;
+                $row->followupEffectiveLimit = max(1, (int) $limit);
+            }
             $row->canEdit = $record && $this->acl->checkEntityEdit($record);
             $row->followupEditableFields = [];
             foreach (['followupTimer', 'followupBreakoutLimit', 'followupAiAgent'] as $field) {
