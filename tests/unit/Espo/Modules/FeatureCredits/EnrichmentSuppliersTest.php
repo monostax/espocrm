@@ -189,6 +189,9 @@ class EnrichmentSuppliersTest extends TestCase
     {
         $normalize = \Espo\Modules\Global\Tools\LinkedInProfile::profile(...);
         $this->assertSame('https://www.linkedin.com/in/person',$normalize('Contact','http://br.linkedin.com/in/person/?trk=example'));
+        $encoded = 'https://www.linkedin.com/in/andr%C3%A9-gabriel-0a26517';
+        $this->assertSame($encoded,$normalize('Contact','https://www.linkedin.com/in/andré-gabriel-0a26517/'));
+        $this->assertSame($encoded,$normalize('Contact',$encoded));
         foreach (['https://evil.test/in/person','https://linkedin.com.evil.test/in/person','https://user:pass@linkedin.com/in/person',
             'https://linkedin.com:444/in/person','https://linkedin.com/company/employer','https://linkedin.com/in/person/activity'] as $url) {
             $this->assertNull($normalize('Contact',$url));

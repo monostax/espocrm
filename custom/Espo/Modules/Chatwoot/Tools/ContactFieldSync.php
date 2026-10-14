@@ -89,11 +89,11 @@ class ContactFieldSync
 
     /**
      * Append the number to the contact's phoneNumber field when not
-     * already present.
+     * already present, or promote it to primary when requested.
      *
-     * @return bool Whether the number was added.
+     * @return bool Whether the contact's phone numbers were modified.
      */
-    public function appendPhone(Entity $contact, string $e164): bool
+    public function appendPhone(Entity $contact, string $e164, bool $makePrimary = false): bool
     {
         /** @var \Espo\Repositories\PhoneNumber $repository */
         $repository = $this->entityManager->getRepository('PhoneNumber');
@@ -101,11 +101,22 @@ class ContactFieldSync
         /** @var \stdClass[] $dataList */
         $dataList = $repository->getPhoneNumberData($contact);
 
-        foreach ($dataList as $item) {
+        foreach ($dataList as $index => $item) {
             $existing = (string) ($item->phoneNumber ?? '');
 
             if ($existing === $e164 || PhoneNormalizer::normalize($existing) === $e164) {
-                return false;
+                if (!$makePrimary || !empty($item->primary)) {
+                    return false;
+                }
+
+                foreach ($dataList as $idx => $entry) {
+                    $entry->primary = $idx === $index;
+                }
+
+                $contact->set('phoneNumberData', $dataList);
+                $this->saveContact($contact);
+
+                return true;
             }
         }
 
@@ -113,10 +124,18 @@ class ContactFieldSync
             'entityDefs', 'Contact', 'fields', 'phoneNumber', 'defaultType',
         ]) ?? 'Mobile';
 
+        $primary = $makePrimary || count($dataList) === 0;
+
+        if ($primary) {
+            foreach ($dataList as $entry) {
+                $entry->primary = false;
+            }
+        }
+
         $dataList[] = (object) [
             'phoneNumber' => $e164,
             'type' => $defaultType,
-            'primary' => count($dataList) === 0,
+            'primary' => $primary,
             'optOut' => false,
             'invalid' => false,
         ];
@@ -130,11 +149,11 @@ class ContactFieldSync
 
     /**
      * Append the address to the contact's emailAddress field when not
-     * already present (case-insensitive).
+     * already present (case-insensitive), or promote it to primary when requested.
      *
-     * @return bool Whether the address was added.
+     * @return bool Whether the contact's email addresses were modified.
      */
-    public function appendEmail(Entity $contact, string $email): bool
+    public function appendEmail(Entity $contact, string $email, bool $makePrimary = false): bool
     {
         /** @var \Espo\Repositories\EmailAddress $repository */
         $repository = $this->entityManager->getRepository('EmailAddress');
@@ -142,17 +161,36 @@ class ContactFieldSync
         /** @var \stdClass[] $dataList */
         $dataList = $repository->getEmailAddressData($contact);
 
-        foreach ($dataList as $item) {
+        foreach ($dataList as $index => $item) {
             $existing = strtolower(trim((string) ($item->emailAddress ?? '')));
 
             if ($existing === $email) {
-                return false;
+                if (!$makePrimary || !empty($item->primary)) {
+                    return false;
+                }
+
+                foreach ($dataList as $idx => $entry) {
+                    $entry->primary = $idx === $index;
+                }
+
+                $contact->set('emailAddressData', $dataList);
+                $this->saveContact($contact);
+
+                return true;
+            }
+        }
+
+        $primary = $makePrimary || count($dataList) === 0;
+
+        if ($primary) {
+            foreach ($dataList as $entry) {
+                $entry->primary = false;
             }
         }
 
         $dataList[] = (object) [
             'emailAddress' => $email,
-            'primary' => count($dataList) === 0,
+            'primary' => $primary,
             'optOut' => false,
             'invalid' => false,
         ];

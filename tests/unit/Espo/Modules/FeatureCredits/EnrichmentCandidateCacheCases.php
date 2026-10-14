@@ -102,7 +102,8 @@ trait EnrichmentCandidateCacheCases
             $this->assertSame([$ids[2]],array_column(array_column($second['list'],'receipt'),'id'));
             $this->assertNull($second['next']);
             $encoded = json_encode($first);
-            foreach (['Fixture Person','52998224725','values','ciphertext','total'] as $hidden) $this->assertStringNotContainsString($hidden,$encoded);
+            $this->assertSame(['Fixture Person','Fixture Person'],array_column($first['list'],'displayName'));
+            foreach (['52998224725','values','ciphertext','total'] as $hidden) $this->assertStringNotContainsString($hidden,$encoded);
             $this->assertSame(['6.0000','6.0000'],array_column(array_column($first['list'],'receipt'),'credits'));
             $this->assertSame([],$history->read(array_replace($query,['product' => 'employees']))['list']);
             foreach ([['limit' => '01'],['limit' => 51],['beforeAt' => $this->now],['unexpected' => true]] as $bad) {

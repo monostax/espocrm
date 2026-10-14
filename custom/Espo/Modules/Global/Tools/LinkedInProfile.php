@@ -15,7 +15,8 @@ final class LinkedInProfile
         $host = strtolower($url['host'] ?? '');
         if (!preg_match('/^(?:www\.|[a-z]{2}\.)?linkedin\.com$/D',$host)) return null;
         $prefix = match ($type) { 'Contact' => 'in', 'Account' => 'company', default => null };
-        if ($prefix === null || !preg_match('~^/' . $prefix . '/[A-Za-z0-9_%.-]+/?$~D',$url['path'] ?? '')) return null;
-        return 'https://www.linkedin.com' . rtrim($url['path'],'/');
+        $path = preg_replace_callback('/[^\x00-\x7F]+/u', static fn (array $match): string => rawurlencode($match[0]), $url['path'] ?? '');
+        if ($prefix === null || $path === null || !preg_match('~^/' . $prefix . '/[A-Za-z0-9_%.-]+/?$~D',$path)) return null;
+        return 'https://www.linkedin.com' . rtrim($path,'/');
     }
 }

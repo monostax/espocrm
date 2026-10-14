@@ -224,11 +224,11 @@ class ContactInbox
     public function metadata(Request $request): object
     {
         $workspace = $this->workspace($request);
-        $billing = static::ENTITY_TYPE === 'Contact' ? $this->em->getRDBRepository('TenantBillingAssignment')
-            ->where(['tenantId' => $workspace->get('tenantId')])->findOne() : null;
+        $billing = $this->em->getRDBRepository('TenantBillingAssignment')
+            ->where(['tenantId' => $workspace->get('tenantId')])->findOne();
         $fields = [];
         foreach (static::FIELDS as $name) {
-            if ($name === 'cpf' && $billing?->get('billingCountry') !== 'BR') continue;
+            if (in_array($name, ['cpf', 'cnpj'], true) && $billing?->get('billingCountry') !== 'BR') continue;
             if ($name === 'channelIdentitiesData' && !$this->acl->checkScope('ContactChannelIdentity', 'read')) continue;
             if (!$this->acl->checkField(static::ENTITY_TYPE, $name)) continue;
             $def = $this->metadata->get(['entityDefs', static::ENTITY_TYPE, 'fields', $name]);

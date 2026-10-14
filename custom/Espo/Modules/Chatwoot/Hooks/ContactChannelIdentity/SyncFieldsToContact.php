@@ -75,17 +75,20 @@ class SyncFieldsToContact
             return;
         }
 
-        // Only when the address-bearing state could have changed.
+        // Only when the address-bearing state or primary flag could have changed.
         if (
             !$entity->isNew() &&
             !$entity->isAttributeChanged('sourceId') &&
-            !$entity->isAttributeChanged('contactId')
+            !$entity->isAttributeChanged('contactId') &&
+            !$entity->isAttributeChanged('isPrimary') &&
+            !$entity->isAttributeChanged('deleted')
         ) {
             return;
         }
 
         $e164 = $this->contactFieldSync->phoneFromIdentity($entity);
         $email = $this->contactFieldSync->emailFromIdentity($entity);
+        $makePrimary = (bool) $entity->get('isPrimary');
 
         if (!$e164 && !$email) {
             return;
@@ -120,11 +123,11 @@ class SyncFieldsToContact
         }
 
         if ($e164) {
-            $this->contactFieldSync->appendPhone($contact, $e164);
+            $this->contactFieldSync->appendPhone($contact, $e164, $makePrimary);
         }
 
         if ($email) {
-            $this->contactFieldSync->appendEmail($contact, $email);
+            $this->contactFieldSync->appendEmail($contact, $email, $makePrimary);
         }
     }
 }

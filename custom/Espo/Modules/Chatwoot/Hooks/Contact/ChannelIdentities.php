@@ -182,6 +182,14 @@ class ChannelIdentities
                 );
             }
         }
+
+        $refreshed = $this->entityManager->getEntityById('Contact', $entity->getId());
+
+        if ($refreshed) {
+            foreach (['emailAddress', 'phoneNumber'] as $field) {
+                $entity->set($field, $refreshed->get($field));
+            }
+        }
     }
 
     /**

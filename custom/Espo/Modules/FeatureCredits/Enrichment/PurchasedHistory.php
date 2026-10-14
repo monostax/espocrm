@@ -47,7 +47,11 @@ final class PurchasedHistory
             foreach ($rows as $row) {
                 $read = $input->isDiscovery() ? $this->review->readLocked($pdo,$input->data['tenantId'],$row['id']) :
                     $this->fields->reviewLocked($pdo,$input->data['tenantId'],$row['id']);
-                // History is receipt/provenance only. Explicit review is the only value-bearing read.
+                // Include only the authorized Finder name for collapsed history headers.
+                if (in_array($params['product'],['employees','socios'],true)) {
+                    $read['displayName'] = $read['erased'] ? null : ($read['values']->name ?? null);
+                }
+                // Full purchased values remain available through explicit review.
                 unset($read['values']); $items[] = $read;
             }
             $more = count($items) > $limit;
