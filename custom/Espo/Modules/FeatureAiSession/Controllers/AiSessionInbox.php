@@ -56,6 +56,10 @@ class AiSessionInbox
             ],
         ]));
         $list = array_map(fn ($item) => $this->present($item), [...$result->getCollection()]);
+        $states = $this->discussion->states('AiSession', array_column(array_filter($list, fn ($item) => $item->canStream), 'id'));
+        foreach ($list as $item) {
+            $item->readState = $states[$item->id] ?? null;
+        }
         return (object) ['list' => $list, 'hasMore' => count($list) === 100, 'total' => -1];
     }
 
