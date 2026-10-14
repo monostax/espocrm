@@ -730,6 +730,10 @@ class Operations
             'waived' => 'failed',
             default => null,
         };
+        // Apply the full-name requirement to retained results after validating their original evidence hash.
+        if ($kind === Kind::PHONE && $publicOutcome === 'verified' && !TwilioLookup::hasExactNameMatch($fieldOutcomes)) {
+            $publicOutcome = 'not_verified';
+        }
         $fresh = $op['state'] === 'completed' && !$hideDetails && !$identityChanged &&
             $op['fresh_until'] !== null && $op['fresh_until'] > $now;
         $stale = $op['state'] === 'completed' && !$hideDetails && !$identityChanged &&

@@ -166,8 +166,8 @@ final class PhoneVerificationDatabaseTest extends TestCase
             $this->emailResult = new EmailResult('completed', 'task1', 'deliverable', ['score' => 99, 'flags' => ['is_accept_all' => true], 'verifiedAt' => null]);
             $this->nextResult = VerificationResult::completed(
                 'verified',
-                ['firstName'],
-                ['firstName' => 'exact_match', 'lastName' => 'no_match', 'dateOfBirth' => 'not_checked'],
+                ['firstName', 'lastName'],
+                ['firstName' => 'exact_match', 'lastName' => 'exact_match', 'dateOfBirth' => 'not_checked'],
             );
 
             [$operations, $execution, $gate, $funding, $crypt, $manager, $acl] = $this->services($pdo);
@@ -706,7 +706,7 @@ final class PhoneVerificationDatabaseTest extends TestCase
             $afterCtx = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => $sources]);
             foreach (['provA', 'provB', 'savedChan', 'contactPhone'] as $k) {
                 self::assertSame('verified', $afterCtx['rows'][$k]['currentResult']['outcome']);
-                self::assertSame(['firstName'], $afterCtx['rows'][$k]['currentResult']['matchedFields']);
+                self::assertSame(['firstName', 'lastName'], $afterCtx['rows'][$k]['currentResult']['matchedFields']);
                 self::assertTrue($afterCtx['rows'][$k]['currentResult']['fresh']);
                 self::assertFalse($afterCtx['rows'][$k]['currentResult']['stale']);
                 self::assertSame('8.0000', $afterCtx['rows'][$k]['currentResult']['settledCredits']);
@@ -732,12 +732,12 @@ final class PhoneVerificationDatabaseTest extends TestCase
             $sourceAttribution = (new OperationSource($manager, $acl))->inspect('tenant', $startA['operation']['usageId']);
             self::assertSame(['scope' => 'Contact', 'id' => 'contact', 'name' => 'Maria Silva'], $sourceAttribution['source']);
 
-            // Explicit paid refresh after cooldown (61s later) with negative outcome ('not_verified') also charges 8.0000 and replaces current result!
+            // A retained legacy surname-only 'verified' result must project as not_verified, including after a paid refresh.
             $this->now = '2026-10-14 12:01:05';
             $this->nextResult = VerificationResult::completed(
-                'not_verified',
-                [],
-                ['firstName' => 'no_match', 'lastName' => 'partial_match', 'dateOfBirth' => 'not_checked'],
+                'verified',
+                ['lastName'],
+                ['firstName' => 'no_match', 'lastName' => 'exact_match', 'dateOfBirth' => 'not_checked'],
             );
             $refreshNegative = $operations->start((object) [
                 'tenantId' => 'tenant',

@@ -145,7 +145,7 @@ final class PhoneVerificationUnitTest extends TestCase
             true,
             ['first_name_match' => 'exact_match', 'last_name_match' => 'no_match', 'date_of_birth_match' => 'no_match', 'summary_score' => 10],
             true,
-            'verified',
+            'not_verified',
             ['firstName'],
             ['firstName' => 'exact_match', 'lastName' => 'no_match', 'dateOfBirth' => 'no_match'],
         ];
@@ -153,7 +153,7 @@ final class PhoneVerificationUnitTest extends TestCase
             false,
             ['first_name_match' => 'partial_match', 'last_name_match' => 'exact_match', 'date_of_birth_match' => null],
             true,
-            'verified',
+            'not_verified',
             ['lastName'],
             ['firstName' => 'partial_match', 'lastName' => 'exact_match', 'dateOfBirth' => 'not_checked'],
         ];
@@ -161,7 +161,7 @@ final class PhoneVerificationUnitTest extends TestCase
             true,
             ['first_name_match' => 'no_match', 'last_name_match' => 'not_available', 'date_of_birth_match' => 'exact_match'],
             true,
-            'verified',
+            'not_verified',
             ['dateOfBirth'],
             ['firstName' => 'no_match', 'lastName' => 'not_available', 'dateOfBirth' => 'exact_match'],
         ];
