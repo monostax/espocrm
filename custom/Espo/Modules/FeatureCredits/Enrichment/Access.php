@@ -182,4 +182,24 @@ class Access
         return ['actorIsHuman' => $human,'recordEditAllowed' => $this->acl->check($target,'edit'),
             'editableFields' => $editable,'recheckRequired' => true];
     }
+
+    public function writableContactDateOfBirthColumns(Entity $target): array
+    {
+        if ($target->getEntityType() !== 'Contact' || !$this->acl->check($target, 'edit')) {
+            return [];
+        }
+        foreach (['dateOfBirth', 'dataNascimento'] as $field) {
+            $current = $target->get($field);
+            if (is_string($current) && trim($current) !== '') {
+                return [];
+            }
+        }
+        $columns = [];
+        foreach (['dateOfBirth' => 'date_of_birth', 'dataNascimento' => 'data_nascimento'] as $field => $column) {
+            if ($this->acl->checkField('Contact', $field, 'edit')) {
+                $columns[] = $column;
+            }
+        }
+        return $columns;
+    }
 }

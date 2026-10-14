@@ -73,11 +73,13 @@ class EnrichmentSuppliersTest extends TestCase
     {
         $supplier = $this->supplier(Hub::class);
         $this->responses[] = new Response(200,['status' => true,'return' => 'OK','result' => [
-            'documento' => '52998224725','listaTelefones' => [['telefoneComDDD' => '(11) 98765-4321'],['telefoneComDDD' => '11987*****']],
+            'documento' => '52998224725','dataDeNascimento' => '15/05/1990',
+            'listaTelefones' => [['telefoneComDDD' => '(11) 98765-4321'],['telefoneComDDD' => '11987*****']],
             'listaEmails' => [['enderecoEmail' => 'private@example.test']]]]);
         $result = $supplier->lookup('Contact','phone',['cpf' => '52998224725']);
         $this->assertSame(['+5511987654321'],$result->values);
         $this->assertSame(['email' => ['private@example.test']],$result->hidden);
+        $this->assertSame('1990-05-15',$result->dateOfBirth);
         $this->assertSame('/v2/cadastropf/',$this->calls[0][2]);
         $this->assertSame('fixture-contract',$this->calls[0][3]['contract']);
         $this->assertSame('fixture-token',$this->calls[0][3]['token']);
@@ -86,8 +88,10 @@ class EnrichmentSuppliersTest extends TestCase
         $this->assertSame(['company@example.test'],$supplier->lookup('Account','email',['cnpj' => '11222333000181'])->values);
         $this->assertSame('/v2/cnpj/',$this->calls[1][2]);
         $this->responses[] = new Response(200,['status' => true,'return' => 'OK','result' => [
-            'documento' => '52998224725','listaEmails' => [['enderecoEmail' => 'person****']]]]);
-        $this->assertSame('no_match',$supplier->lookup('Contact','email',['cpf' => '52998224725'])->state);
+            'documento' => '52998224725','data_nascimento' => '1988-11-23','listaEmails' => [['enderecoEmail' => 'person****']]]]);
+        $noMatch = $supplier->lookup('Contact','email',['cpf' => '52998224725']);
+        $this->assertSame('no_match',$noMatch->state);
+        $this->assertSame('1988-11-23',$noMatch->dateOfBirth);
     }
 
     public function testApolloPhonePollBindsCorrelationAndDisablesNativeWaterfall(): void

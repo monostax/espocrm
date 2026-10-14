@@ -63,11 +63,13 @@ trait EnrichmentExecutionCases
         $this->database($dialect,function (PDO $pdo,Quotes $quotes): void {
             $this->fundAdmission($pdo); $quote = $this->accepted($quotes);
             $quotes->admit('tenant',$quote['id']); $execution = $this->executor($pdo);
-            $this->supplierResults = [new Result('no_match'),new Result('match',['found@example.test']),new Result('ambiguous')];
+            $this->supplierResults = [new Result('no_match'),new Result('match',['found@example.test'],dateOfBirth: '1990-05-15'),new Result('ambiguous')];
             $execution->run('tenant',$quote['id']);
             // Email: cpfcnpj no-match, Hub 7.5 winner. Remaining 0.5 cannot afford any phone provider.
             $this->assertSame([['cpfcnpj','email','lookup'],['hub','email','lookup']],$this->supplierCalls);
             $this->assertExecuted($pdo,'7.5000');
+            $this->assertSame(['date_of_birth' => '1990-05-15','data_nascimento' => '1990-05-15'],
+                $pdo->query("SELECT date_of_birth,data_nascimento FROM contact WHERE id='contact'")->fetch(PDO::FETCH_ASSOC));
             $this->assertSame(1,(int) $pdo->query('SELECT COUNT(*) FROM enrichment_attempt WHERE purchased_at IS NOT NULL')->fetchColumn());
             $stored = $pdo->query("SELECT result_ciphertext FROM enrichment_attempt WHERE state='matched'")->fetchColumn();
             $this->assertStringNotContainsString('found@example.test',$stored);

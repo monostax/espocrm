@@ -32,12 +32,12 @@ abstract class Supplier implements QuoteProvider
         return $this->eligible($type, $product, $identity) ? $this->credentials->get($this->provider()) : [];
     }
 
-    protected function result(array $emails, array $phones, string $product, bool $br = false): Result
+    protected function result(array $emails, array $phones, string $product, bool $br = false, ?string $dateOfBirth = null): Result
     {
         $values = $this->normalize($product === 'email' ? $emails : $phones, $product, $br);
         $sibling = $product === 'email' ? 'phone' : 'email';
         $hidden = $this->normalize($sibling === 'email' ? $emails : $phones, $sibling, $br);
-        return new Result($values ? 'match' : 'no_match', $values, hidden: $hidden ? [$sibling => $hidden] : []);
+        return new Result($values ? 'match' : 'no_match', $values, hidden: $hidden ? [$sibling => $hidden] : [], dateOfBirth: $dateOfBirth);
     }
 
     private function normalize(array $items, string $product, bool $br): array

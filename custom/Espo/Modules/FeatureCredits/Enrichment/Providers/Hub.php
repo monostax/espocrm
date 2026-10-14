@@ -38,6 +38,20 @@ final class Hub extends Supplier
         if (!is_array($data['listaEmails'] ?? []) || !is_array($data['listaTelefones'] ?? [])) return new Result('ambiguous');
         $emails = array_map(static fn ($item) => is_array($item) ? ($item['enderecoEmail'] ?? null) : null, $data['listaEmails'] ?? []);
         $phones = array_map(static fn ($item) => is_array($item) ? ($item['telefoneComDDD'] ?? null) : null, $data['listaTelefones'] ?? []);
-        return $this->result($emails, $phones, $product, true);
+        return $this->result($emails, $phones, $product, true, self::dateOfBirth($data));
+    }
+
+    private static function dateOfBirth(array $data): ?string
+    {
+        $raw = $data['dataDeNascimento'] ?? $data['dataNascimento'] ?? $data['data_nascimento'] ?? null;
+        if (!is_string($raw)) return null;
+        $value = trim($raw);
+        if (preg_match('/\A(\d{2})\/(\d{2})\/(\d{4})\z/', $value, $m)) {
+            $value = "{$m[3]}-{$m[2]}-{$m[1]}";
+        }
+        if (!preg_match('/\A(\d{4})-(\d{2})-(\d{2})\z/', $value, $m)) return null;
+        $year = (int) $m[1];
+        if ($year < 1900 || !checkdate((int) $m[2], (int) $m[3], $year)) return null;
+        return $value;
     }
 }

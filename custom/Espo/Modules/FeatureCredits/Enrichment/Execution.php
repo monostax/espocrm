@@ -179,6 +179,7 @@ class Execution
             $hash = $cipher === null ? null : Quotes::hash([$tenantId,$quoteId,$attemptId,$attempt['provider'],$attempt['product'],$result->values]);
             $pdo->prepare('UPDATE enrichment_attempt SET state=?,result_ciphertext=?,result_expires_at=?,completed_at=?,result_hash=? WHERE id=?')
                 ->execute([$state,$cipher,$cipher === null ? null : self::after($now,$result->retentionSeconds),$now,$hash,$attemptId]);
+            $this->applyContactDateOfBirth($pdo, $terms, $result->dateOfBirth, $now);
             (new FieldCache($this->crypt))->store($pdo,$terms,$attempt,$result,$this->providers,$now);
         });
     }
@@ -265,6 +266,21 @@ class Execution
             // No authoritative purchaser access means no reveal/charge; waive undelivered work.
             return false;
         }
+    }
+
+    private function applyContactDateOfBirth(PDO $pdo, array $terms, ?string $dateOfBirth, string $now): void
+    {
+        if ($dateOfBirth === null || ($terms['request']['targetType'] ?? null) !== 'Contact' ||
+            $dateOfBirth > substr($now, 0, 10)) {
+            return;
+        }
+        $input = new QuoteInput((object) $terms['request']);
+        $access = $this->actors->forActor($terms['actorId']);
+        $columns = $access->writableContactDateOfBirthColumns($access->target($input));
+        if (!$columns) return;
+        $assignments = array_map(static fn (string $col) => "$col=?", $columns);
+        $pdo->prepare('UPDATE contact SET ' . implode(',', $assignments) . ' WHERE id=? AND tenant_id=? AND deleted=FALSE')
+            ->execute([...array_fill(0, count($columns), $dateOfBirth), $input->data['targetId'], $input->data['tenantId']]);
     }
 
     private function close(PDO $pdo, array $wallet, string $now, array $row, array $usage, array $hold): void

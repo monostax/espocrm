@@ -73,7 +73,11 @@ export default class extends BottomPanelView {
         const session = this.session;
         return this.run(async version => {
             const receipt = await session[action]();
-            if (this.active(version)) this.receipt = receipt;
+            if (!this.active(version)) return;
+            this.receipt = receipt;
+            if (this.model.entityType === 'Contact' && ['settled', 'released'].includes(receipt?.admission)) {
+                this.model.fetch();
+            }
         });
     }
 
