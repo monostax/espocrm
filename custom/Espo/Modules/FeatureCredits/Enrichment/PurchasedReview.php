@@ -42,7 +42,7 @@ final class PurchasedReview
                 $human = $permissions['application']['actorIsHuman'];
                 $write = $permissions['application']['recordEditAllowed'] && in_array('cnpj',$permissions['application']['editableFields'],true);
             }
-            return ['receipt' => $saved['receipt'],'values' => (object) $values,'redactedFields' => $redacted,'erased' => $saved['erased'],
+            return ['receipt' => CustomerProjection::purchase($saved['receipt'], $saved['terms']),'values' => (object) $values,'redactedFields' => $redacted,'erased' => $saved['erased'],
                 'provenance' => ['actorId' => $saved['terms']['actorId'],'targetType' => $input->data['targetType'],
                     'targetId' => $input->data['targetId'],'requestedProducts' => $input->data['products'],
                     'waterfall' => $input->data['waterfall'],'refresh' => $input->data['refresh'],

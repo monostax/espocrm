@@ -27,7 +27,7 @@
         <h4>{{translate 'maximum' scope='CreditEnrichment'}}: {{maximum}}</h4>
         <p>{{translate 'combinedHelp' scope='CreditEnrichment'}}</p>
         <p>{{translate 'finderHelp' scope='CreditEnrichment'}}</p>
-        <dl>{{#each routes}}<dt>{{product}}</dt><dd>{{#each steps}}<span>{{provider}}: {{credits}} </span>{{else}}{{translate 'noRoute' scope='CreditEnrichment'}}{{/each}}</dd>{{/each}}</dl>
+        <dl>{{#each routes}}<dt>{{product}}</dt><dd>{{#each steps}}<span>{{translate 'source' scope='CreditEnrichment'}} {{source}}: {{credits}} </span>{{else}}{{translate 'noRoute' scope='CreditEnrichment'}}{{/each}}</dd>{{/each}}</dl>
         <p>{{translate 'settings' scope='CreditEnrichment'}}: {{translate 'waterfall' scope='CreditEnrichment'}} {{#if receipt.waterfall}}{{translate 'yes' scope='CreditEnrichment'}}{{else}}{{translate 'no' scope='CreditEnrichment'}}{{/if}};
         {{translate 'paidRefresh' scope='CreditEnrichment'}} {{#if receipt.refresh}}{{translate 'yes' scope='CreditEnrichment'}}{{else}}{{translate 'no' scope='CreditEnrichment'}}{{/if}}</p>
         {{#each progress}}<p>{{product}}: {{state}} {{stopReason}}</p>{{/each}}
@@ -38,7 +38,7 @@
     <label>{{translate 'product' scope='CreditEnrichment'}}<select class="form-control" data-enrichment-history-product>{{#each products}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
     <button type="button" class="btn btn-default" data-enrichment-history>{{translate 'loadHistory' scope='CreditEnrichment'}}</button>
     <div class="table-responsive"><table class="table"><thead><tr><th scope="col">{{translate 'product' scope='CreditEnrichment'}}</th><th scope="col">{{translate 'source' scope='CreditEnrichment'}}</th><th scope="col">{{translate 'actor' scope='CreditEnrichment'}}</th><th scope="col">{{translate 'purchasedAt' scope='CreditEnrichment'}}</th><th scope="col">{{translate 'acquiredAt' scope='CreditEnrichment'}}</th><th scope="col">{{translate 'credits' scope='CreditEnrichment'}}</th><th scope="col">{{translate 'application' scope='CreditEnrichment'}}</th></tr></thead><tbody>
-    {{#each items}}<tr><td><button class="btn btn-link" type="button" data-enrichment-review="{{receipt.id}}">{{product}}</button></td><td>{{receipt.provider}} / {{provenance.delivery}}</td><td>{{provenance.actorId}}</td><td>{{receipt.purchasedAt}}</td><td>{{receipt.acquiredAt}}</td><td>{{credits}}</td><td>{{#if application.applied}}{{translate 'applied' scope='CreditEnrichment'}}{{else}}{{translate 'purchasedOnly' scope='CreditEnrichment'}}{{/if}}</td></tr>{{/each}}
+    {{#each items}}<tr><td><button class="btn btn-link" type="button" data-enrichment-review="{{receipt.id}}">{{product}}</button></td><td>{{translate 'source' scope='CreditEnrichment'}} {{receipt.source}} / {{provenance.delivery}}</td><td>{{provenance.actorId}}</td><td>{{receipt.purchasedAt}}</td><td>{{receipt.acquiredAt}}</td><td>{{credits}}</td><td>{{#if application.applied}}{{translate 'applied' scope='CreditEnrichment'}}{{else}}{{translate 'purchasedOnly' scope='CreditEnrichment'}}{{/if}}</td></tr>{{/each}}
     </tbody></table></div>
     {{#if next}}<button class="btn btn-default" type="button" data-enrichment-more>{{translate 'more' scope='CreditEnrichment'}}</button>{{/if}}
     {{#if detail}}

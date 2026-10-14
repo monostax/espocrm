@@ -9,7 +9,7 @@ use Espo\Core\Exceptions\{BadRequest, Forbidden};
 use Espo\Entities\User;
 use Espo\Modules\FeatureAiUsage\Services\Access;
 use Espo\Modules\FeatureCredits\Accounting\GrantInput;
-use Espo\Modules\FeatureCredits\Billing\{Accounts, Creation};
+use Espo\Modules\FeatureCredits\Billing\{Accounts, Creation, CustomerProjection};
 use InvalidArgumentException;
 use stdClass;
 
@@ -22,7 +22,7 @@ final class CreditBilling
         return $this->execute($response, function () use ($request): array {
             $input = $this->validate($request->getQueryParams(), ['tenantId']);
             $this->access->assertTenant($input['tenantId']);
-            return $this->accounts->context($input['tenantId']);
+            return CustomerProjection::context($this->accounts->context($input['tenantId']));
         });
     }
 
@@ -31,7 +31,7 @@ final class CreditBilling
         return $this->execute($response, function () use ($request): array {
             $input = $this->validate($request->getQueryParams(), ['tenantId', 'obligationId']);
             $this->access->assertTenant($input['tenantId']);
-            return $this->accounts->readObligation($input['tenantId'], $input['obligationId']);
+            return CustomerProjection::obligation($this->accounts->readObligation($input['tenantId'], $input['obligationId']));
         });
     }
 
@@ -40,7 +40,7 @@ final class CreditBilling
         return $this->execute($response, function () use ($request): array {
             $input = $this->body($request, ['tenantId', 'requestKey', 'revision', 'billingCountry']);
             $this->access->assertTenant($input['tenantId']);
-            return $this->accounts->changeCountry($input['tenantId'], $input['requestKey'], $input['revision'], $input['billingCountry'], $this->user->getId());
+            return CustomerProjection::change($this->accounts->changeCountry($input['tenantId'], $input['requestKey'], $input['revision'], $input['billingCountry'], $this->user->getId()));
         });
     }
 
@@ -50,7 +50,7 @@ final class CreditBilling
             if (!$this->user->isAdmin()) throw new Forbidden('Only instance administrators can change billing provider overrides.');
             $input = $this->body($request, ['tenantId', 'requestKey', 'revision', 'providerOverride']);
             $this->access->assertTenant($input['tenantId']);
-            return $this->accounts->changeOverride($input['tenantId'], $input['requestKey'], $input['revision'], $input['providerOverride'], $this->user->getId());
+            return CustomerProjection::change($this->accounts->changeOverride($input['tenantId'], $input['requestKey'], $input['revision'], $input['providerOverride'], $this->user->getId()));
         });
     }
 
@@ -59,8 +59,8 @@ final class CreditBilling
         return $this->execute($response, function () use ($request): array {
             $input = $this->body($request, ['tenantId', 'requestKey', 'revision', 'catalogId', 'offerId', 'termsId']);
             $this->access->assertTenant($input['tenantId']);
-            return $this->accounts->accept($input['tenantId'], $input['requestKey'], $input['revision'],
-                $input['catalogId'], $input['offerId'], $input['termsId'], $this->user->getId());
+            return CustomerProjection::acceptance($this->accounts->accept($input['tenantId'], $input['requestKey'], $input['revision'],
+                $input['catalogId'], $input['offerId'], $input['termsId'], $this->user->getId()));
         });
     }
 
@@ -69,7 +69,7 @@ final class CreditBilling
         return $this->execute($response, function () use ($request): array {
             $input = $this->body($request, ['tenantId', 'requestKey', 'obligationId']);
             $this->access->assertTenant($input['tenantId']);
-            return $this->accounts->cancel($input['tenantId'], $input['requestKey'], $input['obligationId'], $this->user->getId());
+            return CustomerProjection::change($this->accounts->cancel($input['tenantId'], $input['requestKey'], $input['obligationId'], $this->user->getId()));
         });
     }
 
@@ -78,7 +78,7 @@ final class CreditBilling
         return $this->execute($response, function () use ($request): array {
             $input = $this->body($request, ['tenantId', 'obligationId', 'payer']);
             $this->access->assertTenant($input['tenantId']);
-            return $this->creation->customer($input['tenantId'], $input['obligationId'], get_object_vars($input['payer']));
+            return CustomerProjection::creation($this->creation->customer($input['tenantId'], $input['obligationId'], get_object_vars($input['payer'])));
         });
     }
 
@@ -87,7 +87,7 @@ final class CreditBilling
         return $this->execute($response, function () use ($request): array {
             $input = $this->body($request, ['tenantId', 'obligationId', 'customerCreationId', 'billingType', 'dueDate']);
             $this->access->assertTenant($input['tenantId']);
-            return $this->creation->charge($input['tenantId'], $input['obligationId'], $input['customerCreationId'], $input['billingType'], $input['dueDate']);
+            return CustomerProjection::creation($this->creation->charge($input['tenantId'], $input['obligationId'], $input['customerCreationId'], $input['billingType'], $input['dueDate']));
         });
     }
 
@@ -96,7 +96,7 @@ final class CreditBilling
         return $this->execute($response, function () use ($request): array {
             $input = $this->body($request, ['tenantId', 'creationId']);
             $this->access->assertTenant($input['tenantId']);
-            return $this->creation->reconcile($input['tenantId'], $input['creationId']);
+            return CustomerProjection::creation($this->creation->reconcile($input['tenantId'], $input['creationId']));
         });
     }
 

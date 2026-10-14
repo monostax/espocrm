@@ -36,19 +36,16 @@ function page({getRequest = async (endpoint, {tenantId, obligationId} = {}) => e
 }
 const acceptCommand = () => ({action: 'accept', body: {tenantId: 'a', requestKey: 'original', revision: 1, catalogId: 'catalog', offerId: 'monthly', termsId: 'original-terms'}});
 
-const overrideForm = (value, checked = true) => ({reportValidity: () => true,
-    elements: {providerOverride: {value}, confirmOverride: {checked}}});
+const legacyOverride = (p, value) => {
+    p.pending = {action: 'override', body: {tenantId: 'a', requestKey: 'checkout-key-1', revision: 1, providerOverride: value}};
+    p.journal().save(p.pending);
+};
 const admin = p => { p.getUser = () => ({id: 'user', isAdmin: () => true}); return p; };
 
-test('provider override requires instance admin and explicit consent; pinned reassignment sends no command', async () => {
+test('customer checkout has no provider controls and tenant admins cannot retry legacy operator commands', async () => {
     const {p} = page({postRequest: async () => assert.fail('Must not send override')});
-    assert.equal(p.data().canOverride, false);
-    await p.override(overrideForm('asaas'));
-    admin(p); await p.override(overrideForm('asaas', false));
-    p.context = {...context('a'), effectiveProvider: 'asaas', pinned: true};
-    await p.override(overrideForm('stripe')); assert.equal(p.error, en.resolveObligations);
-    p.context.billingCountry = 'US'; await p.override(overrideForm(''));
-    assert.equal(p.error, en.resolveObligations);
+    assert.equal(p.override, undefined);
+    assert.equal(p.data().providerOptions, undefined);
     p.pending = {action: 'override', body: {tenantId: 'a', requestKey: 'saved', revision: 1, providerOverride: null}};
     p.getUser = () => ({id: 'user', isAdmin: () => false});
     assert.equal(p.data().canRetry, false); await p.retry();
@@ -57,7 +54,8 @@ test('provider override requires instance admin and explicit consent; pinned rea
 test('override lost reply survives reload with original null value, revision and key; duplicate clicks coalesce', async () => {
     const sent = []; const session = storage(); const lost = deferred();
     const first = admin(page({session, postRequest: async (url, body) => { sent.push([url, plain(body)]); return lost.promise; }}).p);
-    const request = first.override(overrideForm('')); await first.override(overrideForm('stripe')); await tick();
+    legacyOverride(first, null);
+    const request = first.retry(); await first.retry(); await tick();
     assert.equal(sent.length, 1); lost.reject({status: 503}); await request;
     assert.deepEqual(sent[0], ['CreditBilling/override', {tenantId: 'a', requestKey: 'checkout-key-1', revision: 1, providerOverride: null}]);
     const second = admin(page({session, postRequest: async (url, body) => { sent.push([url, plain(body)]); return {after: {tenantId: 'a'}}; }}).p);
@@ -70,17 +68,17 @@ test('override lost reply survives reload with original null value, revision and
 
 test('override stale revisions require fresh consent and late success cannot replace another tenant', async () => {
     const rejected = admin(page({postRequest: async () => { throw {status: 409}; }}).p);
-    await rejected.override(overrideForm('asaas'));
+    legacyOverride(rejected, 'asaas'); await rejected.retry();
     assert.equal(rejected.pending, null); assert.equal(rejected.error, en.conflict);
     const late = deferred(); const {p, session} = page({postRequest: () => late.promise}); admin(p);
-    const request = p.override(overrideForm('asaas')); await tick();
+    legacyOverride(p, 'asaas'); const request = p.retry(); await tick();
     const other = new helper.CheckoutJournal(session, 'user', 'b');
     other.save({action: 'override', body: {tenantId: 'b', requestKey: 'other', revision: 1, providerOverride: 'stripe'}});
     await p.changeTenant('b'); late.resolve({after: {tenantId: 'a'}}); await request;
     assert.equal(p.context.tenantId, 'b'); assert.equal(other.read().body.requestKey, 'other');
 });
 
-test('routing presentation uses authoritative requested/effective state and hides override controls from tenant admins', () => {
+test('customer checkout omits routing identities and controls, even with a historical response and instance admin', () => {
     for (const labels of [en, pt]) {
         handlebars.registerHelper('translate', key => labels[key] || key);
         const {p} = page(); p.translate = key => labels[key] || key;
@@ -88,9 +86,9 @@ test('routing presentation uses authoritative requested/effective state and hide
         const render = () => handlebars.compile(read(client + 'res/templates/checkout.tpl'))(p.data());
         assert.ok(!render().includes('data-checkout-override'));
         admin(p); const html = render();
-        assert.ok(html.includes(labels.routeMismatch)); assert.ok(html.includes(labels.provider_stripe));
-        assert.ok(html.includes('name="confirmOverride" required'));
-        assert.ok(html.includes('value="" selected')); assert.ok(html.includes('data-checkout-override'));
+        assert.ok(!html.includes(labels.provider_stripe));
+        assert.ok(!html.includes(labels.effectiveProvider));
+        assert.ok(!html.includes('data-checkout-override'));
     }
 });
 
@@ -111,7 +109,7 @@ test('subscription stop retains one command after lost replies and isolates late
 
 test('pending subscription cancellation offers lookup recovery without another consent action', async () => {
     const {p} = page();
-    p.detail = {...detail(), state: 'pending', charge: {kind: 'subscription', state: 'bound'}, subscription: {cancellationPending: true, providerStatus: 'INACTIVE'}};
+    p.detail = {...detail(), state: 'pending', charge: {kind: 'subscription', state: 'bound'}, subscription: {cancellationPending: true, status: 'INACTIVE'}};
     const data = p.data();
     assert.equal(data.cancellationPending, true);
     assert.equal(data.subscriptionStatus, en.subscription_INACTIVE);

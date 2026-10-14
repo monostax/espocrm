@@ -9,6 +9,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Modules\FeatureAiUsage\Services\Access;
 use Espo\Modules\FeatureCredits\Accounting\GrantInput;
 use Espo\Modules\FeatureCredits\Billing\Checkout;
+use Espo\Modules\FeatureCredits\Billing\CustomerProjection;
 
 final class CreditCheckout
 {
@@ -42,7 +43,12 @@ final class CreditCheckout
                 GrantInput::identity($value);
             }
             $this->access->assertTenant($input['tenantId']);
-            return (object) ($action === 'context' ? $this->checkout->context($input['tenantId']) : $this->checkout->$action($input['tenantId'], $input['obligationId']));
+            return (object) match ($action) {
+                'context' => CustomerProjection::context($this->checkout->context($input['tenantId'])),
+                'read' => CustomerProjection::checkout($this->checkout->read($input['tenantId'], $input['obligationId'])),
+                // M4 blocker: hosted payment handoff still discloses the processor.
+                'payment' => $this->checkout->payment($input['tenantId'], $input['obligationId']),
+            };
         } catch (\InvalidArgumentException | \JsonException $e) { throw new BadRequest($e->getMessage()); }
     }
 }

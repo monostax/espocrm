@@ -9,6 +9,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Entities\User;
 use Espo\Modules\FeatureAiUsage\Services\Access;
 use Espo\Modules\FeatureCredits\Billing\Subscriptions;
+use Espo\Modules\FeatureCredits\Billing\CustomerProjection;
 
 final class CreditSubscriptions
 {
@@ -29,7 +30,7 @@ final class CreditSubscriptions
             if (array_diff(array_keys($input), $keys) || array_diff($keys, array_keys($input))) throw new BadRequest('Invalid subscription command fields.');
             foreach ($input as $value) if (!is_string($value)) throw new BadRequest('Invalid subscription command value.');
             $this->access->assertTenant($input['tenantId']);
-            return (object) ($cancel ? $this->subscriptions->cancel($input['tenantId'], $input['obligationId'], $input['requestKey'], $this->user->getId()) :
+            return (object) CustomerProjection::subscription($cancel ? $this->subscriptions->cancel($input['tenantId'], $input['obligationId'], $input['requestKey'], $this->user->getId()) :
                 $this->subscriptions->reconcile($input['tenantId'], $input['obligationId']));
         } catch (\InvalidArgumentException | \JsonException $e) { throw new BadRequest($e->getMessage()); }
     }

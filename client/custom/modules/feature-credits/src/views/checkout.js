@@ -9,7 +9,6 @@ export default class extends MainView {
         'change [data-checkout-tenant]': function (e) { this.changeTenant(e.currentTarget.value); },
         'click [data-checkout-refresh]': function () { if (!this.busy) this.load(); },
         'submit [data-checkout-country]': function (e) { e.preventDefault(); this.country(e.currentTarget); },
-        'submit [data-checkout-override]': function (e) { e.preventDefault(); this.override(e.currentTarget); },
         'click [data-checkout-offer]': function (e) { this.selectOffer(e.currentTarget.dataset.checkoutOffer); },
         'submit [data-checkout-accept]': function (e) { e.preventDefault(); if (e.currentTarget.elements.acceptTerms.checked) this.accept(); },
         'click [data-checkout-open]': function (e) { this.open(e.currentTarget.dataset.checkoutOpen); },
@@ -193,20 +192,6 @@ export default class extends MainView {
         return this.run(version => this.command(action, body, version));
     }
 
-    override(form) {
-        if (!this.getUser().isAdmin() || !this.context || this.pending || this.storageError ||
-            !form.reportValidity() || !form.elements.confirmOverride.checked) return;
-        const providerOverride = form.elements.providerOverride.value || null;
-        if (![null, 'asaas', 'stripe'].includes(providerOverride)) return;
-        const requested = providerOverride || ({BR: 'asaas', US: 'stripe'}[this.context.billingCountry] || null);
-        if (this.context.pinned && requested !== this.context.effectiveProvider) {
-            this.error = this.t('resolveObligations');
-            return this.reRender();
-        }
-        const body = {tenantId: this.tenantId, requestKey: this.key(), revision: this.context.revision, providerOverride};
-        return this.run(version => this.command('override', body, version));
-    }
-
     customer(form) {
         if (this.pending || this.detail?.customer || !['accepted', 'creating'].includes(this.detail?.state) || !form.reportValidity()) return;
         const tenantId = this.tenantId; const obligationId = this.obligationId;
@@ -281,14 +266,7 @@ export default class extends MainView {
             tenants: (this.tenants || []).map(t => ({...t, selected: t.id === this.tenantId})),
             countries: ['BR', 'US'].map(id => ({id, selected: id === this.context?.billingCountry})),
             billingCountry: this.context?.billingCountry || '—', hasMoreCheckouts: this.context?.hasMoreCheckouts,
-            canOverride: this.getUser().isAdmin(),
             canRetry: this.pending?.action !== 'override' || this.getUser().isAdmin(),
-            providerOptions: [null, 'asaas', 'stripe'].map(id => ({id: id || '',
-                label: this.t(id ? 'provider_' + id : 'automaticProvider'),
-                selected: id === (this.context?.providerOverride ?? null)})),
-            requestedProvider: this.t(this.context?.requestedProvider ? 'provider_' + this.context.requestedProvider : 'noProvider'),
-            effectiveProvider: this.t(this.context?.effectiveProvider ? 'provider_' + this.context.effectiveProvider : 'noProvider'),
-            routePinned: this.context?.pinned, routeMismatch: this.context?.routeMismatch,
             openObligations: this.context?.openObligations,
             offers: (this.context?.offers || []).map(o => ({...this.terms(o.terms), eligible: o.eligibility.eligible && !this.pending && !this.storageError,
                 blocked: o.eligibility.eligible ? null : this.t(o.eligibility.blockedReason)})),
@@ -302,7 +280,7 @@ export default class extends MainView {
             canPayment: detail?.charge?.state === 'bound' && ['pending', 'active', 'completed'].includes(detail.state),
             canManageSubscription: detail?.charge?.kind === 'subscription' && detail.charge.state === 'bound' && ['pending', 'active'].includes(detail.state),
             cancellationPending: detail?.subscription?.cancellationPending,
-            subscriptionStatus: detail?.subscription?.providerStatus ? this.t('subscription_' + detail.subscription.providerStatus) : null,
+            subscriptionStatus: detail?.subscription?.status ? this.t('subscription_' + detail.subscription.status) : null,
             dueDate: detail?.earliestDueDate || this.context?.earliestDueDate,
             sandbox: creation?.environment === 'sandbox' || this.handoff?.environment === 'sandbox',
             invoiceUrl: paymentLink(this.handoff, this.tenantId, this.obligationId),

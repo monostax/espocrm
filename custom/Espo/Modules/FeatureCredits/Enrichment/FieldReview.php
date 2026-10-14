@@ -29,7 +29,7 @@ final class FieldReview
         $permissions = $this->access->fieldApplicationPermissions($target,array_keys(FieldApplication::choices($saved['receipt']['product'],$saved['values'])));
         $reason = $saved['erased'] ? 'data_erased' : ($changed ? 'record_identity_changed' :
             (!$permissions['actorIsHuman'] ? 'human_required' : (!$permissions['recordEditAllowed'] || !$permissions['editableFields'] ? 'application_permission_required' : null)));
-        return ['receipt' => $saved['receipt'],'values' => (object) $saved['values'],'erased' => $saved['erased'],
+        return ['receipt' => CustomerProjection::purchase($saved['receipt'], $saved['terms']),'values' => (object) $saved['values'],'erased' => $saved['erased'],
             'provenance' => ['actorId' => $saved['terms']['actorId'],'targetType' => $input->data['targetType'],'targetId' => $input->data['targetId'],
                 'requestedProducts' => $input->data['products'],'waterfall' => $input->data['waterfall'],'refresh' => $input->data['refresh'],
                 'delivery' => $saved['delivery'],'acquisitionQuoteId' => $saved['acquisitionQuoteId'],
