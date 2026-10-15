@@ -1,5 +1,35 @@
 {
     "fields": {
+        "managedByChatwoot": { "type": "bool", "default": false, "readOnly": true },
+        "managedRequestKey": { "type": "varchar", "maxLength": 64, "readOnly": true },
+        "managedFingerprint": { "type": "varchar", "maxLength": 64, "readOnly": true },
+        "managedPlatformId": { "type": "varchar", "maxLength": 17, "readOnly": true },
+        "managedUserId": { "type": "varchar", "maxLength": 17, "readOnly": true },
+        "managedActorId": { "type": "int", "readOnly": true },
+        "managedOperationId": { "type": "int", "readOnly": true },
+        "managedState": { "type": "enum", "options": ["Importing", "Preparing", "Ready", "Sending", "Completed", "Completed with issues", "Preparation failed", "Expired", "Needs attention", "Cancelled"], "readOnly": true },
+        "managedComposition": { "type": "jsonObject", "readOnly": true },
+        "managedMedia": { "type": "jsonObject", "readOnly": true },
+        "managedTemplate": { "type": "jsonObject", "readOnly": true },
+        "managedExpectedCount": { "type": "int", "readOnly": true },
+        "managedImportedCount": { "type": "int", "default": 0, "readOnly": true },
+        "managedPreparedCount": { "type": "int", "default": 0, "readOnly": true },
+        "managedEligibleCount": { "type": "int", "default": 0, "readOnly": true },
+        "managedExcludedCount": { "type": "int", "default": 0, "readOnly": true },
+        "managedBytes": { "type": "float", "default": 0, "readOnly": true },
+        "managedSelectionDigest": { "type": "varchar", "maxLength": 64, "readOnly": true },
+        "managedDigest": { "type": "varchar", "maxLength": 64, "readOnly": true },
+        "managedVersion": { "type": "int", "default": 1, "readOnly": true },
+        "managedReadyAt": { "type": "datetime", "readOnly": true },
+        "managedConfirmedAt": { "type": "datetime", "readOnly": true },
+        "managedTerminatedAt": { "type": "datetime", "readOnly": true },
+        "managedProgressAt": { "type": "datetime", "readOnly": true },
+        "managedPurgedAt": { "type": "datetime", "readOnly": true },
+        "managedError": { "type": "varchar", "readOnly": true },
+        "managedJobId": { "type": "varchar", "maxLength": 17, "readOnly": true },
+        "managedGeneration": { "type": "int", "default": 0, "readOnly": true },
+        "managedCancelRequested": { "type": "bool", "default": false, "readOnly": true },
+        "managedReceiptCursor": { "type": "int", "default": 0, "readOnly": true },
         "name": {
             "type": "varchar",
             "required": true,
@@ -385,6 +415,9 @@
         "order": "desc"
     },
     "indexes": {
+        "managedRequest": { "columns": ["managedRequestKey"], "unique": true },
+        "managedAccountState": { "columns": ["chatwootAccountId", "managedState"] },
+        "inboxReleaseOrder": { "columns": ["chatwootInboxId", "status", "startedAt", "id"] },
         "status": {
             "columns": ["status", "deleted"]
         },

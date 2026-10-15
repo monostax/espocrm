@@ -1,0 +1,7 @@
+{
+    "params": {
+        "managedWhatsAppCampaignCredentials": {"level": "system"},
+        "managedCampaignSweepCursor": {"level": "system"},
+        "campaignReleaseRepairCursor": {"level": "system"}
+    }
+}

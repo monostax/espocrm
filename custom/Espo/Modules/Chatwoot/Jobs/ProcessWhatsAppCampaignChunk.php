@@ -28,11 +28,7 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Async job to process a chunk of WhatsApp campaign contacts.
- *
- * Sends template messages via Chatwoot API with rate limiting.
- * Each chunk processes CHUNK_SIZE contacts, with a configurable delay
- * between sends to respect API rate limits.
+ * Release one ordinary campaign recipient through the durable shared inbox gate.
  *
  * When the campaign has a parameterMapping, each contact's parameters
  * are resolved using EspoCRM's TemplateRenderer (Handlebars) against
@@ -40,17 +36,8 @@ use Espo\ORM\EntityManager;
  */
 class ProcessWhatsAppCampaignChunk implements Job
 {
-    /**
-     * Delay between message sends in milliseconds.
-     * 1500ms provides breathing room when multiple campaigns overlap.
-     */
-    private const RATE_LIMIT_DELAY_MS = 1500;
-
     /** Maximum number of retry attempts for transient failures per contact. */
     private const MAX_RETRIES = 3;
-
-    /** Delay in seconds between retry passes within the same job run. */
-    private const RETRY_BACKOFF_SECONDS = 3;
 
     public function __construct(
         private EntityManager $entityManager,
@@ -61,6 +48,8 @@ class ProcessWhatsAppCampaignChunk implements Job
         private TemplateBridge $templateBridge,
         private FileStorageManager $fileStorageManager,
         private Log $log,
+        private \Espo\Modules\Chatwoot\Services\CampaignInboxGate $inboxGate,
+        private \Espo\Modules\Chatwoot\Services\WhatsAppCampaignService $campaignService,
     ) {}
 
     /**
@@ -70,6 +59,31 @@ class ProcessWhatsAppCampaignChunk implements Job
      * @throws Error
      */
     public function run(Data $data): void
+    {
+        $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', (string) $data->get('campaignId'));
+        if (!$campaign || $campaign->get('managedByChatwoot') || $campaign->get('status') !== 'Sending') return;
+        $inbox = $this->campaignService->resolveCampaignInbox($campaign, (string) $campaign->get('chatwootAccountId'));
+        if (!$inbox) { $this->failCampaign($campaign->getId(), 'Campaign inbox unavailable.'); return; }
+        if (!$campaign->get('chatwootInboxId')) {
+            $campaign->set('chatwootInboxId', $inbox->getId());
+            $this->entityManager->saveEntity($campaign, ['silent' => true]);
+        }
+        $wait = $this->inboxGate->attempt($campaign, $inbox, function () use ($campaign): void {
+            $fresh = $this->entityManager->getEntityById('WhatsAppCampaign', $campaign->getId());
+            if (!$fresh || $fresh->get('status') !== 'Sending') return;
+            $row = $this->entityManager->getRDBRepository('WhatsAppCampaignContact')->where([
+                'whatsAppCampaignId' => $campaign->getId(), 'status' => ['Pending', 'Retry'],
+            ])->order('id')->findOne();
+            if (!$row) { $this->checkCampaignCompletion($campaign->getId()); return; }
+            $this->processOne(Data::create(['campaignId' => $campaign->getId(), 'campaignContactIds' => [$row->getId()], 'recipientStatus' => $row->get('status')]));
+        });
+        $fresh = $this->entityManager->getEntityById('WhatsAppCampaign', $campaign->getId());
+        if ($fresh?->get('status') === 'Sending' && $this->entityManager->getRDBRepository('WhatsAppCampaignContact')->where([
+            'whatsAppCampaignId' => $campaign->getId(), 'status' => ['Pending', 'Retry'],
+        ])->findOne()) $this->campaignService->scheduleRelease($campaign->getId(), $wait ?? 1);
+    }
+
+    private function processOne(Data $data): void
     {
         $campaignId = $data->get('campaignId');
         $chunkOffset = $data->get('chunkOffset');
@@ -202,8 +216,6 @@ class ProcessWhatsAppCampaignChunk implements Job
             $parameterMapping = [];
         }
 
-        [$delayMinMs, $delayMaxMs] = WhatsAppChannel::sendDelayWindowMs($channelType);
-
         // Materialize campaign media once per chunk, not once per recipient:
         // every recipient gets the same bytes, and re-reading them from object
         // storage for each send would dominate the job's runtime.
@@ -240,37 +252,15 @@ class ProcessWhatsAppCampaignChunk implements Job
             ),
             'templateHeader' => (string) $campaign->get('templateHeader'),
             'createOpportunity' => (bool) $campaign->get('createOpportunity'),
-            'delayMinMs' => $delayMinMs,
-            'delayMaxMs' => $delayMaxMs,
         ];
 
         try {
             // --- First pass: process all Pending contacts in this chunk ---
-            $contacts = $this->findChunkContacts($campaignId, 'Pending', $campaignContactIds, $chunkOffset, $chunkSize);
+            $contacts = $this->findChunkContacts($campaignId, $data->get('recipientStatus') ?: 'Pending', $campaignContactIds, $chunkOffset, $chunkSize);
 
             $processedCount = $this->processContacts($contacts, $sendContext);
 
             $this->log->info("ProcessWhatsAppCampaignChunk: First pass ({$chunkLabel}) for campaign {$campaignId} ({$processedCount} contacts).");
-
-            // --- Retry passes: re-process contacts marked as Retry ---
-            for ($retryPass = 1; $retryPass <= self::MAX_RETRIES; $retryPass++) {
-                $retryContacts = $this->findChunkContacts($campaignId, 'Retry', $campaignContactIds, $chunkOffset, $chunkSize);
-
-                $retryCount = count($retryContacts);
-
-                if ($retryCount === 0) {
-                    break;
-                }
-
-                $this->log->info("ProcessWhatsAppCampaignChunk: Retry pass {$retryPass} for campaign {$campaignId} ({$retryCount} contacts).");
-
-                sleep(self::RETRY_BACKOFF_SECONDS);
-
-                $this->processContacts($retryContacts, $sendContext);
-            }
-
-            // --- Finalize any contacts still in Retry after all passes ---
-            $this->finalizeRemainingRetries($campaignId, $campaignContactIds, $chunkOffset, $chunkSize);
 
             $this->log->info("ProcessWhatsAppCampaignChunk: Completed chunk ({$chunkLabel}) for campaign {$campaignId}.");
 
@@ -459,10 +449,6 @@ class ProcessWhatsAppCampaignChunk implements Job
             }
 
             try {
-                if ($processedCount > 0) {
-                    $this->pauseBetweenSends($ctx);
-                }
-
                 $phoneNumber = $campaignContact->get('phoneNumber');
                 $contactName = $campaignContact->get('contactName');
 
@@ -569,28 +555,6 @@ class ProcessWhatsAppCampaignChunk implements Job
         }
 
         return $processedCount;
-    }
-
-    /**
-     * Sleep between two consecutive sends on the same inbox.
-     *
-     * Cloud API uses a flat delay; QR (WAHA) uses a randomized window so the
-     * traffic pattern on a real handset number does not look machine-generated.
-     *
-     * @param array<string, mixed> $ctx
-     */
-    private function pauseBetweenSends(array $ctx): void
-    {
-        $minMs = (int) ($ctx['delayMinMs'] ?? self::RATE_LIMIT_DELAY_MS);
-        $maxMs = (int) ($ctx['delayMaxMs'] ?? $minMs);
-
-        if ($maxMs < $minMs) {
-            $maxMs = $minMs;
-        }
-
-        $delayMs = $minMs === $maxMs ? $minMs : random_int($minMs, $maxMs);
-
-        usleep($delayMs * 1000);
     }
 
     /**
@@ -781,40 +745,6 @@ class ProcessWhatsAppCampaignChunk implements Job
     }
 
     /**
-     * Mark any contacts still in Retry status as permanently Failed
-     * after all retry passes have been exhausted.
-     *
-     * @param string[] $campaignContactIds
-     */
-    private function finalizeRemainingRetries(
-        string $campaignId,
-        array $campaignContactIds,
-        ?int $chunkOffset,
-        ?int $chunkSize
-    ): void {
-        $remaining = $this->findChunkContacts($campaignId, 'Retry', $campaignContactIds, $chunkOffset, $chunkSize);
-
-        foreach ($remaining as $campaignContact) {
-            $lastReason = $campaignContact->get('failedReason') ?: 'Max retries exhausted';
-
-            $campaignContact->set([
-                'status' => 'Failed',
-                'failedAt' => date('Y-m-d H:i:s'),
-                'failedReason' => $lastReason,
-                'opportunityAttributionStatus' => 'NotRequested',
-            ]);
-            $this->entityManager->saveEntity($campaignContact);
-
-            $this->incrementCampaignCounter($campaignId, 'failedCount');
-
-            $this->log->warning(
-                "ProcessWhatsAppCampaignChunk: Contact {$campaignContact->getId()} " .
-                "failed after {$campaignContact->get('retryCount')} retries: {$lastReason}"
-            );
-        }
-    }
-
-    /**
      * Increment a campaign counter atomically.
      *
      * @param string $campaignId Campaign entity ID
@@ -905,7 +835,7 @@ class ProcessWhatsAppCampaignChunk implements Job
     }
 
     /**
-     * After sending, wait briefly and then verify each message's delivery status
+     * After sending, verify each message's currently available delivery status
      * via the Chatwoot API. This catches async failures (e.g. Meta rejecting the
      * template) that happen after Chatwoot's initial 200 response.
      *
@@ -948,8 +878,6 @@ class ProcessWhatsAppCampaignChunk implements Job
             return;
         }
 
-        sleep(5);
-
         foreach ($contactsByConversation as $conversationId => $contacts) {
             try {
                 $messages = $this->chatwootApiClient->getConversationMessages(
@@ -977,7 +905,7 @@ class ProcessWhatsAppCampaignChunk implements Job
                         continue;
                     }
 
-                    // Webhooks may have already advanced status during sleep(5);
+                    // Webhooks may have already advanced status during I/O;
                     // only attack contacts still in Sent to avoid double-counting.
                     $fresh = $this->entityManager->getEntityById(
                         'WhatsAppCampaignContact',

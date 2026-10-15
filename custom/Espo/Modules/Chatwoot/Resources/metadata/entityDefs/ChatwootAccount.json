@@ -1,5 +1,7 @@
 {
     "fields": {
+        "managedCampaignsEnabled": { "type": "bool", "default": false },
+        "managedCampaignBudgetBytes": { "type": "float", "default": 1073741824, "min": 1 },
         "episodeSyncEnabled": {"type": "bool", "default": false},
         "name": {
             "type": "varchar",

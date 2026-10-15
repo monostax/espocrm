@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "campaignId": { "type": "varchar", "maxLength": 17 },
+        "conversationId": { "type": "int" },
+        "phoneNumber": { "type": "varchar", "maxLength": 50 },
+        "record": { "type": "jsonObject" },
+        "recipientId": { "type": "varchar", "maxLength": 17 },
+        "prepared": { "type": "bool", "default": false },
+        "reason": { "type": "varchar" },
+        "createdAt": { "type": "datetime" }
+    },
+    "indexes": {
+        "campaignConversation": { "columns": ["campaignId", "conversationId"], "unique": true },
+        "campaignPrepared": { "columns": ["campaignId", "prepared", "id"] },
+        "campaignPhone": { "columns": ["campaignId", "phoneNumber"] }
+    }
+}

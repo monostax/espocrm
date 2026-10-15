@@ -129,7 +129,7 @@ class ContactReconciler
      *   identities: list<Entity>,
      * }
      */
-    public function reconcile(array $input): array
+    public function reconcile(array $input, ?callable $beforeWrite = null): array
     {
         $tenantId = $this->str($input['tenantId'] ?? null);
         $teamsIds = $input['teamsIds'] ?? [];
@@ -362,6 +362,9 @@ class ContactReconciler
                 $matchedBy = 'email';
             }
         }
+
+        // Managed imports authorize the resolved target before any contact/identity writes.
+        if ($beforeWrite) $beforeWrite($contact);
 
         $isNew = false;
         if (!$contact) {

@@ -264,7 +264,7 @@ class SyncContactsFromChatwoot implements JobDataLess
      * @param array<string> $teamsIds Team IDs to assign to synced entities
      * @return string 'synced' or 'skipped'
      */
-    private function syncSingleContact(array $chatwootContact, string $espoAccountId, array $teamsIds = [], ?string $tenantId = null): string
+    public function syncSingleContact(array $chatwootContact, string $espoAccountId, array $teamsIds = [], ?string $tenantId = null, ?callable $beforeWrite = null): string
     {
         // Ensure chatwootContactId is cast to int to avoid type mismatch in queries
         $chatwootContactId = (int) $chatwootContact['id'];
@@ -297,7 +297,7 @@ class SyncContactsFromChatwoot implements JobDataLess
             'contactInboxes' => $contactInboxes,
             'inboxIdMap' => $this->buildInboxIdMap($contactInboxes, $espoAccountId),
             'socialProfiles' => $chatwootContact['additional_attributes']['social_profiles'] ?? [],
-        ]);
+        ], $beforeWrite);
         $espoContact = $reconciled['contact'];
 
         if ($existingCwtContact) {

@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "campaignId": { "type": "varchar", "maxLength": 17 },
+        "ordinal": { "type": "int" },
+        "fingerprint": { "type": "varchar", "maxLength": 64 },
+        "lastConversationId": { "type": "int" },
+        "createdAt": { "type": "datetime" }
+    },
+    "indexes": { "campaignOrdinal": { "columns": ["campaignId", "ordinal"], "unique": true } }
+}

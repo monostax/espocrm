@@ -45,12 +45,33 @@ class RepairWhatsAppCampaignRecipients implements JobDataLess
         private EntityManager $entityManager,
         private WhatsAppCampaignOpportunityService $opportunityService,
         private Log $log,
+        private \Espo\Core\Utils\Config $config,
+        private \Espo\Modules\Chatwoot\Services\WhatsAppCampaignService $campaignService,
     ) {}
 
     public function run(): void
     {
         $this->recoverStaleClaims();
         $this->retryOpportunityAttribution();
+        $this->repairReleaseChains();
+    }
+
+    private function repairReleaseChains(): void
+    {
+        $after = (string) $this->config->get('campaignReleaseRepairCursor', '');
+        $rows = $this->entityManager->getRDBRepository('WhatsAppCampaign')->where([
+            'status' => 'Sending', 'managedByChatwoot' => false, 'id>' => $after,
+        ])->order('id')->limit(0, 100)->find();
+        foreach ($rows as $campaign) {
+            $after = $campaign->getId();
+            $active = $this->entityManager->getRDBRepository('Job')->where([
+                'group' => 'campaign-release-' . $after,
+                'OR' => [['status' => 'Pending'], ['status' => 'Running', 'modifiedAt>' => date('Y-m-d H:i:s', time() - 900)]],
+            ])->findOne();
+            if (!$active) $this->campaignService->scheduleRelease($after);
+        }
+        $this->config->set('campaignReleaseRepairCursor', count($rows) === 100 ? $after : '');
+        $this->config->save();
     }
 
     private function recoverStaleClaims(): void
@@ -61,12 +82,13 @@ class RepairWhatsAppCampaignRecipients implements JobDataLess
             ->getRDBRepository('WhatsAppCampaignContact')
             ->where([
                 'status' => 'Processing',
+                'managedSendKey' => null,
                 'OR' => [
                     ['claimedAt<' => $threshold],
                     ['claimedAt' => null],
                 ],
             ])
-            ->find();
+            ->order('claimedAt')->limit(0, 500)->find();
 
         $affectedCampaignIds = [];
 

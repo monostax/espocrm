@@ -178,6 +178,16 @@ class DeliveryWebhook
             return (object) ['success' => true, 'message' => 'Conversation not related to a campaign.'];
         }
 
+        if ($campaignContact->get('managedSendKey')) {
+            if ($this->findWebhookSecrets($espoAccountId) === []) throw new Forbidden('Signed campaign evidence required.');
+            // A reply is engagement, never an explicit provider read/delivery receipt.
+            if (!$campaignContact->get('repliedAt')) {
+                $campaignContact->set('repliedAt', date('Y-m-d H:i:s'));
+                $this->entityManager->saveEntity($campaignContact);
+            }
+            return (object) ['success' => true];
+        }
+
         $currentStatus = $campaignContact->get('status');
 
         if ($currentStatus === 'Replied') {
@@ -297,6 +307,12 @@ class DeliveryWebhook
 
         $currentStatus = $campaignContact->get('status');
         $currentRank = self::STATUS_ORDER[$currentStatus] ?? -1;
+        if ($campaignContact->get('managedSendKey')) {
+            if ($this->findWebhookSecrets($espoAccountId) === []) throw new Forbidden('Signed campaign evidence required.');
+            $this->injectableFactory->create(\Espo\Modules\Chatwoot\Services\ManagedCampaignExecution::class)
+                ->delivery($campaignContact, strtolower($newStatus));
+            return (object) ['success' => true];
+        }
         $newRank = self::STATUS_ORDER[$newStatus] ?? -1;
 
         // Failed is terminal: never re-apply Failed (or regress). Other statuses only move forward.
