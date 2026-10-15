@@ -145,7 +145,7 @@ final class PhoneVerificationUnitTest extends TestCase
             true,
             ['first_name_match' => 'exact_match', 'last_name_match' => 'no_match', 'date_of_birth_match' => 'no_match', 'summary_score' => 10],
             true,
-            'not_verified',
+            'verified',
             ['firstName'],
             ['firstName' => 'exact_match', 'lastName' => 'no_match', 'dateOfBirth' => 'no_match'],
         ];
@@ -161,9 +161,25 @@ final class PhoneVerificationUnitTest extends TestCase
             true,
             ['first_name_match' => 'no_match', 'last_name_match' => 'not_available', 'date_of_birth_match' => 'exact_match'],
             true,
-            'not_verified',
+            'verified',
             ['dateOfBirth'],
             ['firstName' => 'no_match', 'lastName' => 'not_available', 'dateOfBirth' => 'exact_match'],
+        ];
+        yield 'exact first name without DOB and surname mismatch' => [
+            false,
+            ['first_name_match' => 'exact_match', 'last_name_match' => 'no_match', 'date_of_birth_match' => null],
+            true,
+            'verified',
+            ['firstName'],
+            ['firstName' => 'exact_match', 'lastName' => 'no_match', 'dateOfBirth' => 'not_checked'],
+        ];
+        yield 'exact first name and DOB with surname mismatch' => [
+            true,
+            ['first_name_match' => 'exact_match', 'last_name_match' => 'no_match', 'date_of_birth_match' => 'exact_match'],
+            true,
+            'verified',
+            ['firstName', 'dateOfBirth'],
+            ['firstName' => 'exact_match', 'lastName' => 'no_match', 'dateOfBirth' => 'exact_match'],
         ];
         yield 'all three exact matches' => [
             true,
@@ -275,6 +291,7 @@ final class PhoneVerificationUnitTest extends TestCase
         yield 'missing required match key' => [200, ['phone_number' => '+5511987654321', 'valid' => true, 'identity_match' => ['first_name_match' => 'exact_match']], false];
         yield 'missing dob match key when dob submitted' => [200, ['phone_number' => '+5511987654321', 'valid' => true, 'identity_match' => ['first_name_match' => 'exact_match', 'last_name_match' => 'no_match']], true];
         yield 'unsupported match value' => [200, ['phone_number' => '+5511987654321', 'valid' => true, 'identity_match' => ['first_name_match' => 'fuzzy_match', 'last_name_match' => 'no_match']], false];
+        yield 'unsolicited exact DOB cannot verify' => [200, ['phone_number' => '+5511987654321', 'valid' => true, 'identity_match' => ['first_name_match' => 'no_match', 'last_name_match' => 'no_match', 'date_of_birth_match' => 'exact_match']], false];
     }
 
     #[DataProvider('nonBillableFailureResponses')]

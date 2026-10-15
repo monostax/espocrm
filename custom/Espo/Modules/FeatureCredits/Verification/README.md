@@ -11,6 +11,18 @@ The existing verification operation/request tables, wallet locks, settlement, an
 Errors and unresolved deadlines settle at zero. Email deliverability does not
 establish identity or ownership. Email checks never read or save names/DOB.
 
+## Phone match rule
+
+A completed phone check is `verified` when Twilio returns `exact_match` for the
+first name **or** the submitted date of birth. A surname-only match does not verify;
+a surname mismatch does not override either qualifying match. Partial matches and
+Twilio's summary score do not qualify.
+
+Context badges, status, history, and free reuse apply this rule to retained evidence
+after validating its original integrity hash. Earlier `not_verified` results with
+a qualifying match therefore display as `verified` without another supplier call
+or charge; the original stored evidence and financial receipts remain intact.
+
 ## Deployment and activation
 
 1. Deploy the additive metadata/schema and compatible accounting code before enabling

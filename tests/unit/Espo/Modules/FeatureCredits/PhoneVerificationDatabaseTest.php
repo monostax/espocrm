@@ -807,6 +807,59 @@ final class PhoneVerificationDatabaseTest extends TestCase
     }
 
     #[DataProvider('dialects')]
+    public function testRetainedFirstNameOrDobMatchesProjectAsVerifiedWithoutAnotherCharge(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution): void {
+            $pdo->exec("UPDATE contact SET date_of_birth = '1990-05-15' WHERE id = 'contact'");
+            $source = ['key' => 'contactPhone', 'kind' => 'contact_phone'];
+            $cases = [
+                ['firstName' => 'exact_match', 'lastName' => 'no_match', 'dateOfBirth' => 'no_match'],
+                ['firstName' => 'no_match', 'lastName' => 'no_match', 'dateOfBirth' => 'exact_match'],
+                ['firstName' => 'exact_match', 'lastName' => 'no_match', 'dateOfBirth' => 'exact_match'],
+            ];
+            foreach ($cases as $index => $fields) {
+                $this->now = sprintf('2026-10-14 12:%02d:00', $index * 2);
+                $matched = array_keys(array_filter($fields, static fn ($value) => $value === 'exact_match'));
+                // Persist a real receipt using the old rule's outcome and its original evidence hash.
+                $this->nextResult = VerificationResult::completed('not_verified', $matched, $fields);
+                $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]]);
+                $start = $operations->start((object) [
+                    'tenantId' => 'tenant', 'contactId' => 'contact', 'source' => $source,
+                    'requestKey' => 'legacy-match-' . $index,
+                    'contextRevision' => $context['rows']['contactPhone']['contextRevision'],
+                    'refresh' => $index > 0,
+                ]);
+                $id = $start['operation']['id'];
+                $execution->run('tenant', $id);
+                $q = $pdo->prepare('SELECT outcome, evidence_hash, evidence_ciphertext FROM phone_verification_operation WHERE id = ?');
+                $q->execute([$id]); $original = $q->fetch(PDO::FETCH_ASSOC);
+                self::assertSame('not_verified', $original['outcome']);
+
+                $status = $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'operationId' => $id]);
+                self::assertSame('verified', $status['operation']['outcome']);
+                self::assertSame($fields, $status['operation']['fieldOutcomes']);
+                self::assertSame($matched, $status['operation']['matchedFields']);
+                $history = $operations->history(['tenantId' => 'tenant', 'contactId' => 'contact']);
+                self::assertSame('verified', $history['list'][0]['outcome']);
+                $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]]);
+                self::assertSame('verified', $context['rows']['contactPhone']['currentResult']['outcome']);
+                $reuse = $operations->start((object) [
+                    'tenantId' => 'tenant', 'contactId' => 'contact', 'source' => $source,
+                    'requestKey' => 'legacy-reuse-' . $index,
+                    'contextRevision' => $context['rows']['contactPhone']['contextRevision'],
+                ]);
+                self::assertSame('reused', $reuse['resolution']);
+                self::assertSame($id, $reuse['operation']['id']);
+                self::assertSame('verified', $reuse['operation']['outcome']);
+                self::assertSame($index + 1, $this->providerCalls);
+                self::assertSame($index + 1, (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type = 'debit'")->fetchColumn());
+                $q->execute([$id]); self::assertSame($original, $q->fetch(PDO::FETCH_ASSOC));
+            }
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    #[DataProvider('dialects')]
     public function testDobSaveFirstOptionalityInsufficientFundsAndSaveFailure(string $dialect): void
     {
         $this->database($dialect, function (

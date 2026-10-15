@@ -136,7 +136,7 @@ class TwilioLookup
             $matchedFields[] = 'dateOfBirth';
         }
 
-        if (self::hasExactNameMatch($fieldOutcomes)) {
+        if (self::hasExactFirstNameOrDobMatch($fieldOutcomes)) {
             return VerificationResult::completed('verified', $matchedFields, $fieldOutcomes);
         }
 
@@ -156,9 +156,9 @@ class TwilioLookup
         );
     }
 
-    public static function hasExactNameMatch(?array $fieldOutcomes): bool
+    public static function hasExactFirstNameOrDobMatch(?array $fieldOutcomes): bool
     {
-        return ($fieldOutcomes['firstName'] ?? null) === 'exact_match' &&
-            ($fieldOutcomes['lastName'] ?? null) === 'exact_match';
+        return ($fieldOutcomes['firstName'] ?? null) === 'exact_match' ||
+            ($fieldOutcomes['dateOfBirth'] ?? null) === 'exact_match';
     }
 }

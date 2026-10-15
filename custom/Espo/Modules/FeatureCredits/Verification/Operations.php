@@ -730,9 +730,9 @@ class Operations
             'waived' => 'failed',
             default => null,
         };
-        // Apply the full-name requirement to retained results after validating their original evidence hash.
-        if ($kind === Kind::PHONE && $publicOutcome === 'verified' && !TwilioLookup::hasExactNameMatch($fieldOutcomes)) {
-            $publicOutcome = 'not_verified';
+        // Apply the current first-name OR DOB rule after validating the original retained evidence hash.
+        if ($kind === Kind::PHONE && in_array($publicOutcome, ['verified', 'not_verified'], true)) {
+            $publicOutcome = TwilioLookup::hasExactFirstNameOrDobMatch($fieldOutcomes) ? 'verified' : 'not_verified';
         }
         $fresh = $op['state'] === 'completed' && !$hideDetails && !$identityChanged &&
             $op['fresh_until'] !== null && $op['fresh_until'] > $now;
