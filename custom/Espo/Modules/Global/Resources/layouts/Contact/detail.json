@@ -30,9 +30,7 @@
                 {
                     "name": "sexo"
                 },
-                {
-                    "name": "title"
-                }
+                false
             ],
             [
                 {
@@ -55,6 +53,14 @@
     {
         "label": "Details",
         "rows": [
+            [
+                {
+                    "name": "title"
+                },
+                {
+                    "name": "jobLevel"
+                }
+            ],
             [
                 {
                     "name": "description",

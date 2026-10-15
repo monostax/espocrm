@@ -14,6 +14,31 @@
             "options": ["", "M", "F", "Outro"],
             "default": ""
         },
+        "jobLevel": {
+            "type": "enum",
+            "options": [
+                "",
+                "Board Member",
+                "Founder",
+                "CXO",
+                "SVP",
+                "VP",
+                "Executive Director",
+                "Senior Director",
+                "Director",
+                "General Manager",
+                "Head",
+                "Associate Director",
+                "Senior Manager",
+                "Manager",
+                "Principal",
+                "Lead",
+                "Senior",
+                "Individual Contributor"
+            ],
+            "default": "",
+            "audited": true
+        },
         "source": {
             "type": "enum",
             "options": [
