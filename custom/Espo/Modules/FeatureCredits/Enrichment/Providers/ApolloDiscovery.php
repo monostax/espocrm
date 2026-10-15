@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureCredits\Enrichment\Providers;
 
-use Espo\Modules\FeatureCredits\Enrichment\{CandidateProjection, DiscoverySupplier, DiscoveryResult, Quotes};
+use Espo\Modules\FeatureCredits\Enrichment\{CandidateProjection, DiscoverySupplier, DiscoveryResult, EmployeeFilters, Quotes};
 use Espo\Modules\Global\Tools\LinkedInProfile;
 
 /** Every resolver/search/completion is one separately claimed request. */
@@ -17,7 +17,7 @@ final class ApolloDiscovery implements DiscoverySupplier
     {
         $connection = $this->credentials->get('apollo');
         if (!$connection || $targetType !== 'Account' || $product !== 'employees' || LinkedInProfile::profile('Account', $identity['linkedinUrl'] ?? null) === null) return null;
-        return Quotes::hash(['apollo-company-search-demographics-v1', 'retention-reuse-approved-max90d', $tenantId, $connection, $this->retentionSeconds($product)]);
+        return Quotes::hash(['apollo-company-search-crm-filters-v2', 'retention-reuse-approved-max90d', $tenantId, $connection, $this->retentionSeconds($product)]);
     }
 
     public function execute(array $request, int $timeoutMs): DiscoveryResult
@@ -26,8 +26,9 @@ final class ApolloDiscovery implements DiscoverySupplier
         $connection = $this->credentials->get('apollo');
         if (!$connection || $profile === null || ($request['product'] ?? null) !== 'employees') return new DiscoveryResult('failed');
         $filters = $request['filters'] ?? [];
-        if (!is_array($filters) || array_diff(array_keys($filters), ['titles', 'seniorities']) ||
-            array_diff($filters['seniorities'] ?? [], ['owner', 'founder', 'c_suite', 'partner', 'vp', 'head', 'director', 'manager', 'senior', 'entry', 'intern'])) return new DiscoveryResult('failed');
+        if (!is_array($filters)) return new DiscoveryResult('failed');
+        try { $filterQuery = EmployeeFilters::apollo($filters); }
+        catch (\InvalidArgumentException) { return new DiscoveryResult('failed'); }
         $headers = ['x-api-key: ' . $connection['key']];
         if (($request['kind'] ?? null) === 'completion') {
             $token = self::decode($request['input']['completionToken'] ?? null);
@@ -60,9 +61,7 @@ final class ApolloDiscovery implements DiscoverySupplier
         $cursor = self::decode($cursor);
         if (!self::id($cursor['organization'] ?? null) || !is_int($cursor['page'] ?? null) || $cursor['page'] < 1 || $cursor['page'] > 5) return new DiscoveryResult('failed');
         $query = ['organization_ids' => [$cursor['organization']], 'page' => $cursor['page'], 'per_page' => 100,
-            'include_similar_titles' => 'false'];
-        if ($filters['titles'] ?? []) $query['person_titles'] = $filters['titles'];
-        if ($filters['seniorities'] ?? []) $query['person_seniorities'] = $filters['seniorities'];
+            'include_similar_titles' => 'true', ...$filterQuery];
         $response = $this->transport->send('apollo', 'POST', '/api/v1/mixed_people/api_search', $query, $headers, $timeoutMs);
         if ($failure = self::failure($response)) return $failure;
         $people = $response->data['people'] ?? null; $total = $response->data['total_entries'] ?? null;

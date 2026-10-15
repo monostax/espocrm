@@ -30,8 +30,8 @@ class EnrichmentDiscoveryPlanningTest extends TestCase
         $this->assertSame([], $input->data['filters']);
         $this->assertTrue($input->isDiscovery());
         $filters = new QuoteInput((object) self::request(['products' => ['employees'], 'filters' => (object) [
-            'seniorities' => [], 'titles' => [' CTO ', 'CEO', 'CTO']]]));
-        $this->assertSame(['titles' => ['CEO', 'CTO']], $filters->data['filters']);
+            'seniorities' => [], 'titles' => [' CTO ', 'CEO', 'CTO'], 'jobLevels' => [' SVP ', 'VP', 'SVP']]]));
+        $this->assertSame(['jobLevels' => ['SVP', 'VP'], 'titles' => ['CEO', 'CTO']], $filters->data['filters']);
         $this->assertSame($filters->data, (new QuoteInput((object) $filters->data))->data);
         $legacy = new QuoteInput((object) self::request(['products' => ['email']]));
         $this->assertArrayNotHasKey('count', $legacy->data);
@@ -114,6 +114,9 @@ class EnrichmentDiscoveryPlanningTest extends TestCase
         yield 'rdap count' => [['products' => ['cnpj'], 'count' => 1]];
         yield 'fields filters' => [['products' => ['email'], 'filters' => []]];
         yield 'socios filters' => [['filters' => ['titles' => ['CEO']]]];
+        yield 'unknown job level' => [['products' => ['employees'], 'filters' => ['jobLevels' => ['invented']]]];
+        yield 'unmapped board level' => [['products' => ['employees'], 'filters' => ['jobLevels' => ['Board Member']]]];
+        yield 'unknown seniority' => [['products' => ['employees'], 'filters' => ['seniorities' => ['invented']]]];
         yield 'scalar filters' => [['filters' => 'CEO']];
         yield 'null filters' => [['filters' => null]];
         yield 'no waterfall cap' => [['waterfall' => true]];

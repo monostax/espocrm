@@ -1,6 +1,17 @@
 {
     "fields": {
         "industry": { "type": "varchar", "maxLength": 255 },
+        "contactRole": {
+            "options": [
+                "Owner", "Founder", "Co-Founder", "Board Member",
+                "CEO", "COO", "CFO", "CTO", "CIO", "CMO", "CRO", "CHRO",
+                "Managing Director", "Sales Director", "Sales Manager",
+                "Sales Development Representative", "Business Development Representative",
+                "Account Executive", "Marketing Director", "Marketing Manager",
+                "Operations Manager", "Human Resources Manager", "Recruiter",
+                "Engineering Manager", "Software Engineer", "Product Manager", "Research Analyst"
+            ]
+        },
         "linkedinUrl": { "type": "url", "maxLength": 512, "trim": true },
         "cnpj": {
             "type": "varchar",

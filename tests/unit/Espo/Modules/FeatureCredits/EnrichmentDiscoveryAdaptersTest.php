@@ -131,7 +131,9 @@ class EnrichmentDiscoveryAdaptersTest extends TestCase
         $transport = $this->createMock(Transport::class);
         $transport->expects($this->exactly(3))->method('send')->willReturnCallback(function (...$args) use (&$calls, &$responses) { $calls[] = $args; return array_shift($responses); });
         $adapter = new ApolloDiscovery($credentials, $transport);
-        $request = ['product' => 'employees', 'kind' => 'page', 'identity' => ['linkedinUrl' => $org['linkedin_url']], 'filters' => ['titles' => ['CEO']]];
+        $request = ['product' => 'employees', 'kind' => 'page', 'identity' => ['linkedinUrl' => $org['linkedin_url']],
+            'filters' => ['titles' => ['CEO', 'Marketing Manager'], 'jobLevels' => ['CXO', 'SVP', 'VP', 'Senior Manager', 'Manager'],
+                'seniorities' => ['founder']]];
         $resolved = $adapter->execute($request, 1000);
         $this->assertSame([], $resolved->items); $this->assertNotNull($resolved->nextCursor);
         $page = $adapter->execute([...$request, 'input' => ['cursor' => $resolved->nextCursor]], 1000);
@@ -141,6 +143,10 @@ class EnrichmentDiscoveryAdaptersTest extends TestCase
         $this->assertSame('https://www.linkedin.com/in/person', $result->items[0]['values']['linkedinUrl']);
         $this->assertArrayNotHasKey('email', $result->items[0]['values']);
         $this->assertSame([$org['id']], $calls[1][3]['organization_ids']);
+        $this->assertSame(['CEO', 'Marketing Manager'], $calls[1][3]['person_titles']);
+        $this->assertSame(['founder', 'c_suite', 'vp', 'manager'], $calls[1][3]['person_seniorities']);
+        $this->assertSame('true', $calls[1][3]['include_similar_titles']);
+        $this->assertArrayNotHasKey('jobLevels', $calls[1][3]);
         foreach (['reveal_personal_emails', 'reveal_phone_number', 'run_waterfall_email', 'run_waterfall_phone'] as $flag) $this->assertSame('false', $calls[2][3][$flag]);
     }
 }

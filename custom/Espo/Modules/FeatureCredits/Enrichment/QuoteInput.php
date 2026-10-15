@@ -43,7 +43,7 @@ final class QuoteInput
                 throw new InvalidArgumentException('Finder count must be an integer from 1 to 50.');
             }
             $filters = $data['filters'] instanceof stdClass ? get_object_vars($data['filters']) : $data['filters'];
-            if (!is_array($filters) || array_diff(array_keys($filters), $data['products'] === ['employees'] ? ['titles', 'seniorities'] : [])) {
+            if (!is_array($filters) || array_diff(array_keys($filters), $data['products'] === ['employees'] ? ['titles', 'jobLevels', 'seniorities'] : [])) {
                 throw new InvalidArgumentException('Unsupported Finder filters.');
             }
             foreach ($filters as &$values) {
@@ -61,6 +61,7 @@ final class QuoteInput
                 sort($values, SORT_STRING);
             }
             unset($values);
+            if ($data['products'] === ['employees']) EmployeeFilters::apollo($filters);
             $filters = array_filter($filters, static fn (array $values): bool => $values !== []);
             ksort($filters, SORT_STRING);
             $data['filters'] = $filters;
