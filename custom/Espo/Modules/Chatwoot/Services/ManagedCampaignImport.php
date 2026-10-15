@@ -27,7 +27,7 @@ class ManagedCampaignImport
     {
         $action = $data['action'] ?? '';
         $ctx = $this->access->context($platform, $data, in_array($action, ['begin', 'append', 'seal', 'confirm', 'retry'], true));
-        if ($action === 'capabilities') return $this->payload->capabilities($ctx);
+        if ($action === 'capabilities') return $this->payload->capabilities($ctx) + ['sender_id' => $this->access->integrationSenderId($ctx['account'])];
         if ($action === 'history') return $this->history($ctx, $data);
         if ($action === 'begin') return $this->begin($ctx, $data);
         $campaign = $this->owned($ctx, $data);
@@ -198,7 +198,9 @@ class ManagedCampaignImport
             $counts[$status] = $repo->where(['whatsAppCampaignId' => $campaign->getId(), 'managedDispatch' => 'accepted', 'managedDelivery' => $status])->count();
         }
         $inbox = $this->em->getEntityById('ChatwootInbox', (string) $campaign->get('chatwootInboxId'));
+        $account = $this->em->getEntityById('ChatwootAccount', (string) $campaign->get('chatwootAccountId'));
         return ['id' => (int) $campaign->get('managedOperationId'), 'campaign_id' => $campaign->getId(),
+            'sender_id' => $account ? $this->access->integrationSenderId($account) : null,
             'counts' => $counts, 'inbox' => $inbox?->get('name'),
             'state' => $campaign->get('managedState'), 'version' => (int) $campaign->get('managedVersion'), 'digest' => $campaign->get('managedDigest'),
             'selected' => (int) $campaign->get('managedExpectedCount'), 'imported' => (int) $campaign->get('managedImportedCount'),

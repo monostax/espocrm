@@ -16,7 +16,9 @@ class ManagedCampaignBridge
 {
     public const PATH = '/api/v1/ManagedWhatsAppCampaign';
 
-    public function __construct(private Config $config, private EntityManager $em, private Log $log) {}
+    public function __construct(
+        private Config $config, private EntityManager $em, private Log $log, private ManagedCampaignAccess $access,
+    ) {}
 
     public static function signature(string $secret, string $method, string $path, string $timestamp, string $id, string $body): string
     {
@@ -28,11 +30,13 @@ class ManagedCampaignBridge
         $key = (string) $request->getHeader('X-Campaign-Key');
         $credentials = (array) $this->config->get('managedWhatsAppCampaignCredentials', []);
         $credential = (array) ($credentials[$key] ?? []);
-        $secret = (string) ($credential['secret'] ?? '');
+        $secret = $this->secret($credential);
         $timestamp = (string) $request->getHeader('X-Campaign-Timestamp');
         $id = (string) $request->getHeader('X-Campaign-Request-Id');
         $path = $request->getUri()->getPath();
-        if ($request->getUri()->getScheme() !== 'https' || strtoupper($request->getMethod()) !== 'POST' ||
+        // Like CRM's core authentication, honor HTTPS terminated by the ingress.
+        $https = $request->getUri()->getScheme() === 'https' || $request->getServerParam('HTTP_X_FORWARDED_PROTO') === 'https';
+        if (!$https || strtoupper($request->getMethod()) !== 'POST' ||
             strlen($secret) < 32 || $path !== self::PATH || !preg_match('/^\d{10}$/D', $timestamp) ||
             abs(time() - (int) $timestamp) > 300 || !preg_match('/^[\w-]{16,100}$/D', $id) ||
             !hash_equals(self::signature($secret, 'POST', self::PATH, $timestamp, $id, $body), (string) $request->getHeader('X-Campaign-Signature'))) {
@@ -60,16 +64,18 @@ class ManagedCampaignBridge
         $inbox = $this->em->getEntityById('ChatwootInbox', $campaign->get('chatwootInboxId'));
         if (!$account || !$platform || !$inbox || $account->get('platformId') !== $platform->getId() ||
             $inbox->get('chatwootAccountId') !== $account->getId()) throw new Forbidden('Campaign binding changed.');
-        [$key, $secret] = $this->credential($platform->getId());
-        $url = rtrim((string) $platform->get('backendUrl'), '/');
+        [$key, $secret, $callbackUrl] = $this->credential($platform->getId());
+        // Ordinary API traffic keeps its internal backendUrl. Campaign callbacks use TLS.
+        $url = rtrim((string) ($callbackUrl ?? $platform->get('frontendUrl')), '/');
         if (!preg_match('#^https://[^/]+$#D', $url)) throw new Forbidden('TLS campaign endpoint required.');
         $path = '/integrations/campaigns/' . (int) $account->get('chatwootAccountId') . '/' .
             (int) $campaign->get('managedOperationId') . '/' . $action;
-        $body = json_encode($data + [
+        $body = json_encode(array_merge($data, [
             'campaign_id' => $campaign->getId(), 'actor_id' => (int) $campaign->get('managedActorId'),
             'request_fingerprint' => $campaign->get('managedFingerprint'),
             'inbox_id' => (int) $inbox->get('chatwootInboxId'),
-        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            'sender_id' => $this->access->integrationSenderId($account),
+        ]), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $timestamp = (string) time();
         $id = bin2hex(random_bytes(16));
         $curl = curl_init($url . $path);
@@ -97,10 +103,18 @@ class ManagedCampaignBridge
     {
         foreach ((array) $this->config->get('managedWhatsAppCampaignCredentials', []) as $key => $entry) {
             $entry = (array) $entry;
-            if (($entry['platformId'] ?? '') === $platformId && strlen($entry['secret'] ?? '') >= 32) {
-                return [$key, $entry['secret']];
+            $secret = $this->secret($entry);
+            if (($entry['platformId'] ?? '') === $platformId && strlen($secret) >= 32) {
+                return [$key, $secret, $entry['callbackUrl'] ?? null];
             }
         }
         throw new Forbidden('Campaign credential unavailable.');
+    }
+
+    private function secret(array $credential): string
+    {
+        return isset($credential['secretEnv'])
+            ? (string) getenv($credential['secretEnv'])
+            : (string) ($credential['secret'] ?? '');
     }
 }

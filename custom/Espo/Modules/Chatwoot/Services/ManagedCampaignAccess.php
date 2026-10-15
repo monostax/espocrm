@@ -71,6 +71,18 @@ class ManagedCampaignAccess
         return $contact->get('tenantId') === $ctx['account']->get('tenantId') && $this->acl->checkEntityRead($ctx['user'], $contact);
     }
 
+    /** Resolve the integration identity already provisioned for this account. */
+    public function integrationSenderId(Entity $account): ?int
+    {
+        $identity = $this->em->getEntityById('ChatwootUser', (string) $account->get('conciergeUserId'));
+        if (!$identity || $identity->get('platformId') !== $account->get('platformId') ||
+            (int) $identity->get('chatwootUserId') < 1) return null;
+        $membership = $this->em->getRDBRepository('ChatwootAccountUserMembership')->where([
+            'chatwootAccountId' => $account->getId(), 'chatwootUserId' => $identity->getId(),
+        ])->findOne();
+        return $membership ? (int) $identity->get('chatwootUserId') : null;
+    }
+
     public function assertCancellation(Entity $campaign, array $ctx): void
     {
         if (!$this->acl->checkEntity($ctx['user'], $campaign, 'edit')) throw new Forbidden('Campaign cancellation unavailable.');

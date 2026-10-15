@@ -85,7 +85,7 @@
     },
     "RepairWhatsAppCampaignRecipients": {
         "name": "Repair WhatsApp Campaign Recipients",
-        "isSystem": false,
+        "isSystem": true,
         "scheduling": "*/5 * * * *",
         "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\RepairWhatsAppCampaignRecipients"
     }
