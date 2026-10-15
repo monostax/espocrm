@@ -21,6 +21,27 @@
         ]
     },
     {
+        "label": "Prompt",
+        "name": "aiPrompt",
+        "dynamicLogicVisible": {
+            "conditionGroup": [
+                {
+                    "type": "isTrue",
+                    "attribute": "isAI"
+                }
+            ]
+        },
+        "rows": [
+            [
+                {
+                    "name": "aiPrompt",
+                    "fullWidth": true,
+                    "noLabel": true
+                }
+            ]
+        ]
+    },
+    {
         "tabBreak": true,
         "tabLabel": "AI Configuration",
         "label": "AI Configuration",
@@ -76,12 +97,6 @@
             [
                 {
                     "name": "taskAssignees",
-                    "fullWidth": true
-                }
-            ],
-            [
-                {
-                    "name": "aiPrompt",
                     "fullWidth": true
                 }
             ],
