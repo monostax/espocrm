@@ -387,10 +387,10 @@ class CandidateApplicationTest extends TestCase
 
     public function testExplicitCompanyFieldsAreAtomicWithReceiptAndRequirePurchasedValues(): void
     {
-        $purchase = $this->purchased(['name' => 'Purchased company','description' => 'Purchased description'],'company');
+        $purchase = $this->purchased(['name' => 'Purchased company','description' => 'Purchased description','industry' => 'pharmaceuticals'],'company');
         $input = (object) ['tenantId' => $this->tenant,'id' => $purchase['id'],'source' => 'field',
-            'fields' => (object) ['name' => 'Purchased company','description' => 'Purchased description'],
-            'expected' => (object) ['name' => 'Company','description' => null]];
+            'fields' => (object) ['name' => 'Purchased company','description' => 'Purchased description','industry' => 'pharmaceuticals'],
+            'expected' => (object) ['name' => 'Company','description' => null,'industry' => null]];
         $service = $this->service(\Espo\Modules\FeatureCredits\Enrichment\FieldApplication::class); $pdo = $this->em->getPDO();
         $pdo->exec("ALTER TABLE enrichment_attempt ADD CONSTRAINT injected_field_application CHECK (id<>'" . $purchase['id'] . "' OR application_receipt IS NULL)");
         try { $service->apply($input); $this->fail('Field receipt failure ignored.'); }
@@ -398,10 +398,12 @@ class CandidateApplicationTest extends TestCase
         finally { $this->dropCheck($pdo,'enrichment_attempt','injected_field_application'); }
         $this->assertSame('Company',$this->em->getEntityById('Account',$this->account)->get('name'));
         $this->assertNull($this->em->getEntityById('Account',$this->account)->get('description'));
+        $this->assertNull($this->em->getEntityById('Account',$this->account)->get('industry'));
         $invalid = clone $input; $invalid->fields = (object) ['name' => 'Not purchased']; $invalid->expected = (object) ['name' => 'Company'];
         try { $service->apply($invalid); $this->fail('Unpurchased value applied.'); } catch (\InvalidArgumentException) {}
         $receipt = $service->apply($input); $this->assertSame($receipt,$service->apply($input));
         $this->assertSame('Purchased company',$this->em->getEntityById('Account',$this->account)->get('name'));
+        $this->assertSame('pharmaceuticals',$this->em->getEntityById('Account',$this->account)->get('industry'));
         $this->assertSame([], $this->service(\Espo\Modules\FeatureCredits\Accounting\ConsistencyAudit::class)->inspect($this->tenant)['findings']);
     }
 

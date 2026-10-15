@@ -1,5 +1,6 @@
 {
     "fields": {
+        "industry": { "type": "varchar", "maxLength": 255 },
         "linkedinUrl": { "type": "url", "maxLength": 512, "trim": true },
         "cnpj": {
             "type": "varchar",
