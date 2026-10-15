@@ -105,6 +105,13 @@ class AccessChecker implements AccessEntityCREDSChecker
             return false;
         }
 
+        if ($campaign->get('managedByChatwoot')) {
+            $contact = $this->entityManager->getEntityById('Contact', (string) $entity->get('contactId'));
+            if (!$contact || $entity->get('chatwootAccountId') !== $campaign->get('chatwootAccountId') ||
+                $contact->get('tenantId') !== $campaign->get('tenantId') ||
+                !$this->aclManager->checkEntityRead($user, $contact) || !$this->aclManager->checkField($user, 'Contact', 'phoneNumber')) return false;
+        }
+
         return $this->aclManager->checkEntity($user, $campaign, $action);
     }
 }

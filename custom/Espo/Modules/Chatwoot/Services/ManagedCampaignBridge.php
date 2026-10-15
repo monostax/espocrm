@@ -36,7 +36,7 @@ class ManagedCampaignBridge
         $path = $request->getUri()->getPath();
         // Like CRM's core authentication, honor HTTPS terminated by the ingress.
         $https = $request->getUri()->getScheme() === 'https' || $request->getServerParam('HTTP_X_FORWARDED_PROTO') === 'https';
-        if (!$https || strtoupper($request->getMethod()) !== 'POST' ||
+        if (!$https || $request->getUri()->getQuery() !== '' || strtoupper($request->getMethod()) !== 'POST' ||
             strlen($secret) < 32 || $path !== self::PATH || !preg_match('/^\d{10}$/D', $timestamp) ||
             abs(time() - (int) $timestamp) > 300 || !preg_match('/^[\w-]{16,100}$/D', $id) ||
             !hash_equals(self::signature($secret, 'POST', self::PATH, $timestamp, $id, $body), (string) $request->getHeader('X-Campaign-Signature'))) {

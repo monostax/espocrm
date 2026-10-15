@@ -6,6 +6,7 @@ namespace Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\AclManager;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Utils\Metadata;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\TemplateSendPreflight;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateDeadline;
@@ -60,6 +61,7 @@ class ManagedCampaignPayload
 
     public function validate(array $composition, array $ctx, ?array $media): ?array
     {
+        $this->assertReadable($composition, $ctx);
         $mode = $this->access->mode($ctx['inbox']);
         if (($composition['mode'] ?? '') !== $mode) throw new BadRequest('invalid_mode');
         if ($mode === 'FreeText') {
@@ -81,6 +83,7 @@ class ManagedCampaignPayload
     public function freeze(Entity $campaign, Entity $contact, string $phone, array $ctx): string
     {
         $composition = self::array($campaign->get('managedComposition'));
+        $this->assertReadable($composition, $ctx);
         $allowed = array_column($this->variables($ctx), null, 'path');
         $render = function (string $text) use ($contact, $allowed): string {
             $syntax = preg_replace('/\{\{\s*([\w.]+)\s*\}\}/u', '', $text);
@@ -123,6 +126,24 @@ class ManagedCampaignPayload
         $json = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if (strlen($json) > 100000) throw new BadRequest('payload_too_large');
         return $json;
+    }
+
+    /** Recheck permissions without re-rendering immutable reviewed values. */
+    public function assertReadable(array $composition, array $ctx): void
+    {
+        if (!$this->acl->checkScope($ctx['user'], 'Contact', 'read') ||
+            !$this->acl->checkField($ctx['user'], 'Contact', 'phoneNumber')) throw new Forbidden('Contact fields unavailable.');
+        $allowed = array_column($this->variables($ctx), null, 'path');
+        $texts = [$composition['body'] ?? ''];
+        foreach (['body_parameters', 'header_parameters'] as $key) {
+            foreach (TemplateParameters::mapping($composition[$key] ?? []) as $text) $texts[] = $text;
+        }
+        foreach ($texts as $text) {
+            preg_match_all('/\{\{\s*([\w.]+)\s*\}\}/u', (string) $text, $matches);
+            foreach ($matches[1] as $path) {
+                if (!isset($allowed[$path])) throw new Forbidden('Contact fields unavailable.');
+            }
+        }
     }
 
     public static function array(mixed $value): array

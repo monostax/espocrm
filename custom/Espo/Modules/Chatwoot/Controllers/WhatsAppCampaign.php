@@ -303,6 +303,8 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
             throw new NotFound("Campaign {$id} not found.");
         }
 
+        if ($campaign->get('managedByChatwoot')) throw new Forbidden('Managed campaigns cannot be distributed or cloned.');
+
         if (!$this->acl->check($campaign, 'edit')) {
             throw new Forbidden('No edit access to the campaign.');
         }
@@ -342,8 +344,6 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
         if (!$campaign) {
             throw new NotFound("Campaign {$id} not found.");
         }
-
-        if ($campaign->get('managedByChatwoot')) throw new Forbidden('Managed campaigns cannot be distributed or cloned.');
 
         if (!$this->acl->check($campaign, 'edit')) {
             throw new Forbidden('No edit access to the campaign.');

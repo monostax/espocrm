@@ -51,7 +51,8 @@ class ManagedCampaignAccess
             'account_id' => $account->get('chatwootAccountId'), 'actor_id' => $campaign->get('managedActorId'),
             'inbox_id' => $inbox->get('chatwootInboxId'),
         ], $launch);
-        if ($ctx['account']->getId() !== $account->getId() || $ctx['user']->getId() !== $campaign->get('managedUserId') ||
+        if ($ctx['account']->getId() !== $account->getId() || $ctx['inbox']->getId() !== $inbox->getId() ||
+            $ctx['user']->getId() !== $campaign->get('managedUserId') ||
             $campaign->get('tenantId') !== $account->get('tenantId') ||
             !$this->acl->checkEntity($ctx['user'], $campaign, $launch ? 'edit' : 'read')) throw new Forbidden();
         return $ctx;
@@ -61,7 +62,8 @@ class ManagedCampaignAccess
     {
         $integration = $this->em->getEntityById('ChatwootInboxIntegration', (string) $inbox->get('chatwootInboxIntegrationId'));
         $type = $inbox->get('channelType');
-        if (!$integration || $integration->get('status') !== 'ACTIVE' || $integration->get('channelType') !== $type ||
+        if (!$integration || $integration->get('chatwootAccountId') !== $inbox->get('chatwootAccountId') ||
+            $integration->get('status') !== 'ACTIVE' || $integration->get('channelType') !== $type ||
             !WhatsAppChannel::isSendable($type)) throw new Forbidden('Inbox configuration unavailable.');
         return WhatsAppChannel::isQrcode($type) ? 'FreeText' : 'Template';
     }

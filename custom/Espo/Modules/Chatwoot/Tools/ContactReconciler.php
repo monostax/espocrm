@@ -366,6 +366,11 @@ class ContactReconciler
         // Managed imports authorize the resolved target before any contact/identity writes.
         if ($beforeWrite) $beforeWrite($contact);
 
+        if ($contact?->get('deleted')) {
+            $this->entityManager->getRDBRepository('Contact')->restoreDeleted($contact->getId());
+            $contact = $this->entityManager->getEntityById('Contact', $contact->getId());
+        }
+
         $isNew = false;
         if (!$contact) {
             // Auto-provision if we have ANY identity material — name
@@ -502,14 +507,13 @@ class ContactReconciler
             return null;
         }
 
-        // Restore + return.
-        $this->entityManager->getRDBRepository('Contact')->restoreDeleted($contactId);
-        return $this->entityManager->getEntityById('Contact', $contactId);
+        // Resolve without writing; authorization precedes restoration in reconcile.
+        return $this->findContactByIdAndTenant($contactId, (string) $identity->get('tenantId'));
     }
 
     /**
      * Find a Contact by a flat field within a tenant. Includes
-     * soft-deleted records and restores them when matched.
+     * soft-deleted records; restoration follows authorization in reconcile.
      */
     private function findContactByField(string $tenantId, string $field, string $value): ?Entity
     {
@@ -536,14 +540,13 @@ class ContactReconciler
         if ((new IdentityOwnership($this->entityManager))->isRejected($contact, $field === 'emailAddress' ? 'email' : 'phone', $value)) {
             return null;
         }
-        $this->entityManager->getRDBRepository('Contact')->restoreDeleted($contact->getId());
-        return $this->entityManager->getEntityById('Contact', $contact->getId());
+        return $contact;
     }
 
     /**
      * Look up a Contact by id, but only if it belongs to the given
      * tenant. Used to honor a pre-existing bridge link without ever
-     * trusting a cross-tenant id. Restores soft-deleted records.
+     * trusting a cross-tenant id. Includes soft-deleted records without writes.
      */
     private function findContactByIdAndTenant(string $contactId, string $tenantId): ?Entity
     {
@@ -567,8 +570,7 @@ class ContactReconciler
             return null;
         }
 
-        $this->entityManager->getRDBRepository('Contact')->restoreDeleted($contact->getId());
-        return $this->entityManager->getEntityById('Contact', $contact->getId());
+        return $contact;
     }
 
     /**

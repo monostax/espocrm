@@ -34,7 +34,7 @@ class ManagedCampaignImport
         try {
             return match ($action) {
             'append' => $this->append($campaign, $data), 'seal' => $this->seal($campaign),
-            'read' => $this->summary($campaign), 'results' => $this->results($campaign, $data),
+            'read' => $this->summary($campaign), 'results' => $this->results($campaign, $data, $ctx),
             'confirm' => $this->summary($this->factory->create(ManagedCampaignExecution::class)->confirm($campaign, $data)),
             'cancel' => $this->cancel($campaign, $ctx),
             'retry' => $this->summary($this->factory->create(ManagedCampaignExecution::class)->retry($campaign)),
@@ -227,7 +227,7 @@ class ManagedCampaignImport
             (int) $campaign->get('managedActorId') !== (int) $data['actor_id'] ||
             (int) $campaign->get('managedOperationId') !== (int) ($data['operation_id'] ?? 0) ||
             ($ctx['inbox'] && $campaign->get('chatwootInboxId') !== $ctx['inbox']->getId())) throw new NotFound();
-        $this->access->campaign($campaign, false);
+        $this->access->campaign($campaign, in_array($data['action'] ?? '', ['append', 'seal', 'confirm', 'retry'], true));
         return $campaign;
     }
 
@@ -252,14 +252,19 @@ class ManagedCampaignImport
         return $this->summary($this->factory->create(ManagedCampaignExecution::class)->cancel($campaign));
     }
 
-    private function results(Entity $campaign, array $data): array
+    private function results(Entity $campaign, array $data, array $ctx): array
     {
         $sources = ($data['kind'] ?? '') === 'exclusions';
+        if (!$sources) $this->payload->assertReadable(ManagedCampaignPayload::array($campaign->get('managedComposition')), $ctx);
         $where = $sources ? ['campaignId' => $campaign->getId(), 'reason!=' => null] : ['whatsAppCampaignId' => $campaign->getId()];
         if (!empty($data['after'])) $where['id>'] = (string) $data['after'];
         $rows = iterator_to_array($this->em->getRDBRepository($sources ? 'WhatsAppCampaignSource' : 'WhatsAppCampaignContact')
             ->where($where)->order('id')->limit(0, 101)->find(), false);
         $page = array_slice($rows, 0, 100);
+        $visible = $sources ? $page : array_filter($page, function (Entity $row) use ($ctx): bool {
+            $contact = $this->em->getEntityById('Contact', (string) $row->get('contactId'));
+            return $contact && $row->get('chatwootAccountId') === $ctx['account']->getId() && $this->access->contact($contact, $ctx);
+        });
         return ['version' => $campaign->get('managedVersion'), 'digest' => $campaign->get('managedDigest'),
             'payload' => array_map(fn ($row) => $sources ? [
                 'id' => $row->getId(), 'conversation_id' => $row->get('conversationId'), 'reason' => $row->get('reason'),
@@ -267,6 +272,6 @@ class ManagedCampaignImport
                 'id' => $row->getId(), 'phone_number' => $row->get('phoneNumber'), 'preview' => json_decode($row->get('managedPayload') ?: 'null', true),
                 'dispatch' => $row->get('managedDispatch'), 'delivery' => $row->get('managedDelivery'), 'reason' => $row->get('managedError'),
                 'message_id' => $row->get('chatwootMessageId'), 'conversation_id' => $row->get('chatwootConversationId'), 'replied_at' => $row->get('repliedAt'),
-            ], $page), 'next_cursor' => count($rows) > 100 ? end($page)->getId() : null];
+            ], array_values($visible)), 'next_cursor' => count($rows) > 100 ? end($page)->getId() : null];
     }
 }

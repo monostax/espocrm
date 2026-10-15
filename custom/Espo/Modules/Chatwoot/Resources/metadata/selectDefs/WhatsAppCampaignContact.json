@@ -1,0 +1,5 @@
+{
+    "accessControlFilterClassNameMap": {
+        "mandatory": "Espo\\Modules\\Chatwoot\\Classes\\Select\\WhatsAppCampaignContact\\AccessControlFilters\\Mandatory"
+    }
+}

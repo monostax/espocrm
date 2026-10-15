@@ -1,0 +1,7 @@
+{
+    "fields": {
+        "managedPayload": { "forbidden": true },
+        "managedSendKey": { "forbidden": true },
+        "managedFingerprint": { "forbidden": true }
+    }
+}

@@ -50,7 +50,7 @@ class ManagedCampaignRecipients
             if (!$this->acl->checkScope($ctx['user'], 'Contact', 'create') || !$this->acl->checkScope($ctx['user'], 'Contact', 'edit')) {
                 throw new Forbidden('contact_sync_forbidden');
             }
-            foreach (['name', 'phoneNumber', 'emailAddress', 'teams'] as $field) {
+            foreach (['name', 'firstName', 'lastName', 'phoneNumber', 'emailAddress', 'teams'] as $field) {
                 if (!$this->acl->checkField($ctx['user'], 'Contact', $field, 'edit')) throw new Forbidden('contact_sync_forbidden');
             }
             // Reuse the canonical reconciler/bridge/inbox synchronization path.
@@ -60,7 +60,8 @@ class ManagedCampaignRecipients
             $this->sync->syncSingleContact($contactData, $ctx['account']->getId(), $ctx['account']->get('teamsIds') ?? [], $ctx['account']->get('tenantId'),
                 function (?Entity $target) use ($ctx, $ids): void {
                     if ($ids && (!$target || $target->getId() !== $ids[0])) throw new BadRequest('ambiguous_identity');
-                    if ($target && (!$this->access->contact($target, $ctx) || !$this->acl->checkEntity($ctx['user'], $target, 'edit'))) {
+                    if ($target && (!$this->access->contact($target, $ctx) || !$this->acl->checkEntity($ctx['user'], $target, 'edit') ||
+                        ($target->get('deleted') && !$this->acl->checkEntity($ctx['user'], $target, 'delete')))) {
                         throw new Forbidden('contact_sync_forbidden');
                     }
                 });
