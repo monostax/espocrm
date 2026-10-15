@@ -1,6 +1,7 @@
 {
     "deleteId": true,
     "fields": {
+        "campaignNextReleaseAt": { "type": "float", "default": 0, "readOnly": true },
         "deleteId": {
             "type": "varchar",
             "maxLength": 17,

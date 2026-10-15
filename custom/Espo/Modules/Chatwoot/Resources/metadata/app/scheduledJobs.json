@@ -1,4 +1,10 @@
 {
+    "MaintainManagedWhatsAppCampaigns": {
+        "name": "Maintain managed WhatsApp campaigns",
+        "isSystem": true,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\Chatwoot\\Jobs\\MaintainManagedWhatsAppCampaigns"
+    },
     "SyncConversationEpisodesFromChatwoot": {
         "name": "Sync Conversation Episodes from Chatwoot",
         "isSystem": true,

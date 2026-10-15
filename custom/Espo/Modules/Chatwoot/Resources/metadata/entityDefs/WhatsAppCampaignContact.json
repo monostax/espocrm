@@ -1,5 +1,12 @@
 {
     "fields": {
+        "managedSendKey": { "type": "varchar", "maxLength": 64, "readOnly": true },
+        "managedPayload": { "type": "text", "dbType": "mediumtext", "readOnly": true },
+        "managedFingerprint": { "type": "varchar", "maxLength": 64, "readOnly": true },
+        "managedDispatch": { "type": "varchar", "default": "pending", "readOnly": true },
+        "managedDelivery": { "type": "varchar", "default": "unknown", "readOnly": true },
+        "managedRetryAt": { "type": "datetime", "readOnly": true },
+        "managedError": { "type": "varchar", "readOnly": true },
         "whatsAppCampaign": {
             "type": "link",
             "required": true
@@ -182,6 +189,9 @@
         }
     },
     "indexes": {
+        "managedDispatch": { "columns": ["whatsAppCampaignId", "managedDispatch", "id"] },
+        "managedDelivery": { "columns": ["whatsAppCampaignId", "managedDispatch", "managedDelivery"] },
+        "managedSendKey": { "columns": ["managedSendKey"], "unique": true },
         "chatwootMessageId": {
             "columns": ["chatwootMessageId"]
         },

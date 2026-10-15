@@ -66,8 +66,10 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
             throw new BadRequest('Missing campaign ID.');
         }
 
-        $this->requireEditableCampaign($id);
-        $campaign = $this->getWhatsAppCampaignService()->abort($id);
+        $campaign = $this->requireEditableCampaign($id);
+        $campaign = $campaign->get('managedByChatwoot')
+            ? $this->injectableFactory->create(\Espo\Modules\Chatwoot\Services\ManagedCampaignExecution::class)->cancel($campaign)
+            : $this->getWhatsAppCampaignService()->abort($id);
 
         return (object) $campaign->getValueMap();
     }
@@ -340,6 +342,8 @@ class WhatsAppCampaign extends Record implements \Espo\Core\Di\EntityManagerAwar
         if (!$campaign) {
             throw new NotFound("Campaign {$id} not found.");
         }
+
+        if ($campaign->get('managedByChatwoot')) throw new Forbidden('Managed campaigns cannot be distributed or cloned.');
 
         if (!$this->acl->check($campaign, 'edit')) {
             throw new Forbidden('No edit access to the campaign.');

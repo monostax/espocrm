@@ -1,6 +1,8 @@
 {
     "beforeLinkHookClassNameList": [
         "__APPEND__",
-        "Espo\\Modules\\Chatwoot\\Classes\\RecordHooks\\ProtectManagedCrmLinks"
-    ]
+        "Espo\\Modules\\Chatwoot\\Classes\\RecordHooks\\ProtectManagedCrmLinks",
+        "Espo\\Modules\\Chatwoot\\Classes\\RecordHooks\\ManagedCampaignLink"
+    ],
+    "beforeUnlinkHookClassNameList": ["__APPEND__", "Espo\\Modules\\Chatwoot\\Classes\\RecordHooks\\ManagedCampaignLink"]
 }

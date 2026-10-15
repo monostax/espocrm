@@ -97,6 +97,8 @@ class WhatsAppCampaignService
             throw new NotFound("Campaign {$campaignId} not found.");
         }
 
+        if ($campaign->get('managedByChatwoot')) throw new Forbidden('Managed audiences are immutable.');
+
         $targetLists = $this->entityManager
             ->getRDBRepository('WhatsAppCampaign')
             ->getRelation($campaign, 'targetLists')
@@ -477,6 +479,8 @@ class WhatsAppCampaignService
             throw new NotFound("Campaign {$campaignId} not found.");
         }
 
+        if ($campaign->get('managedByChatwoot')) throw new Forbidden('Confirm managed campaigns from Chat.');
+
         if ($campaign->get('status') !== 'Draft') {
             throw new Forbidden("Campaign can only be launched from Draft status (current: {$campaign->get('status')}).");
         }
@@ -589,6 +593,8 @@ class WhatsAppCampaignService
         if (!$campaign) {
             throw new NotFound("Campaign {$campaignId} not found.");
         }
+
+        if ($campaign->get('managedByChatwoot')) throw new Forbidden('Managed audiences are immutable.');
 
         if ($campaign->get('status') !== 'Sending') {
             $this->log->warning(
@@ -773,6 +779,8 @@ class WhatsAppCampaignService
             throw new NotFound("Campaign {$campaignId} not found.");
         }
 
+        if ($campaign->get('managedByChatwoot')) throw new Forbidden('Managed campaigns cannot join distributions.');
+
         $status = $campaign->get('status');
 
         if ($status === 'Sending') {
@@ -935,14 +943,7 @@ class WhatsAppCampaignService
     }
 
     /**
-     * Schedule chunk processing jobs for a set of campaign contact rows.
-     *
-     * Each job receives an explicit ID list (not offset paging), so jobs
-     * scheduled by later enrollments cannot interfere with earlier ones.
-     *
-     * Chunk size is channel-derived: QR (WAHA) sends are paced tens of seconds
-     * apart, so those chunks stay small to bound how long a single job holds a
-     * worker.
+     * Schedule one durable release chain, regardless of audience size.
      *
      * @param string $campaignId Campaign entity ID
      * @param string[] $campaignContactIds WhatsAppCampaignContact IDs
@@ -950,24 +951,24 @@ class WhatsAppCampaignService
      */
     private function scheduleChunkJobs(string $campaignId, array $campaignContactIds): int
     {
-        $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $campaignId);
+        if (!$campaignContactIds) return 0;
+        $this->scheduleRelease($campaignId);
+        return 1;
+    }
 
-        $chunkSize = WhatsAppChannel::chunkSize($campaign?->get('channelType'));
-
-        $chunks = array_chunk($campaignContactIds, $chunkSize);
-
-        foreach ($chunks as $chunk) {
-            $this->jobSchedulerFactory
-                ->create()
-                ->setClassName('Espo\\Modules\\Chatwoot\\Jobs\\ProcessWhatsAppCampaignChunk')
-                ->setData([
-                    'campaignId' => $campaignId,
-                    'campaignContactIds' => $chunk,
-                ])
-                ->schedule();
-        }
-
-        return count($chunks);
+    public function scheduleRelease(string $campaignId, int $delay = 0): void
+    {
+        $this->entityManager->getTransactionManager()->run(function () use ($campaignId, $delay): void {
+            $campaign = $this->entityManager->getRDBRepository('WhatsAppCampaign')->where(['id' => $campaignId])->forUpdate()->findOne();
+            if (!$campaign || $campaign->get('managedByChatwoot') || $campaign->get('status') !== 'Sending') return;
+            $group = 'campaign-release-' . $campaignId;
+            if ($this->entityManager->getRDBRepository('Job')->where(['group' => $group, 'status' => 'Pending'])->findOne()) return;
+            $this->entityManager->createEntity('Job', [
+                'name' => 'WhatsApp campaign release', 'className' => 'Espo\\Modules\\Chatwoot\\Jobs\\ProcessWhatsAppCampaignChunk',
+                'group' => $group, 'executeTime' => date('Y-m-d H:i:s', time() + $delay),
+                'data' => (object) ['campaignId' => $campaignId], 'attempts' => 1,
+            ]);
+        });
     }
 
     /**
