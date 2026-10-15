@@ -1,6 +1,16 @@
 {
     "importUpdateEntityFinderClassName": "Espo\\Modules\\Chatwoot\\Tools\\ContactImportUpdateEntityFinder",
     "fields": {
+        "accountWebsite": {
+            "type": "foreign",
+            "link": "account",
+            "field": "website",
+            "readOnly": true,
+            "notStorable": true,
+            "layoutAvailabilityList": [],
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        },
         "whatsAppOptedOut": {
             "type": "bool",
             "default": false
