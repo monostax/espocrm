@@ -30,14 +30,14 @@ class ContactInbox
 {
     protected const ENTITY_TYPE = 'Contact';
     protected const SORT_FIELDS = ['streamUpdatedAt', 'createdAt', 'modifiedAt', 'name', 'accountName', 'assignedUserName', 'source'];
-    protected const EDIT_FIELDS = ['firstName', 'lastName', 'accountId', 'assignedUserId', 'tags', 'crmTagsIds', 'source', 'emailAddress', 'phoneNumber', 'cpf', 'dateOfBirth', 'dataNascimento', 'channelIdentitiesData', 'description', 'customFields'];
+    protected const EDIT_FIELDS = ['firstName', 'lastName', 'title', 'jobLevel', 'accountId', 'assignedUserId', 'tags', 'crmTagsIds', 'source', 'emailAddress', 'phoneNumber', 'cpf', 'dateOfBirth', 'dataNascimento', 'channelIdentitiesData', 'description', 'customFields'];
     protected const GROUP_FIELDS = [
         'assignee' => ['assignedUserId', 'assignedUser'],
         'account' => ['accountId', 'account'],
         'source' => ['source', 'source'],
     ];
     protected const FIELDS = [
-        'name', 'firstName', 'lastName', 'account', 'assignedUser', 'teams', 'tags', 'crmTags', 'source',
+        'name', 'firstName', 'lastName', 'title', 'jobLevel', 'account', 'assignedUser', 'teams', 'tags', 'crmTags', 'source',
         'emailAddress', 'phoneNumber', 'cpf', 'dateOfBirth', 'dataNascimento', 'channelIdentitiesData', 'description', 'customFields',
         'createdAt', 'modifiedAt', 'createdBy',
     ];
