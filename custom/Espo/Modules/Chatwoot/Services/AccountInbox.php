@@ -16,14 +16,14 @@ class AccountInbox extends ContactInbox
     protected const SORT_FIELDS = ['streamUpdatedAt', 'createdAt', 'modifiedAt', 'name', 'assignedUserName', 'type', 'industry'];
     protected const FIELDS = [
         'cnpj',
-        'name', 'website', 'emailAddress', 'phoneNumber', 'type', 'industry', 'assignedUser', 'teams',
+        'name', 'website', 'linkedinUrl', 'emailAddress', 'phoneNumber', 'type', 'industry', 'assignedUser', 'teams',
         'billingAddressStreet', 'billingAddressCity', 'billingAddressState', 'billingAddressCountry', 'billingAddressPostalCode',
         'shippingAddressStreet', 'shippingAddressCity', 'shippingAddressState', 'shippingAddressCountry', 'shippingAddressPostalCode',
         'description', 'customFields', 'crmTags', 'createdAt', 'modifiedAt', 'createdBy',
     ];
     protected const EDIT_FIELDS = [
         'cnpj',
-        'name', 'website', 'emailAddress', 'phoneNumber', 'type', 'industry', 'assignedUserId',
+        'name', 'website', 'linkedinUrl', 'emailAddress', 'phoneNumber', 'type', 'industry', 'assignedUserId',
         'billingAddressStreet', 'billingAddressCity', 'billingAddressState', 'billingAddressCountry', 'billingAddressPostalCode',
         'shippingAddressStreet', 'shippingAddressCity', 'shippingAddressState', 'shippingAddressCountry', 'shippingAddressPostalCode',
         'description', 'customFields', 'crmTagsIds',
