@@ -1,5 +1,15 @@
 {
     "fields": {
+        "accountWebsite": {
+            "type": "foreign",
+            "link": "account",
+            "field": "website",
+            "readOnly": true,
+            "notStorable": true,
+            "layoutAvailabilityList": [],
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        },
         "nextActionId": { "type": "varchar", "maxLength": 24, "readOnly": true, "utility": true },
         "nextActionType": { "type": "enum", "options": ["", "Task", "Call", "Meeting"], "readOnly": true, "utility": true },
         "chatwootStreamUpdatedAt": { "type": "datetime", "notStorable": true, "readOnly": true, "utility": true },
