@@ -28,8 +28,8 @@ class ManagedCampaignAccess
             !$this->acl->checkEntityRead($user, $account) || !$this->acl->checkScope($user, 'WhatsAppCampaign', 'read')) {
             throw new Forbidden('Campaign actor unavailable.');
         }
-        if ($launch && (!$account->get('managedCampaignsEnabled') ||
-            !$this->acl->checkScope($user, 'WhatsAppCampaign', 'create') || !$this->acl->checkScope($user, 'WhatsAppCampaign', 'edit'))) {
+        if ($launch && (!$this->acl->checkScope($user, 'WhatsAppCampaign', 'create') ||
+            !$this->acl->checkScope($user, 'WhatsAppCampaign', 'edit'))) {
             throw new Forbidden('Campaign launch unavailable.');
         }
         $inbox = null;

@@ -1,8 +1,5 @@
 {
     "fields": {
-        "managedCampaignsEnabled": {
-            "onlyAdmin": true
-        },
         "managedCampaignBudgetBytes": {
             "onlyAdmin": true
         },
