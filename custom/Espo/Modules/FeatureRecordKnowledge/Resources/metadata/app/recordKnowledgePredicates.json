@@ -8,7 +8,7 @@
     "deal_with": {"label": "deal with", "subjects": ["Opportunity"], "objects": ["User", "Contact", "Lead"], "inverse": "involved in deal", "aliases": [], "qualifiers": {"role": "string"}},
     "introduced_by": {"label": "introduced by", "subjects": "*", "objects": ["User", "Contact", "Lead"], "inverse": "introduced", "aliases": [], "qualifiers": {"on": "date"}},
     "attended": {"label": "attended", "subjects": ["User", "Contact", "Lead"], "objects": ["Meeting", "Call", "Event"], "inverse": "attendees", "aliases": [], "qualifiers": {"on": "date"}},
-    "part_of": {"label": "part of", "subjects": "*", "objects": "*", "inverse": "contains", "aliases": [], "qualifiers": {}},
+    "part_of": {"label": "part of", "subjects": "*", "objects": "*", "inverse": "contains", "aliases": [], "qualifierSchema": {"type": "object", "properties": {"role": {"type": "string", "maxLength": 512}, "since": {"type": "string", "format": "date"}, "until": {"type": "string", "format": "date"}}, "required": [], "additionalProperties": false}},
     "about": {"label": "about", "subjects": ["Document", "KnowledgeBaseArticle"], "objects": "*", "inverse": "subject of", "aliases": [], "qualifiers": {}},
     "contradicts": {"label": "contradicts", "subjects": ["Document", "KnowledgeBaseArticle"], "objects": ["Document", "KnowledgeBaseArticle"], "inverse": "contradicted by", "aliases": [], "qualifiers": {}},
     "supersedes": {"label": "supersedes", "subjects": ["Document", "KnowledgeBaseArticle"], "objects": ["Document", "KnowledgeBaseArticle"], "inverse": "superseded by", "aliases": ["replaces"], "qualifiers": {}}

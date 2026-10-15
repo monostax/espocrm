@@ -14,6 +14,7 @@ use Espo\Modules\FeatureRecordKnowledge\Services\Relations;
 use Espo\ORM\EntityManager;
 use PDO;
 use PDOException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /** Full disposable Espo runtime, real ORM/ACL/hooks/record and manual relation services. */
@@ -187,6 +188,87 @@ class CandidateApplicationTest extends TestCase
         $this->assertSame('Sócio-Administrador',$review['values']->role);
         $this->assertTrue($review['application']['creationForm']['available']);
         $this->assertContains('lastName',array_column($review['application']['creationForm']['fields'],'name'));
+    }
+
+    public static function qsaRoles(): array
+    {
+        return [
+            'board member' => ['Conselheiro de Administração','administers'],
+            'director' => ['Diretor','administers'],
+            'partner' => ['Sócio','owns'],
+            'arbitrary supplier title' => ['Consultora / Representante Especial','part_of'],
+            'maximum purchased role length' => [str_repeat('á',512),'part_of'],
+        ];
+    }
+
+    #[DataProvider('qsaRoles')]
+    public function testQsaRoleCreatesContactAndPreservesRoleWithFreeReplay(string $role,string $predicate): void
+    {
+        $purchase = $this->purchased(['role' => $role,'since' => '2024-05-21']);
+        $input = new ApplicationInput((object) ['tenantId' => $this->tenant,'purchaseId' => $purchase['id'],
+            'createIfUnmatched' => true,'contactData' => (object) ['lastName' => 'Reviewed QSA contact','teamsIds' => [$this->team]]]);
+        $service = $this->service(CandidateApplication::class);
+        $receipt = $service->apply($input);
+        $this->assertSame($receipt,$service->apply($input));
+        $this->assertSame(1,$this->countRecords('contact'));
+        $this->assertSame(1,$this->countRecords('record_relation'));
+        $this->assertCount(1,$receipt['relationIds']);
+        $contact = $this->em->getEntityById('Contact',$receipt['contactId']);
+        $this->assertSame('Reviewed QSA contact',$contact->get('lastName'));
+        $this->assertSame('52998224725',$contact->get('cpf'));
+        $relation = $this->em->getEntityById('RecordRelation',$receipt['relationIds'][0]);
+        $this->assertSame('builtin:' . $predicate,$relation->get('predicate'));
+        $this->assertSame('confirmed',$relation->get('status'));
+        $this->assertSame(['role' => $role,'since' => '2024-05-21'],(array) $relation->get('qualifiers'));
+        $q = $this->em->getPDO()->prepare('SELECT COUNT(*) FROM account_contact WHERE contact_id=? AND account_id=? AND deleted=FALSE');
+        $q->execute([$receipt['contactId'],$this->account]); $this->assertSame(1,(int) $q->fetchColumn());
+        $review = $this->service(\Espo\Modules\FeatureCredits\Enrichment\PurchasedReview::class)->read($this->tenant,$purchase['id']);
+        $this->assertSame($role,$review['values']->role);
+        $this->assertTrue($review['application']['applied']);
+        $q = $this->em->getPDO()->prepare("SELECT COUNT(*) FROM credit_transaction WHERE tenant_id=? AND type='debit'");
+        $q->execute([$this->tenant]); $this->assertSame(1,(int) $q->fetchColumn());
+        $this->assertSame([], $this->service(\Espo\Modules\FeatureCredits\Accounting\ConsistencyAudit::class)->inspect($this->tenant)['findings']);
+    }
+
+    public function testArbitraryQsaRolePreservesDifferentManualCompanyRelationship(): void
+    {
+        $purchase = $this->purchased(['role' => 'Unmapped supplier role']);
+        $contact = $this->em->createEntity('Contact',['lastName' => 'Existing','cpf' => '52998224725',
+            'tenantId' => $this->tenant,'teamsIds' => [$this->team]]);
+        $manual = $this->service(Relations::class)->submit((object) ['tenantId' => $this->tenant,'subjectType' => 'Contact',
+            'subjectId' => $contact->getId(),'objectType' => 'Account','objectId' => $this->account,'predicate' => 'part_of',
+            'qualifiers' => (object) ['role' => 'Manual role'],'idempotencyKey' => 'manual-company-role'],true);
+        $service = $this->service(CandidateApplication::class); $input = $this->input($purchase);
+        $receipt = $service->apply($input);
+        $this->assertSame($receipt,$service->apply($input));
+        $this->assertSame($contact->getId(),$receipt['contactId']);
+        $this->assertSame(1,$this->countRecords('contact'));
+        $this->assertSame(2,$this->countRecords('record_relation'));
+        $this->assertNotContains($manual['id'],$receipt['relationIds']);
+        $this->assertSame('Manual role',$this->em->getEntityById('RecordRelation',$manual['id'])->get('qualifiers')->role);
+        $this->assertSame('Unmapped supplier role',$this->em->getEntityById('RecordRelation',$receipt['relationIds'][0])->get('qualifiers')->role);
+    }
+
+    public function testMultipleArbitraryQsaRolesAreSavedSeparatelyAndReusedByRole(): void
+    {
+        $contact = $this->em->createEntity('Contact',['lastName' => 'Multiple roles',
+            'tenantId' => $this->tenant,'teamsIds' => [$this->team]]);
+        $relationships = CandidateApplication::relationships('socios',['since' => '2024-05-21'],
+            ['Representante Especial','Procurador','representante especial']);
+        $records = $this->service(\Espo\Modules\FeatureCredits\Enrichment\ApplicationRecords::class);
+        $apply = fn () => $records->relationships($this->tenant,$contact->getId(),$this->account,$relationships,'fixture-qsa-roles');
+        $ids = $this->em->getTransactionManager()->run($apply);
+        $this->assertCount(2,$ids);
+        $this->assertSame($ids,$this->em->getTransactionManager()->run($apply));
+        $this->assertSame(2,$this->countRecords('record_relation'));
+        $roles = [];
+        foreach ($ids as $id) {
+            $relation = $this->em->getEntityById('RecordRelation',$id);
+            $this->assertSame('builtin:part_of',$relation->get('predicate'));
+            $this->assertSame('2024-05-21',$relation->get('qualifiers')->since);
+            $roles[] = mb_strtolower($relation->get('qualifiers')->role);
+        }
+        $this->assertSame(['procurador','representante especial'],$roles);
     }
 
     public function testReviewedCreationFormOffersTenantTeamAndCreatesThroughNormalRecords(): void

@@ -23,7 +23,9 @@ class PredicateRegistry
         $list = [];
         foreach ($this->metadata->get('app.recordKnowledgePredicates', []) as $code => $def) {
             $list['builtin:' . $code] = [...$def, 'key' => 'builtin:' . $code, 'code' => $code, 'builtin' => true, 'active' => true,
-                'qualifierSchema' => QualifierSchema::shorthand($def['qualifiers'] ?? [])];
+                'qualifierSchema' => isset($def['qualifierSchema'])
+                    ? json_decode(json_encode($def['qualifierSchema'],JSON_THROW_ON_ERROR),false,32,JSON_THROW_ON_ERROR)
+                    : QualifierSchema::shorthand($def['qualifiers'] ?? [])];
         }
         return $list;
     }

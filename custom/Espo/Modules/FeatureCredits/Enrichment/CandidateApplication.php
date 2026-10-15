@@ -111,23 +111,25 @@ final class CandidateApplication
         return $result;
     }
 
-    /** Canonical roles and verified CPF.CNPJ QSA labels; unknown role text is never guessed. */
+    /** Preserve supplier roles; recognized QSA labels additionally identify ownership or administration. */
     public static function relationships(string $product,array $facts,array $roles): array
     {
         if ($product === 'employees') return [['predicate' => 'works_at','qualifiers' => isset($facts['title']) ? ['role' => $facts['title']] : []]];
         $result = [];
         foreach ($roles as $role) {
-            $predicates = match (mb_strtolower(trim($role))) {
+            $role = trim($role);
+            $predicates = match (mb_strtolower($role)) {
                 'owner', 'sócio' => ['owns'],
-                'administrator', 'administrador' => ['administers'],
+                'administrator', 'administrador', 'conselheiro de administração', 'diretor' => ['administers'],
                 'owner_administrator', 'sócio-administrador' => ['owns','administers'],
-                default => throw new Conflict('Supplier role requires a verified application mapping.'),
+                default => ['part_of'],
             };
             foreach ($predicates as $predicate) {
-                $qualifiers = ['role' => $predicate === 'owns' ? 'owner' : 'administrator'];
+                $qualifiers = ['role' => $role];
                 foreach (['since','until'] as $field) if (isset($facts[$field])) $qualifiers[$field] = $facts[$field];
                 if ($predicate === 'owns' && isset($facts['ownershipPercentage'])) $qualifiers['ownershipPercentage'] = (float) $facts['ownershipPercentage'];
-                $result[$predicate] = ['predicate' => $predicate,'qualifiers' => $qualifiers];
+                $key = $predicate === 'part_of' ? $predicate . ':' . mb_strtolower($role) : $predicate;
+                $result[$key] = ['predicate' => $predicate,'qualifiers' => $qualifiers];
             }
         }
         if (!$result) throw new Conflict('Purchased relationship is missing.');

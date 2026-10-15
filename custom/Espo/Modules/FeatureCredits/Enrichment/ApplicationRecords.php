@@ -197,12 +197,16 @@ class ApplicationRecords
     {
         $ids = [];
         foreach ($relationships as $index => $item) {
-            $q = $this->em->getPDO()->prepare("SELECT id,status FROM record_relation WHERE tenant_id=? AND subject_type='Contact'
+            $q = $this->em->getPDO()->prepare("SELECT id,status,qualifiers FROM record_relation WHERE tenant_id=? AND subject_type='Contact'
                 AND subject_id=? AND object_type='Account' AND object_id=? AND predicate=? AND deleted=FALSE
                 AND status IN ('confirmed','suggested') ORDER BY id FOR UPDATE");
             $q->execute([$tenant,$contact,$account,'builtin:' . $item['predicate']]);
             $reuse = null; $confirmed = null;
             foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                if ($item['predicate'] === 'part_of') {
+                    $qualifiers = json_decode($row['qualifiers'] ?? '{}',true,32,JSON_THROW_ON_ERROR);
+                    if (!CandidateProjection::equivalent($qualifiers['role'] ?? null,$item['qualifiers']['role'] ?? null)) continue;
+                }
                 if ($row['status'] === 'confirmed') $confirmed ??= $row['id'];
                 $reuse = $row['id'];
             }
