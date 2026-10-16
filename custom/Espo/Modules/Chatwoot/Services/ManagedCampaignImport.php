@@ -74,6 +74,7 @@ class ManagedCampaignImport
             ])->findOne()) throw new Conflict('preparation_already_active');
             $composition = $data['composition'] ?? [];
             if (($composition['mode'] ?? '') !== $this->access->mode($ctx['inbox'])) throw new BadRequest('invalid_mode');
+            ManagedCampaignPayload::pacing($composition, $ctx['inbox']->get('channelType'));
             $media = $data['media'] ?? null;
             if ($media && (($media['bytes'] ?? 0) < 1 || $media['bytes'] > 16777216 ||
                 ($media['key'] ?? '') !== (string) $data['operation_id'] || $composition['mode'] !== 'FreeText')) throw new BadRequest('invalid_media');
@@ -208,7 +209,8 @@ class ManagedCampaignImport
             'excluded' => (int) $campaign->get('managedExcludedCount'), 'error' => $campaign->get('managedError'),
             'composition' => $campaign->get('managedComposition'), 'media' => $campaign->get('managedMedia'),
             'ready_at' => $campaign->get('managedReadyAt'), 'purged' => (bool) $campaign->get('managedPurgedAt'),
-            'created_at' => $campaign->get('createdAt'), 'pacing' => $campaign->get('messageMode') === 'Template' ? [1.5, 1.5] : [20, 45],
+            'created_at' => $campaign->get('createdAt'),
+            'pacing' => ManagedCampaignPayload::pacing(ManagedCampaignPayload::array($campaign->get('managedComposition')), $campaign->get('channelType')),
             'cancellation' => $campaign->get('managedState') === 'Cancelled' ? 'acknowledged' : ($campaign->get('managedCancelRequested') ? 'requested' : null)];
     }
 

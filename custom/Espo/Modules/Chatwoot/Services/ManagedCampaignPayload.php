@@ -8,6 +8,7 @@ use Espo\Core\AclManager;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Utils\Metadata;
+use Espo\Modules\Chatwoot\Tools\WhatsAppChannel;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\TemplateSendPreflight;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateDeadline;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateDefinition;
@@ -56,7 +57,22 @@ class ManagedCampaignPayload
             $templates = array_values(array_filter($templates, fn ($t) => ($t['status'] ?? '') === 'APPROVED' && (new TemplateDefinition())->supported($t)));
         }
         return ['mode' => $mode, 'fields' => $this->variables($ctx), 'templates' => $templates,
-            'inbox' => $ctx['inbox']->get('name'), 'pacing' => $mode === 'Template' ? [1.5, 1.5] : [20, 45], 'media_limit' => 16777216];
+            'inbox' => $ctx['inbox']->get('name'), 'pacing' => self::pacing([], $ctx['inbox']->get('channelType')), 'media_limit' => 16777216];
+    }
+
+    /** Resolve the immutable campaign delay in seconds; older campaigns use channel defaults. */
+    public static function pacing(array $composition, ?string $channelType): array
+    {
+        if (!array_key_exists('pacing_min', $composition) && !array_key_exists('pacing_max', $composition)) {
+            return array_map(fn (int $ms) => $ms / 1000, WhatsAppChannel::sendDelayWindowMs($channelType));
+        }
+        $options = ['options' => ['min_range' => 1, 'max_range' => 3600]];
+        $min = filter_var($composition['pacing_min'] ?? null, FILTER_VALIDATE_INT, $options);
+        $max = filter_var($composition['pacing_max'] ?? null, FILTER_VALIDATE_INT, $options);
+        if (!WhatsAppChannel::isQrcode($channelType) || $min === false || $max === false || $min > $max) {
+            throw new BadRequest('invalid_pacing');
+        }
+        return [$min, $max];
     }
 
     public function validate(array $composition, array $ctx, ?array $media): ?array
@@ -64,6 +80,7 @@ class ManagedCampaignPayload
         $this->assertReadable($composition, $ctx);
         $mode = $this->access->mode($ctx['inbox']);
         if (($composition['mode'] ?? '') !== $mode) throw new BadRequest('invalid_mode');
+        self::pacing($composition, $ctx['inbox']->get('channelType'));
         if ($mode === 'FreeText') {
             if (!is_string($composition['body'] ?? '') || mb_strlen($composition['body'] ?? '') > 10000 ||
                 (!trim($composition['body'] ?? '') && !$media)) throw new BadRequest('invalid_body');

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Espo\Modules\Chatwoot\Services;
 
-use Espo\Modules\Chatwoot\Tools\WhatsAppChannel;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -30,8 +29,9 @@ class CampaignInboxGate
             $stmt->execute([$inbox->getId()]);
             [$now, $next] = $stmt->fetch(\PDO::FETCH_NUM);
             if ((float) $next > (float) $now) return max(1, (int) ceil($next - $now));
-            [$min, $max] = WhatsAppChannel::sendDelayWindowMs($inbox->get('channelType'));
-            $delay = random_int($min, $max) / 1000;
+            $composition = $campaign->get('managedByChatwoot') ? ManagedCampaignPayload::array($campaign->get('managedComposition')) : [];
+            [$min, $max] = ManagedCampaignPayload::pacing($composition, $inbox->get('channelType'));
+            $delay = random_int((int) ($min * 1000), (int) ($max * 1000)) / 1000;
             // Persist before I/O, using DB time; never accumulate missed slots.
             $update = $pdo->prepare('UPDATE chatwoot_inbox SET campaign_next_release_at = UNIX_TIMESTAMP(NOW(6)) + ? WHERE id = ?');
             $update->execute([$delay, $inbox->getId()]);

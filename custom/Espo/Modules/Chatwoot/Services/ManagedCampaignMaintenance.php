@@ -118,7 +118,9 @@ class ManagedCampaignMaintenance
         $this->em->getTransactionManager()->run(function () use ($campaign): void {
             $this->em->getRDBRepository('ChatwootAccount')->where(['id' => $campaign->get('chatwootAccountId')])->forUpdate()->findOne();
             $campaign = $this->imports->lock($campaign->getId());
-            $campaign->set(['managedComposition' => null, 'managedTemplate' => null, 'managedMedia' => null,
+            // Retain only pacing metadata for the historical summary, never message content.
+            $pacing = array_intersect_key(ManagedCampaignPayload::array($campaign->get('managedComposition')), array_flip(['pacing_min', 'pacing_max']));
+            $campaign->set(['managedComposition' => $pacing ? (object) $pacing : null, 'managedTemplate' => null, 'managedMedia' => null,
                 'managedBytes' => 0, 'managedPurgedAt' => date('Y-m-d H:i:s')]);
             $this->imports->save($campaign);
         });
