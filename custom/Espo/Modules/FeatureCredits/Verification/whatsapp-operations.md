@@ -37,7 +37,7 @@ The documented supplier contract is one GET to `/api/contacts/check-exists` with
 Only a successful HTTP response with a boolean `numberExists` completes. `chatId`,
 `pn`, names and other supplier fields are discarded. Discovery and lookup share the
 same at-most-30-second timeout budget; discovery cannot extend the dispatch lease.
-the original operation deadline is five minutes. A claimed dispatch is never resent.
+The original operation deadline is five minutes. A claimed dispatch is never resent.
 
 ## Activation smoke test (deployment gate)
 
@@ -61,6 +61,21 @@ fixture tests. Do not globally enable until an operator has recorded:
 After these pass, enable globally. Existing credit permissions, Contact/phone/source
 access and sufficient funds remain mandatory for every tenant. Twilio activation and
 Brazil-only eligibility remain independent.
+
+### Recorded pool validation — 2026-10-16
+
+- Operator approved existing active sessions as a shared pool; 14 names configured in
+  `ai-monostax-app`. Each dispatch rechecks their live status.
+- WAHA 2026.9.2 / GOWS: live adapter returned `registered` for an owned working-session
+  number, `not_registered` for an unassigned NANP test number, and no result for a pool
+  containing no working member. No messages were sent or contacts changed.
+- A reserved fictional-number fixture unexpectedly returned registered; the negative
+  smoke fixture therefore uses an unassigned area code, not an assumed-free real number.
+- 102 unit tests / 437 assertions; 36 database tests / 686 assertions across MySQL and
+  PostgreSQL, including two-credit positive/negative settlement, zero-charge failures,
+  replay/reuse, release of holds, concurrent admission and both-check credit ordering.
+- Pool tests cover approved/working-only selection, failed discovery, original deadline,
+  invalid pool configuration and one lookup without failover. Browser behavior is unchanged.
 
 ## API and confirmation contract
 
