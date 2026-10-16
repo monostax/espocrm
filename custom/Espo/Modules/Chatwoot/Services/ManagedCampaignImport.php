@@ -8,6 +8,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Util;
 use Espo\ORM\Entity;
@@ -83,15 +84,16 @@ class ManagedCampaignImport
                 'managedRequestKey' => $key, 'managedFingerprint' => $data['fingerprint'], 'managedOperationId' => $data['operation_id'],
                 'managedPlatformId' => $ctx['platform']->getId(), 'managedUserId' => $ctx['user']->getId(), 'managedActorId' => $data['actor_id'],
                 'chatwootAccountId' => $account->getId(), 'chatwootInboxId' => $ctx['inbox']->getId(),
-                'tenantId' => $account->get('tenantId'), 'createdById' => $ctx['user']->getId(),
-                'assignedUserId' => $ctx['user']->getId(), 'teamsIds' => $account->get('teamsIds') ?? [],
+                'tenantId' => $account->get('tenantId'), 'teamsIds' => $account->getLinkMultipleIdList('teams'),
                 'channelType' => $ctx['inbox']->get('channelType'), 'messageMode' => $composition['mode'],
                 'managedState' => 'Importing', 'managedExpectedCount' => $data['expected_count'],
                 'managedSelectionDigest' => $data['selection_digest'], 'managedComposition' => (object) $composition,
                 'managedMedia' => $media ? (object) $media : null, 'managedBytes' => 0,
                 'managedDigest' => $data['fingerprint'], 'managedProgressAt' => date('Y-m-d H:i:s'),
                 'continuousEnrollment' => false, 'createOpportunity' => false,
-            ], self::OPTIONS);
+            ], self::OPTIONS + [SaveOption::CREATED_BY_ID => $ctx['user']->getId()]);
+            // Fail inside the transaction rather than leave an inaccessible preparation holding the account slot.
+            $this->access->campaign($campaign);
             $this->reserve($campaign, strlen(json_encode($composition)) + (int) ($media['bytes'] ?? 0));
             return $campaign;
         });

@@ -31,9 +31,11 @@ class ManagedWhatsAppCampaign
                 $e instanceof BadRequest => 400, $e instanceof Forbidden => 403,
                 $e instanceof NotFound => 404, $e instanceof Conflict => 409, default => 503,
             };
+            $code = $e instanceof Conflict && in_array($e->getMessage(), ['preparation_already_active', 'request_conflict'], true)
+                ? $e->getMessage() : 'campaign_request_failed';
             $response->setStatus($status);
-            $this->log->warning('Managed campaign request failed.', ['stage' => 'bridge', 'status' => $status]);
-            return (object) ['error' => 'campaign_request_failed'];
+            $this->log->warning('Managed campaign request failed.', ['stage' => 'bridge', 'status' => $status, 'code' => $code]);
+            return (object) ['error' => $code];
         }
     }
 }
