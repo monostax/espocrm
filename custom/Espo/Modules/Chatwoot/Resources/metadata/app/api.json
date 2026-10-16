@@ -1,8 +1,8 @@
 {
     "controllerMiddlewareClassNameListMap": {
-        "Opportunity": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup"],
-        "ChatwootConversation": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup"],
-        "Contact": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup"],
-        "Account": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup"]
+        "Opportunity": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup", "Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityAccountFavicon"],
+        "ChatwootConversation": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup", "Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityAccountFavicon"],
+        "Contact": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup", "Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityAccountFavicon"],
+        "Account": ["Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityFollowup", "Espo\\Modules\\Chatwoot\\Classes\\Api\\OpportunityAccountFavicon"]
     }
 }
