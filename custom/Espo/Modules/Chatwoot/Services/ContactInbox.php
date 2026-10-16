@@ -235,6 +235,10 @@ class ContactInbox
             if (!$def) continue;
             $fields[$name] = array_intersect_key($def, array_flip(['type', 'options', 'required', 'readOnly', 'maxLength']));
             if (!$this->acl->checkField(static::ENTITY_TYPE, $name, 'edit')) $fields[$name]['readOnly'] = true;
+            if (static::ENTITY_TYPE === 'Contact' && $name === 'dateOfBirth' &&
+                !$this->acl->checkField('Contact', 'dataNascimento', 'edit')) {
+                $fields[$name]['readOnly'] = true;
+            }
         }
         return (object) [static::ENTITY_TYPE => ['fields' => $fields, 'canCreate' => $this->acl->checkScope(static::ENTITY_TYPE, 'create')]];
     }
@@ -272,6 +276,14 @@ class ContactInbox
         $data = $request->getParsedBody();
         // The inbox edits a record inside its current workspace, never moves it.
         if (array_diff(array_keys((array) $data), static::EDIT_FIELDS)) throw new BadRequest('Unsupported inbox fields.');
+        if (static::ENTITY_TYPE === 'Contact' && property_exists($data, 'dateOfBirth')) {
+            if (!$this->acl->checkField('Contact', 'dateOfBirth', 'edit') ||
+                !$this->acl->checkField('Contact', 'dataNascimento', 'edit')) {
+                throw new Forbidden('Contact date of birth edit access required.');
+            }
+            // The editor falls back to the legacy field; explicit null must clear it too.
+            $data->dataNascimento = $data->dateOfBirth;
+        }
         if (!empty($data->accountId)) {
             $account = $this->em->getEntityById('Account', $data->accountId);
             if (!$account || $account->get('tenantId') !== $record->get('tenantId') || !$this->acl->checkEntityRead($account)) throw new Forbidden();
