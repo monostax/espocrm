@@ -62,6 +62,56 @@ class ChatwootApiClient
         }
     }
 
+    /**
+     * Avatar-only write using the protected managed binding, never a personal user token.
+     * @param array<string, string> $binding
+     * @param array{bytes: string, mime: string, name: string}|null $avatar
+     */
+    public function syncMachineIdentityAvatar(
+        string $url,
+        string $token,
+        int $accountId,
+        string $machineIdentityId,
+        array $binding,
+        ?array $avatar
+    ): void {
+        $url = rtrim($url, '/') . "/platform/api/v1/accounts/{$accountId}/machine_identities/" .
+            rawurlencode($machineIdentityId) . '/avatar';
+        $headers = ['api_access_token: ' . $token, 'Accept: application/json'];
+        if ($avatar === null) {
+            $headers[] = 'Content-Type: application/json';
+            $body = json_encode($binding, JSON_THROW_ON_ERROR);
+        } else {
+            $body = $binding + ['avatar' => new \CURLStringFile($avatar['bytes'], basename($avatar['name']), $avatar['mime'])];
+        }
+
+        $ch = curl_init($url);
+        if ($ch === false) {
+            throw new Error('Could not initialize managed avatar request.');
+        }
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            // Never forward the platform credential to a redirected host.
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_CUSTOMREQUEST => $avatar === null ? 'DELETE' : 'PUT',
+            CURLOPT_CONNECTTIMEOUT => $this->config->get('chatwootApiConnectTimeout', self::CONNECT_TIMEOUT),
+            CURLOPT_TIMEOUT => $this->config->get('chatwootApiTimeout', self::DEFAULT_TIMEOUT),
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS | CURLPROTO_HTTP,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_POSTFIELDS => $body,
+        ]);
+        try {
+            $result = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            if ($result === false || $code !== 204) {
+                throw new Error('Managed avatar synchronization failed: HTTP ' . $code);
+            }
+        } finally {
+            curl_close($ch);
+        }
+    }
+
     public function identityOwnership(string $url, string $token, int $accountId, int $conversationId, ?array $report = null): array
     {
         $url = rtrim($url, '/') . "/api/v1/accounts/{$accountId}/conversations/{$conversationId}/identity_ownership";
