@@ -77,7 +77,7 @@ final class WhatsAppVerificationUnitTest extends TestCase
 
     public function testExplicitActivationIndependentOfPhoneAllowlistAndStablePolicy(): void
     {
-        $names = ['VERIFICATION_WHATSAPP_ENABLED', 'VERIFICATION_WHATSAPP_SESSION', 'WAHA_PLATFORM_BACKEND_URL', 'WAHA_PLATFORM_API_KEY', 'VERIFICATION_KILL_SWITCH'];
+        $names = ['VERIFICATION_WHATSAPP_ENABLED', 'VERIFICATION_WHATSAPP_SESSION', 'VERIFICATION_WHATSAPP_SESSIONS', 'WAHA_PLATFORM_BACKEND_URL', 'WAHA_PLATFORM_API_KEY', 'VERIFICATION_KILL_SWITCH'];
         $saved = array_combine($names, array_map(getenv(...), $names));
         try {
             foreach ($names as $name) putenv($name);
@@ -97,11 +97,88 @@ final class WhatsAppVerificationUnitTest extends TestCase
                 self::assertFalse($gate->inspect($tenant)['available']);
             }
             self::assertSame($policy, $gate->policyVersion(Kind::WHATSAPP));
+            putenv('VERIFICATION_WHATSAPP_SESSION');
+            putenv('VERIFICATION_WHATSAPP_SESSIONS=["shared-a","shared-b","shared-a"]');
+            self::assertSame(['shared-a', 'shared-b'], (new WahaCredentials())->get()['sessions']);
+            self::assertTrue($gate->inspect('other', Kind::WHATSAPP)['available']);
+            self::assertSame($policy, $gate->policyVersion(Kind::WHATSAPP));
+            // Invalid explicit pool never silently falls back to the single session.
+            putenv('VERIFICATION_WHATSAPP_SESSION=verification');
+            foreach (['[]', '{}', 'null', '"shared-a"', '["shared-a",123]', '["bad/name"]', 'not-json'] as $invalid) {
+                putenv('VERIFICATION_WHATSAPP_SESSIONS=' . $invalid);
+                self::assertSame('provider_unavailable', $gate->inspect('tenant', Kind::WHATSAPP)['reason']);
+            }
+            putenv('VERIFICATION_WHATSAPP_SESSIONS=["shared-a"]');
             putenv('VERIFICATION_KILL_SWITCH=true');
             self::assertFalse($gate->inspect('tenant', Kind::WHATSAPP)['available']);
         } finally {
             foreach ($saved as $name => $value) putenv($value === false ? $name : $name . '=' . $value);
         }
+    }
+
+    public function testPoolSelectsOnlyApprovedWorkingSessionsAndNeverRetriesFailedLookup(): void
+    {
+        $connection = ['url' => 'http://waha.internal:3000', 'apiKey' => 'test-key',
+            'sessions' => ['working-a', 'working-b', 'failed', 'stopped']];
+        $credentials = $this->createStub(WahaCredentials::class);
+        $credentials->method('enabled')->willReturn(true);
+        $credentials->method('get')->willReturn($connection);
+        $transport = $this->createMock(WahaTransport::class);
+        $transport->expects(self::once())->method('sessions')->with($connection, 5000)->willReturn(new Response(200, [
+            ['name' => 'unapproved', 'status' => 'WORKING'],
+            ['name' => 'failed', 'status' => 'FAILED'],
+            ['name' => 'stopped', 'status' => 'STOPPED'],
+            ['name' => 'working-a', 'status' => 'WORKING'],
+            ['name' => 'working-b', 'status' => 'WORKING'],
+        ]));
+        $transport->expects(self::once())->method('send')->willReturnCallback(
+            static function (array $selected, string $phone, int $timeout): Response {
+                self::assertContains($selected['session'], ['working-a', 'working-b']);
+                self::assertArrayNotHasKey('sessions', $selected);
+                self::assertSame('14155552671', $phone);
+                self::assertGreaterThan(0, $timeout);
+                self::assertLessThan(30000, $timeout);
+                return new Response(500, null);
+            }
+        );
+        self::assertNull((new WahaLookup($credentials, $transport))->verify('+14155552671')->outcome);
+    }
+
+    public static function unavailablePools(): iterable
+    {
+        yield [200, []];
+        yield [200, [['name' => 'approved', 'status' => 'FAILED'], ['name' => 'other', 'status' => 'WORKING']]];
+        yield [200, ['error' => 'malformed']];
+        yield [200, [null, 'invalid', ['name' => 1, 'status' => 'WORKING']]];
+        yield [200, null];
+        yield [503, [['name' => 'approved', 'status' => 'WORKING']]];
+        yield [0, null];
+    }
+
+    #[DataProvider('unavailablePools')]
+    public function testUnavailablePoolNeverLooksUpPhone(int $status, ?array $data): void
+    {
+        $credentials = $this->createStub(WahaCredentials::class);
+        $credentials->method('enabled')->willReturn(true);
+        $credentials->method('get')->willReturn(['url' => 'http://waha.internal:3000', 'apiKey' => 'test-key', 'sessions' => ['approved']]);
+        $transport = $this->createMock(WahaTransport::class);
+        $transport->expects(self::once())->method('sessions')->willReturn(new Response($status, $data));
+        $transport->expects(self::never())->method('send');
+        self::assertNull((new WahaLookup($credentials, $transport))->verify('+14155552671')->outcome);
+    }
+
+    public function testDiscoveryCannotExtendTheDispatchDeadline(): void
+    {
+        $credentials = $this->createStub(WahaCredentials::class);
+        $credentials->method('enabled')->willReturn(true);
+        $credentials->method('get')->willReturn(['url' => 'http://waha.internal:3000', 'apiKey' => 'test-key', 'sessions' => ['approved']]);
+        $transport = $this->createMock(WahaTransport::class);
+        $transport->expects(self::once())->method('sessions')->with(self::anything(), 1)->willReturnCallback(static function (): Response {
+            usleep(2000);
+            return new Response(200, [['name' => 'approved', 'status' => 'WORKING']]);
+        });
+        $transport->expects(self::never())->method('send');
+        self::assertNull((new WahaLookup($credentials, $transport))->verify('+14155552671', 1)->outcome);
     }
 
     public function testRegistrationIdentityDoesNotDependOnNamesOrDob(): void

@@ -15,17 +15,28 @@ both processes through the shared CRM deployment template:
 | --- | --- | --- |
 | `crmVerificationWhatsAppEnabled` | `VERIFICATION_WHATSAPP_ENABLED` | `false` |
 | `crmVerificationWhatsAppSession` | `VERIFICATION_WHATSAPP_SESSION` | empty |
+| `crmVerificationWhatsAppSessions` | `VERIFICATION_WHATSAPP_SESSIONS` | empty; otherwise JSON array of approved session names |
 
-The session must be a dedicated, operator-managed session for this CRM installation
-and shared database. There is no customer pairing, tenant allowlist, automatic
-session start, health-probe loop, alternate-number probing or failover. Missing
-configuration disables admission. An unavailable configured session fails normally
-at zero charge. Disabling does not invalidate retained evidence.
+The operator can configure a shared pool of existing sessions for this CRM installation
+and shared database. A nonempty pool setting takes precedence over the legacy single
+session. Invalid/empty explicit JSON pools fail closed. New sessions require an explicit
+pool update; customer input cannot choose or add sessions. Shared sessions also carry
+their inbox traffic and share its connection/rate limits.
+
+After the durable dispatch claim and outside database locks, pool mode performs one
+GET to `/api/sessions?all=true` (at most five seconds), intersects the approved names
+with exact `WORKING` statuses, deduplicates and randomly selects one member. No eligible
+member or failed discovery produces a zero-charge failure. Context/admission checks
+configuration only, so a runtime pool outage can still be discovered after reservation.
+There is no customer pairing, tenant allowlist, automatic session start, health-probe
+loop, alternate-number probing or retry/failover after lookup. Missing configuration
+disables admission. Disabling does not invalidate retained evidence.
 
 The documented supplier contract is one GET to `/api/contacts/check-exists` with
 `phone` (international digits, no `+`) and `session`, authenticated with `X-Api-Key`.
 Only a successful HTTP response with a boolean `numberExists` completes. `chatId`,
-`pn`, names and other supplier fields are discarded. Timeout is at most 30 seconds;
+`pn`, names and other supplier fields are discarded. Discovery and lookup share the
+same at-most-30-second timeout budget; discovery cannot extend the dispatch lease.
 the original operation deadline is five minutes. A claimed dispatch is never resent.
 
 ## Activation smoke test (deployment gate)
@@ -33,10 +44,11 @@ the original operation deadline is five minutes. A claimed dispatch is never res
 The deployed WAHA version and session identity have **not** been validated by local
 fixture tests. Do not globally enable until an operator has recorded:
 
-1. Deployed version/engine and dedicated session identity, with working connectivity.
+1. Deployed version/engine and approved session pool (or single session), with working connectivity.
 2. Controlled lookup of a known registered and known unregistered number using that
-   exact session/API version: boolean true/false, no message or identity mutation.
-3. Disconnected-session, malformed-response and timeout behavior classified as errors.
+   exact pool/API version: boolean true/false, no message or identity mutation.
+3. Empty working pool, disconnected-session, malformed-response and timeout behavior
+   classified as errors; no lookup retry or automatic session restart.
 4. In an isolated deployment using the same version/configuration, save authorized
    test Contacts and confirm each check through the product API/UI. Each definitive
    result settles exactly `2.0000`; failures settle `0.0000` and release reservations.

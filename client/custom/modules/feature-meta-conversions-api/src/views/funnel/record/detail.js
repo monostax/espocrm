@@ -6,9 +6,9 @@
  * active MetaCapiDataset configured. Reads the server-provided
  * `metaCapiActive` AppParam (see Classes/AppParams/MetaCapiActive.php).
  *
- * Admin users always see the fields so they can bootstrap the first
- * dataset; tenants who have not (yet) configured CAPI don't see the
- * toggles at all and aren't confused by dead configuration.
+ * Instance admins and tenant admins always see the fields so they can
+ * bootstrap the first dataset. Team-scoped Funnel and MetaCapiDataset
+ * ACL still controls which records they can manage.
  */
 define(
     "feature-meta-conversions-api:views/funnel/record/detail",
@@ -19,8 +19,9 @@ define(
                 Dep.prototype.setup.call(this);
 
                 var active = !!this.getHelper().getAppParam("metaCapiActive");
+                var isTenantAdmin = !!this.getHelper().getAppParam("isTenantAdmin");
 
-                if (active) {
+                if (active || isTenantAdmin) {
                     return;
                 }
 

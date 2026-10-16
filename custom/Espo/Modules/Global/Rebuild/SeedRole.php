@@ -476,6 +476,13 @@ class SeedRole implements RebuildAction
                     'stream' => 'team',
                 ],
                 'Calendar' => true,
+                'Account' => [
+                    'create' => 'yes',
+                    'read' => 'team',
+                    'edit' => 'team',
+                    'delete' => 'team',
+                    'stream' => 'team',
+                ],
                 'Contact' => [
                     'create' => 'yes',
                     'read' => 'team',
