@@ -18,6 +18,7 @@ final class CustomerProjection
     public static function context(array $data): array
     {
         $email = ($data['verificationKind'] ?? Kind::PHONE) === Kind::EMAIL;
+        $identity = ($data['verificationKind'] ?? Kind::PHONE) === Kind::PHONE;
         $rows = [];
         foreach ($data['rows'] ?? [] as $key => $row) {
             $projected = self::only($row, [
@@ -46,14 +47,14 @@ final class CustomerProjection
         }
 
         return [
-            ...($email ? ['verificationKind' => Kind::EMAIL] : []),
+            ...(!$identity ? ['verificationKind' => $data['verificationKind']] : []),
             'tenantId' => $data['tenantId'],
             'contactId' => $data['contactId'],
             'observedAt' => $data['observedAt'],
             'priceCredits' => $data['priceCredits'],
             'available' => $data['available'],
             'reason' => $data['reason'],
-            'contact' => $email ? (object) [] : self::only($data['contact'] ?? [], [
+            'contact' => !$identity ? (object) [] : self::only($data['contact'] ?? [], [
                 'nameReady',
                 'hasDateOfBirth',
                 'dateOfBirth',
@@ -65,6 +66,9 @@ final class CustomerProjection
 
     public static function evidence(array $result): array
     {
+        if (($result['verificationKind'] ?? Kind::PHONE) === Kind::WHATSAPP) {
+            return self::only($result, ['operationId', 'usageId', 'outcome', 'completedAt', 'freshUntil', 'fresh', 'stale', 'settledCredits']);
+        }
         if (($result['verificationKind'] ?? Kind::PHONE) === Kind::EMAIL) {
             return [
                 ...self::only($result, ['operationId', 'usageId', 'outcome', 'completedAt', 'freshUntil', 'fresh', 'stale', 'settledCredits']),
@@ -90,6 +94,11 @@ final class CustomerProjection
 
     public static function operation(array $operation): array
     {
+        if (($operation['verificationKind'] ?? Kind::PHONE) === Kind::WHATSAPP) {
+            return self::only($operation, ['verificationKind', 'id', 'usageId', 'reservationId', 'canonicalPhone',
+                'state', 'outcome', 'priceCredits', 'reservedCredits', 'settledCredits', 'admittedAt', 'completedAt',
+                'freshUntil', 'fresh', 'stale', 'erased', 'expired', 'identityChanged']);
+        }
         if (($operation['verificationKind'] ?? Kind::PHONE) === Kind::EMAIL) {
             return [
                 ...self::only($operation, ['verificationKind', 'id', 'usageId', 'reservationId', 'canonicalEmail',

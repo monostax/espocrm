@@ -74,8 +74,8 @@ class Access
      */
     public function contactIdentity(Entity $contact, string $nowUtc, string $kind = Kind::PHONE): array
     {
-        if ($kind === Kind::EMAIL) {
-            // Email admission never reads name/DOB or requires edit access.
+        if ($kind !== Kind::PHONE) {
+            // Registration/deliverability never reads name/DOB or requires edit access.
             return ['name' => ['firstName' => '', 'lastName' => ''], 'nameReady' => true,
                 'dateOfBirth' => null, 'hasDateOfBirth' => false, 'dateOfBirthValid' => true,
                 'dateOfBirthReadable' => false, 'dateOfBirthEditable' => false];
@@ -150,12 +150,12 @@ class Access
         $contactId = $contact->getId();
         $resolved = match ($kind) {
             'contact_phone' => $this->resolveContactPhone($contact, $source),
-            'channel' => $this->resolveChannelPhone($pdo, $tenantId, $contactId, $source),
-            'purchased' => $this->resolvePurchasedPhone($pdo, $tenantId, $contactId, $source),
+            'channel' => $this->resolveChannelPhone($pdo, $tenantId, $contactId, $source, $verificationKind),
+            'purchased' => $this->resolvePurchasedPhone($pdo, $tenantId, $contactId, $source, $verificationKind),
         };
-        $norm = BrazilianPhone::normalize($resolved['rawPhone']);
+        $norm = $verificationKind === Kind::WHATSAPP ? WhatsAppPhone::normalize($resolved['rawPhone']) : BrazilianPhone::normalize($resolved['rawPhone']);
         $rejected = $resolved['channelRejected'] ||
-            $this->isPhoneOwnershipRejected($pdo, $tenantId, $contactId, $resolved['rawPhone'], $norm['e164']);
+            $this->isPhoneOwnershipRejected($pdo, $tenantId, $contactId, $resolved['rawPhone'], $norm['e164'], $verificationKind);
 
         return [
             'value' => $norm['e164'],
@@ -207,6 +207,13 @@ class Access
         $this->resolveSource($pdo, $tenantId, $contact, $source, Kind::EMAIL);
     }
 
+    public function authorizeWhatsAppSource(PDO $pdo, string $tenantId, Entity $contact, array $source): void
+    {
+        if (($source['kind'] ?? null) === 'contact_phone') return;
+        if (isset($source['index'])) unset($source['value']);
+        $this->resolveSource($pdo, $tenantId, $contact, $source, Kind::WHATSAPP);
+    }
+
     /** @return array{rawPhone: string, channelRejected: bool} */
     private function resolveContactPhone(Entity $contact, array $source): array
     {
@@ -227,7 +234,11 @@ class Access
     private function resolveChannelPhone(PDO $pdo, string $tenantId, string $contactId, array $source, string $kind = Kind::PHONE): array
     {
         $channels = $kind === Kind::EMAIL ? ['email'] : ['whatsapp', 'sms'];
-        $normalize = $kind === Kind::EMAIL ? Kind::email(...) : BrazilianPhone::e164(...);
+        $normalize = match ($kind) {
+            Kind::EMAIL => Kind::email(...),
+            Kind::WHATSAPP => WhatsAppPhone::e164(...),
+            default => BrazilianPhone::e164(...),
+        };
         if (array_diff(array_keys($source), ['key', 'kind', 'id', 'channelType', 'sourceId'])) {
             throw new InvalidArgumentException('Invalid channel source descriptor.');
         }
@@ -354,7 +365,7 @@ class Access
         return ['rawPhone' => trim($selected), 'channelRejected' => false];
     }
 
-    public function isPhoneOwnershipRejected(PDO $pdo, string $tenantId, string $contactId, string $rawPhone, ?string $e164): bool
+    public function isPhoneOwnershipRejected(PDO $pdo, string $tenantId, string $contactId, string $rawPhone, ?string $e164, string $kind = Kind::PHONE): bool
     {
         $q = $pdo->prepare("SELECT source_id FROM contact_channel_identity
             WHERE tenant_id = ? AND contact_id = ? AND deleted = FALSE AND ownership_status = 'rejected'
@@ -367,7 +378,8 @@ class Access
             if (trim($rejectedSource) === trim($rawPhone)) {
                 return true;
             }
-            if ($e164 !== null && BrazilianPhone::e164($rejectedSource) === $e164) {
+            $canonical = $kind === Kind::WHATSAPP ? WhatsAppPhone::e164($rejectedSource) : BrazilianPhone::e164($rejectedSource);
+            if ($e164 !== null && $canonical === $e164) {
                 return true;
             }
         }

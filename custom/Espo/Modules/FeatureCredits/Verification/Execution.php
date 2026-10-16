@@ -37,6 +37,7 @@ class Execution
         private Clock $clock,
         private ?Log $log = null,
         private ?BounceBanLookup $emailProvider = null,
+        private ?WahaLookup $whatsAppProvider = null,
     ) {}
 
     /**
@@ -53,10 +54,13 @@ class Execution
             return;
         }
         try {
-            $result = $claim['kind'] === Kind::EMAIL
-                ? ($this->emailProvider ?? new BounceBanLookup(new BounceBanCredentials(), new BounceBanTransport()))
-                    ->verify($claim['identity']['email'], $claim['taskId'], $timeoutMs)
-                : $this->provider->verify($claim['identity'], $timeoutMs);
+            $result = match ($claim['kind']) {
+                Kind::EMAIL => ($this->emailProvider ?? new BounceBanLookup(new BounceBanCredentials(), new BounceBanTransport()))
+                    ->verify($claim['identity']['email'], $claim['taskId'], $timeoutMs),
+                Kind::WHATSAPP => ($this->whatsAppProvider ?? new WahaLookup(new WahaCredentials(), new WahaTransport()))
+                    ->verify($claim['identity']['phone'], $timeoutMs),
+                default => $this->provider->verify($claim['identity'], $timeoutMs),
+            };
         } catch (\Throwable) {
             $result = VerificationResult::failed('provider_exception');
         }
@@ -182,6 +186,11 @@ class Execution
                 }
                 $snapshotIdentity = $this->decryptSnapshot($op);
                 $hasTask = ($op['verification_kind'] ?? Kind::PHONE) === Kind::EMAIL && $op['supplier_task_ciphertext'] !== null;
+                if (($op['verification_kind'] ?? Kind::PHONE) === Kind::WHATSAPP &&
+                    !$this->capability->inspect($tenantId, Kind::WHATSAPP)['available']) {
+                    $this->waiveLocked($pdo, $wallet, $now, $op, $usage, $hold, 'unavailable', 'capability_changed');
+                    return null;
+                }
                 $precheck = $hasTask ? $this->deliveryAuthorizationCheck($pdo, $tenantId, $op, $snapshotIdentity)
                     : $this->preDispatchCheck($pdo, $tenantId, $op, $snapshotIdentity, $now);
                 if ($precheck !== 'ok') {
@@ -200,7 +209,7 @@ class Execution
      * Publish the result and atomically settle the kind-specific price; failed/waived checks cost zero.
      * Late results after closure are ignored and never reopen an operation (D11–D12, D19, D24).
      */
-    public function record(string $tenantId, string $operationId, string $token, VerificationResult | EmailResult $result): void
+    public function record(string $tenantId, string $operationId, string $token, VerificationResult | EmailResult | WhatsAppResult $result): void
     {
         GrantInput::identity($tenantId);
         GrantInput::identity($operationId);
@@ -233,6 +242,7 @@ class Execution
 
                 $kind = $op['verification_kind'] ?? Kind::PHONE;
                 $emailResult = $result instanceof EmailResult;
+                $whatsAppResult = $result instanceof WhatsAppResult;
                 if ($emailResult && $kind === Kind::EMAIL && $result->status === 'pending') {
                     if ($op['supplier_task_ciphertext'] !== null &&
                         !hash_equals($this->crypt->decrypt($op['supplier_task_ciphertext']), $result->taskId ?? '')) {
@@ -248,9 +258,9 @@ class Execution
                         ->execute([$this->crypt->encrypt($result->taskId), min($next, $op['deadline_at']), $operationId, $tenantId]);
                     return;
                 }
-                $valid = $emailResult
+                $valid = $whatsAppResult ? $kind === Kind::WHATSAPP && $result->registered !== null : ($emailResult
                     ? $kind === Kind::EMAIL && $result->status === 'completed' && $result->evidence !== null
-                    : $kind === Kind::PHONE && $result->billable && $result->fieldOutcomes !== null;
+                    : $kind === Kind::PHONE && $result->billable && $result->fieldOutcomes !== null);
                 if (!$valid) {
                     $this->waiveLocked(
                         $pdo,
@@ -260,16 +270,16 @@ class Execution
                         $usage,
                         $hold,
                         'failed',
-                        $emailResult ? 'provider_failed' : ($result->failureReason ?? 'provider_failed'),
+                        ($emailResult || $whatsAppResult) ? 'provider_failed' : ($result->failureReason ?? 'provider_failed'),
                     );
                     return;
                 }
 
                 // D19: Identity inputs were frozen at dispatch; later edits do not cancel a completed check.
-                $evidencePayload = $emailResult ? $result->evidence : [
+                $evidencePayload = $whatsAppResult ? ['registered' => $result->registered] : ($emailResult ? $result->evidence : [
                     'matchedFields' => array_values($result->matchedFields),
                     'fieldOutcomes' => $result->fieldOutcomes,
-                ];
+                ]);
                 $evidenceCiphertext = $this->crypt->encrypt(json_encode($evidencePayload, JSON_THROW_ON_ERROR));
                 $evidenceHash = Operations::evidenceHash($tenantId, $operationId, $result->outcome, $evidencePayload);
                 $freshUntil = Operations::after($now, CapabilityGate::FRESH_REUSE_SECONDS);
@@ -463,6 +473,11 @@ class Execution
         }
         try {
             $access = $this->actors->forActor($op['actor_id']);
+            if (($op['verification_kind'] ?? Kind::PHONE) === Kind::WHATSAPP) {
+                $contact = $access->contact($tenantId, $op['contact_id'], Kind::WHATSAPP);
+                $resolved = $access->resolveSource($pdo, $tenantId, $contact, $snapshot['source'], Kind::WHATSAPP);
+                return $resolved['value'] === $snapshot['phone'] ? 'ok' : 'identity_changed';
+            }
             if (($op['verification_kind'] ?? Kind::PHONE) === Kind::EMAIL) {
                 $contact = $access->contact($tenantId, $op['contact_id'], Kind::EMAIL);
                 $resolved = $access->resolveSource($pdo, $tenantId, $contact, $snapshot['source'], Kind::EMAIL);
@@ -505,6 +520,11 @@ class Execution
     {
         try {
             $access = $this->actors->forActor($op['actor_id']);
+            if (($op['verification_kind'] ?? Kind::PHONE) === Kind::WHATSAPP) {
+                $contact = $access->contact($tenantId, $op['contact_id'], Kind::WHATSAPP);
+                $access->authorizeWhatsAppSource($pdo, $tenantId, $contact, $snapshot['source']);
+                return 'ok';
+            }
             if (($op['verification_kind'] ?? Kind::PHONE) === Kind::EMAIL) {
                 $contact = $access->contact($tenantId, $op['contact_id'], Kind::EMAIL);
                 $access->authorizeEmailSource($pdo, $tenantId, $contact, $snapshot['source']);

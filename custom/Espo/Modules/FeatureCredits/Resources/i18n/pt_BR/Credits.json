@@ -1,6 +1,7 @@
 {
     "labels": {
         "email_deliverability": "Verificação de e-mail",
+        "whatsapp_registration": "Registro no WhatsApp",
         "title": "Créditos e uso",
         "description": "Créditos pré-pagos compartilhados do ambiente. Estes saldos são separados da cobrança legada por engajamento e não autorizam a execução de IA.",
         "tenant": "Ambiente", "selectTenant": "Selecione um ambiente", "refresh": "Atualizar / tentar novamente", "legacyUsage": "Uso legado de IA",

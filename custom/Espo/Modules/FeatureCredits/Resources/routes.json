@@ -1,4 +1,8 @@
 [
+    {"route": "/CreditWhatsAppVerification/context", "method": "post", "params": {"controller": "CreditWhatsAppVerification", "action": "context"}},
+    {"route": "/CreditWhatsAppVerification", "method": "post", "params": {"controller": "CreditWhatsAppVerification", "action": "start"}},
+    {"route": "/CreditWhatsAppVerification/status", "method": "get", "params": {"controller": "CreditWhatsAppVerification", "action": "status"}},
+    {"route": "/CreditWhatsAppVerification/history", "method": "get", "params": {"controller": "CreditWhatsAppVerification", "action": "history"}},
     {"route": "/CreditEmailVerification/context", "method": "post", "params": {"controller": "CreditEmailVerification", "action": "context"}},
     {"route": "/CreditEmailVerification", "method": "post", "params": {"controller": "CreditEmailVerification", "action": "start"}},
     {"route": "/CreditEmailVerification/status", "method": "get", "params": {"controller": "CreditEmailVerification", "action": "status"}},

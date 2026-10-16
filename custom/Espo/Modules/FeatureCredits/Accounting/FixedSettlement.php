@@ -45,7 +45,7 @@ final class FixedSettlement
             $op['operation_key'] !== 'verification:' . $op['id'] ||
             $op['execution_id'] !== 'verification:' . $op['id'] ||
             $op['source_type'] !== 'Contact' || $op['source_id'] !== $op['contact_id'] ||
-            !in_array($kind, [Kind::PHONE, Kind::EMAIL], true) ||
+            !in_array($kind, [Kind::PHONE, Kind::EMAIL, Kind::WHATSAPP], true) ||
             (string) Amount::fromString($op['price_credits']) !== Kind::price($kind) ||
             $op['completed_at'] === null || $op['admitted_at'] > $op['completed_at']) {
             throw new \LogicException('Invalid phone verification operation binding.');
@@ -79,7 +79,7 @@ final class FixedSettlement
         $q = $pdo->prepare('SELECT verification_kind FROM phone_verification_operation WHERE tenant_id = ? AND usage_id = ?');
         $q->execute([$tenant, $usage]);
         $kind = $q->fetchColumn();
-        if (!in_array($kind, [Kind::PHONE, Kind::EMAIL], true)) throw new \LogicException('Invalid verification kind.');
+        if (!in_array($kind, [Kind::PHONE, Kind::EMAIL, Kind::WHATSAPP], true)) throw new \LogicException('Invalid verification kind.');
         return $kind;
     }
 
@@ -97,7 +97,7 @@ final class FixedSettlement
             $op['operation_key'] === 'verification:' . $op['id'] &&
             $op['execution_id'] === 'verification:' . $op['id'] &&
             $op['source_type'] === 'Contact' && $op['source_id'] === $op['contact_id'] &&
-            in_array($kind, [Kind::PHONE, Kind::EMAIL], true) &&
+            in_array($kind, [Kind::PHONE, Kind::EMAIL, Kind::WHATSAPP], true) &&
             (string) Amount::fromString($op['price_credits']) === Kind::price($kind) &&
             ($reserved === null || $reserved === Kind::price($kind)) &&
             in_array($op['state'], $kind === Kind::EMAIL ? ['admitted', 'claimed', 'awaiting'] : ['admitted', 'claimed'], true) &&

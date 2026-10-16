@@ -196,14 +196,14 @@ final class ConsistencyAudit
                 (SELECT 1 FROM phone_verification_operation o WHERE o.usage_id = r.id AND o.tenant_id = r.tenant_id
                  AND o.deleted = FALSE AND o.contact_id = r.source_id
                  AND ((o.verification_kind = 'phone_identity' AND o.price_credits = 8.0000) OR
-                      (o.verification_kind = 'email_deliverability' AND o.price_credits = 2.0000))
+                      (o.verification_kind IN ('email_deliverability', 'whatsapp_registration') AND o.price_credits = 2.0000))
                  AND r.operation_key = CONCAT('verification:', o.id) AND r.execution_id = CONCAT('verification:', o.id)
                  AND ((r.state = 'admitted' AND o.state IN ('admitted', 'claimed', 'awaiting') AND r.settled_credits IS NULL) OR
                       (r.state = 'settled' AND o.state = 'completed' AND r.settled_credits = o.price_credits) OR
                       (r.state = 'settled' AND o.state = 'waived' AND r.settled_credits = 0.0000))))"];
         yield ['verification.binding', 'PhoneVerificationOperation', "SELECT r.id FROM phone_verification_operation r WHERE r.tenant_id = ? AND
             (r.deleted = TRUE OR NOT ((r.verification_kind = 'phone_identity' AND r.price_credits = 8.0000) OR
-              (r.verification_kind = 'email_deliverability' AND r.price_credits = 2.0000)) OR
+              (r.verification_kind IN ('email_deliverability', 'whatsapp_registration') AND r.price_credits = 2.0000)) OR
              r.state NOT IN ('admitted', 'claimed', 'awaiting', 'completed', 'waived') OR
              (r.state = 'awaiting' AND (r.verification_kind <> 'email_deliverability' OR r.supplier_task_ciphertext IS NULL)) OR
              (r.erased_at IS NOT NULL AND (r.identity_ciphertext IS NOT NULL OR r.evidence_ciphertext IS NOT NULL OR r.supplier_task_ciphertext IS NOT NULL)) OR
@@ -211,7 +211,8 @@ final class ConsistencyAudit
              (r.state IN ('admitted', 'claimed', 'awaiting') AND (r.completed_at IS NOT NULL OR r.outcome IS NOT NULL OR r.evidence_ciphertext IS NOT NULL)) OR
              (r.state = 'completed' AND (r.completed_at IS NULL OR r.claimed_at IS NULL OR r.claimed_at > r.completed_at OR
               NOT ((r.verification_kind = 'phone_identity' AND r.outcome IN ('verified', 'not_verified', 'insufficient_data')) OR
-                   (r.verification_kind = 'email_deliverability' AND r.outcome IN ('deliverable', 'risky', 'undeliverable', 'unknown'))) OR
+                   (r.verification_kind = 'email_deliverability' AND r.outcome IN ('deliverable', 'risky', 'undeliverable', 'unknown')) OR
+                   (r.verification_kind = 'whatsapp_registration' AND r.outcome IN ('registered', 'not_registered'))) OR
               r.fresh_until IS NULL OR r.retention_expires_at IS NULL OR
               r.evidence_hash IS NULL OR (r.erased_at IS NULL AND r.evidence_ciphertext IS NULL))) OR
              (r.state = 'waived' AND (r.completed_at IS NULL OR r.outcome NOT IN ('failed', 'cancelled', 'unavailable') OR

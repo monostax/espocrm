@@ -110,8 +110,8 @@ final class OperationHistory
                     break;
                 }
                 $list[] = ['id' => $row['id'], 'reservationId' => $row['reservation_id'],
-                    ...($row['operation_type'] === 'verification' && FixedSettlement::verificationKind($pdo, $input->tenantId, $row['id']) === 'email_deliverability'
-                        ? ['verificationKind' => 'email_deliverability'] : []),
+                    ...($row['operation_type'] === 'verification' && ($kind = FixedSettlement::verificationKind($pdo, $input->tenantId, $row['id'])) !== 'phone_identity'
+                        ? ['verificationKind' => $kind] : []),
                     'operationType' => $row['operation_type'], 'billingRegime' => $row['billing_regime'],
                     'state' => $row['state'], 'reservedCredits' => (string) $reserved,
                     'accruedCreditsExact' => (string) $accrued->strippedOfTrailingZeros(),

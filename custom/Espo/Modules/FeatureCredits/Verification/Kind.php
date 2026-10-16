@@ -8,12 +8,13 @@ final class Kind
 {
     public const PHONE = 'phone_identity';
     public const EMAIL = 'email_deliverability';
+    public const WHATSAPP = 'whatsapp_registration';
 
     public static function price(string $kind): string
     {
         return match ($kind) {
             self::PHONE => '8.0000',
-            self::EMAIL => '2.0000',
+            self::EMAIL, self::WHATSAPP => '2.0000',
             default => throw new \InvalidArgumentException('Unsupported verification kind.'),
         };
     }
@@ -23,6 +24,7 @@ final class Kind
         return match ($kind) {
             self::PHONE => ['verified', 'not_verified', 'insufficient_data'],
             self::EMAIL => ['deliverable', 'risky', 'undeliverable', 'unknown'],
+            self::WHATSAPP => ['registered', 'not_registered'],
             default => [],
         };
     }
@@ -40,6 +42,9 @@ final class Kind
             return IdentityInput::fingerprintHash($key, $tenant, $contact, $value,
                 $identity['name']['firstName'], $identity['name']['lastName'], $identity['dateOfBirth'], $policy);
         }
+        if ($kind === self::WHATSAPP) {
+            return hash_hmac('sha256', Operations::hash([$kind, $tenant, $contact, $value, $policy]), $key);
+        }
         return hash_hmac('sha256', Operations::hash([self::EMAIL, $tenant, $contact, $value, 'regular', '0', $policy]), $key);
     }
 
@@ -48,6 +53,9 @@ final class Kind
         if ($kind === self::PHONE) {
             return Operations::computeContextRevision($tenant, $contact, $value,
                 $identity['name']['firstName'], $identity['name']['lastName'], $identity['dateOfBirth'], $policy);
+        }
+        if ($kind === self::WHATSAPP) {
+            return Operations::hash(['whatsapp-context-v1', $tenant, $contact, $value, $policy, self::price($kind)]);
         }
         return Operations::hash(['email-context-v1', $tenant, $contact, $value, 'regular', '0', $policy, self::price($kind)]);
     }

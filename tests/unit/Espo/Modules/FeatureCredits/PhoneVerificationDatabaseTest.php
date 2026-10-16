@@ -50,6 +50,7 @@ use Espo\Modules\FeatureCredits\Verification\BounceBanTransport;
 use Espo\Modules\FeatureCredits\Verification\EmailResult;
 use Espo\Modules\FeatureCredits\Verification\Kind;
 use Espo\Modules\FeatureCredits\Verification\CustomerProjection;
+use Espo\Modules\FeatureCredits\Verification\{WahaCredentials, WahaLookup, WahaTransport, WhatsAppResult};
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\BaseEntity;
 use Espo\ORM\Entity;
@@ -77,6 +78,9 @@ final class PhoneVerificationDatabaseTest extends TestCase
     public ?VerificationResult $nextResult = null;
     public ?EmailResult $emailResult = null;
     public array $emailCalls = [];
+    public array $whatsAppCalls = [];
+    public ?bool $registered = true;
+    public bool $whatsAppEnabled = true;
 
     public static function dialects(): iterable
     {
@@ -163,6 +167,9 @@ final class PhoneVerificationDatabaseTest extends TestCase
             $this->apiActor = false;
             $this->providerCalls = 0;
             $this->emailCalls = [];
+            $this->whatsAppCalls = [];
+            $this->registered = true;
+            $this->whatsAppEnabled = true;
             $this->emailResult = new EmailResult('completed', 'task1', 'deliverable', ['score' => 99, 'flags' => ['is_accept_all' => true], 'verifiedAt' => null]);
             $this->nextResult = VerificationResult::completed(
                 'verified',
@@ -295,7 +302,12 @@ final class PhoneVerificationDatabaseTest extends TestCase
         $emailCredentials = new class extends BounceBanCredentials {
             public function get(): array { return ['apiKey' => 'test-only']; }
         };
-        $gate = new CapabilityGate($config, $creds, $clock, emailCredentials: $emailCredentials);
+        $whatsAppCredentials = new class($this) extends WahaCredentials {
+            public function __construct(private PhoneVerificationDatabaseTest $suite) {}
+            public function get(): array { return ['url' => 'http://unused.test', 'apiKey' => 'fixture', 'session' => 'fixture']; }
+            public function enabled(): bool { return $this->suite->whatsAppEnabled; }
+        };
+        $gate = new CapabilityGate($config, $creds, $clock, emailCredentials: $emailCredentials, whatsAppCredentials: $whatsAppCredentials);
         $lock = new WalletLock($manager, $clock);
         $funding = new Funding($lock);
         $reservations = new Reservations($lock, $funding);
@@ -324,7 +336,15 @@ final class PhoneVerificationDatabaseTest extends TestCase
                 return $this->suite->emailResult ?? new EmailResult('failed');
             }
         };
-        $execution = new Execution($manager, $lock, $actorAccess, $gate, $lookup, $settlement, $crypt, $config, $clock, emailProvider: $emailLookup);
+        $whatsAppLookup = new class($whatsAppCredentials, new WahaTransport(), $this) extends WahaLookup {
+            public function __construct(WahaCredentials $c, WahaTransport $t, private PhoneVerificationDatabaseTest $suite) { parent::__construct($c, $t); }
+            public function verify(string $phone, int $timeoutMs = 30000): WhatsAppResult {
+                $this->suite->whatsAppCalls[] = $phone;
+                return new WhatsAppResult($this->suite->registered);
+            }
+        };
+        $execution = new Execution($manager, $lock, $actorAccess, $gate, $lookup, $settlement, $crypt, $config, $clock,
+            emailProvider: $emailLookup, whatsAppProvider: $whatsAppLookup);
 
         return [$operations, $execution, $gate, $funding, $crypt, $manager, $acl];
     }
@@ -855,6 +875,291 @@ final class PhoneVerificationDatabaseTest extends TestCase
                 self::assertSame($index + 1, (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type = 'debit'")->fetchColumn());
                 $q->execute([$id]); self::assertSame($original, $q->fetch(PDO::FETCH_ASSOC));
             }
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    private function whatsAppCommand(Operations $operations, string $key, array $source = ['key' => 'phone', 'kind' => 'contact_phone'], bool $refresh = false): object
+    {
+        $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]], Kind::WHATSAPP);
+        return (object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'source' => $source,
+            'requestKey' => $key, 'contextRevision' => $context['rows'][$source['key']]['contextRevision'], 'refresh' => $refresh];
+    }
+
+    #[DataProvider('dialects')]
+    public function testIndependentWhatsAppFirstAdmissionWithOnlyEightCredits(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution, CapabilityGate $gate, Funding $funding): void {
+            $funding->grant(new GrantInput('other', 'purchase', 'eight', '8.0000', '2026-10-14 00:00:00', null, (object) ['source' => 'fixture']));
+            $source = ['key' => 'phone', 'kind' => 'contact_phone'];
+            $contextInput = (object) ['tenantId' => 'other', 'contactId' => 'foreign', 'sources' => [$source]];
+            $wa = $operations->context($contextInput, Kind::WHATSAPP);
+            $phone = $operations->context($contextInput);
+            $start = $operations->start((object) ['tenantId' => 'other', 'contactId' => 'foreign', 'source' => $source,
+                'requestKey' => 'wa-first', 'contextRevision' => $wa['rows']['phone']['contextRevision'], 'maxChargeCredits' => '2.0000'], Kind::WHATSAPP);
+            try {
+                $operations->start((object) ['tenantId' => 'other', 'contactId' => 'foreign', 'source' => $source,
+                    'requestKey' => 'phone-second', 'contextRevision' => $phone['rows']['phone']['contextRevision'], 'maxChargeCredits' => '8.0000']);
+                self::fail('Both checks reserved more than eight available credits.');
+            } catch (Conflict $e) { self::assertStringContainsString('insufficient_credits', (string) $e->getBody()); }
+            $execution->run('other', $start['operation']['id']);
+            self::assertSame('6.0000', $pdo->query("SELECT balance FROM tenant_credit_balance WHERE tenant_id='other'")->fetchColumn());
+            self::assertSame(0, $this->providerCalls);
+            $this->assertHealthyAccounting($pdo, 'other');
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testWhatsAppAuthorizationAndForbiddenClientInputs(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations): void {
+            $command = $this->whatsAppCommand($operations, 'bad');
+            foreach (['phone' => '+14155552671', 'session' => 'customer-session', 'providerUrl' => 'http://example.test',
+                'dateOfBirth' => '1990-01-01', 'apiKey' => 'customer-key'] as $field => $value) {
+                $bad = clone $command; $bad->$field = $value;
+                try { $operations->start($bad, Kind::WHATSAPP); self::fail('Accepted arbitrary ' . $field); }
+                catch (\InvalidArgumentException) {}
+            }
+            foreach (['Contact.phoneNumber', 'Contact.channelIdentitiesData', 'ContactChannelIdentity.sourceId'] as $field) {
+                $this->deniedFields = [$field];
+                $input = (object) ['tenantId' => 'tenant', 'contactId' => 'contact',
+                    'sources' => [['key' => 'ch', 'kind' => 'channel', 'id' => 'chan1']]];
+                try {
+                    $result = $operations->context($input, Kind::WHATSAPP);
+                    self::assertFalse($result['rows']['ch']['eligible']);
+                } catch (Forbidden) { self::assertSame('Contact.phoneNumber', $field); }
+            }
+            $this->deniedFields = [];
+            $bad = clone $command; $bad->tenantId = 'other';
+            try { $operations->start($bad, Kind::WHATSAPP); self::fail('Foreign tenant accepted.'); }
+            catch (Forbidden) {}
+            $this->allowed = false;
+            try { $operations->start($command, Kind::WHATSAPP); self::fail('Missing credit permission accepted.'); }
+            catch (Forbidden) {}
+            self::assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM phone_verification_operation')->fetchColumn());
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testOwnershipFreeQuoteCannotBecomePaidAfterExpiry(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution): void {
+            $source = ['key' => 'p', 'kind' => 'contact_phone'];
+            $ctx = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]]);
+            $command = (object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'source' => $source,
+                'requestKey' => 'phone-original', 'contextRevision' => $ctx['rows']['p']['contextRevision']];
+            $start = $operations->start($command);
+            $execution->run('tenant', $start['operation']['id']);
+            $command->requestKey = 'phone-free';
+            $command->maxChargeCredits = '0.0000';
+            $this->now = Operations::after($this->now, CapabilityGate::FRESH_REUSE_SECONDS);
+            try { $operations->start($command); self::fail('Expired free ownership quote charged.'); }
+            catch (Conflict $e) { self::assertStringContainsString('context_changed', (string) $e->getBody()); }
+            self::assertSame('32.0000', $pdo->query("SELECT balance FROM tenant_credit_balance WHERE tenant_id='tenant'")->fetchColumn());
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testConcurrentWhatsAppAdmissionsShareOneReservation(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution) use ($dialect): void {
+            $command = $this->whatsAppCommand($operations, 'concurrent-a');
+            $pdo->beginTransaction();
+            $pdo->query("SELECT id FROM tenant_credit_balance WHERE tenant_id='tenant' FOR UPDATE")->fetchColumn();
+            $workers = [];
+            try {
+                foreach (['concurrent-a', 'concurrent-b'] as $key) {
+                    $input = clone $command; $input->requestKey = $key;
+                    $process = proc_open([PHP_BINARY, __DIR__ . '/fixtures/whatsapp-verification-worker.php', $dialect,
+                        base64_encode(json_encode($input, JSON_THROW_ON_ERROR)), $this->now],
+                        [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+                    self::assertIsResource($process);
+                    fclose($pipes[0]);
+                    stream_set_timeout($pipes[1], 10);
+                    self::assertSame("ready\n", fgets($pipes[1]));
+                    $workers[] = [$process, $pipes];
+                }
+                $pdo->commit();
+                $receipts = [];
+                foreach ($workers as [$process, $pipes]) {
+                    $output = stream_get_contents($pipes[1]);
+                    $errors = stream_get_contents($pipes[2]);
+                    fclose($pipes[1]); fclose($pipes[2]);
+                    self::assertSame(0, proc_close($process), $errors);
+                    $receipts[] = json_decode($output, true, 32, JSON_THROW_ON_ERROR);
+                }
+                $workers = [];
+                self::assertSame($receipts[0]['operation']['id'], $receipts[1]['operation']['id']);
+                self::assertEqualsCanonicalizing(['admitted', 'joined'], array_column($receipts, 'resolution'));
+                self::assertSame('2.0000', $pdo->query("SELECT reserved_credits FROM tenant_credit_balance WHERE tenant_id='tenant'")->fetchColumn());
+                $execution->run('tenant', $receipts[0]['operation']['id']);
+                self::assertCount(1, $this->whatsAppCalls);
+                self::assertSame('38.0000', $pdo->query("SELECT balance FROM tenant_credit_balance WHERE tenant_id='tenant'")->fetchColumn());
+                $this->assertHealthyAccounting($pdo);
+            } finally {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                foreach ($workers as [$process, $pipes]) {
+                    if (is_resource($process)) { proc_terminate($process); proc_close($process); }
+                    foreach ($pipes as $pipe) if (is_resource($pipe)) fclose($pipe);
+                }
+            }
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testWhatsAppBothOutcomesReuseJoinReplayAndAccountingWithoutIdentityAccess(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution, CapabilityGate $gate, Funding $funding, Crypt $crypt): void {
+            $this->deniedFields = ['Contact.firstName', 'Contact.lastName', 'Contact.dateOfBirth', 'Contact.name'];
+            $pdo->exec("UPDATE contact SET first_name = NULL, last_name = NULL, name = NULL WHERE id = 'contact'");
+            $pdo->exec("UPDATE contact_channel_identity SET ownership_status = 'rejected' WHERE id = 'chan1'");
+            $gate->publish((object) ['enabled' => false, 'allowlistedTenantIds' => []], 'admin');
+            $this->seedPurchasedPhones($pdo, $crypt, 'qwa', 'waA', 'hub', ['+5511987654321']);
+            $command = $this->whatsAppCommand($operations, 'wa-first');
+            $first = $operations->start($command, Kind::WHATSAPP);
+            self::assertSame($first, $operations->start($command, Kind::WHATSAPP));
+            $sources = [['key' => 'ch', 'kind' => 'channel', 'id' => 'chan1'],
+                ['key' => 'p', 'kind' => 'purchased', 'receiptId' => 'waA', 'index' => 0]];
+            foreach ($sources as $i => $source) {
+                $joined = $operations->start($this->whatsAppCommand($operations, 'join-' . $i, $source), Kind::WHATSAPP);
+                self::assertSame('joined', $joined['resolution']);
+                self::assertSame($first['operation']['id'], $joined['operation']['id']);
+            }
+            self::assertSame('2.0000', $pdo->query("SELECT reserved_credits FROM tenant_credit_balance WHERE tenant_id='tenant'")->fetchColumn());
+            $this->assertHealthyAccounting($pdo);
+            $execution->run('tenant', $first['operation']['id']);
+            $execution->run('tenant', $first['operation']['id']);
+            foreach ($sources as $i => $source) {
+                self::assertSame('reused', $operations->start($this->whatsAppCommand($operations, 'reuse-wa-' . $i, $source), Kind::WHATSAPP)['resolution']);
+            }
+            self::assertCount(1, $this->whatsAppCalls);
+            $this->now = Operations::after($this->now, 61);
+            $this->registered = false;
+            $second = $operations->start($this->whatsAppCommand($operations, 'wa-negative', refresh: true), Kind::WHATSAPP);
+            $execution->run('tenant', $second['operation']['id']);
+            $receipt = $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'requestKey' => 'wa-negative'], Kind::WHATSAPP);
+            self::assertSame('not_registered', $receipt['operation']['outcome']);
+            self::assertSame('2.0000', $receipt['operation']['settledCredits']);
+            self::assertSame('36.0000', $pdo->query("SELECT balance FROM tenant_credit_balance WHERE tenant_id='tenant'")->fetchColumn());
+            self::assertSame('rejected', $pdo->query("SELECT ownership_status FROM contact_channel_identity WHERE id='chan1'")->fetchColumn());
+            self::assertSame(0, $this->providerCalls);
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testWhatsAppInternationalStaleQuoteExplicitRefreshAndDisabledHistory(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution): void {
+            $pdo->exec("UPDATE contact SET phone_number = '+44 20 7946 0018' WHERE id='contact'");
+            $source = ['key' => 'phone', 'kind' => 'contact_phone'];
+            $ctx = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]]);
+            self::assertSame('unsupported_country', $ctx['rows']['phone']['reason']);
+            $command = $this->whatsAppCommand($operations, 'intl');
+            $first = $operations->start($command, Kind::WHATSAPP);
+            $execution->run('tenant', $first['operation']['id']);
+            self::assertSame(['+442079460018'], $this->whatsAppCalls);
+            $free = $this->whatsAppCommand($operations, 'free');
+            $free->maxChargeCredits = '0.0000';
+            $this->now = Operations::after($this->now, CapabilityGate::FRESH_REUSE_SECONDS);
+            try { $operations->start($free, Kind::WHATSAPP); self::fail('Expired reuse silently charged.'); }
+            catch (Conflict $e) { self::assertStringContainsString('context_changed', (string) $e->getBody()); }
+            $free->maxChargeCredits = '2.0000';
+            try { $operations->start($free, Kind::WHATSAPP); self::fail('Stale result refreshed implicitly.'); }
+            catch (Conflict) {}
+            $free->refresh = true;
+            $second = $operations->start($free, Kind::WHATSAPP);
+            $execution->run('tenant', $second['operation']['id']);
+            $this->whatsAppEnabled = false;
+            $ctx = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]], Kind::WHATSAPP);
+            self::assertFalse($ctx['available']);
+            self::assertSame('registered', $ctx['rows']['phone']['currentResult']['outcome']);
+            self::assertFalse($ctx['rows']['phone']['actions']['canRefresh']);
+            self::assertSame('reused', $operations->start($this->whatsAppCommand($operations, 'disabled-reuse'), Kind::WHATSAPP)['resolution']);
+            try { $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'requestKey' => 'intl']); self::fail('Wrong kind exposed.'); }
+            catch (NotFound) {}
+            $this->now = Operations::after($this->now, CapabilityGate::RETENTION_SECONDS);
+            // Expired evidence is absent from context even before the cleanup sweep;
+            // a newly quoted paid check must not require an invisible refresh toggle.
+            $this->whatsAppEnabled = true;
+            $afterRetention = $operations->start($this->whatsAppCommand($operations, 'after-retention'), Kind::WHATSAPP);
+            self::assertSame('admitted', $afterRetention['resolution']);
+            $execution->run('tenant', $afterRetention['operation']['id']);
+            $execution->expireEvidence();
+            $receipt = $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'requestKey' => 'intl'], Kind::WHATSAPP);
+            self::assertNull($receipt['operation']['canonicalPhone']);
+            self::assertSame('2.0000', $receipt['operation']['settledCredits']);
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testWhatsAppFailuresCrashesDeadlineAndDisableAfterClaimAreFree(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution): void {
+            foreach (['provider', 'crash', 'deadline', 'disabled'] as $mode) {
+                $this->now = Operations::after($this->now, 61);
+                $start = $operations->start($this->whatsAppCommand($operations, $mode), Kind::WHATSAPP);
+                $id = $start['operation']['id'];
+                if ($mode === 'provider') {
+                    $this->registered = null;
+                    $execution->run('tenant', $id);
+                } else {
+                    $claim = $execution->claim('tenant', $id);
+                    self::assertNull($execution->claim('tenant', $id));
+                    if ($mode === 'disabled') {
+                        $this->whatsAppEnabled = false;
+                        self::assertNull($execution->dispatchWindow('tenant', $id, $claim['token']));
+                        $this->whatsAppEnabled = true;
+                    } else {
+                        $this->now = Operations::after($this->now, $mode === 'deadline' ? 301 : 31);
+                        $execution->recover('tenant', $id);
+                    }
+                    $execution->record('tenant', $id, $claim['token'], new WhatsAppResult(true));
+                }
+                self::assertSame('0.0000', $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'operationId' => $id], Kind::WHATSAPP)['operation']['settledCredits']);
+            }
+            self::assertCount(1, $this->whatsAppCalls);
+            self::assertSame('40.0000', $pdo->query("SELECT balance FROM tenant_credit_balance WHERE tenant_id='tenant'")->fetchColumn());
+            self::assertSame('0.0000', $pdo->query("SELECT reserved_credits FROM tenant_credit_balance WHERE tenant_id='tenant'")->fetchColumn());
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testWhatsAppSourceEditsRevocationAndPrivacyErasure(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution, CapabilityGate $gate, Funding $funding, Crypt $crypt, EntityManager $manager): void {
+            $source = ['key' => 'ch', 'kind' => 'channel', 'id' => 'chan1'];
+            $first = $operations->start($this->whatsAppCommand($operations, 'edit', $source), Kind::WHATSAPP);
+            $pdo->exec("UPDATE contact_channel_identity SET source_id='+14155552671' WHERE id='chan1'");
+            $execution->run('tenant', $first['operation']['id']);
+            self::assertCount(0, $this->whatsAppCalls);
+            $second = $operations->start($this->whatsAppCommand($operations, 'revoke', $source), Kind::WHATSAPP);
+            $claim = $execution->claim('tenant', $second['operation']['id']);
+            $this->deniedEntities = ['chan1'];
+            $execution->record('tenant', $second['operation']['id'], $claim['token'], new WhatsAppResult(true));
+            self::assertSame('0.0000', $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'requestKey' => 'revoke'], Kind::WHATSAPP)['operation']['settledCredits']);
+            $this->deniedEntities = [];
+            $this->now = Operations::after($this->now, 61);
+            $third = $operations->start($this->whatsAppCommand($operations, 'frozen', $source), Kind::WHATSAPP);
+            $claim = $execution->claim('tenant', $third['operation']['id']);
+            $pdo->exec("UPDATE contact_channel_identity SET source_id='+442079460018' WHERE id='chan1'");
+            $execution->record('tenant', $third['operation']['id'], $claim['token'], new WhatsAppResult(true));
+            $ctx = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]], Kind::WHATSAPP);
+            self::assertNull($ctx['rows']['ch']['currentResult']);
+            $pending = $operations->start($this->whatsAppCommand($operations, 'erase', $source), Kind::WHATSAPP);
+            $claim = $execution->claim('tenant', $pending['operation']['id']);
+            $clock = $this->createStub(Clock::class);
+            $clock->method('now')->willReturn($this->now);
+            $eraser = new PurchasedErasure($manager, $crypt, new FixedSettlement($funding), $clock);
+            $pdo->beginTransaction();
+            $eraser->erase($manager->getEntityById('Contact', 'contact'));
+            $pdo->commit();
+            $execution->record('tenant', $pending['operation']['id'], $claim['token'], new WhatsAppResult(true));
+            self::assertSame('0.0000', $operations->status(['tenantId' => 'tenant', 'contactId' => 'contact', 'requestKey' => 'erase'], Kind::WHATSAPP)['operation']['settledCredits']);
+            self::assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM phone_verification_operation WHERE identity_ciphertext IS NOT NULL OR evidence_ciphertext IS NOT NULL')->fetchColumn());
             $this->assertHealthyAccounting($pdo);
         });
     }

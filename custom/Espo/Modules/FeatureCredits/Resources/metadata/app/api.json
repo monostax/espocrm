@@ -1,5 +1,9 @@
 {
     "routeMiddlewareClassNameListMap": {
+        "post_/CreditWhatsAppVerification/context": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "post_/CreditWhatsAppVerification": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "get_/CreditWhatsAppVerification/status": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "get_/CreditWhatsAppVerification/history": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "get_/CreditEnrichmentPreview": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "get_/CreditConfiguration": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "post_/CreditConfiguration": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],

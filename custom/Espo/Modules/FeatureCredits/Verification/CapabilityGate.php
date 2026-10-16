@@ -36,6 +36,7 @@ class CapabilityGate
         private Clock $clock,
         private ?ConfigWriter $configWriter = null,
         private ?BounceBanCredentials $emailCredentials = null,
+        private ?WahaCredentials $whatsAppCredentials = null,
     ) {}
 
     public function configuration(): array
@@ -72,6 +73,19 @@ class CapabilityGate
     public function inspect(string $tenantId, string $kind = Kind::PHONE): array
     {
         $cfg = $this->configuration();
+        if ($kind === Kind::WHATSAPP) {
+            $credentials = $this->whatsAppCredentials ?? new WahaCredentials();
+            $reason = match (true) {
+                $this->globalKillSwitch() => 'kill_switch',
+                !$credentials->enabled() => 'verification_disabled',
+                !$credentials->get() => 'provider_unavailable',
+                default => null,
+            };
+            return ['available' => $reason === null, 'reason' => $reason,
+                'priceCredits' => Kind::price($kind), 'policyVersion' => $this->policyVersion($kind),
+                'limits' => array_intersect_key($cfg, array_flip(['maxOutstandingPerTenant', 'maxPerMinutePerTenant',
+                    'maxPerDayPerTenant', 'sameInputCooldownSeconds']))];
+        }
         $creds = $kind === Kind::EMAIL ? ($this->emailCredentials ?? new BounceBanCredentials())->get() : $this->credentials->get();
         $hasCreds = $creds !== [];
         $allowlisted = in_array($tenantId, $cfg['allowlistedTenantIds'], true);
@@ -104,6 +118,8 @@ class CapabilityGate
 
     public function policyVersion(string $kind = Kind::PHONE): string
     {
+        // Session/credential rotation and disabling do not invalidate retained registration evidence.
+        if ($kind === Kind::WHATSAPP) return Operations::hash(['whatsapp-registration-v1', Kind::price($kind)]);
         if ($kind === Kind::EMAIL) {
             $creds = ($this->emailCredentials ?? new BounceBanCredentials())->get();
             return Operations::hash(['email-verification-2026-10-14-v1', 'bounceban-single', 'regular', '0',

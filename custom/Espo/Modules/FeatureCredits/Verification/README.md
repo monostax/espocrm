@@ -1,12 +1,18 @@
-# Phone and email verification
+# Phone, WhatsApp and email verification
 
 The existing verification operation/request tables, wallet locks, settlement, and
-`DispatchPhoneVerification` / `RunPhoneVerification` jobs serve both kinds:
+`DispatchPhoneVerification` / `RunPhoneVerification` jobs serve all three kinds:
 
 | Kind | Provider | Completed price | Completed outcomes |
 | --- | --- | --- | --- |
 | `phone_identity` | Twilio Lookup | `8.0000` | `verified`, `not_verified`, `insufficient_data` |
 | `email_deliverability` | BounceBan standard single verification | `2.0000` | `deliverable`, `risky`, `undeliverable`, `unknown` |
+| `whatsapp_registration` | WAHA registration lookup | `2.0000` | `registered`, `not_registered` |
+
+WhatsApp registration does not establish ownership or guarantee reachability. It
+does not read name/DOB, send messages, modify phone/channel identities, or override
+ownership rejection. See [WhatsApp operator runbook](whatsapp-operations.md) for the
+disabled-by-default configuration and required deployed-version smoke test.
 
 Errors and unresolved deadlines settle at zero. Email deliverability does not
 establish identity or ownership. Email checks never read or save names/DOB.
@@ -45,12 +51,12 @@ or charge; the original stored evidence and financial receipts remain intact.
 A non-empty API key enables email verification for authorized tenants with credits.
 An empty key leaves it unavailable. No configuration POST, approval reference, or
 tenant allowlist is required. No live provider probe runs on deployment/context reads.
-`VERIFICATION_KILL_SWITCH=true` stops new dispatch for both kinds. Already submitted
+`VERIFICATION_KILL_SWITCH=true` stops new dispatch for all kinds. Already submitted
 email tasks may finish through free status retrieval; authorization revocation and
 erasure still stop delivery. Shared operational diagnostics are available through
 the existing instance-admin `CreditPhoneVerificationConfiguration` GET endpoint.
 
-Both kinds share the limits configured through `CreditPhoneVerificationConfiguration`:
+All kinds share the limits configured through `CreditPhoneVerificationConfiguration`:
 5 outstanding operations, 10 admissions/minute, 100/day per tenant by default, with
 a 60-second same-fingerprint cooldown. Email activation does not require phone
 activation; its availability ignores phone-specific approval and allowlist settings.
@@ -107,6 +113,15 @@ erasure, retention, and financial reconciliation on MariaDB and PostgreSQL.
 `SchemaTest`, customer-boundary tests, and credit operation/reservation tests cover
 the shared integration. Chatwoot's verification specs cover two-credit confirmation,
 absence of DOB prompts, source sharing, and uncertain-response recovery.
+
+`WhatsAppVerificationUnitTest` covers normalization, strict boolean responses,
+single-attempt transport inputs, default-off activation, customer projections and
+sanitized errors. `PhoneVerificationDatabaseTest` also covers registration on both
+database engines, including separate-process concurrent admissions, exact two-credit
+settlement, independent eight-credit-wallet admission, stale free quotes, revoked
+access, privacy erasure and retention. Chatwoot's `WhatsAppVerification.spec.js`
+exercises WhatsApp-first admission, visible skips, independent results, explicit
+refresh and D18 recovery. These fixture tests do not validate a deployed WAHA session.
 
 Production activation remains separate from local fixture validation. Rollback
 should disable admission while retaining compatible recovery/accounting/schema.

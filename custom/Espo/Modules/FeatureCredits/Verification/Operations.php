@@ -108,7 +108,7 @@ class Operations
 
                 $e164 = $resolved['value'];
                 $ownershipRejected = $resolved['ownershipRejected'];
-                if ($ownershipRejected) {
+                if ($ownershipRejected && $kind !== Kind::WHATSAPP) {
                     $rows[$key] = [
                         'key' => $key,
                         'eligible' => false,
@@ -188,7 +188,7 @@ class Operations
                     'eligible' => $canVerify,
                     'reason' => $reason,
                     'canonicalPhone' => $e164,
-                    'ownershipStatus' => 'unverified',
+                    'ownershipStatus' => $ownershipRejected ? 'rejected' : 'unverified',
                     'contextRevision' => Kind::revision($tenantId, $contactId, $e164, $identity, $policyVersion, $kind),
                     'actions' => [
                         'canVerify' => $canVerify,
@@ -230,7 +230,7 @@ class Operations
     public function start(stdClass $input, string $kind = Kind::PHONE): array
     {
         $data = get_object_vars($input);
-        if (array_diff(array_keys($data), ['tenantId', 'contactId', 'source', 'requestKey', 'contextRevision', 'refresh', 'dateOfBirth']) ||
+        if (array_diff(array_keys($data), ['tenantId', 'contactId', 'source', 'requestKey', 'contextRevision', 'refresh', 'dateOfBirth', 'maxChargeCredits']) ||
             !is_string($data['tenantId'] ?? null) ||
             !is_string($data['contactId'] ?? null) ||
             !is_string($data['requestKey'] ?? null) ||
@@ -251,8 +251,13 @@ class Operations
             throw new InvalidArgumentException('Refresh flag must be boolean.');
         }
         $suppliedDob = $data['dateOfBirth'] ?? null;
-        if ($kind === Kind::EMAIL && array_key_exists('dateOfBirth', $data)) {
-            throw new InvalidArgumentException('Email verification does not accept date of birth.');
+        if ($kind !== Kind::PHONE && array_key_exists('dateOfBirth', $data)) {
+            throw new InvalidArgumentException('This verification kind does not accept date of birth.');
+        }
+        $maxCharge = $data['maxChargeCredits'] ?? null;
+        if (array_key_exists('maxChargeCredits', $data) &&
+            ($kind === Kind::EMAIL || !in_array($maxCharge, ['0.0000', Kind::price($kind)], true))) {
+            throw new InvalidArgumentException('Invalid maximum verification charge.');
         }
         if ($suppliedDob !== null && $suppliedDob !== '') {
             $suppliedDob = IdentityInput::validateDateOfBirth($suppliedDob, $this->clock->now());
@@ -271,7 +276,8 @@ class Operations
         unset($canonicalSource['key']);
         ksort($canonicalSource);
         $commandHash = self::hash([
-            ...($kind === Kind::EMAIL ? ['verificationKind' => $kind] : []),
+            ...($kind !== Kind::PHONE ? ['verificationKind' => $kind] : []),
+            ...($maxCharge !== null ? ['maxChargeCredits' => $maxCharge] : []),
             'tenantId' => $tenantId,
             'contactId' => $contactId,
             'source' => $canonicalSource,
@@ -319,6 +325,7 @@ class Operations
                 $refresh,
                 $commandHash,
                 $kind,
+                $maxCharge,
             ): array {
                 // 1. Check request binding first so retries return the original operation even after expiry/erasure.
                 $q = $pdo->prepare('SELECT * FROM phone_verification_request WHERE tenant_id = ? AND request_key = ?');
@@ -351,7 +358,7 @@ class Operations
                 $identity = $this->access->contactIdentity($contact, $now, $kind);
                 $resolved = $this->access->resolveSource($pdo, $tenantId, $contact, $source, $kind);
 
-                if ($resolved['ownershipRejected']) {
+                if ($resolved['ownershipRejected'] && $kind !== Kind::WHATSAPP) {
                     throw Conflict::createWithBody('Phone ownership is rejected.', '{"reason":"ownership_rejected"}');
                 }
                 if ($resolved['value'] === null) {
@@ -424,6 +431,15 @@ class Operations
                     }
                 }
 
+                // A free reuse/join quote must never silently turn into a paid admission.
+                if ($maxCharge === '0.0000') {
+                    throw Conflict::createWithBody('Review the updated verification charge.', '{"reason":"context_changed"}');
+                }
+                if ($kind === Kind::WHATSAPP && !$refresh && !empty($completedOp) &&
+                    $this->projectOperationLocked($pdo, $tenantId, $completedOp, $now)['stale']) {
+                    throw Conflict::createWithBody('Confirm a paid refresh of expired evidence.', '{"reason":"context_changed"}');
+                }
+
                 // 5. New paid check requires active capability gate, pilot limits, cooldown, and funds (D2, D9, D20, D25).
                 if (!$cap['available']) {
                     throw Conflict::createWithBody(
@@ -453,7 +469,8 @@ class Operations
                     new SourceReference('Contact', $contactId),
                 ));
 
-                $snapshotIdentity = $kind === Kind::EMAIL ? ['email' => $e164, 'source' => $source] : [
+                $snapshotIdentity = $kind !== Kind::PHONE
+                    ? [($kind === Kind::EMAIL ? 'email' : 'phone') => $e164, 'source' => $source] : [
                     'phone' => $e164,
                     'firstName' => $firstName,
                     'lastName' => $lastName,
@@ -462,7 +479,7 @@ class Operations
                 $identityCiphertext = $this->crypt->encrypt(json_encode($snapshotIdentity, JSON_THROW_ON_ERROR));
                 $deadlineAt = self::after($now, CapabilityGate::OPERATION_DEADLINE_SECONDS);
                 $identityHash = self::hash([
-                    ...($kind === Kind::EMAIL ? ['verificationKind' => $kind] : []),
+                    ...($kind !== Kind::PHONE ? ['verificationKind' => $kind] : []),
                     'id' => $operationId,
                     'tenantId' => $tenantId,
                     'contactId' => $contactId,
@@ -684,10 +701,14 @@ class Operations
             $snapshotIdentity = json_decode($this->crypt->decrypt($op['identity_ciphertext']), true, 16, JSON_THROW_ON_ERROR);
             $this->verifyIdentityHash($op, $snapshotIdentity);
             $canonicalPhone = $snapshotIdentity[$kind === Kind::EMAIL ? 'email' : 'phone'] ?? null;
-            if ($kind === Kind::EMAIL) {
+            if ($kind !== Kind::PHONE) {
                 $contact = $this->access->contact($tenantId, $op['contact_id'], $kind);
                 try {
-                    $this->access->authorizeEmailSource($pdo, $tenantId, $contact, $snapshotIdentity['source']);
+                    if ($kind === Kind::EMAIL) {
+                        $this->access->authorizeEmailSource($pdo, $tenantId, $contact, $snapshotIdentity['source']);
+                    } else {
+                        $this->access->authorizeWhatsAppSource($pdo, $tenantId, $contact, $snapshotIdentity['source']);
+                    }
                 } catch (\Throwable) {
                     $hideDetails = true;
                     $canonicalPhone = null;
@@ -768,7 +789,7 @@ class Operations
     public static function verifyIdentityHash(array $op, array $snapshotIdentity): void
     {
         $expected = self::hash([
-            ...(($op['verification_kind'] ?? Kind::PHONE) === Kind::EMAIL ? ['verificationKind' => Kind::EMAIL] : []),
+            ...(($op['verification_kind'] ?? Kind::PHONE) !== Kind::PHONE ? ['verificationKind' => $op['verification_kind']] : []),
             'id' => $op['id'],
             'tenantId' => $op['tenant_id'],
             'contactId' => $op['contact_id'],

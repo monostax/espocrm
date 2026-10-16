@@ -40,8 +40,8 @@ export function present(balance, page, tab, t) {
             id: row.id,
             sourceId: tab === 'operations' ? row.id : (['reservations', 'requests'].includes(tab) ? row.usageId : null),
             cells: columns.map(key => {
-                if (key === 'operationType' && row.operationType === 'verification' && row.verificationKind === 'email_deliverability') {
-                    return {value: t('email_deliverability')};
+                if (key === 'operationType' && row.operationType === 'verification' && ['email_deliverability', 'whatsapp_registration'].includes(row.verificationKind)) {
+                    return {value: t(row.verificationKind)};
                 }
                 const value = row[key];
                 if (value === null || value === undefined) {

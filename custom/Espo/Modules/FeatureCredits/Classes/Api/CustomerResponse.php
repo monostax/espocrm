@@ -19,12 +19,17 @@ final class CustomerResponse implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        $reason = null;
         try {
             $response = $handler->handle($request);
             if ($response->getStatusCode() < 400) return $response->withHeader('Cache-Control', 'private, no-store');
             $status = $response->getStatusCode();
+            $reason = $this->verificationReason($request, (string) $response->getBody());
             $this->log->warning('Customer credit request returned an error.', ['status' => $status]);
         } catch (Throwable $e) {
+            if ($e instanceof \Espo\Core\Exceptions\Conflict) {
+                $reason = $this->verificationReason($request, (string) $e->getBody());
+            }
             $this->log->error('Customer credit request failed.', ['exception' => $e]);
             $status = match (true) {
                 $e instanceof \Espo\Core\Exceptions\BadRequest, $e instanceof \InvalidArgumentException => 400,
@@ -41,8 +46,18 @@ final class CustomerResponse implements MiddlewareInterface
             404 => 'not_found', 409 => 'request_conflict', 429 => 'rate_limited', default => 'request_unavailable',
         };
         $response = new Response($status);
-        $response->getBody()->write(json_encode(['error' => $code], JSON_THROW_ON_ERROR));
+        $response->getBody()->write(json_encode(['error' => $code, ...($reason === null ? [] : ['reason' => $reason])], JSON_THROW_ON_ERROR));
         return $response->withHeader('Content-Type', 'application/json')
             ->withHeader('Cache-Control', 'private, no-store')->withHeader('X-Status-Reason', $code);
+    }
+
+    private function verificationReason(ServerRequestInterface $request, string $body): ?string
+    {
+        if (!preg_match('~/Credit(?:Phone|WhatsApp)Verification(?:/|$)~', $request->getUri()?->getPath() ?? '')) return null;
+        $reason = json_decode($body, true)['reason'] ?? null;
+        return in_array($reason, ['context_changed', 'ownership_rejected', 'missing_name', 'invalid_phone',
+            'unsupported_country', 'invalid_date_of_birth', 'verification_disabled', 'tenant_not_allowlisted',
+            'provider_unavailable', 'kill_switch', 'cooldown_active', 'rate_limited', 'insufficient_credits'], true)
+            ? $reason : null;
     }
 }
