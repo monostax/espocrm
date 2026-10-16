@@ -41,6 +41,8 @@ use Espo\ORM\EntityManager;
  *     `avatarId` is dirty. Iterates every {@see ChatwootUser} whose
  *     `assignedUser` points at the CRM user and uploads the new attachment
  *     bytes (or issues a delete) to each Chatwoot platform user's profile.
+ *     Managed AI users use the account-scoped, binding-checked avatar endpoint
+ *     instead of the ordinary profile API or personal-token retrieval.
  *
  *   - **Chatwoot → CRM** (pull): invoked by the
  *     `ChatwootAccountUserMembership.afterSave` hook when `avatarUrl` is dirty.
@@ -123,6 +125,11 @@ class AgentAvatarSyncService
 
         $avatarId = $user->get('avatarId');
         $payload = $avatarId ? $this->loadAttachmentPayload($avatarId) : null;
+
+        // A failed storage read is not an intentional avatar removal.
+        if ($avatarId && $payload === null) {
+            return;
+        }
 
         foreach ($chatwootUsers as $chatwootUser) {
             try {
@@ -226,9 +233,69 @@ class AgentAvatarSyncService
             return;
         }
 
+        $identity = $this->entityManager->getRDBRepository('ChatwootMachineIdentity')
+            ->where(['chatwootUserId' => $chatwootUser->getId()])->findOne();
+
+        if ($identity) {
+            $this->pushManagedAvatar($identity, $chatwootUser, $payload);
+        } else {
+            $this->pushOrdinaryAvatar($chatwootUser, $payload);
+        }
+
+        $chatwootUser->set('crmAvatarSyncHash', $newHash);
+        $this->entityManager->saveEntity($chatwootUser, ['silent' => true, 'skipHooks' => true]);
+
+        $this->log->info(
+            'AgentAvatarSyncService: ' . ($payload ? 'Pushed' : 'Cleared') .
+            ' avatar on Chatwoot for ChatwootUser ' . $chatwootUser->getId() .
+            ' (chatwootUserId=' . $chatwootUser->get('chatwootUserId') . ')'
+        );
+    }
+
+    /** @param array{bytes: string, mime: string, name: string}|null $payload */
+    private function pushManagedAvatar(Entity $identity, Entity $chatwootUser, ?array $payload): void
+    {
+        $account = $this->entityManager->getEntityById('ChatwootAccount', $identity->get('accountId'));
+        $membership = $this->entityManager->getEntityById('ChatwootAccountUserMembership', $identity->get('membershipId'));
+        // An editable assignedUser link alone never authorizes a managed identity write.
+        if ($identity->get('status') !== 'active' || $identity->get('kind') !== 'agent' ||
+            !$identity->get('crmUserId') || $chatwootUser->get('assignedUserId') !== $identity->get('crmUserId') ||
+            !$account || !$membership || $account->get('status') !== 'active' ||
+            $account->get('tenantId') !== $identity->get('tenantId') ||
+            $account->get('platformId') !== $identity->get('platformId') ||
+            $chatwootUser->get('platformId') !== $identity->get('platformId') ||
+            !$identity->get('remoteUserId') || (int) $chatwootUser->get('chatwootUserId') !== (int) $identity->get('remoteUserId') ||
+            (int) $account->get('chatwootAccountId') !== (int) $identity->get('remoteAccountId') ||
+            $chatwootUser->get('emailAddress') !== $identity->get('email') ||
+            $membership->get('chatwootUserId') !== $chatwootUser->getId() ||
+            $membership->get('chatwootAccountId') !== $account->getId()) {
+            throw new \RuntimeException('Managed avatar ownership does not match its protected binding.');
+        }
+
+        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $identity->get('platformId'));
+        if (!$platform?->get('backendUrl') || !$platform->get('accessToken')) {
+            throw new \RuntimeException('Managed avatar platform credentials are unavailable.');
+        }
+
+        $this->apiClient->syncMachineIdentityAvatar(
+            $platform->get('backendUrl'), $platform->get('accessToken'),
+            (int) $identity->get('remoteAccountId'), $identity->get('machineIdentityId'), [
+                'operation_id' => $identity->get('operationId'),
+                'tenant_id' => $identity->get('tenantId'),
+                'crm_account_id' => $account->getId(),
+                'crm_agent_id' => $membership->getId(),
+                'email' => $identity->get('email'),
+                'user_id' => (string) $identity->get('remoteUserId'),
+            ], $payload
+        );
+    }
+
+    /** @param array{bytes: string, mime: string, name: string}|null $payload */
+    private function pushOrdinaryAvatar(Entity $chatwootUser, ?array $payload): void
+    {
         $resolved = $this->resolvePushContext($chatwootUser);
         if ($resolved === null) {
-            return;
+            throw new \RuntimeException('Avatar user credentials are unavailable.');
         }
 
         [$platformUrl, $userAccessToken] = $resolved;
@@ -244,15 +311,6 @@ class AgentAvatarSyncService
                 $payload['name']
             );
         }
-
-        $chatwootUser->set('crmAvatarSyncHash', $newHash);
-        $this->entityManager->saveEntity($chatwootUser, ['silent' => true, 'skipHooks' => true]);
-
-        $this->log->info(
-            'AgentAvatarSyncService: ' . ($payload ? 'Pushed' : 'Cleared') .
-            ' avatar on Chatwoot for ChatwootUser ' . $chatwootUser->getId() .
-            ' (chatwootUserId=' . $chatwootUser->get('chatwootUserId') . ')'
-        );
     }
 
     /**
