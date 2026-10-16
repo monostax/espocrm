@@ -113,10 +113,10 @@ trait ReservationHistoryCases
             $outcomes->record(new OutcomeInput('tenant', $usage, 'execution', $id, 'cancelled', 0, 0, 1,
                 (object) ['source' => 'provider']));
             $this->assertSame('0.0001875', $read()[$usage]['accruedCreditsExact']);
-            $this->assertSame('2.0000', $read()[$usage]['reservedCredits']);
+            $this->assertSame('1.8127', $read()[$usage]['reservedCredits']);
             $this->now = '2026-10-11 00:00:00';
             $before = $this->auditSnapshot($pdo);
-            $this->assertSame('2.0000', $read()[$usage]['reservedCredits']);
+            $this->assertSame('1.8127', $read()[$usage]['reservedCredits']);
             $this->assertSame($before, $this->auditSnapshot($pdo));
             $settlements = new Settlements($this->lock($pdo), $funding);
             $settlements->settle('tenant', $usage, 'execution');

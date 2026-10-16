@@ -11,7 +11,7 @@ use Espo\Modules\FeatureCredits\Pricing\AiPricing;
 use Espo\Modules\FeatureCredits\Pricing\AiRate;
 use PDO;
 
-/** Records request facts, never a debit. Full authorized holds survive until operation settlement. */
+/** Records request facts and releases unused authorization; debits remain operation-level. */
 final class Outcomes
 {
     public function __construct(private WalletLock $walletLock) {}
@@ -39,6 +39,7 @@ final class Outcomes
             $history = $request['outcome_record'] === null ? [] : json_decode($request['outcome_record'], true, 512, JSON_THROW_ON_ERROR);
             foreach ($history as $entry) {
                 if ($entry['hash'] === $input->hash) {
+                    RequestHolds::trim($pdo, $input->tenantId, $input->requestId, $now);
                     return $this->receipt($request);
                 }
             }
@@ -116,6 +117,7 @@ final class Outcomes
             }
             $pdo->prepare('UPDATE credit_reservation SET accrued_credits_exact = ?, modified_at = ? WHERE id = ?')
                 ->execute([$accrued, $now, $reservation['id']]);
+            RequestHolds::trim($pdo, $input->tenantId, $input->requestId, $now);
             return $this->receipt(['id' => $input->requestId, 'outcome' => $input->outcome,
                 'metering_state' => $input->measured() ? 'measured' : 'unknown', 'billing_state' => $billing,
                 'priced_credits_exact' => $exact, 'waiver_reason' => $waived ? 'infrastructure_failure' : null]);

@@ -38,7 +38,8 @@ class CreditDispatchTest extends TestCase
     {
         $manager = $this->createMock(EntityManager::class); $manager->expects($this->never())->method('getPDO');
         $clock = new Clock(); $lock = new WalletLock($manager, $clock); $funding = new Funding($lock);
-        $store = new DispatchStore($manager, $clock, new Outcomes($lock), new Reservations($lock, $funding), new Settlements($lock, $funding));
+        $store = new DispatchStore($manager, $clock, new Outcomes($lock), new Reservations($lock, $funding), new Settlements($lock, $funding),
+            new \Espo\Modules\FeatureCredits\Accounting\Reconciliation($lock), $this->createStub(\Espo\Core\Utils\Config::class));
         $timestamp = (string) (time() + ($when === 'expired' ? -400 : ($when === 'future' ? 400 : 0)));
         $request = $this->createStub(Request::class); $request->method('getBodyContents')->willReturn($raw);
         $request->method('getHeader')->willReturnCallback(static fn ($header) => match ($header) {
@@ -81,7 +82,8 @@ class CreditDispatchTest extends TestCase
     {
         $manager = $this->createMock(EntityManager::class); $manager->expects($this->never())->method('getPDO');
         $clock = new Clock(); $lock = new WalletLock($manager, $clock); $funding = new Funding($lock);
-        $controller = new CreditDispatch(new DispatchStore($manager, $clock, new Outcomes($lock), new Reservations($lock, $funding), new Settlements($lock, $funding)));
+        $controller = new CreditDispatch(new DispatchStore($manager, $clock, new Outcomes($lock), new Reservations($lock, $funding), new Settlements($lock, $funding),
+            new \Espo\Modules\FeatureCredits\Accounting\Reconciliation($lock), $this->createStub(\Espo\Core\Utils\Config::class)));
         $previous = getenv('AI_CREDIT_EXECUTION_SECRET'); putenv('AI_CREDIT_EXECUTION_SECRET=test-secret');
         try {
             foreach (['[]', '{', str_repeat(' ', 65537)] as $raw) {

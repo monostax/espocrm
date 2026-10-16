@@ -211,13 +211,13 @@ trait ExecutionRoutingCases
             $settle = $this->terminalOnly($input, 'settle');
             foreach ([$settle, $this->terminalOnly($input, 'release')] as $blocked) {
                 try { $this->terminalCommand($pdo, $blocked); $this->fail('Unknown request was released.'); }
-                catch (Conflict) { $this->assertHeld($pdo, '1.0000'); }
+                catch (Conflict) { $this->assertHeld($pdo, '0.6252'); }
             }
             $cancelled->outputTokens = 0; $cancelled->evidence = (object) ['source' => 'authoritative-lookup'];
             $this->terminalCommand($pdo, $cancelled);
             $pdo->exec("ALTER TABLE credit_transaction ADD CONSTRAINT terminal_fault CHECK (type <> 'debit')");
             try { $this->terminalCommand($pdo, $settle); $this->fail('Posting fault ignored.'); }
-            catch (PDOException) { $this->assertHeld($pdo, '1.0000'); $this->assertConsistent($pdo, '10.0000'); }
+            catch (PDOException) { $this->assertHeld($pdo, '0.4377'); $this->assertConsistent($pdo, '10.0000'); }
             $pdo->exec('ALTER TABLE credit_transaction DROP ' . self::dropCheckKeyword($pdo) . ' terminal_fault');
             // Cutover/configuration changes must not rewrite an admitted route.
             $pdo->exec('UPDATE tenant_credit_cutover SET deleted = TRUE');

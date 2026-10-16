@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\Utils\Config;
 use Espo\ORM\EntityManager;
 use LogicException;
 use PDO;
@@ -20,7 +21,8 @@ use Throwable;
 final class DispatchStore
 {
     public function __construct(private EntityManager $entityManager, private Clock $clock, private Outcomes $outcomes,
-        private Reservations $reservations, private Settlements $settlements) {}
+        private Reservations $reservations, private Settlements $settlements, private Reconciliation $reconciliation,
+        private Config $config) {}
 
     public function execute(DispatchInput $input): mixed
     {
@@ -263,7 +265,17 @@ final class DispatchStore
         }
         if ($snapshot['missing']) return ['state' => 'pending', 'reason' => 'request_recovery'];
         if ($deliveryFailed) return ['state' => 'pending', 'reason' => 'outcome_delivery'];
-        if ($meteringPending) return ['state' => 'pending', 'reason' => 'metering'];
+        if ($meteringPending) {
+            $policy = $this->config->get('featureCreditsSdkCancellationRecovery');
+            if (!is_array($policy) || !in_array($scope->tenantId, $policy['tenantIds'] ?? [], true)) {
+                return ['state' => 'pending', 'reason' => 'metering'];
+            }
+            $this->reconciliation->reviewSdkCancellation($scope->tenantId, $scope->usageId, $scope->executionId,
+                new ReconciliationPolicy($policy['version'], $policy['operator'], $policy['deadlineSeconds'],
+                    $policy['retrySeconds'], $policy['minimumAttempts']));
+            // Settlement rechecks every request under the financial lock. A review
+            // that is not yet eligible preserves only the unresolved request's hold.
+        }
         $identity = new ExecutionIdentity($scope->runId, $scope->workflowRunId, $scope->executionId);
         $release = $snapshot['action'] === 'release';
         try {

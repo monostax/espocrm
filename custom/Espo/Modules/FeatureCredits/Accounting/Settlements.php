@@ -108,8 +108,29 @@ final class Settlements
                 throw new Conflict('Reservation and allocation projections disagree.');
             }
             foreach ($requests as $request) {
-                if ($request['allocated']->compareTo($request['bound']) !== 0) {
+                $needed = Amount::reservation($request['price']);
+                if ($request['native'] && $needed->compareTo($request['bound']) > 0) $needed = $request['bound'];
+                if ($request['allocated']->compareTo($needed) < 0 || $request['allocated']->compareTo($request['bound']) > 0) {
                     throw new Conflict('Request bound and allocation projections disagree.');
+                }
+            }
+            // Released surplus is historical authorization, no longer a current hold.
+            $query = $pdo->prepare('SELECT * FROM credit_allocation WHERE reservation_id=? AND request_id IS NOT NULL');
+            $query->execute([$reservation['id']]);
+            $bounds = [];
+            foreach ($query->fetchAll(PDO::FETCH_ASSOC) as $allocation) {
+                if ($allocation['deleted'] || $allocation['tenant_id'] !== $tenantId || !isset($requests[$allocation['request_id']]) ||
+                    ($allocation['settled_at'] !== null && ($allocation['consumed_credits'] !== '0.0000' ||
+                        $allocation['debit_transaction_id'] !== null || Amount::fromString($allocation['reserved_credits'])->compareTo(
+                            Amount::fromString($allocation['released_credits'])->plus(Amount::fromString($allocation['expired_credits']))) !== 0))) {
+                    throw new Conflict('Invalid request authorization history.');
+                }
+                $id = $allocation['request_id'];
+                $bounds[$id] = ($bounds[$id] ?? Amount::fromString('0'))->plus(Amount::fromString($allocation['reserved_credits']));
+            }
+            foreach ($requests as $id => $request) {
+                if (!isset($bounds[$id]) || $bounds[$id]->compareTo($request['bound']) !== 0) {
+                    throw new Conflict('Request authorization history does not reconcile.');
                 }
             }
             // Assign exact consumption only to each request's original lots, earliest expiry first.

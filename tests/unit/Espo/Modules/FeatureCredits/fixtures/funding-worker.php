@@ -66,7 +66,11 @@ try {
             new \Espo\Modules\FeatureCredits\Pricing\AiCatalog($manager)))
             ->publishAgreement(json_decode(base64_decode($key), false, 32, JSON_THROW_ON_ERROR)),
         'dispatch' => (new \Espo\Modules\FeatureCredits\Accounting\DispatchStore($manager, $clock, new Outcomes($lock),
-            new Reservations($lock, $funding), new Settlements($lock, $funding)))
+            new Reservations($lock, $funding), new Settlements($lock, $funding), new Reconciliation($lock),
+            new class extends \Espo\Core\Utils\Config {
+                public function __construct() {}
+                public function get(string $name, $default = null) { return $default; }
+            }))
             ->execute(new \Espo\Modules\FeatureCredits\Accounting\DispatchInput(json_decode(base64_decode($key), false, 32, JSON_THROW_ON_ERROR))),
         'cutover' => (new Cutovers($manager, $clock))->schedule(new CutoverInput('tenant', $expires ?: $now, (object) ['approval' => $credits])),
         'request-execution' => (new Requests($lock, $funding))->authorize(

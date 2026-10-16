@@ -60,24 +60,30 @@ trait DispatchStoreCases
         });
     }
 
-    private function dispatchStore(PDO $pdo): DispatchStore
+    private function dispatchStore(PDO $pdo, ?array $cancellationPolicy = null): DispatchStore
     {
         $manager = $this->createMock(EntityManager::class);
         $manager->method('getPDO')->willReturn($pdo);
         $clock = $this->createMock(Clock::class);
         $clock->method('now')->willReturnCallback(fn () => $this->now);
         $lock = $this->lock($pdo); $funding = new Funding($lock);
+        $config = $this->createStub(\Espo\Core\Utils\Config::class);
+        $config->method('get')->willReturn($cancellationPolicy);
         return new DispatchStore($manager, $clock, new Outcomes($lock),
             new \Espo\Modules\FeatureCredits\Accounting\Reservations($lock, $funding),
-            new \Espo\Modules\FeatureCredits\Accounting\Settlements($lock, $funding));
+            new \Espo\Modules\FeatureCredits\Accounting\Settlements($lock, $funding),
+            new \Espo\Modules\FeatureCredits\Accounting\Reconciliation($lock), $config);
     }
 
-    private function dispatchFixture(PDO $pdo): array
+    private function dispatchFixture(PDO $pdo, ?array $modelPolicy = null): array
     {
         $this->reservations($pdo);
         (new Funding($this->lock($pdo)))->grant($this->input());
         $this->cutovers($pdo)->schedule(new CutoverInput('tenant', $this->now, (object) ['approved' => true]));
-        $command = ExecutionFixtures::admission(); $catalog = [$command->modelRateId => ExecutionFixtures::policy()];
+        $modelPolicy ??= ExecutionFixtures::policy();
+        $command = ExecutionFixtures::admission();
+        $command->modelRateId = (new \Espo\Modules\FeatureCredits\Pricing\AiModelPolicy($modelPolicy))->rate->id;
+        $catalog = [$command->modelRateId => $modelPolicy];
         $admitted = $this->terminalCommand($pdo, $command, $catalog);
         unset($command->billingRateId); $command->operation = 'authorize';
         $command->usageId = $admitted['receipt']['usageId']; $command->requestKey = 'first';

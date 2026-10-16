@@ -17,77 +17,139 @@ final class Reconciliation
 
     public function recordUnavailable(ReconciliationInput $input): array
     {
-        return $this->walletLock->run($input->tenantId, function (PDO $pdo, array $wallet, string $now) use ($input): array {
-            $query = $pdo->prepare('SELECT * FROM credit_usage WHERE id = ? AND tenant_id = ?');
-            $query->execute([$input->usageId, $input->tenantId]);
-            $usage = $query->fetch(PDO::FETCH_ASSOC);
-            if (!$usage || $usage['deleted']) {
-                throw new NotFound('Unknown credit operation.');
+        return $this->walletLock->run($input->tenantId,
+            fn (PDO $pdo, array $wallet, string $now): array => $this->recordLocked($pdo, $input, $now));
+    }
+
+    /** Policy-authorized review of durable Google SDK cancellations with no
+     * response identity. This is a mailbox lookup, NOT a fabricated provider API
+     * lookup or a claim of zero usage. The seal + terminal SDK facts prove that
+     * dispatch ended. Repeat observations/grace allow late metering to win first. */
+    public function reviewSdkCancellation(string $tenantId, string $usageId, string $executionId, ReconciliationPolicy $policy): void
+    {
+        $this->walletLock->run($tenantId, function (PDO $pdo, array $wallet, string $now) use ($tenantId, $usageId, $executionId, $policy): void {
+            $policySnapshot = get_object_vars($policy);
+            ksort($policySnapshot);
+            $q = $pdo->prepare('SELECT * FROM credit_execution_route WHERE tenant_id=? AND usage_id=? AND execution_id=? AND deleted=FALSE');
+            $q->execute([$tenantId, $usageId, $executionId]);
+            $route = $q->fetch(PDO::FETCH_ASSOC);
+            if (!$route || $route['completion_requested_at'] === null || $route['completion_finished_at'] !== null) return;
+            $q = $pdo->prepare("SELECT * FROM credit_request WHERE tenant_id=? AND usage_id=? AND deleted=FALSE
+                AND provider='google' AND provider_request_id IS NULL AND outcome IN ('cancelled','superseded')
+                AND metering_state='unknown' AND billing_state='pending' ORDER BY id");
+            $q->execute([$tenantId, $usageId]);
+            foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $request) {
+                if ($request['completed_at'] === null || $request['outcome_record'] === null) continue;
+                $history = json_decode($request['reconciliation_record'] ?? 'null', true, 512, JSON_THROW_ON_ERROR);
+                if ($history && ($history['policy'] !== $policySnapshot ||
+                    ($history['nextAttemptAt'] ?? $now) > $now)) continue;
+                $q = $pdo->prepare('SELECT * FROM credit_execution_attempt WHERE tenant_id=? AND usage_id=? AND request_id=? AND deleted=FALSE');
+                $q->execute([$tenantId, $usageId, $request['id']]);
+                $attempts = $q->fetchAll(PDO::FETCH_ASSOC);
+                if (count($attempts) !== 1) continue;
+                $attempt = $attempts[0];
+                $intent = json_decode($attempt['intent'], false, 512, JSON_THROW_ON_ERROR);
+                DispatchInput::intent($intent);
+                if ($intent->kind !== 'stream' || $intent->scope->tenantId !== $tenantId || $intent->scope->usageId !== $usageId ||
+                    $intent->scope->executionId !== $executionId || $intent->scope->runId !== $route['run_id'] ||
+                    $intent->scope->workflowRunId !== $route['workflow_run_id'] || $intent->requestKey !== $request['request_key']) continue;
+                $q = $pdo->prepare('SELECT * FROM credit_outcome_delivery WHERE attempt_id=? ORDER BY phase');
+                $q->execute([$attempt['id']]);
+                $deliveries = $q->fetchAll(PDO::FETCH_ASSOC);
+                // A saved resolution, even one not yet delivered, must be processed rather than waived.
+                if (count($deliveries) !== 1 || $deliveries[0]['deleted'] || $deliveries[0]['tenant_id'] !== $tenantId || (int) $deliveries[0]['phase'] !== 0) continue;
+                $facts = json_decode($deliveries[0]['facts'], false, 512, JSON_THROW_ON_ERROR);
+                $terminal = DispatchInput::terminal($intent->scope, $facts);
+                $outcome = json_decode($request['outcome_record'], true, 512, JSON_THROW_ON_ERROR);
+                if ($terminal->outcome->hash !== ($outcome['initial']['hash'] ?? null) || isset($outcome['resolution']) ||
+                    $facts->requestId !== $request['id'] || $facts->outcome !== $request['outcome'] ||
+                    $facts->inputTokens !== null || $facts->outputTokens !== null || $facts->cachedInputTokens !== null ||
+                    ($facts->providerRequestId ?? null) !== null || ($facts->evidence->source ?? null) !== 'vercel-ai-sdk-v4' ||
+                    ($facts->evidence->completion ?? null) !== 'stream-open-error' || ($facts->evidence->dispatched ?? null) !== true ||
+                    ($facts->evidence->requestHash ?? null) !== $intent->requestHash) continue;
+                $number = count($history['attempts'] ?? []) + 1;
+                $evidence = (object) ['source' => 'crm-durable-sdk-outcome-review-v1',
+                    'reference' => $request['id'] . ':sdk-review:' . $number . ':' . $now,
+                    'reason' => 'Configured cancellation policy: sealed Google stream ended before any response identity or metering; durable SDK mailbox has no recovered usage.',
+                    'deliveryId' => $deliveries[0]['id'], 'facts' => $facts, 'completionRequestedAt' => $route['completion_requested_at']];
+                $this->recordLocked($pdo, new ReconciliationInput($tenantId, $usageId, $executionId, $request['id'],
+                    'sdk-review-' . $number, $policy->operator, $now, $policy, $evidence), $now);
             }
-            if ($usage['execution_id'] !== $input->executionId || $usage['operation_type'] !== 'ai' ||
-                $usage['billing_regime'] !== 'unified-prepaid-v1') {
-                throw new Conflict('Reconciliation does not own a unified AI operation.');
-            }
-            $query = $pdo->prepare('SELECT * FROM credit_request WHERE id = ? AND usage_id = ? AND tenant_id = ?');
-            $query->execute([$input->requestId, $input->usageId, $input->tenantId]);
-            $request = $query->fetch(PDO::FETCH_ASSOC);
-            if (!$request || $request['deleted']) {
-                throw new NotFound('Unknown authorized request.');
-            }
-            $record = $request['reconciliation_record'] === null ? null :
-                json_decode($request['reconciliation_record'], true, 512, JSON_THROW_ON_ERROR);
-            foreach ($record['attempts'] ?? [] as $attempt) {
-                if ($attempt['input']['attemptKey'] === $input->attemptKey) {
-                    if ($attempt['hash'] !== $input->hash) {
-                        throw new Conflict('Conflicting reconciliation attempt replay.');
-                    }
-                    return $this->receipt($request, $record);
-                }
-            }
-            $query = $pdo->prepare('SELECT * FROM credit_reservation WHERE id = ? AND usage_id = ? AND tenant_id = ?');
-            $query->execute([$request['reservation_id'], $input->usageId, $input->tenantId]);
-            $reservation = $query->fetch(PDO::FETCH_ASSOC);
-            if (!$reservation || $reservation['deleted'] || $reservation['state'] !== 'held' ||
-                $reservation['execution_id'] !== $input->executionId || $usage['state'] !== 'admitted') {
-                throw new Conflict('Operation is not open for reconciliation.');
-            }
-            if (!in_array($request['outcome'], ['cancelled', 'superseded'], true) ||
-                $request['metering_state'] !== 'unknown' || $request['billing_state'] !== 'pending' ||
-                $request['completed_at'] === null || $request['outcome_record'] === null ||
-                $request['priced_credits_exact'] !== null || $request['waiver_reason'] !== null) {
-                throw new Conflict('Only terminal cancellation with unknown metering may be reconciled as unavailable.');
-            }
-            $payload = json_decode($input->json, true, 512, JSON_THROW_ON_ERROR);
-            $record ??= ['policy' => $payload['policy'],
-                'deadlineAt' => self::after($request['completed_at'], $input->policy->deadlineSeconds), 'attempts' => []];
-            if ($record['policy'] !== $payload['policy']) {
-                throw new Conflict('Reconciliation policy and owner are immutable for this request.');
-            }
-            $earliest = $record['nextAttemptAt'] ?? $request['completed_at'];
-            if ($input->observedAt < $earliest || $input->observedAt > $now) {
-                throw new Conflict('Lookup observation violates reconciliation cadence or server time.');
-            }
-            foreach ($record['attempts'] as $attempt) {
-                if ($attempt['input']['evidence']['source'] === $payload['evidence']['source'] &&
-                    $attempt['input']['evidence']['reference'] === $payload['evidence']['reference']) {
-                    throw new Conflict('A lookup evidence reference cannot count as another attempt.');
-                }
-            }
-            $record['attempts'][] = ['hash' => $input->hash, 'recordedAt' => $now, 'input' => $payload];
-            $waive = count($record['attempts']) >= $input->policy->minimumAttempts && $input->observedAt >= $record['deadlineAt'];
-            $record['nextAttemptAt'] = $waive ? null : self::after($input->observedAt, $input->policy->retrySeconds);
-            if ($waive) {
-                $record['waivedAt'] = $now;
-                $request['metering_state'] = 'unrecoverable';
-                $request['billing_state'] = 'waived';
-                $request['waiver_reason'] = 'unrecoverable_cancellation';
-            }
-            // Pending usage contributes no accrued price. Preserve original/partial evidence and all assigned holds.
-            $pdo->prepare('UPDATE credit_request SET reconciliation_record = ?, metering_state = ?, billing_state = ?, waiver_reason = ? WHERE id = ?')
-                ->execute([json_encode($record, JSON_THROW_ON_ERROR), $request['metering_state'], $request['billing_state'],
-                    $request['waiver_reason'], $input->requestId]);
-            return $this->receipt($request, $record);
         });
+    }
+
+    private function recordLocked(PDO $pdo, ReconciliationInput $input, string $now): array
+    {
+        $query = $pdo->prepare('SELECT * FROM credit_usage WHERE id = ? AND tenant_id = ?');
+        $query->execute([$input->usageId, $input->tenantId]);
+        $usage = $query->fetch(PDO::FETCH_ASSOC);
+        if (!$usage || $usage['deleted']) {
+            throw new NotFound('Unknown credit operation.');
+        }
+        if ($usage['execution_id'] !== $input->executionId || $usage['operation_type'] !== 'ai' ||
+            $usage['billing_regime'] !== 'unified-prepaid-v1') {
+            throw new Conflict('Reconciliation does not own a unified AI operation.');
+        }
+        $query = $pdo->prepare('SELECT * FROM credit_request WHERE id = ? AND usage_id = ? AND tenant_id = ?');
+        $query->execute([$input->requestId, $input->usageId, $input->tenantId]);
+        $request = $query->fetch(PDO::FETCH_ASSOC);
+        if (!$request || $request['deleted']) {
+            throw new NotFound('Unknown authorized request.');
+        }
+        $record = $request['reconciliation_record'] === null ? null :
+            json_decode($request['reconciliation_record'], true, 512, JSON_THROW_ON_ERROR);
+        foreach ($record['attempts'] ?? [] as $attempt) {
+            if ($attempt['input']['attemptKey'] === $input->attemptKey) {
+                if ($attempt['hash'] !== $input->hash) {
+                    throw new Conflict('Conflicting reconciliation attempt replay.');
+                }
+                return $this->receipt($request, $record);
+            }
+        }
+        $query = $pdo->prepare('SELECT * FROM credit_reservation WHERE id = ? AND usage_id = ? AND tenant_id = ?');
+        $query->execute([$request['reservation_id'], $input->usageId, $input->tenantId]);
+        $reservation = $query->fetch(PDO::FETCH_ASSOC);
+        if (!$reservation || $reservation['deleted'] || $reservation['state'] !== 'held' ||
+            $reservation['execution_id'] !== $input->executionId || $usage['state'] !== 'admitted') {
+            throw new Conflict('Operation is not open for reconciliation.');
+        }
+        if (!in_array($request['outcome'], ['cancelled', 'superseded'], true) ||
+            $request['metering_state'] !== 'unknown' || $request['billing_state'] !== 'pending' ||
+            $request['completed_at'] === null || $request['outcome_record'] === null ||
+            $request['priced_credits_exact'] !== null || $request['waiver_reason'] !== null) {
+            throw new Conflict('Only terminal cancellation with unknown metering may be reconciled as unavailable.');
+        }
+        $payload = json_decode($input->json, true, 512, JSON_THROW_ON_ERROR);
+        $record ??= ['policy' => $payload['policy'],
+            'deadlineAt' => self::after($request['completed_at'], $input->policy->deadlineSeconds), 'attempts' => []];
+        if ($record['policy'] !== $payload['policy']) {
+            throw new Conflict('Reconciliation policy and owner are immutable for this request.');
+        }
+        $earliest = $record['nextAttemptAt'] ?? $request['completed_at'];
+        if ($input->observedAt < $earliest || $input->observedAt > $now) {
+            throw new Conflict('Lookup observation violates reconciliation cadence or server time.');
+        }
+        foreach ($record['attempts'] as $attempt) {
+            if ($attempt['input']['evidence']['source'] === $payload['evidence']['source'] &&
+                $attempt['input']['evidence']['reference'] === $payload['evidence']['reference']) {
+                throw new Conflict('A lookup evidence reference cannot count as another attempt.');
+            }
+        }
+        $record['attempts'][] = ['hash' => $input->hash, 'recordedAt' => $now, 'input' => $payload];
+        $waive = count($record['attempts']) >= $input->policy->minimumAttempts && $input->observedAt >= $record['deadlineAt'];
+        $record['nextAttemptAt'] = $waive ? null : self::after($input->observedAt, $input->policy->retrySeconds);
+        if ($waive) {
+            $record['waivedAt'] = $now;
+            $request['metering_state'] = 'unrecoverable';
+            $request['billing_state'] = 'waived';
+            $request['waiver_reason'] = 'unrecoverable_cancellation';
+        }
+        // Preserve original/partial evidence. Only a completed waiver releases its request hold.
+        $pdo->prepare('UPDATE credit_request SET reconciliation_record = ?, metering_state = ?, billing_state = ?, waiver_reason = ? WHERE id = ?')
+            ->execute([json_encode($record, JSON_THROW_ON_ERROR), $request['metering_state'], $request['billing_state'],
+                $request['waiver_reason'], $input->requestId]);
+        RequestHolds::trim($pdo, $input->tenantId, $input->requestId, $now);
+        return $this->receipt($request, $record);
     }
 
     private static function after(string $time, int $seconds): string

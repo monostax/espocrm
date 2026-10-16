@@ -58,6 +58,7 @@ require_once __DIR__ . '/FundingRefundCases.php';
 require_once __DIR__ . '/LegacyMigrationCases.php';
 require_once __DIR__ . '/WorkspaceCases.php';
 require_once __DIR__ . '/AiUsageReportingCases.php';
+require_once __DIR__ . '/RequestHoldsCases.php';
 
 class FundingTest extends TestCase
 {
@@ -87,6 +88,7 @@ class FundingTest extends TestCase
     use LegacyMigrationCases;
     use WorkspaceCases;
     use AiUsageReportingCases;
+    use RequestHoldsCases;
 
     private string $now = '2026-10-10 12:00:00';
 
@@ -762,7 +764,7 @@ class FundingTest extends TestCase
                 $this->assertFalse($requests->authorize($input)['dispatchAllowed']);
             }
             $this->assertSame('0.001603125', $pdo->query('SELECT accrued_credits_exact FROM credit_reservation')->fetchColumn());
-            $this->assertHeld($pdo, '2.0000');
+            $this->assertHeld($pdo, '1.8890'); // Four 0.0282 bounds become three 0.0006 holds and one waiver.
             $this->assertConsistent($pdo, '10.0000');
             $this->assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM credit_transaction')->fetchColumn());
         });
@@ -814,9 +816,9 @@ class FundingTest extends TestCase
                 $outcomes->record(new OutcomeInput('other', $usage, 'execution', $request, 'success', 0, 0, 1, (object) ['source' => 'provider']));
                 $this->fail('Cross-tenant outcome accepted.');
             } catch (NotFound) {
-                $this->assertSame('0.0001875', $pdo->query('SELECT accrued_credits_exact FROM credit_reservation')->fetchColumn());
+                    $this->assertSame('0.0001875', $pdo->query('SELECT accrued_credits_exact FROM credit_reservation')->fetchColumn());
             }
-            $this->assertHeld($pdo, '2.0000');
+            $this->assertHeld($pdo, '1.8127');
         });
     }
 
@@ -876,8 +878,9 @@ class FundingTest extends TestCase
             ]);
             $this->assertCount(1, array_column($results, 'result'));
             $this->assertSame([Conflict::class], array_values(array_column($results, 'error')));
-            $this->assertContains($pdo->query('SELECT accrued_credits_exact FROM credit_reservation')->fetchColumn(), ['0.00075', '0.0009375']);
-            $this->assertHeld($pdo, '2.0000');
+            $accrued = $pdo->query('SELECT accrued_credits_exact FROM credit_reservation')->fetchColumn();
+            $this->assertContains($accrued, ['0.00075', '0.0009375']);
+            $this->assertHeld($pdo, $accrued === '0.00075' ? '1.4383' : '1.4385');
             $this->assertConsistent($pdo, '10.0000');
         });
     }
@@ -924,7 +927,7 @@ class FundingTest extends TestCase
                 $reservations->release('tenant', $usage, 'execution');
                 $this->fail('Requests were released through pre-request cancellation.');
             } catch (Conflict) {
-                $this->assertHeld($pdo, '2.0000');
+                $this->assertHeld($pdo, '1.6250'); // Unassigned admission buffer only.
             }
         });
     }
@@ -945,9 +948,9 @@ class FundingTest extends TestCase
             ]);
             $this->assertCount(3, array_column($results, 'result'));
             $this->assertSame('0.0001875', $pdo->query('SELECT accrued_credits_exact FROM credit_reservation')->fetchColumn());
-            $this->assertConsistent($pdo, '1.1875');
-            $this->assertHeld($pdo, '0.3750');
-            $this->assertSame('0.1875', $pdo->query("SELECT reserved_credits FROM credit_grant WHERE source_key = 'monthly'")->fetchColumn());
+            $this->assertConsistent($pdo, '1.0002');
+            $this->assertHeld($pdo, '0.1877');
+            $this->assertSame('0.0002', $pdo->query("SELECT reserved_credits FROM credit_grant WHERE source_key = 'monthly'")->fetchColumn());
         });
     }
 
@@ -1127,8 +1130,9 @@ class FundingTest extends TestCase
             $this->assertSame('0.0750', $receipt['settledCredits']);
             $this->assertSame(['monthly' => '0.0000', 'purchase' => '2.0000'],
                 $pdo->query('SELECT source_key, remaining_credits FROM credit_grant ORDER BY source_key')->fetchAll(PDO::FETCH_KEY_PAIR));
-            $this->assertSame('0.0250', $pdo->query('SELECT SUM(expired_credits) FROM credit_allocation')->fetchColumn());
-            $this->assertSame('0.4000', $pdo->query('SELECT SUM(released_credits) FROM credit_allocation WHERE allocation_key <> \'initial\'')->fetchColumn());
+            $this->assertSame('0.0000', $pdo->query('SELECT SUM(expired_credits) FROM credit_allocation')->fetchColumn());
+            $this->assertSame('-0.0250', $pdo->query("SELECT SUM(credits) FROM credit_transaction WHERE type='expiration'")->fetchColumn());
+            $this->assertSame('0.4250', $pdo->query('SELECT SUM(released_credits) FROM credit_allocation WHERE allocation_key <> \'initial\'')->fetchColumn());
             $this->assertConsistent($pdo, '2.0000');
             $this->assertHeld($pdo, '0.0000');
         });
@@ -1166,7 +1170,7 @@ class FundingTest extends TestCase
                     $this->fail('Invalid settlement accepted: ' . $state);
                 } catch (Conflict) {
                     $this->assertConsistent($pdo, '10.0000');
-                    $this->assertHeld($pdo, '2.0000');
+                    $this->assertHeld($pdo, in_array($state, ['inFlight', 'unknown'], true) ? '2.0000' : '1.8127');
                     $this->assertNull($pdo->query('SELECT settled_credits FROM credit_usage')->fetchColumn());
                 }
             }
@@ -1255,7 +1259,7 @@ class FundingTest extends TestCase
             } else {
                 $this->assertSame(Conflict::class, $results[0]['error']);
                 $this->assertConsistent($pdo, '10.0000');
-                $this->assertHeld($pdo, '2.0000');
+                $this->assertHeld($pdo, '1.8127');
             }
         });
     }
@@ -1528,7 +1532,7 @@ class FundingTest extends TestCase
             $this->assertNull($receipt['nextAttemptAt']);
             $this->assertSame($receipt, $service->recordUnavailable($first));
             $this->assertSame($before, $pdo->query('SELECT outcome_record, metering, evidence, completed_at, provider_request_id FROM credit_request')->fetch(PDO::FETCH_ASSOC));
-            $this->assertHeld($pdo, '2.0000');
+            $this->assertHeld($pdo, '1.8125');
             $this->assertConsistent($pdo, '10.0000');
             $funding = new Funding($this->lock($pdo));
             $success = (new Requests($this->lock($pdo), $funding))->authorize($this->request($usage, 'success'))['requestId'];
