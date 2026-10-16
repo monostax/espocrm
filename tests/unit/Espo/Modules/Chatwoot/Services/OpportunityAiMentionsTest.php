@@ -25,12 +25,24 @@ class OpportunityAiMentionsTest extends TestCase
     private OpportunityPostMentions $mentions;
     private Note $note;
     private bool $canReadMembership = true;
-    private OpportunityPostMentions $realMentions;
     private EntityDouble $parent;
+    private string $userType = 'regular';
+    private bool $isActive = true;
+    private bool $canMention = true;
+    private bool $canRead = true;
+    private bool $canStream = true;
+    private bool $canActForTenant = true;
+    private bool $aiEnabled = true;
 
     protected function setUp(): void
     {
         $em = $this->createMock(EntityManager::class);
+        $user = $this->createMock(User::class);
+        $user->method('getId')->willReturn('ai-user');
+        $user->method('isRegular')->willReturnCallback(fn () => $this->userType === 'regular');
+        $user->method('isAdmin')->willReturnCallback(fn () => $this->userType === 'admin');
+        $user->method('isApi')->willReturnCallback(fn () => $this->userType === 'api');
+        $user->method('isActive')->willReturnCallback(fn () => $this->isActive);
         $account = new EntityDouble(['id' => 'account', 'platformId' => 'platform', 'tenantId' => 'tenant', 'chatwootAccountId' => 1]);
         $opportunity = $this->parent = new EntityDouble(['tenantId' => 'tenant']);
         $memberships = [];
@@ -45,23 +57,27 @@ class OpportunityAiMentionsTest extends TestCase
             'ChatwootAccountUserMembership' => array_values(array_filter($memberships, fn ($m) => $m->getId() === $id))[0] ?? null,
             'ChatwootAccount' => $account,
             'ChatwootUser' => $identities[$id] ?? null,
+            'User' => $id === 'ai-user' ? $user : null,
             default => null,
         });
         $accounts = $this->createMock(RDBRepository::class);
         $accountSelect = $this->createMock(RDBSelectBuilder::class);
-        $accounts->method('where')->with(['tenantId' => 'tenant', 'chatwootAccountId' => 1])->willReturn($accountSelect);
+        $accountWhere = [];
+        $accounts->method('where')->willReturnCallback(function ($where) use (&$accountWhere, $accountSelect) {
+            $accountWhere = $where;
+            return $accountSelect;
+        });
         $accountSelect->method('limit')->with(0, 2)->willReturnSelf();
-        $accountSelect->method('find')->willReturn(new EntityCollection([$account]));
+        $accountSelect->method('find')->willReturnCallback(function () use (&$accountWhere, $account) {
+            return new EntityCollection($accountWhere === ['tenantId' => 'tenant', 'chatwootAccountId' => 1] ? [$account] : []);
+        });
         $members = $this->createMock(RDBRepository::class);
         $memberSelect = $this->createMock(RDBSelectBuilder::class);
         $members->method('join')->with('chatwootUser')->willReturn($memberSelect);
         $memberSelect->method('where')->with([
             'chatwootAccountId' => 'account', 'chatwootUser.platformId' => 'platform', 'isAI' => true,
         ])->willReturnSelf();
-        $memberSelect->method('find')->willReturn(new EntityCollection($memberships));
-        $user = $this->createMock(User::class);
-        $user->method('getId')->willReturn('ai-user');
-        $user->method('isRegular')->willReturn(true);
+        $memberSelect->method('find')->willReturnCallback(fn () => new EntityCollection($this->aiEnabled ? $memberships : []));
         $users = $this->createMock(RDBRepository::class);
         $usersSelect = $this->createMock(RDBSelectBuilder::class);
         $users->method('where')->with(['id' => ['ai-user'], 'isActive' => true])->willReturn($usersSelect);
@@ -73,25 +89,19 @@ class OpportunityAiMentionsTest extends TestCase
         });
         $acl = $this->createMock(Acl::class);
         $acl->method('check')->willReturnCallback(fn () => $this->canReadMembership);
-        $acl->method('checkUserPermission')->willReturn(true);
+        $acl->method('checkUserPermission')->willReturnCallback(fn () => $this->canMention);
         $manager = $this->createMock(AclManager::class);
-        $manager->method('checkEntityRead')->willReturn(true);
-        $manager->method('checkEntityStream')->willReturn(true);
+        $manager->method('checkEntityRead')->willReturnCallback(fn () => $this->canRead);
+        $manager->method('checkEntityStream')->willReturnCallback(fn () => $this->canStream);
         $tenants = $this->createMock(UserTenantResolver::class);
-        $tenants->method('canActForTenant')->willReturn(true);
-        $this->realMentions = new OpportunityPostMentions($em, $acl, $manager, $tenants, $this->createMock(TenantResolver::class));
-        $this->mentions = $this->getMockBuilder(OpportunityPostMentions::class)
-            ->setConstructorArgs([$em, $acl, $this->createMock(AclManager::class),
-                $this->createMock(UserTenantResolver::class), $this->createMock(TenantResolver::class)])
-            ->onlyMethods(['resolve'])->getMock();
-        // Author/ACL normalization is already covered separately. Here it deliberately
-        // accepts the shared user so only exact mention selection can disambiguate AIs.
-        $this->mentions->method('resolve')->with($this->anything(), false)->willReturn(['ai-user']);
+        $tenants->method('canActForTenant')->willReturnCallback(fn () => $this->canActForTenant);
+        $this->mentions = new OpportunityPostMentions($em, $acl, $manager, $tenants, $this->createMock(TenantResolver::class));
         $defs = ['attributes' => []];
         foreach (['id', 'parentType', 'parentId', 'createdById', 'post', 'opportunityChatwootAccountId'] as $field) {
             $defs['attributes'][$field] = ['type' => 'varchar'];
         }
         $defs['attributes']['data'] = ['type' => 'jsonObject'];
+        $defs['attributes']['opportunityChatwootAccountId'] = ['type' => 'int'];
         $defs['attributes']['opportunityMentionUserIds'] = ['type' => 'jsonArray'];
         $this->note = new Note('Note', $defs);
         $this->note->set([
@@ -149,12 +159,73 @@ class OpportunityAiMentionsTest extends TestCase
     public function testMembershipReferencesNormalizeToAuthorizedUsersWithoutCrossAccountOrTenantAccess(): void
     {
         $this->note->setPost('[Assistant](#crm-reference/v1/record/ChatwootAccountUserMembership/ai-7) Help');
-        self::assertSame(['ai-user'], $this->realMentions->resolve($this->note));
-        self::assertSame(['ai-7'], array_column($this->realMentions->resolveAiTargets($this->note), 'aiAgentMembershipId'));
+        self::assertSame(['ai-user'], $this->mentions->resolve($this->note));
+        self::assertSame(['ai-7'], array_column($this->mentions->resolveAiTargets($this->note), 'aiAgentMembershipId'));
         $this->note->set('opportunityChatwootAccountId', 2);
-        self::assertSame([], $this->realMentions->resolve($this->note));
+        self::assertSame([], $this->mentions->resolve($this->note));
         $this->note->set('opportunityChatwootAccountId', 1);
         $this->parent->set('tenantId', 'other');
-        self::assertSame([], $this->realMentions->resolve($this->note));
+        self::assertSame([], $this->mentions->resolve($this->note));
+    }
+
+    public function testApiAiMembershipTriggersExecutionWithoutHumanNotifications(): void
+    {
+        $this->userType = 'api';
+        foreach (['Opportunity', 'Initiative', 'Task', 'Meeting', 'Call', 'Account', 'Contact'] as $type) {
+            $this->note->set('parentType', $type);
+            $this->note->setPost('[Assistant](#crm-reference/v1/record/ChatwootAccountUserMembership/ai-7) Help');
+            self::assertSame([], $this->mentions->resolve($this->note));
+            self::assertSame(['ai-7'], array_column($this->mentions->resolveAiTargets($this->note), 'aiAgentMembershipId'));
+        }
+    }
+
+    public function testApiAiSupportsLegacyAndCrmUserMentions(): void
+    {
+        $this->userType = 'api';
+        $this->note->setPost('[@Assistant](mention://user/7/Assistant) Help');
+        self::assertSame(['ai-7'], array_column($this->mentions->resolveAiTargets($this->note), 'aiAgentMembershipId'));
+        $this->note->setPost('[Assistant](#crm-reference/v1/record/User/ai-user) Help');
+        self::assertSame(['ai-7', 'ai-8'], array_column($this->mentions->resolveAiTargets($this->note), 'aiAgentMembershipId'));
+    }
+
+    public function testApiAiRetainsEveryAuthorizationCheck(): void
+    {
+        $this->userType = 'api';
+        $this->note->setPost('[Assistant](#crm-reference/v1/record/ChatwootAccountUserMembership/ai-7) Help');
+        self::assertCount(1, $this->mentions->resolveAiTargets($this->note));
+        foreach (['isActive', 'canReadMembership', 'canMention', 'canRead', 'canStream', 'canActForTenant', 'aiEnabled'] as $gate) {
+            $this->$gate = false;
+            self::assertSame([], $this->mentions->resolveAiTargets($this->note), $gate);
+            $this->$gate = true;
+        }
+        $this->note->set('opportunityChatwootAccountId', 2);
+        self::assertSame([], $this->mentions->resolveAiTargets($this->note));
+        $this->note->set('opportunityChatwootAccountId', 1);
+        $this->parent->set('tenantId', 'other');
+        self::assertSame([], $this->mentions->resolveAiTargets($this->note));
+    }
+
+    public function testApiAiDoesNotTriggerFromTeamsGeneratedRepliesOrPeerPosts(): void
+    {
+        $this->userType = 'api';
+        $this->note->setPost('[@Team](mention://team/7/Team) Help');
+        self::assertSame([], $this->mentions->resolveAiTargets($this->note));
+        $this->note->setPost('[Assistant](#crm-reference/v1/record/ChatwootAccountUserMembership/ai-7) Help');
+        $this->note->setData((object) ['opportunityStreamAgent' => (object) ['status' => 'completed']]);
+        self::assertSame([], $this->mentions->resolveAiTargets($this->note));
+        $this->note->setData((object) []);
+        $this->note->set('createdById', 'ai-user');
+        self::assertSame([], $this->mentions->resolveAiTargets($this->note));
+    }
+
+    public function testPortalAndNonAiApiUsersCannotBecomeAiTargets(): void
+    {
+        $this->note->setPost('[Assistant](#crm-reference/v1/record/ChatwootAccountUserMembership/ai-7) Help');
+        $this->userType = 'portal';
+        self::assertSame([], $this->mentions->resolveAiTargets($this->note));
+        $this->userType = 'api';
+        $this->aiEnabled = false;
+        $this->note->setPost('[Assistant](#crm-reference/v1/record/User/ai-user) Help');
+        self::assertSame([], $this->mentions->resolveAiTargets($this->note));
     }
 }

@@ -7,6 +7,7 @@ namespace Espo\Modules\Chatwoot\Services;
 use Espo\Core\Acl;
 use Espo\Core\AclManager;
 use Espo\Entities\Note;
+use Espo\Entities\User;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
@@ -97,10 +98,7 @@ class OpportunityPostMentions
             return [];
         }
         foreach ($this->entityManager->getRDBRepository('User')->where(['id' => $ids, 'isActive' => true])->find() as $user) {
-            if (($user->isRegular() || $user->isAdmin()) && $this->acl->checkUserPermission($user, 'mention') &&
-                $this->aclManager->checkEntityRead($user, $opportunity) &&
-                $this->aclManager->checkEntityStream($user, $opportunity) &&
-                ($user->isAdmin() || $this->tenantResolver->canActForTenant($user, (string) $opportunity->get('tenantId')))) {
+            if (($user->isRegular() || $user->isAdmin()) && $this->canMentionUser($user, $opportunity)) {
                 $result[] = $user->getId();
             }
         }
@@ -129,10 +127,8 @@ class OpportunityPostMentions
             return [];
         }
         $account = $accounts[0];
-        $userIds = $this->resolve($note, includeTeams: false);
-        if (!$userIds) {
-            return [];
-        }
+        // AI execution recipients are not human notification recipients. Managed
+        // AI profiles use API users, which resolve() intentionally excludes.
         // A CRM user can own multiple Chatwoot identities. Retain the exact selected
         // platform ID rather than waking every AI linked to the same CRM user.
         preg_match_all('~\(mention://user/(\d+)/[^)]*\)~', $note->getPost() ?? '', $directMatches);
@@ -163,10 +159,16 @@ class OpportunityPostMentions
             if ($userId && $userId === $note->getCreatedById()) {
                 return [];
             }
-            if ($userId && in_array($userId, $userIds, true) &&
+            if ($userId &&
                 (in_array((int) $chatwootUser->get('chatwootUserId'), $platformUserIds, true) ||
                     in_array($userId, $nativeUserIds, true) ||
                     (in_array($membership->getId(), $membershipIds, true) && $this->acl->check($membership, 'read')))) {
+                $user = $this->entityManager->getEntityById('User', $userId);
+                if (!$user instanceof User || !$user->isActive() ||
+                    !($user->isRegular() || $user->isAdmin() || $user->isApi()) ||
+                    !$this->canMentionUser($user, $opportunity)) {
+                    continue;
+                }
                 $targets[] = (object) [
                     'aiAgentMembershipId' => $membership->getId(),
                     'chatwootAccountCrmId' => $account->getId(),
@@ -175,6 +177,14 @@ class OpportunityPostMentions
             }
         }
         return $targets;
+    }
+
+    private function canMentionUser(User $user, Entity $parent): bool
+    {
+        return $this->acl->checkUserPermission($user, 'mention') &&
+            $this->aclManager->checkEntityRead($user, $parent) &&
+            $this->aclManager->checkEntityStream($user, $parent) &&
+            ($user->isAdmin() || $this->tenantResolver->canActForTenant($user, (string) $parent->get('tenantId')));
     }
 
     private function referenceUserIds(Note $note, bool $includeTeams, bool $includeMemberships = true): array
