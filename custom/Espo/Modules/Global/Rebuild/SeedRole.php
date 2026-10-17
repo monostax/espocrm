@@ -95,6 +95,9 @@ class SeedRole implements RebuildAction
             'mentionPermission' => 'team',
             'userCalendarPermission' => 'team',
             'data' => [
+                // DMD discovers CRM contracts using the initiating tenant user's identity.
+                // This grants schema documentation access; record operations retain their own ACL.
+                'OpenApi' => true,
                 'Import' => true,
                 'ExternalAccount' => true,
                 'Activities' => true,
