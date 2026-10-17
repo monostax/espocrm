@@ -17,6 +17,9 @@ use Espo\Tools\Stream\MassNotePreparator;
 
 class ActivityInbox
 {
+    protected const INBOX_TYPES = ['Task', 'Call'];
+    protected const RECORD_TYPES = Access::TYPES;
+
     public function __construct(private Inbox $inbox, private Access $access, private ActivityDiscussion $discussion, private ServiceContainer $services, private MassNotePreparator $preparator, private Recurrence $recurrence) {}
 
     private function tenant(Request $request): Entity
@@ -26,7 +29,12 @@ class ActivityInbox
 
     private function record(Request $request, bool $stream = false): Entity
     {
-        return $this->access->record((string) $request->getRouteParam('type'), (string) $request->getRouteParam('id'), $this->tenant($request), $stream);
+        return $this->access->record($this->recordType($request), (string) $request->getRouteParam('id'), $this->tenant($request), $stream);
+    }
+
+    protected function recordType(Request $request): string
+    {
+        return $this->access->type((string) $request->getRouteParam('type'));
     }
 
     private function filters(Request $request): array
@@ -42,9 +50,9 @@ class ActivityInbox
         return $filters;
     }
 
-    public function getActionList(Request $request): object { return $this->inbox->list($this->tenant($request), $this->filters($request)); }
-    public function getActionCounts(Request $request): object { return $this->inbox->counts($this->tenant($request), $this->filters($request)); }
-    public function getActionMetadata(Request $request): object { $this->tenant($request); return $this->inbox->metadata(); }
+    public function getActionList(Request $request): object { return $this->inbox->list($this->tenant($request), $this->filters($request), static::INBOX_TYPES); }
+    public function getActionCounts(Request $request): object { return $this->inbox->counts($this->tenant($request), $this->filters($request), static::INBOX_TYPES); }
+    public function getActionMetadata(Request $request): object { $this->tenant($request); return $this->inbox->metadata(static::INBOX_TYPES, $this->filters($request)); }
     public function getActionOptions(Request $request): object { return $this->inbox->options($this->tenant($request), (string) $request->getQueryParam('entity'), (string) $request->getQueryParam('search')); }
 
     public function getActionRead(Request $request): object
@@ -57,7 +65,7 @@ class ActivityInbox
 
     public function postActionCreate(Request $request): object
     {
-        $type = $this->access->type((string) $request->getRouteParam('type'));
+        $type = $this->recordType($request);
         $data = clone $request->getParsedBody();
         $this->access->validateTeams($data, $this->tenant($request), true);
         return $this->inbox->present($this->services->get($type)->create($data)->getEntity());
@@ -156,6 +164,7 @@ class ActivityInbox
         return BulkReadState::run($body, function (string $key) use ($tenant, $body): array {
             $parts = explode(':', $key);
             if (count($parts) !== 2) throw new BadRequest('Expected an activity type and ID.');
+            if (!in_array($parts[0], static::RECORD_TYPES, true)) throw new BadRequest('Invalid inbox activity type.');
             return $this->discussion->mark(
                 $this->access->record($parts[0], $parts[1], $tenant, true),
                 (object) ['unread' => $body->unread, 'allThreads' => !$body->unread],

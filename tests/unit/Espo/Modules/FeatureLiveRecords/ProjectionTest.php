@@ -12,10 +12,12 @@ final class ProjectionTest extends TestCase
     public function testOnlyBoundedReadRoutesAreAdmitted(): void
     {
         foreach (['/Account', '/Account/one', '/Contact/action/inbox', '/ActivityInbox/counts',
+            '/MeetingInbox', '/MeetingInbox/counts', '/MeetingInbox/metadata', '/MeetingInbox/options', '/MeetingInbox/one', '/MeetingInbox/one/stream',
             '/RecordKnowledge/relations', '/JourneyRelationships/Contact/one', '/Opportunity/one/stream'] as $path) {
             self::assertTrue(Projection::accepts($path), $path);
         }
         foreach (['/User', '/Admin', '/Account/action/massDelete', '/Account/action/stream', '/Lead',
+            '/MeetingInbox/bulkReadState', '/MeetingInbox/one/posts', '/MeetingInbox/one/readState', '/MeetingInbox/Task/one',
             'https://example.test/Account', '//Account', '/Account/../User', '/Account%2fone'] as $path) {
             self::assertFalse(Projection::accepts($path), $path);
         }

@@ -16,6 +16,7 @@ final class Projection
         if (!str_contains($path, '/action/') && preg_match("~^/$type/$id/(?:inbox|contacts|accounts|opportunities|activities|relations|stream|discussion|readState|activityCount|contactCount|chatwootConversationsForUser|playbooks|versions|replies)$~D", $path)) return true;
         if (preg_match("~^/(?:Opportunity|Contact|Account|Initiative)/$id/threads/$id$~D", $path)) return true;
         if (preg_match("~^/ActivityInbox(?:/(?:Task|Meeting|Call)/$id(?:/(?:stream|discussion|readState|recurrence|conversations))?)?$~D", $path)) return true;
+        if (preg_match("~^/MeetingInbox(?:/$id(?:/stream)?)?$~D", $path) && !preg_match('~/(?:action|posts|readState|bulkReadState)$~D', $path)) return true;
         if (preg_match('~^/(?:Contact|Account|Initiative)/action/(?:inbox|groupSummary|navigationCounts|inboxMetadata|inboxOptions)$~D', $path)) return true;
         if (preg_match("~^/JourneyRelationships/(?:Contact|Account|Opportunity|Initiative)/$id(?:/(?:options|$id))?$~D", $path)) return true;
         if (preg_match("~^/ChatwootConversation/$id/(?:contacts|accounts|opportunities|tasks|calls|meetings)$~D", $path)) return true;
@@ -26,6 +27,7 @@ final class Projection
             '/RecordKnowledge/iconOptions', '/EditorReference/backlinks', '/EditorReference/search',
             '/Contact/inbox', '/Account/inbox', '/Initiative/inbox',
             '/ActivityInbox/counts', '/ActivityInbox/metadata', '/ActivityInbox/options',
+            '/MeetingInbox/counts', '/MeetingInbox/metadata', '/MeetingInbox/options',
             '/Notification/action/notReadCount',
         ], true);
     }

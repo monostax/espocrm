@@ -38,9 +38,10 @@ class ActivityInbox
         private CrmTags $tags,
     ) {}
 
-    private function types(array $filters): array
+    private function types(array $filters, array $allowedTypes): array
     {
-        $types = empty($filters['type']) ? Access::TYPES : [$this->access->type($filters['type'])];
+        $types = !isset($filters['type']) || $filters['type'] === '' ? $allowedTypes : [$this->access->type($filters['type'])];
+        if (array_diff($types, $allowedTypes)) throw new BadRequest('Invalid inbox activity type.');
         return array_values(array_filter($types, fn ($type) => $this->acl->checkScope($type, 'read') && !$this->metadata->get(['scopes', $type, 'disabled'])));
     }
 
@@ -114,7 +115,7 @@ class ActivityInbox
         $query->where(['OR' => $clauses]);
     }
 
-    public function list(Entity $tenant, array $filters): object
+    public function list(Entity $tenant, array $filters, array $allowedTypes = ['Task', 'Call']): object
     {
         $offset = max(0, (int) ($filters['offset'] ?? 0));
         $limit = min(100, max(1, (int) ($filters['maxSize'] ?? 25)));
@@ -123,7 +124,7 @@ class ActivityInbox
         $order = ($filters['order'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
         $groupByRead = ($filters['group'] ?? '') === 'read';
         $union = UnionBuilder::create()->all();
-        $types = $this->types($filters);
+        $types = $this->types($filters, $allowedTypes);
         $total = 0;
         foreach ($types as $type) {
             $query = $this->query($type, $tenant, $filters);
@@ -146,7 +147,7 @@ class ActivityInbox
             $union->order([...$ordering, ['inboxSort', $order], ['type', 'ASC'], ['id', 'ASC']])->limit($offset, $limit)->build()
         )->fetchAll(\PDO::FETCH_ASSOC) : [];
         $records = [];
-        foreach ($this->types($filters) as $type) {
+        foreach ($types as $type) {
             $ids = array_column(array_filter($page, fn ($row) => $row['type'] === $type), 'id');
             if (!$ids) continue;
             $items = $this->services->get($type)->find(SearchParams::fromRaw(['maxSize' => $limit, 'where' => [['type' => 'in', 'attribute' => 'id', 'value' => $ids]]]))->getCollection();
@@ -184,13 +185,14 @@ class ActivityInbox
         return (object) ['list' => array_values(array_filter(array_map(fn ($row) => $records[$row['type'] . ':' . $row['id']] ?? null, $page))), 'total' => $total, 'hasMore' => $offset + $limit < $total];
     }
 
-    public function counts(Entity $tenant, array $filters): object
+    public function counts(Entity $tenant, array $filters, array $allowedTypes = ['Task', 'Call']): object
     {
+        $this->types($filters, $allowedTypes);
         // Counts describe sidebar destinations, retaining only the global assignee scope.
         $base = array_intersect_key($filters, array_flip(['assignee_tab', 'timeZone']));
         $tagsUnread = [];
         $result = ['all' => 0, 'unread' => 0, 'mentions' => 0, 'types' => [], 'status' => [], 'statusGroups' => ['Open' => 0, 'Finished' => 0], 'users' => [], 'due' => [], 'tags' => []];
-        foreach ($this->types([]) as $type) {
+        foreach ($this->types([], $allowedTypes) as $type) {
             $repo = $this->em->getRDBRepository($type);
             if (($filters['railOnly'] ?? '') === 'true') {
                 $result['unread'] += $repo->clone($this->query($type, $tenant, ['read_status' => 'unread'])->build())->count();
@@ -264,11 +266,12 @@ class ActivityInbox
         ]))->getValueMapList();
     }
 
-    public function metadata(): object
+    public function metadata(array $allowedTypes = ['Task', 'Call'], array $filters = []): object
     {
+        $this->types($filters, $allowedTypes);
         $result = [];
         $fields = ['name', 'status', 'priority', 'direction', 'description', 'dateStart', 'dateEnd', 'isAllDay', 'parent', 'assignedUser', 'teams', 'users', 'contacts', 'leads', 'tags', 'reminders', 'duration', 'recurrence'];
-        foreach ($this->types([]) as $type) {
+        foreach ($this->types([], $allowedTypes) as $type) {
             $defs = $this->metadata->get(['entityDefs', $type, 'fields']) ?? [];
             $hidden = $this->acl->getScopeForbiddenFieldList($type);
             $readonly = $this->acl->getScopeForbiddenFieldList($type, 'edit');
