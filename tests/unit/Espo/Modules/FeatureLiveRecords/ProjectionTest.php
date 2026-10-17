@@ -14,6 +14,7 @@ final class ProjectionTest extends TestCase
         foreach (['/Account', '/Account/one', '/Contact/action/inbox', '/ActivityInbox/counts',
             '/MeetingInbox', '/MeetingInbox/counts', '/MeetingInbox/metadata', '/MeetingInbox/options', '/MeetingInbox/one', '/MeetingInbox/one/stream',
             '/CallInbox', '/CallInbox/counts', '/CallInbox/metadata', '/CallInbox/options', '/CallInbox/one', '/CallInbox/one/stream',
+            '/AppointmentInbox', '/AppointmentInbox/metadata', '/AppointmentInbox/options', '/AppointmentInbox/one', '/AppointmentInbox/one/stream', '/ChatwootConversation/one/appointments', '/ChatwootConversation',
             '/RecordKnowledge/relations', '/JourneyRelationships/Contact/one', '/Opportunity/one/stream'] as $path) {
             self::assertTrue(Projection::accepts($path), $path);
         }
@@ -21,6 +22,7 @@ final class ProjectionTest extends TestCase
             '/MeetingInbox/bulkReadState', '/MeetingInbox/one/posts', '/MeetingInbox/one/readState', '/MeetingInbox/Task/one',
             '/CallInbox/bulkReadState', '/CallInbox/one/posts', '/CallInbox/one/readState', '/CallInbox/Task/one', '/CallInbox/one/recurrence', '/CallInbox/action/stream',
             '/CallInbox/counts/stream', '/CallInbox/metadata/stream', '/CallInbox/options/stream', '/CallInbox/bulkReadState/stream',
+            '/AppointmentInbox/counts', '/AppointmentInbox/bulkReadState', '/AppointmentInbox/recurrence', '/AppointmentInbox/one/posts', '/AppointmentInbox/one/readState', '/AppointmentInbox/Task/one', '/AppointmentInbox/one/recurrence', '/AppointmentInbox/action/list',
             'https://example.test/Account', '//Account', '/Account/../User', '/Account%2fone'] as $path) {
             self::assertFalse(Projection::accepts($path), $path);
         }

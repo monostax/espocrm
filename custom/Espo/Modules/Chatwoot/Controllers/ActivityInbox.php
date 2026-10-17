@@ -18,7 +18,7 @@ use Espo\Tools\Stream\MassNotePreparator;
 class ActivityInbox
 {
     protected const INBOX_TYPES = ['Task'];
-    protected const RECORD_TYPES = Access::TYPES;
+    protected const RECORD_TYPES = ['Task', 'Call', 'Meeting'];
 
     public function __construct(private Inbox $inbox, private Access $access, private ActivityDiscussion $discussion, private ServiceContainer $services, private MassNotePreparator $preparator, private Recurrence $recurrence) {}
 
@@ -34,13 +34,15 @@ class ActivityInbox
 
     protected function recordType(Request $request): string
     {
-        return $this->access->type((string) $request->getRouteParam('type'));
+        $type = (string) $request->getRouteParam('type');
+        if (!in_array($type, static::RECORD_TYPES, true)) throw new BadRequest('Invalid inbox activity type.');
+        return $this->access->type($type);
     }
 
-    private function filters(Request $request): array
+    protected function filters(Request $request): array
     {
         $filters = [];
-        foreach (['type', 'assignee_tab', 'assigned_user', 'status', 'stage', 'tag', 'search', 'due', 'timeZone', 'read_status', 'view', 'group', 'sort', 'order', 'offset', 'maxSize', 'railOnly'] as $key) {
+        foreach (['type', 'assignee_tab', 'assigned_user', 'status', 'stage', 'tag', 'search', 'due', 'timeZone', 'read_status', 'view', 'group', 'sort', 'order', 'offset', 'maxSize', 'railOnly', 'customerId'] as $key) {
             $value = $request->getQueryParam($key);
             if ($value !== null) {
                 if (!is_scalar($value)) throw new BadRequest('Invalid filter.');
@@ -67,6 +69,7 @@ class ActivityInbox
     {
         $type = $this->recordType($request);
         $data = clone $request->getParsedBody();
+        if ($type === 'Appointment') $this->access->validateAppointment($data, $this->tenant($request));
         $this->access->validateTeams($data, $this->tenant($request), true);
         return $this->inbox->present($this->services->get($type)->create($data)->getEntity());
     }
@@ -75,6 +78,7 @@ class ActivityInbox
     {
         $record = $this->record($request);
         $data = clone $request->getParsedBody();
+        if ($record->getEntityType() === 'Appointment') $this->access->validateAppointment($data, $this->tenant($request));
         $this->access->validateTeams($data, $this->tenant($request), false);
         $params = (new \Espo\Core\Record\UpdateParamsFetcher())->fetch($request);
         return $this->inbox->present($this->services->get($record->getEntityType())->update($record->getId(), $data, $params)->getEntity());

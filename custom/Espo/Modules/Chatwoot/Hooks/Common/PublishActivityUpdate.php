@@ -92,6 +92,9 @@ class PublishActivityUpdate implements AfterSave, BeforeRemove
         $affected[] = ['entityType' => $type, 'recordId' => $id];
         // Both sides of a parent move must refresh, including removal from the old list.
         foreach (['get', 'getFetched'] as $method) {
+            if ($type === 'Appointment' && $record->$method('customerId')) {
+                $affected[] = ['entityType' => 'Contact', 'recordId' => $record->$method('customerId')];
+            }
             if ($record->$method('parentType') && $record->$method('parentId')) {
                 $affected[] = ['entityType' => $record->$method('parentType'), 'recordId' => $record->$method('parentId')];
             }

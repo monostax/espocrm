@@ -134,4 +134,19 @@ class AttachmentAuthorizationTest extends SecurityTestCase
         $this->note(['isInternal' => true]);
         self::assertFalse($this->portalAttachmentChecker->checkEntityRead($this->user, $this->attachment(), $this->scope));
     }
+
+    public function testAppointmentNoteDenialCannotFallThroughToBroadAttachmentAccess(): void
+    {
+        $this->entity('Appointment', ['id' => 'appointment']);
+        $note = $this->note(['parentType' => 'Appointment', 'parentId' => 'appointment']);
+        // The parent's stream scope is denied, although stock record/attachment ACL is broad.
+        foreach ([false, true] as $portal) {
+            $this->portal = $portal;
+            $checker = $portal ? $this->portalAttachmentChecker : $this->attachmentChecker;
+            foreach (['all', 'teams', 'users', null] as $target) {
+                $note->set('targetType', $target);
+                self::assertFalse($checker->checkEntityRead($this->user, $this->attachment(), $this->scope));
+            }
+        }
+    }
 }

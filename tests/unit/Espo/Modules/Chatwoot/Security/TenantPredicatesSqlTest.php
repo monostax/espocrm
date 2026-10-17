@@ -23,6 +23,7 @@ use Espo\Modules\Chatwoot\Tools\Stream\QueryHelper;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\BaseEntity;
 use Espo\ORM\EntityFactory;
+use Espo\ORM\EntityCollection;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Metadata;
 use Espo\ORM\MetadataDataProvider;
@@ -30,6 +31,9 @@ use Espo\ORM\Query\SelectBuilder;
 use Espo\ORM\QueryBuilder;
 use Espo\ORM\QueryComposer\MysqlQueryComposer;
 use Espo\ORM\QueryComposer\PostgresqlQueryComposer;
+use Espo\ORM\Repository\RDBRepository;
+use Espo\ORM\Repository\RDBSelectBuilder;
+use Espo\ORM\Repository\RDBRelation;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -80,6 +84,9 @@ class TenantPredicatesSqlTest extends TestCase
             'Task' => ['id', 'readable', 'deleted'],
             'Meeting' => ['id', 'readable', 'deleted'],
             'Call' => ['id', 'readable', 'deleted'],
+            'Appointment' => ['id', 'readable', 'deleted'],
+            'Team' => ['id', 'deleted'],
+            'AppointmentTeam' => ['appointmentId', 'teamId', 'deleted'],
         ];
         $defs = [];
         foreach ($tables as $type => $fields) {
@@ -91,6 +98,8 @@ class TenantPredicatesSqlTest extends TestCase
             }
             $this->pdo->exec('CREATE TABLE ' . $this->sqlName($type) . ' (' . implode(', ', $columns) . ')');
         }
+        $defs['Appointment']['relations']['teams'] = ['type' => 'manyMany', 'entity' => 'Team',
+            'relationName' => 'AppointmentTeam', 'midKeys' => ['appointmentId', 'teamId']];
         $provider = $this->createMock(MetadataDataProvider::class);
         $provider->method('get')->willReturn($defs);
         $metadata = new Metadata($provider);
@@ -112,16 +121,30 @@ class TenantPredicatesSqlTest extends TestCase
         $this->acl = $this->createMock(AclManager::class);
         $this->acl->method('checkField')->willReturnCallback(fn () => $this->attachmentFieldAllowed);
         $this->acl->method('checkScope')->willReturnCallback(fn ($user, $scope, $action) =>
-            (!in_array($scope, ['Contact', 'Initiative', 'Account', 'AiSession'], true) || in_array($scope, $this->enabledParents, true)) &&
+            (!in_array($scope, ['Contact', 'Initiative', 'Account', 'AiSession', 'Appointment'], true) || in_array($scope, $this->enabledParents, true)) &&
             !in_array("$scope:$action", $this->deniedScopes, true));
         $this->acl->method('getLevel')->willReturnCallback(function ($user, $scope, $action) {
             self::assertSame($this->user, $user);
-            self::assertContains($scope, ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession']);
+            self::assertContains($scope, ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession', 'Appointment']);
             self::assertSame('stream', $action);
             return $this->streamLevel;
         });
         $this->em = $this->createMock(EntityManager::class);
         $this->em->method('getQueryBuilder')->willReturn(new QueryBuilder());
+        $tenantRepository = $this->createMock(RDBRepository::class);
+        $this->em->method('getRDBRepository')->with('Tenant')->willReturn($tenantRepository);
+        $tenantRepository->method('where')->willReturnCallback(function ($where) {
+            $builder = $this->createMock(RDBSelectBuilder::class);
+            $builder->method('find')->willReturn(new EntityCollection(array_map(function ($id) {
+                $tenant = new BaseEntity('Tenant', ['attributes' => ['id' => ['type' => 'varchar'], 'baseUserTeamId' => ['type' => 'varchar']]]);
+                $tenant->set(['id' => $id, 'baseUserTeamId' => str_replace('tenant-', 'team-', $id)]);
+                return $tenant;
+            }, $where['id'])));
+            return $builder;
+        });
+        $otherTeams = $this->createMock(RDBRelation::class);
+        $otherTeams->method('find')->willReturn(new EntityCollection([]));
+        $tenantRepository->method('getRelation')->willReturn($otherTeams);
         $factory = $this->accessFactory = $this->createMock(InjectableFactory::class);
         $this->selects = $this->createMock(SelectBuilderFactory::class);
         $factory->method('createWith')->with(SelectBuilderFactory::class, ['user' => $this->user])->willReturn($this->selects);
@@ -212,6 +235,36 @@ class TenantPredicatesSqlTest extends TestCase
     private function sqlName(string $name): string
     {
         return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
+    }
+
+    public function testAppointmentNotesRequireTenantTeamAndRecordAccessBeforePagination(): void
+    {
+        $this->enabledParents[] = 'Appointment';
+        foreach (['a', 'b'] as $tenant) {
+            $this->insert('Team', ['id' => "team-$tenant"]);
+            $this->insert('Appointment', ['id' => "appointment-$tenant", 'readable' => 1]);
+            $this->insert('AppointmentTeam', ['appointmentId' => "appointment-$tenant", 'teamId' => "team-$tenant"]);
+            $this->insertNote("appointment-note-$tenant", 30, ['parentType' => 'Appointment', 'parentId' => "appointment-$tenant"]);
+            $this->insert('Attachment', ['id' => "appointment-file-$tenant", 'parentType' => 'Note', 'parentId' => "appointment-note-$tenant"]);
+        }
+        $this->insert('Appointment', ['id' => 'hidden', 'readable' => 0]);
+        $this->insert('AppointmentTeam', ['appointmentId' => 'hidden', 'teamId' => 'team-a']);
+        $this->insertNote('hidden-appointment-note', 1, ['parentType' => 'Appointment', 'parentId' => 'hidden']);
+        $this->insertNote('missing-appointment-note', 2, ['parentType' => 'Appointment', 'parentId' => 'missing']);
+        $query = fn () => SelectBuilder::create()->from('Note')->select('id')->where(['parentType' => 'Appointment'])
+            ->where($this->parents->where($this->user))->order('number')->limit(0, 1);
+        $this->assertRows(['appointment-note-a'], $query());
+        $this->assertRows(['appointment-file-a'], SelectBuilder::create()->from('Attachment')->select('id')->where($this->attachments->where($this->user)));
+        $this->tenantIds = ['tenant-b'];
+        $this->assertRows(['appointment-note-b'], $query());
+        $this->assertRows(['appointment-file-b'], SelectBuilder::create()->from('Attachment')->select('id')->where($this->attachments->where($this->user)));
+        $this->deniedScopes = ['Appointment:stream'];
+        $this->assertRows([], $query());
+        $this->deniedScopes = ['Appointment:read'];
+        $this->assertRows([], $query());
+        $this->deniedScopes = [];
+        $this->tenantIds = [];
+        $this->assertRows([], $query());
     }
 
     public function testPrivateSessionsFilterRecordsNotesAndFilesDespiteBroadRoleAccess(): void

@@ -13,7 +13,7 @@ final class MetadataTest extends TestCase
 {
     public function testOnlyExplicitSurfaceTypesAndDependenciesAreRegistered(): void
     {
-        $excluded = ['Lead', 'Credential', 'AutomationRun', 'AiSession', 'Appointment', 'UnrelatedFutureRecord'];
+        $excluded = ['Lead', 'Credential', 'AutomationRun', 'AiSession', 'UnrelatedFutureRecord'];
         $data = (object) ['entityDefs' => (object) [], 'scopes' => (object) []];
         foreach ([...Scope::all(), ...$excluded] as $type) {
             $data->entityDefs->$type = (object) ['fields' => (object) ['name' => (object) ['type' => 'varchar']]];
@@ -21,7 +21,8 @@ final class MetadataTest extends TestCase
         }
         (new LiveRecords())->build($data);
         self::assertSame(Scope::RECORD_TYPES, $data->app->liveRecords->recordTypes);
-        self::assertCount(8, $data->app->liveRecords->recordTypes);
+        self::assertCount(9, $data->app->liveRecords->recordTypes);
+        self::assertContains('Appointment', $data->app->liveRecords->recordTypes);
         foreach (Scope::all() as $type) {
             self::assertSame(Observer::class, $data->entityDefs->$type->mutationObserverClassName);
             self::assertObjectNotHasProperty('optimisticConcurrencyControl', $data->entityDefs->$type);

@@ -8,7 +8,7 @@ namespace Espo\Modules\FeatureLiveRecords;
 final class Scope
 {
     public const RECORD_TYPES = [
-        'Account', 'Call', 'Contact', 'Initiative',
+        'Account', 'Appointment', 'Call', 'Contact', 'Initiative',
         'JourneyRecord', 'Meeting', 'Opportunity', 'Task',
     ];
 

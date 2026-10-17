@@ -58,6 +58,11 @@ final class Routing
         }
 
         $references = [];
+        if ($type === 'Appointment') {
+            foreach (['get', 'getFetched'] as $method) {
+                if ($entity->$method('customerId')) $references[] = ['Contact', $entity->$method('customerId')];
+            }
+        }
         foreach (['parent', 'subject', 'object', 'knowledgeRecord', 'record', 'target'] as $prefix) {
             if ($current->get($prefix . 'Type') && $current->get($prefix . 'Id')) {
                 $references[] = [$current->get($prefix . 'Type'), $current->get($prefix . 'Id')];

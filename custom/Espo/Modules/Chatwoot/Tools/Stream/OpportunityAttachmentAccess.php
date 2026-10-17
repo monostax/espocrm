@@ -38,7 +38,7 @@ class OpportunityAttachmentAccess
             return false;
         }
         if ($type === 'AiSession' && !$this->aclManager->checkField($user, 'Note', 'attachments')) return false;
-        if ($type === 'Note' && in_array($parent->get('parentType'), ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession'], true)) {
+        if ($type === 'Note' && in_array($parent->get('parentType'), ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession', 'Appointment'], true)) {
             if ($parent->get('parentType') === 'AiSession' && !$this->aclManager->checkField($user, 'Note', 'attachments')) return false;
             return $this->access->canReadNote($user, $parent) && $this->aclManager->checkEntityRead($user, $parent);
         }

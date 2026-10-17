@@ -19,13 +19,14 @@ use PHPUnit\Framework\TestCase;
 
 final class RoutingTest extends TestCase
 {
-    private function routeGraph(array $rows, string $start): array
+    private function routeGraph(array $rows, string $start, array $fetched = []): array
     {
         $entities = [];
         foreach ($rows as $typeAndId => $values) {
             [$type, $id] = explode(':', $typeAndId);
             $entity = new BaseEntity($type, ['attributes' => array_fill_keys(['id', ...array_keys($values)], ['type' => 'varchar'])]);
             $entity->set(['id' => $id, ...$values]);
+            foreach ($fetched[$typeAndId] ?? [] as $field => $value) $entity->setFetched($field, $value);
             $entities[$typeAndId] = $entity;
         }
         $em = $this->createMock(EntityManager::class);
@@ -43,6 +44,29 @@ final class RoutingTest extends TestCase
         self::assertSame(['type' => 'Contact', 'id' => 'contact'], $result['tenant']['Contact:contact']);
         self::assertSame(['type' => 'ContactChannelIdentity', 'id' => 'identity'], $result['tenant']['ContactChannelIdentity:identity']);
         self::assertStringNotContainsString('private-address', json_encode($result));
+    }
+
+    public function testAppointmentChangesAndDiscussionInvalidateTheNativeCustomer(): void
+    {
+        $result = $this->routeGraph([
+            'Contact:customer' => ['tenantId' => 'tenant'],
+            'Appointment:visit' => ['tenantId' => 'tenant', 'customerId' => 'customer'],
+            'Note:post' => ['parentType' => 'Appointment', 'parentId' => 'visit'],
+        ], 'Note:post');
+        self::assertArrayHasKey('Appointment:visit', $result['tenant']);
+        self::assertArrayHasKey('Contact:customer', $result['tenant']);
+        self::assertArrayHasKey('Note:post', $result['tenant']);
+    }
+
+    public function testCustomerReassignmentInvalidatesOldAndNewCollections(): void
+    {
+        $result = $this->routeGraph([
+            'Contact:old' => ['tenantId' => 'tenant'],
+            'Contact:new' => ['tenantId' => 'tenant'],
+            'Appointment:visit' => ['tenantId' => 'tenant', 'customerId' => 'new'],
+        ], 'Appointment:visit', ['Appointment:visit' => ['customerId' => 'old']]);
+        self::assertArrayHasKey('Contact:old', $result['tenant']);
+        self::assertArrayHasKey('Contact:new', $result['tenant']);
     }
 
     public function testExcludedRecordsAndTheirProvisionedDocumentsStaySilent(): void

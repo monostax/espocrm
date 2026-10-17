@@ -55,7 +55,16 @@ class ActivityInbox
 
     public function query(string $type, Entity $tenant, array $filters): SelectBuilder
     {
+        if ($type === 'Appointment' && array_intersect(['assignee_tab', 'assigned_user', 'assignedUserId'], array_keys($filters))) {
+            throw new BadRequest('Appointment assignment is derived.');
+        }
         $query = $this->access->query($type, $tenant, ($filters['read_status'] ?? '') === 'unread' || ($filters['view'] ?? '') === 'mentions');
+        if (isset($filters['customerId'])) {
+            if ($type !== 'Appointment' || !is_string($filters['customerId']) || $filters['customerId'] === '') throw new BadRequest('Invalid customer filter.');
+            if (!$this->acl->checkField('Appointment', 'customer')) return $query->where(['id' => null]);
+            $customers = $this->access->referenceQuery('Contact', $tenant)->select('id')->where(['id' => $filters['customerId']])->build();
+            $query->where(['customerId=s' => $customers]);
+        }
         if (($filters['assignee_tab'] ?? '') === 'me') $query->where(['assignedUserId' => $this->user->getId()]);
         if (($filters['assignee_tab'] ?? '') === 'unassigned') $query->where(['assignedUserId' => null]);
         if (!empty($filters['assigned_user'])) $query->where(['assignedUserId' => $filters['assigned_user']]);
@@ -65,6 +74,7 @@ class ActivityInbox
         elseif ($status !== '') $query->where(['status' => $status]);
         if (!empty($filters['stage'])) $query->where(['status' => $filters['stage']]);
         if (!empty($filters['tag'])) {
+            if ($type === 'Appointment') throw new BadRequest('Appointment tags are not supported.');
             if (!$this->acl->checkField($type, 'tags') || !$this->acl->checkScope('CrmTag', 'read')) return $query->where(['id' => null]);
             $tag = $this->tags->query()->where(['id' => $filters['tag'], 'tenantId' => $tenant->getId()])->select(['id'])->build();
             $tagged = SelectBuilder::create()->from($type)->select(['id'])->join('tags', 'crmTag')->where(['crmTag.id=s' => $tag])->build();
@@ -166,7 +176,8 @@ class ActivityInbox
                     $previews[$post->get('parentId')] = $post->getValueMap();
                 }
             }
-            $tagged = $this->tags->decorate($type, array_map(fn ($item) => $this->present($item), [...$items]));
+            $tagged = array_map(fn ($item) => $this->present($item), [...$items]);
+            if ($type !== 'Appointment') $tagged = $this->tags->decorate($type, $tagged);
             foreach ($tagged as $row) {
                 $row->readState = $states[$row->id] ?? null;
                 $row->lastPost = $previews[$row->id] ?? null;
@@ -272,18 +283,21 @@ class ActivityInbox
         $result = [];
         $fields = ['name', 'status', 'priority', 'direction', 'description', 'dateStart', 'dateEnd', 'isAllDay', 'parent', 'assignedUser', 'teams', 'users', 'contacts', 'leads', 'tags', 'reminders', 'duration', 'recurrence'];
         foreach ($this->types([], $allowedTypes) as $type) {
+            $typeFields = $type === 'Appointment'
+                ? ['name', 'status', 'description', 'dateStart', 'dateEnd', 'duration', 'customer', 'location', 'professionals', 'assignedUsers', 'teams', 'chatwootConversations']
+                : $fields;
             $defs = $this->metadata->get(['entityDefs', $type, 'fields']) ?? [];
             $hidden = $this->acl->getScopeForbiddenFieldList($type);
             $readonly = $this->acl->getScopeForbiddenFieldList($type, 'edit');
             $visible = [];
             foreach ($defs as $name => $def) {
-                if ((!in_array($name, $fields, true) && !($def['isCustom'] ?? false)) || in_array($name, $hidden, true)) continue;
+                if ((!in_array($name, $typeFields, true) && !($def['isCustom'] ?? false)) || in_array($name, $hidden, true)) continue;
                 $visible[$name] = array_intersect_key($def, array_flip(['type', 'options', 'required', 'readOnly', 'readOnlyAfterCreate', 'entityList', 'default', 'maxLength']));
                 if (in_array($name, $readonly, true)) $visible[$name]['readOnly'] = true;
                 if (is_string($visible[$name]['default'] ?? null) && str_starts_with($visible[$name]['default'], 'javascript:')) unset($visible[$name]['default']);
             }
             $result[$type] = ['fields' => $visible, 'canCreate' => $this->acl->checkScope($type, 'create'),
-                'completedStatuses' => $this->metadata->get(['scopes', $type, 'completedStatusList']) ?? ['Completed'],
+                'completedStatuses' => $this->metadata->get(['scopes', $type, 'completedStatusList']) ?? ($type === 'Appointment' ? ['Held'] : ['Completed']),
                 'finishedStatuses' => $this->finishedStatuses($type),
                 'activeStatuses' => $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? ['Planned', 'Started']];
             if ($type === 'Task' && isset($visible['recurrence'])) $result[$type]['recurrence'] = [
@@ -297,12 +311,7 @@ class ActivityInbox
     public function options(Entity $tenant, string $type, string $search): object
     {
         if (!in_array($type, ['User', 'Team', 'Account', 'Contact', 'Lead', 'Opportunity', 'Case', 'ChatwootConversation', 'Initiative'], true)) throw new BadRequest('Invalid option type.');
-        $query = $this->select->create()->from($type)->withStrictAccessControl()->buildQueryBuilder()->select('id')->limit(0, 100)->order('name');
-        if ($type === 'Team') $query->where(['id' => $this->access->teamIds($tenant)]);
-        elseif ($type === 'ChatwootConversation') $query->join('chatwootAccount')->where(['chatwootAccount.tenantId' => $tenant->getId()]);
-        elseif ($this->em->getDefs()->getEntity($type)->hasAttribute('tenantId')) $query->where(['tenantId' => $tenant->getId()]);
-        else $query->join('teams', 'workspaceTeam')->where(['workspaceTeam.id' => $this->access->teamIds($tenant)])->distinct();
-        if ($type === 'User') $query->where(['isActive' => true, 'type' => ['regular', 'admin', 'super-admin']]);
+        $query = $this->access->referenceQuery($type, $tenant)->select('id')->limit(0, 100)->order('name');
         if ($search !== '') $query->where(['name*' => '%' . $search . '%']);
         $ids = array_map(fn ($e) => $e->getId(), [...$this->em->getRDBRepository($type)->clone($query->build())->find()]);
         if (!$ids) return (object) ['list' => []];

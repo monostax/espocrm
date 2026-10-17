@@ -11,16 +11,16 @@ final class Projection
     {
         if (strlen($path) > 512 || !preg_match('~^/[A-Za-z0-9_/-]+$~D', $path)) return false;
         $id = '[a-zA-Z0-9_-]+';
-        $type = '(?:Contact|Account|Opportunity|Task|Meeting|Call|Initiative|JourneyRecord|Note|Document|ContactChannelIdentity|InitiativeRelation|CrmTag|Funnel|OpportunityStage|InitiativeStage|InitiativeType|Journey|JourneyStage|Playbook|PlaybookStep|PlaybookRun|PlaybookRunStep)';
+        $type = '(?:Contact|Account|Opportunity|Task|Meeting|Call|Appointment|Initiative|JourneyRecord|Note|Document|ContactChannelIdentity|InitiativeRelation|CrmTag|Funnel|OpportunityStage|InitiativeStage|InitiativeType|Journey|JourneyStage|Playbook|PlaybookStep|PlaybookRun|PlaybookRunStep)';
         if (preg_match("~^/$type(?:/$id)?$~D", $path) && !str_ends_with($path, '/action')) return true;
         if (!str_contains($path, '/action/') && preg_match("~^/$type/$id/(?:inbox|contacts|accounts|opportunities|activities|relations|stream|discussion|readState|activityCount|contactCount|chatwootConversationsForUser|playbooks|versions|replies)$~D", $path)) return true;
         if (preg_match("~^/(?:Opportunity|Contact|Account|Initiative)/$id/threads/$id$~D", $path)) return true;
         if (preg_match("~^/ActivityInbox(?:/(?:Task|Meeting|Call)/$id(?:/(?:stream|discussion|readState|recurrence|conversations))?)?$~D", $path)) return true;
-        $reservedInboxPath = '(?:counts|metadata|options|action|posts|readState|bulkReadState)';
-        if (preg_match("~^/(?:Meeting|Call)Inbox(?:/(?!$reservedInboxPath(?:/|$))$id(?:/stream)?)?$~D", $path)) return true;
+        $reservedInboxPath = '(?:counts|metadata|options|action|posts|readState|bulkReadState|stream|recurrence)';
+        if (preg_match("~^/(?:Meeting|Call|Appointment)Inbox(?:/(?!$reservedInboxPath(?:/|$))$id(?:/stream)?)?$~D", $path)) return true;
         if (preg_match('~^/(?:Contact|Account|Initiative)/action/(?:inbox|groupSummary|navigationCounts|inboxMetadata|inboxOptions)$~D', $path)) return true;
         if (preg_match("~^/JourneyRelationships/(?:Contact|Account|Opportunity|Initiative)/$id(?:/(?:options|$id))?$~D", $path)) return true;
-        if (preg_match("~^/ChatwootConversation/$id/(?:contacts|accounts|opportunities|tasks|calls|meetings)$~D", $path)) return true;
+        if (preg_match("~^/ChatwootConversation/$id/(?:contacts|accounts|opportunities|tasks|calls|meetings|appointments)$~D", $path)) return true;
         return in_array($path, [
             '/Opportunity/action/activitySummary', '/Opportunity/action/groupSummary',
             '/Opportunity/action/spreadsheetSummary', '/Opportunity/action/navigationCounts',
@@ -30,6 +30,8 @@ final class Projection
             '/ActivityInbox/counts', '/ActivityInbox/metadata', '/ActivityInbox/options',
             '/MeetingInbox/counts', '/MeetingInbox/metadata', '/MeetingInbox/options',
             '/CallInbox/counts', '/CallInbox/metadata', '/CallInbox/options',
+            '/AppointmentInbox/metadata', '/AppointmentInbox/options',
+            '/ChatwootConversation',
             '/Notification/action/notReadCount',
         ], true);
     }

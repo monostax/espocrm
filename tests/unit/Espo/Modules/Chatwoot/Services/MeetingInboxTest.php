@@ -46,7 +46,8 @@ final class MeetingInboxTest extends TestCase
         $this->pdo = new PDO('sqlite::memory:', options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $this->pdo->sqliteCreateFunction('IF', fn ($condition, $yes, $no) => $condition ? $yes : $no);
         foreach (Access::TYPES as $type) {
-            $fields = ['id', 'name', 'tenantId', 'status', 'assignedUserId', 'dateEnd', 'dateEndDate', 'createdAt', 'modifiedAt', 'readable', 'unread', 'deleted'];
+            $owner = $type === 'Appointment' ? 'customerId' : 'assignedUserId';
+            $fields = ['id', 'name', 'tenantId', 'status', $owner, 'dateEnd', 'dateEndDate', 'createdAt', 'modifiedAt', 'readable', 'unread', 'deleted'];
             $columns = [];
             foreach ($fields as $field) {
                 $numeric = in_array($field, ['readable', 'unread', 'deleted'], true);
@@ -55,13 +56,16 @@ final class MeetingInboxTest extends TestCase
             }
             $this->pdo->exec('CREATE TABLE ' . strtolower($type) . ' (' . implode(', ', $columns) . ')');
             for ($i = 0; $i < 107; $i++) {
-                $this->pdo->prepare('INSERT INTO ' . strtolower($type) . ' (id,name,tenant_id,status,assigned_user_id,date_end,readable,unread) VALUES (?,?,?,?,?,?,?,?)')->execute([
+                $this->pdo->prepare('INSERT INTO ' . strtolower($type) . ' (id,name,tenant_id,status,' . $this->snake($owner) . ',date_end,readable,unread) VALUES (?,?,?,?,?,?,?,?)')->execute([
                     sprintf('%03d', $i), sprintf('Item %03d', $i), $i === 106 ? 'tenant-b' : 'tenant-a',
                     $i % 2 ? ($type === 'Task' ? 'Completed' : 'Held') : 'Planned',
                     $i % 2 ? 'other' : 'viewer', '2030-01-01 10:00:00', $i === 105 ? 0 : 1, $i < 3 ? 1 : 0,
                 ]);
             }
         }
+        $this->defs['Contact']['attributes'] = array_fill_keys(['id', 'tenantId', 'readable', 'deleted'], ['type' => 'varchar']);
+        $this->pdo->exec('CREATE TABLE contact (id TEXT, tenant_id TEXT, readable INTEGER, deleted INTEGER DEFAULT 0)');
+        $this->pdo->exec("INSERT INTO contact (id,tenant_id,readable) VALUES ('viewer','tenant-a',1),('other','tenant-a',1),('foreign','tenant-b',1),('hidden','tenant-a',0)");
         $provider = $this->createMock(MetadataDataProvider::class);
         $provider->method('get')->willReturn($this->defs);
         $entities = $this->createMock(EntityFactory::class);
@@ -88,6 +92,7 @@ final class MeetingInboxTest extends TestCase
             return $repo;
         });
         $acl = $this->createMock(Acl::class);
+        $acl->method('checkField')->willReturnCallback(fn ($type, $field) => $field === 'customer');
         $acl->method('checkScope')->willReturnCallback(fn ($type) => in_array($type, Access::TYPES, true) && $type !== $this->unreadableType);
         $acl->method('getScopeForbiddenFieldList')->willReturnCallback(fn ($type, $action = 'read') => $action === 'edit' ? ['name'] : ['description']);
         $user = $this->createMock(User::class);
@@ -97,6 +102,7 @@ final class MeetingInboxTest extends TestCase
         $access->method('query')->willReturnCallback(fn ($type, $tenant, $stream = false) => SelectBuilder::create()->from($type)->where([
             'tenantId' => $tenant->getId(), 'readable' => 1,
         ]));
+        $access->method('referenceQuery')->willReturnCallback(fn ($type, $tenant) => SelectBuilder::create()->from($type)->where(['tenantId' => $tenant->getId(), 'readable' => 1]));
         $discussion = $this->createMock(ActivityDiscussion::class);
         $discussion->method('states')->willReturn([]);
         $discussion->method('applyFilter')->willReturnCallback(function ($query) { $query->where(['unread' => 1]); });
@@ -109,9 +115,11 @@ final class MeetingInboxTest extends TestCase
             return $service;
         });
         $metadata = $this->createMock(AppMetadata::class);
-        $metadata->method('get')->willReturnCallback(fn ($path) => $path[0] === 'entityDefs' ? [
-            'name' => ['type' => 'varchar'], 'description' => ['type' => 'text'], 'status' => ['type' => 'enum'],
-        ] : null);
+        $metadata->method('get')->willReturnCallback(function ($path) {
+            if ($path[0] !== 'entityDefs') return null;
+            if ($path[1] === 'Appointment') return json_decode(file_get_contents(dirname(__DIR__, 6) . '/custom/Espo/Modules/Global/Resources/metadata/entityDefs/Appointment.json'), true)['fields'];
+            return ['name' => ['type' => 'varchar'], 'description' => ['type' => 'text'], 'status' => ['type' => 'enum']];
+        });
         $tags = $this->createMock(CrmTags::class);
         $tags->method('counts')->willReturn([]);
         $tags->method('decorate')->willReturnArgument(1);
@@ -144,7 +152,7 @@ final class MeetingInboxTest extends TestCase
 
     public function testBoundariesPrecedePaginationTotalsAndAclHydration(): void
     {
-        foreach ([['Meeting'], ['Task'], ['Call']] as $allowed) {
+        foreach ([['Meeting'], ['Task'], ['Call'], ['Appointment']] as $allowed) {
             $keys = [];
             for ($offset = 0; $offset < 105 * count($allowed); $offset += 100) {
                 $page = $this->inbox->list($this->tenant, ['offset' => $offset, 'maxSize' => 999, 'sort' => 'name'], $allowed);
@@ -193,7 +201,7 @@ final class MeetingInboxTest extends TestCase
 
     public function testIncompatibleFiltersAreRejectedAcrossReadEndpoints(): void
     {
-        foreach ([['Meeting', ['Task']], ['Call', ['Task']], ['Task', ['Meeting']], ['Call', ['Meeting']], ['Task', ['Call']], ['Meeting', ['Call']]] as [$type, $allowed]) {
+        foreach ([['Meeting', ['Task']], ['Call', ['Task']], ['Task', ['Meeting']], ['Call', ['Meeting']], ['Task', ['Call']], ['Meeting', ['Call']], ['Appointment', ['Task']], ['Task', ['Appointment']], ['Call', ['Appointment']], ['Meeting', ['Appointment']]] as [$type, $allowed]) {
             foreach (['list', 'counts', 'metadata'] as $method) {
                 try {
                     if ($method === 'metadata') $this->inbox->metadata($allowed, ['type' => $type]);
@@ -204,5 +212,38 @@ final class MeetingInboxTest extends TestCase
                 }
             }
         }
+    }
+
+    public function testAppointmentCustomerScopePrecedesTotalsAndPaginationWithoutAssigneeColumns(): void
+    {
+        $page = $this->inbox->list($this->tenant, ['customerId' => 'viewer', 'offset' => 50, 'maxSize' => 100], ['Appointment']);
+        self::assertSame(53, $page->total);
+        self::assertCount(3, $page->list);
+        self::assertFalse($page->hasMore);
+        foreach ($page->list as $record) self::assertSame('viewer', $record->customerId);
+        foreach (['foreign', 'hidden'] as $customer) {
+            $this->pdo->exec("UPDATE appointment SET customer_id = '$customer'");
+            self::assertSame(0, $this->inbox->list($this->tenant, ['customerId' => $customer], ['Appointment'])->total);
+        }
+        foreach (['assignee_tab', 'assigned_user', 'assignedUserId'] as $filter) {
+            try {
+                $this->inbox->list($this->tenant, [$filter => 'viewer'], ['Appointment']);
+                self::fail('Task assignment filter accepted.');
+            } catch (BadRequest) { self::assertTrue(true); }
+        }
+    }
+
+    public function testAppointmentMetadataPreservesRequiredFieldsDefaultsAndFieldRestrictions(): void
+    {
+        $metadata = $this->inbox->metadata(['Appointment']);
+        self::assertSame(['Appointment'], array_keys((array) $metadata));
+        $fields = $metadata->Appointment['fields'];
+        foreach (['customer', 'location', 'dateStart', 'dateEnd', 'teams'] as $field) self::assertTrue($fields[$field]['required']);
+        self::assertSame('Planned', $fields['status']['default']);
+        self::assertSame(1800, $fields['duration']['default']);
+        self::assertTrue($fields['assignedUsers']['readOnly']);
+        self::assertTrue($fields['name']['readOnly']);
+        foreach (['parent', 'assignedUser', 'recurrence', 'description'] as $field) self::assertArrayNotHasKey($field, $fields);
+        self::assertSame(['Held'], $metadata->Appointment['completedStatuses']);
     }
 }

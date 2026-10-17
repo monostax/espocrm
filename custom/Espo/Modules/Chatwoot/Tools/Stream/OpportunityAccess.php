@@ -13,6 +13,7 @@ use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Select;
+use Espo\ORM\Query\SelectBuilder;
 
 /** Tenant membership is required in addition to, never instead of, record ACL. */
 class OpportunityAccess
@@ -27,6 +28,11 @@ class OpportunityAccess
 
     public function canReadNote(User $user, Entity $note): bool
     {
+        if ($note->get('parentType') === 'Appointment' && !$user->isAdmin()) {
+            $query = $this->readableParents($user, 'Appointment');
+            return $query && (bool) $this->entityManager->getRDBRepository('Appointment')->clone($query)
+                ->where(['id' => $note->get('parentId')])->findOne();
+        }
         if (!in_array($note->get('parentType'), ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession'], true) || $user->isAdmin()) {
             return true;
         }
@@ -71,7 +77,16 @@ class OpportunityAccess
         $builder = $factory->create()->from($type)->withStrictAccessControl()
             ->buildQueryBuilder()->select(['id'])->order([]);
         if (!$user->isAdmin()) {
-            $builder->where(['tenantId' => $tenantIds]);
+            if ($type === 'Appointment') {
+                $teamIds = [];
+                foreach ($this->entityManager->getRDBRepository('Tenant')->where(['id' => $tenantIds])->find() as $tenant) {
+                    $teamIds[] = $tenant->get('baseUserTeamId');
+                    foreach ($this->entityManager->getRDBRepository('Tenant')->getRelation($tenant, 'otherUserTeams')->find() as $team) $teamIds[] = $team->getId();
+                }
+                $owned = SelectBuilder::create()->from('Appointment', 'workspaceAppointment')->select('id')
+                    ->join('teams', 'workspaceTeam')->where(['workspaceTeam.id' => array_values(array_unique(array_filter($teamIds)))])->build();
+                $builder->where(['id=s' => $owned]);
+            } else $builder->where(['tenantId' => $tenantIds]);
         }
 
         // Strict selection applies read ACL; stream may have a narrower scope.
@@ -100,8 +115,8 @@ class OpportunityAccess
             return [];
         }
 
-        $conditions = [['parentType!=' => ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession']], ['parentType' => null]];
-        foreach (['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession'] as $type) {
+        $conditions = [['parentType!=' => ['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession', 'Appointment']], ['parentType' => null]];
+        foreach (['Opportunity', 'Initiative', 'Contact', 'Account', 'AiSession', 'Appointment'] as $type) {
             $parents = $this->readableParents($user, $type);
             if ($parents) {
                 $conditions[] = ['parentType' => $type, 'parentId=s' => $parents];
