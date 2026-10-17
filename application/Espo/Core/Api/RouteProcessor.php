@@ -147,11 +147,12 @@ class RouteProcessor
 
         ob_start();
 
-        $response = $this->processAfterAuth($processData, $psrRequest, $response);
-
-        ob_clean();
-
-        return $response;
+        try {
+            return $this->processAfterAuth($processData, $psrRequest, $response);
+        } finally {
+            // Close the controller-output buffer before Slim emits a streamed response.
+            ob_end_clean();
+        }
     }
 
     /**
