@@ -19,6 +19,7 @@ use Espo\Modules\Chatwoot\Controllers\AppointmentInbox;
 use Espo\Modules\Chatwoot\Services\ActivityInbox as Inbox;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\Chatwoot\Tools\Activities\MeetingCalendarLink;
 use Espo\Modules\FeatureTaskRecurrence\Services\Recurrence;
 use Espo\ORM\BaseEntity;
 use Espo\Tools\Stream\MassNotePreparator;
@@ -58,7 +59,7 @@ final class AppointmentInboxTest extends TestCase
         $services->method('get')->with('Appointment')->willReturn($this->records);
         $this->inbox = $this->createMock(Inbox::class);
         $this->inbox->method('present')->willReturnCallback(fn ($entity) => (object) ((array) $entity->getValueMap() + ['entityType' => $entity->getEntityType()]));
-        $dependencies = [$this->inbox, $this->access, $this->discussion, $services, $this->createMock(MassNotePreparator::class), $this->createMock(Recurrence::class)];
+        $dependencies = [$this->inbox, $this->access, $this->discussion, $services, $this->createMock(MassNotePreparator::class), $this->createMock(Recurrence::class), $this->createMock(MeetingCalendarLink::class)];
         $this->controller = new AppointmentInbox(...$dependencies);
         $this->legacy = new ActivityInbox(...$dependencies);
     }

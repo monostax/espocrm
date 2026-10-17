@@ -10,6 +10,7 @@ use Espo\Core\Record\ServiceContainer;
 use Espo\Modules\Chatwoot\Services\ActivityInbox as Inbox;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\Chatwoot\Tools\Activities\MeetingCalendarLink;
 use Espo\Modules\Chatwoot\Tools\Inbox\BulkReadState;
 use Espo\Modules\FeatureTaskRecurrence\Services\Recurrence;
 use Espo\ORM\Entity;
@@ -20,7 +21,7 @@ class ActivityInbox
     protected const INBOX_TYPES = ['Task'];
     protected const RECORD_TYPES = ['Task', 'Call', 'Meeting'];
 
-    public function __construct(private Inbox $inbox, private Access $access, private ActivityDiscussion $discussion, private ServiceContainer $services, private MassNotePreparator $preparator, private Recurrence $recurrence) {}
+    public function __construct(private Inbox $inbox, private Access $access, private ActivityDiscussion $discussion, private ServiceContainer $services, private MassNotePreparator $preparator, private Recurrence $recurrence, private MeetingCalendarLink $meetingCalendarLink) {}
 
     private function tenant(Request $request): Entity
     {
@@ -60,7 +61,11 @@ class ActivityInbox
     public function getActionRead(Request $request): object
     {
         $record = $this->record($request);
-        $data = $this->inbox->present($this->services->get($record->getEntityType())->read($record->getId())->getEntity());
+        $detail = $this->services->get($record->getEntityType())->read($record->getId())->getEntity();
+        $data = $this->inbox->present($detail);
+        if ($record->getEntityType() === 'Meeting') {
+            $data->calendarEventUrl = $this->meetingCalendarLink->resolve($detail);
+        }
         $data->conversations = $this->inbox->conversations($record);
         return $data;
     }
