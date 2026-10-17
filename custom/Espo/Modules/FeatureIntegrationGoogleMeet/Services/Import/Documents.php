@@ -100,7 +100,8 @@ class Documents
         $this->access->text($document);
         if ($document?->getId() !== $attempt->get('expectedDocumentId') ||
             ($document && (int) $document->get('versionNumber') !== (int) $attempt->get('expectedVersion'))) throw new Failure('conflict');
-        if ($document && !$document->get('bodyEditorState')) throw new Failure('editorRequired');
+        // Empty pages have no saved editor state. Text::append initializes them,
+        // while still rejecting nonempty content without a safe editor snapshot.
         $content = Text::append($document?->get('bodyEditorState'), (string) $document?->get('body'), $parts);
         if ($document) {
             $this->write($document, $content['body'], $content['bodyEditorState'], (int) $attempt->get('expectedVersion'));
