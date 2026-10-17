@@ -17,7 +17,7 @@ use Espo\Tools\Stream\MassNotePreparator;
 
 class ActivityInbox
 {
-    protected const INBOX_TYPES = ['Task', 'Call'];
+    protected const INBOX_TYPES = ['Task'];
     protected const RECORD_TYPES = Access::TYPES;
 
     public function __construct(private Inbox $inbox, private Access $access, private ActivityDiscussion $discussion, private ServiceContainer $services, private MassNotePreparator $preparator, private Recurrence $recurrence) {}

@@ -115,7 +115,7 @@ class ActivityInbox
         $query->where(['OR' => $clauses]);
     }
 
-    public function list(Entity $tenant, array $filters, array $allowedTypes = ['Task', 'Call']): object
+    public function list(Entity $tenant, array $filters, array $allowedTypes = ['Task']): object
     {
         $offset = max(0, (int) ($filters['offset'] ?? 0));
         $limit = min(100, max(1, (int) ($filters['maxSize'] ?? 25)));
@@ -185,7 +185,7 @@ class ActivityInbox
         return (object) ['list' => array_values(array_filter(array_map(fn ($row) => $records[$row['type'] . ':' . $row['id']] ?? null, $page))), 'total' => $total, 'hasMore' => $offset + $limit < $total];
     }
 
-    public function counts(Entity $tenant, array $filters, array $allowedTypes = ['Task', 'Call']): object
+    public function counts(Entity $tenant, array $filters, array $allowedTypes = ['Task']): object
     {
         $this->types($filters, $allowedTypes);
         // Counts describe sidebar destinations, retaining only the global assignee scope.
@@ -266,7 +266,7 @@ class ActivityInbox
         ]))->getValueMapList();
     }
 
-    public function metadata(array $allowedTypes = ['Task', 'Call'], array $filters = []): object
+    public function metadata(array $allowedTypes = ['Task'], array $filters = []): object
     {
         $this->types($filters, $allowedTypes);
         $result = [];

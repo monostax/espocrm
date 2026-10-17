@@ -1,16 +1,18 @@
-# Native Chatwoot Activities and Meetings
+# Native Chatwoot Activities, Calls and Meetings
 
-Activities contains Tasks and Calls. Meetings has a dedicated workspace backed by
-the same Meeting records, Note streams and read state. No records are copied.
+Activities contains Tasks. Calls and Meetings have dedicated workspaces backed by
+the existing records, Note streams and read state. No records are copied.
 
 ## Deployment
 
 1. Deploy this CRM revision and run the normal Espo rebuild (`php command.php rebuild`).
-   It creates the private `ActivityReadState` table and enables Call streams.
+   Calls reuses the existing `ActivityReadState` table and Call streams; no data migration.
 2. Deploy the matching Chatwoot revision. The native entry point is
-   `/app/accounts/{accountId}/activities` and `/app/accounts/{accountId}/meetings`.
-   Legacy Meeting detail and `type=Meeting` / `create=Meeting` links replace-navigate
-   to Meetings, preserving supported query context and hashes.
+   `/app/accounts/{accountId}/activities`, `/calls`, and `/meetings` under the same account prefix.
+   Legacy typed details win over recognized creation intent, which wins over type filters.
+   Call and Meeting links replace-navigate to their canonical workspace, preserving applicable
+   filters, tabs, thread context and hashes. Canonical workspaces never redirect to another
+   workspace because of query controls; unsupported creation intents are removed.
 3. Keep the CRM job worker running for `BroadcastActivityUpdate`. Existing Chatwoot
    account integration credentials authenticate the `/activity_events` notification.
 
@@ -20,14 +22,15 @@ the same Meeting records, Note streams and read state. No records are copied.
   workspace before filtering, counting, and pagination. Task/Meeting use tenant
   teams. Calls with a tenant use that tenant, with team scoping for legacy calls.
 - Record routes include both type and ID. IDs alone are not activity identities.
-- ActivityInbox list/counts/metadata are bounded to Task/Call; MeetingInbox equivalents
-  are bounded to Meeting before counting or pagination. Incompatible type filters
+- ActivityInbox list/counts/metadata are bounded to Task; CallInbox to Call; MeetingInbox
+  to Meeting before counting or pagination. Incompatible type filters
   fail validation. Sidebar destinations retain their own filters; rail unread totals
   ignore the selected leaf. Existing page and bulk-read limits remain 100.
-- MeetingInbox uses `/MeetingInbox/:id` for read/update/delete, `/:id/stream`,
-  `/:id/posts`, `/:id/readState`, `/bulkReadState`, and POST `/MeetingInbox` for create.
-  Every request retains `accountId`. Meeting keys remain `Meeting:<id>` in client
-  state and bulk read payloads. The ActivityInbox Meeting record-operation aliases
+- CallInbox and MeetingInbox use `/{Call|Meeting}Inbox/:id` for read/update/delete,
+  `/:id/stream`, `/:id/posts`, `/:id/readState`, `/bulkReadState`, and POST to the base path
+  for create. Both expose `/metadata`, `/counts`, and authorized `/options` lookup.
+  Every request retains `accountId`. Keys remain `Call:<id>` and `Meeting:<id>` in client
+  state and bulk read payloads. The ActivityInbox Call and Meeting record-operation aliases
   remain available, including bulk-read compatibility and edit version checks.
 - CRM tags use a tenant-scoped `CrmTag` catalog shared with Opportunities.
   Assignments are independent on each Task, Call, Meeting, and Opportunity.
@@ -36,7 +39,10 @@ the same Meeting records, Note streams and read state. No records are copied.
 - `group=read` orders unread activities before read activities in the database,
   before pagination, retaining the selected sort within each group. The Chatwoot
   list passes its active grouping; fresh workspaces default to Open, due-date groups,
-  date ascending, list mode. Meetings has independent preferences with no migration.
+  date ascending, list mode. Calls and Meetings have independent preferences with no copying.
+  Obsolete type grouping normalizes to due-date grouping; single-type controls are hidden.
+- Eligible embedded panels split Activities (Task/Appointment), Calls (Call), and Meetings
+  (Meeting), including independent counts, searches, linking, creation and drawers.
 - Activity streams share the historical `opportunityThreadRootId`,
   `opportunityMentionUserIds`, and Note capability fields with Opportunities.
   Activity read cursors live separately, keyed by user, parent type, parent ID,
@@ -66,10 +72,12 @@ the draft. Existing Opportunity streams use the same shared Vue discussion conte
   legacy redirects, embedded group totals, and negative authorization smoke checks.
 - Block or roll back on separation failures, broken canonical APIs, critical workflow
   failures or authorization regressions. Revert CRM and dashboard together; no data
-  migration needs reversal. New preference keys may remain unused. New Meeting
-  bookmarks are unavailable on a complete rollback; legacy Activity URLs remain.
+  migration needs reversal. Roll back to the pre-Calls revision retaining Meetings.
+  Calls preference keys may remain unused; `/calls` bookmarks will be unavailable until
+  the feature returns. Legacy Activity URLs remain.
 - Known in-repository consumers: dashboard activity API/store and recurrence forms,
   embedded relationships/bulk actions, next-action editors, unread badges, live-query
-  projections and edit interception. Meeting consumers now use the Meeting adapter.
-  External combined-ActivityInbox consumers must adopt the split; they were not
-  exhaustively inventoried.
+  projections and edit interception. Call and Meeting consumers use their dedicated adapters.
+  Business-summary calculations retain their existing entity reads; full-page links are canonical.
+  Communicate the Task-only ActivityInbox list/count/metadata contract and refresh requirement
+  to known API consumers before release. External consumers were not exhaustively inventoried.

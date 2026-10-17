@@ -39,7 +39,7 @@ final class MeetingInboxTest extends TestCase
     private ActivityInbox $inbox;
     private BaseEntity $tenant;
     private array $defs = [];
-    private bool $meetingReadable = true;
+    private ?string $unreadableType = null;
 
     protected function setUp(): void
     {
@@ -88,7 +88,7 @@ final class MeetingInboxTest extends TestCase
             return $repo;
         });
         $acl = $this->createMock(Acl::class);
-        $acl->method('checkScope')->willReturnCallback(fn ($type) => in_array($type, Access::TYPES, true) && ($type !== 'Meeting' || $this->meetingReadable));
+        $acl->method('checkScope')->willReturnCallback(fn ($type) => in_array($type, Access::TYPES, true) && $type !== $this->unreadableType);
         $acl->method('getScopeForbiddenFieldList')->willReturnCallback(fn ($type, $action = 'read') => $action === 'edit' ? ['name'] : ['description']);
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn('viewer');
@@ -144,7 +144,7 @@ final class MeetingInboxTest extends TestCase
 
     public function testBoundariesPrecedePaginationTotalsAndAclHydration(): void
     {
-        foreach ([['Meeting'], ['Task', 'Call']] as $allowed) {
+        foreach ([['Meeting'], ['Task'], ['Call']] as $allowed) {
             $keys = [];
             for ($offset = 0; $offset < 105 * count($allowed); $offset += 100) {
                 $page = $this->inbox->list($this->tenant, ['offset' => $offset, 'maxSize' => 999, 'sort' => 'name'], $allowed);
@@ -163,31 +163,37 @@ final class MeetingInboxTest extends TestCase
 
     public function testCountsAreBoundedSidebarDestinationsAndRailIgnoresSelectedLeaf(): void
     {
-        $meetings = $this->inbox->counts($this->tenant, ['status' => 'Finished', 'type' => 'Meeting', 'search' => 'missing'], ['Meeting']);
-        self::assertSame(105, $meetings->all);
-        self::assertSame(['Meeting' => 105], $meetings->types);
-        self::assertSame(['Open' => 53, 'Finished' => 52], $meetings->statusGroups);
-        self::assertSame(3, $meetings->unread);
-        self::assertSame(210, $this->inbox->counts($this->tenant, [])->all);
-        self::assertSame(3, $this->inbox->counts($this->tenant, ['assignee_tab' => 'unassigned', 'railOnly' => 'true'], ['Meeting'])->unread);
-        self::assertSame(53, $this->inbox->counts($this->tenant, ['assignee_tab' => 'me'], ['Meeting'])->all);
+        foreach (['Task', 'Call', 'Meeting'] as $type) {
+            $counts = $this->inbox->counts($this->tenant, ['status' => 'Finished', 'type' => $type, 'search' => 'missing'], [$type]);
+            self::assertSame(105, $counts->all);
+            self::assertSame([$type => 105], $counts->types);
+            self::assertSame(['Open' => 53, 'Finished' => 52], $counts->statusGroups);
+            self::assertSame(3, $counts->unread);
+            self::assertSame(3, $this->inbox->counts($this->tenant, ['assignee_tab' => 'unassigned', 'railOnly' => 'true'], [$type])->unread);
+            self::assertSame(53, $this->inbox->counts($this->tenant, ['assignee_tab' => 'me'], [$type])->all);
+        }
+        self::assertSame(105, $this->inbox->counts($this->tenant, [])->all);
     }
 
     public function testMetadataKeepsTypeScopeAndFieldPermissions(): void
     {
-        self::assertSame(['Task', 'Call'], array_keys((array) $this->inbox->metadata()));
-        $metadata = $this->inbox->metadata(['Meeting']);
-        self::assertSame(['Meeting'], array_keys((array) $metadata));
-        self::assertArrayNotHasKey('description', $metadata->Meeting['fields']);
-        self::assertTrue($metadata->Meeting['fields']['name']['readOnly']);
-        $this->meetingReadable = false;
-        self::assertSame([], (array) $this->inbox->metadata(['Meeting']));
-        self::assertSame(0, $this->inbox->list($this->tenant, [], ['Meeting'])->total);
+        self::assertSame(['Task'], array_keys((array) $this->inbox->metadata()));
+        foreach (['Task', 'Call', 'Meeting'] as $type) {
+            $metadata = $this->inbox->metadata([$type]);
+            self::assertSame([$type], array_keys((array) $metadata));
+            self::assertArrayNotHasKey('description', $metadata->$type['fields']);
+            self::assertTrue($metadata->$type['fields']['name']['readOnly']);
+            $this->unreadableType = $type;
+            self::assertSame([], (array) $this->inbox->metadata([$type]));
+            self::assertSame(0, $this->inbox->list($this->tenant, [], [$type])->total);
+            self::assertSame(0, $this->inbox->counts($this->tenant, [], [$type])->all);
+            $this->unreadableType = null;
+        }
     }
 
     public function testIncompatibleFiltersAreRejectedAcrossReadEndpoints(): void
     {
-        foreach ([['Meeting', ['Task', 'Call']], ['Task', ['Meeting']], ['Call', ['Meeting']]] as [$type, $allowed]) {
+        foreach ([['Meeting', ['Task']], ['Call', ['Task']], ['Task', ['Meeting']], ['Call', ['Meeting']], ['Task', ['Call']], ['Meeting', ['Call']]] as [$type, $allowed]) {
             foreach (['list', 'counts', 'metadata'] as $method) {
                 try {
                     if ($method === 'metadata') $this->inbox->metadata($allowed, ['type' => $type]);
