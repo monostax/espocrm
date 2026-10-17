@@ -83,27 +83,39 @@ class Overviews
     public function saved(Entity $record): void
     {
         if (!$this->eligible($record)) return;
-        $binding = $this->ensure($record);
-        $document = $this->em->getEntityById('Document', $binding->get('overviewDocumentId'));
-        if ($document && !$record->isNew()) $this->syncAccess($record, $document);
+        $this->ensure($record);
+        if (!$record->isNew()) {
+            foreach ($this->owned($record) as $document) $this->syncAccess($record, $document);
+        }
     }
 
     public function removed(Entity $record): void
     {
         if (!$this->scopes->supports($record->getEntityType()) || $record->get('knowledgeRecordType')) return;
-        $binding = $this->binding($record->getEntityType(), $record->getId());
-        $document = $binding ? $this->em->getEntityById('Document', $binding->get('overviewDocumentId')) : null;
-        if ($document) $this->em->removeEntity($document, ['knowledgeParentRemoval' => true]);
+        foreach ($this->owned($record) as $document) {
+            $this->em->removeEntity($document, ['knowledgeParentRemoval' => true]);
+        }
     }
 
     public function restored(Entity $record): void
     {
         $binding = $this->binding($record->getEntityType(), $record->getId());
-        if (!$binding) { $this->ensure($record); return; }
-        $this->em->getRDBRepository('Document')->restoreDeleted($binding->get('overviewDocumentId'));
-        $document = $this->em->getEntityById('Document', $binding->get('overviewDocumentId'));
-        if (!$document) throw new Conflict('Owned overview is missing.');
-        $this->syncAccess($record, $document);
-        $this->index->replace($document);
+        if (!$binding) $this->ensure($record);
+        foreach ($this->owned($record, true) as $owned) {
+            $this->em->getRDBRepository('Document')->restoreDeleted($owned->getId());
+            $document = $this->em->getEntityById('Document', $owned->getId());
+            if (!$document) throw new Conflict('Owned document is missing.');
+            $this->syncAccess($record, $document);
+            $this->index->replace($document);
+        }
+    }
+
+    private function owned(Entity $record, bool $withDeleted = false): iterable
+    {
+        $query = \Espo\ORM\Query\SelectBuilder::create()->from('Document')->where([
+            'knowledgeRecordType' => $record->getEntityType(), 'knowledgeRecordId' => $record->getId(),
+        ]);
+        if ($withDeleted) $query->withDeleted();
+        return $this->em->getRDBRepository('Document')->clone($query->build())->find();
     }
 }

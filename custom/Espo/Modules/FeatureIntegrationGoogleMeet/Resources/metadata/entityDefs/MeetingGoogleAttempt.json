@@ -1,0 +1,19 @@
+{
+    "fields": {
+        "importId": {"type": "varchar", "maxLength": 64, "required": true},
+        "kind": {"type": "varchar", "maxLength": 32},
+        "unitIds": {"type": "jsonArray"},
+        "credentialId": {"type": "varchar", "maxLength": 64},
+        "initiatedById": {"type": "varchar", "maxLength": 64},
+        "expectedDocumentId": {"type": "varchar", "maxLength": 64},
+        "expectedVersion": {"type": "int"},
+        "status": {"type": "varchar", "maxLength": 32, "default": "queued"},
+        "fence": {"type": "varchar", "maxLength": 64},
+        "deadline": {"type": "datetime"},
+        "error": {"type": "varchar", "maxLength": 64},
+        "createdAt": {"type": "datetime"},
+        "modifiedAt": {"type": "datetime"}
+    },
+    "indexes": {"work": {"columns": ["importId", "kind", "status"]}},
+    "transactionalSave": true
+}

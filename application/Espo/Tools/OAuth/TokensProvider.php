@@ -99,20 +99,23 @@ class TokensProvider
     private function fetch(string $id): OAuthAccount
     {
         // Ensuring the token is not being refreshed.
-        $this->entityManager->getTransactionManager()->start();
+        $account = $this->entityManager->getTransactionManager()->run(function () use ($id) {
+            // Lock only stored identity. A raw cloned query has no joins for
+            // OAuthAccount's calculated provider fields (e.g. providerType).
+            $locked = $this->entityManager
+                ->getRDBRepositoryByClass(OAuthAccount::class)
+                ->clone(
+                    SelectBuilder::create()
+                        ->from(OAuthAccount::ENTITY_TYPE)
+                        ->select(Attribute::ID)
+                        ->forShare()
+                        ->build()
+                )
+                ->where([Attribute::ID => $id])
+                ->findOne();
 
-        $account = $this->entityManager
-            ->getRDBRepositoryByClass(OAuthAccount::class)
-            ->clone(
-                SelectBuilder::create()
-                    ->from(OAuthAccount::ENTITY_TYPE)
-                    ->forShare()
-                    ->build()
-            )
-            ->where([Attribute::ID => $id])
-            ->findOne();
-
-        $this->entityManager->getTransactionManager()->commit();
+            return $locked ? $this->entityManager->getEntityById(OAuthAccount::ENTITY_TYPE, $id) : null;
+        });
 
         if (!$account) {
             throw new AccountNotFound();
@@ -179,6 +182,12 @@ class TokensProvider
         }
 
         $this->tokenSetter->set($account, $tokens);
+
+        // Google normally omits refresh_token on refresh. Retain the existing
+        // encrypted token unless the provider actually rotates it.
+        if (!$tokens->getRefreshToken()) {
+            $account->setRefreshToken($this->crypt->encrypt($refreshToken));
+        }
 
         $this->entityManager->saveEntity($account);
     }

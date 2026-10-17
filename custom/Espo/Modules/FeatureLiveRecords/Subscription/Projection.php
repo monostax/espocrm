@@ -25,6 +25,7 @@ final class Projection
             '/Opportunity/action/activitySummary', '/Opportunity/action/groupSummary',
             '/Opportunity/action/spreadsheetSummary', '/Opportunity/action/navigationCounts',
             '/RecordKnowledge/relations', '/RecordKnowledge/overview', '/RecordKnowledge/schema',
+            '/MeetingGoogleImport/transcript',
             '/RecordKnowledge/iconOptions', '/EditorReference/backlinks', '/EditorReference/search',
             '/Contact/inbox', '/Account/inbox', '/Initiative/inbox',
             '/ActivityInbox/counts', '/ActivityInbox/metadata', '/ActivityInbox/options',

@@ -1,0 +1,8 @@
+{
+    "MaintainMeetingGoogleImports": {
+        "name": "Maintain Google Meet imports",
+        "isSystem": true,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureIntegrationGoogleMeet\\Jobs\\MaintainMeetingGoogleImports"
+    }
+}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureRecordKnowledge\Classes\Acl;
 
 use Espo\Core\Acl\AccessEntityReadChecker;
+use Espo\Core\Acl\AccessEntityCreateChecker;
 use Espo\Core\Acl\AccessEntityEditChecker;
 use Espo\Core\Acl\AccessEntityDeleteChecker;
 use Espo\Core\Acl\AccessEntityStreamChecker;
@@ -16,7 +17,7 @@ use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
-class PortalDocumentAccess implements AccessEntityReadChecker, AccessEntityEditChecker, AccessEntityDeleteChecker, AccessEntityStreamChecker
+class PortalDocumentAccess implements AccessEntityCreateChecker, AccessEntityReadChecker, AccessEntityEditChecker, AccessEntityDeleteChecker, AccessEntityStreamChecker
 {
     use DefaultAccessCheckerDependency;
 
