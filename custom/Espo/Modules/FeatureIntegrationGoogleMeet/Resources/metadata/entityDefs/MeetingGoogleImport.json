@@ -1,0 +1,23 @@
+{
+    "fields": {
+        "meeting": {"type": "link", "required": true},
+        "tenantId": {"type": "varchar", "maxLength": 64, "required": true},
+        "accountId": {"type": "int", "required": true},
+        "conference": {"type": "varchar", "maxLength": 255, "required": true},
+        "conferenceStart": {"type": "varchar", "maxLength": 64},
+        "credentialId": {"type": "varchar", "maxLength": 64},
+        "initiatedById": {"type": "varchar", "maxLength": 64},
+        "transcriptDocument": {"type": "link"},
+        "createdAt": {"type": "datetime"},
+        "modifiedAt": {"type": "datetime"}
+    },
+    "links": {
+        "meeting": {"type": "belongsTo", "entity": "Meeting"},
+        "transcriptDocument": {"type": "belongsTo", "entity": "Document"}
+    },
+    "indexes": {
+        "meeting": {"unique": true, "columns": ["meetingId"]},
+        "transcript": {"unique": true, "columns": ["transcriptDocumentId"]}
+    },
+    "transactionalSave": true
+}

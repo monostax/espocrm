@@ -1,0 +1,5 @@
+{
+    "fields": {
+        "googleMeetGrantedScopes": {"type": "jsonArray", "readOnly": true, "directUpdateDisabled": true, "utility": true}
+    }
+}

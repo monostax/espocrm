@@ -24,6 +24,11 @@ class MarkdownSource
         $mode = $entity->get('bodyAuthoringMode') ?: 'Lexical';
         if (!in_array($mode, ['Lexical', 'Markdown'], true)) throw new BadRequest('Invalid authoring mode.');
         if ($entity->get('knowledgeRecordType')) {
+            if (($options['api'] ?? false) && !$entity->isNew()) {
+                foreach (['teamsIds', 'assignedUserId', 'createdById'] as $attribute) {
+                    if ($entity->isAttributeChanged($attribute)) throw new Forbidden('Owned document sharing follows its parent.');
+                }
+            }
             if ($entity->get('contentType') !== 'Page' || $entity->get('bodyFormat') !== 'Markdown') {
                 throw new BadRequest('Owned overviews must remain Markdown pages.');
             }

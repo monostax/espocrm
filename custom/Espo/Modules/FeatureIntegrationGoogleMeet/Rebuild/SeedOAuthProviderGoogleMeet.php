@@ -85,6 +85,8 @@ class SeedOAuthProviderGoogleMeet implements RebuildAction
             'https://www.googleapis.com/auth/user.emails.read',
             'https://www.googleapis.com/auth/meetings.space.created',
             'https://www.googleapis.com/auth/meetings.space.readonly',
+            'https://www.googleapis.com/auth/drive.meet.readonly',
+            'https://www.googleapis.com/auth/documents.readonly',
         ];
     }
 

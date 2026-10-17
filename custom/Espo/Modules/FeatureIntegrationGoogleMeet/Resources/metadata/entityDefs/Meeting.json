@@ -1,0 +1,5 @@
+{
+    "fields": {
+        "googleMeetRecordings": {"type": "bool", "notStorable": true, "utility": true}
+    }
+}

@@ -1,0 +1,14 @@
+[
+    {"route": "/MeetingGoogleImport/connections", "method": "get", "params": {"controller": "MeetingGoogleImport", "action": "connections"}},
+    {"route": "/MeetingGoogleImport/connect", "method": "post", "params": {"controller": "MeetingGoogleImport", "action": "connect"}},
+    {"route": "/MeetingGoogleImport/callback", "method": "get", "params": {"controller": "MeetingGoogleImport", "action": "callback"}},
+    {"route": "/MeetingGoogleImport/sessions", "method": "get", "params": {"controller": "MeetingGoogleImport", "action": "sessions"}},
+    {"route": "/MeetingGoogleImport/preview", "method": "post", "params": {"controller": "MeetingGoogleImport", "action": "preview"}},
+    {"route": "/MeetingGoogleImport/start", "method": "post", "params": {"controller": "MeetingGoogleImport", "action": "start"}},
+    {"route": "/MeetingGoogleImport/retry", "method": "post", "params": {"controller": "MeetingGoogleImport", "action": "retry"}},
+    {"route": "/MeetingGoogleImport/status", "method": "get", "params": {"controller": "MeetingGoogleImport", "action": "status"}},
+    {"route": "/MeetingGoogleImport/transcript", "method": "get", "params": {"controller": "MeetingGoogleImport", "action": "transcript"}},
+    {"route": "/MeetingGoogleImport/transcript", "method": "put", "params": {"controller": "MeetingGoogleImport", "action": "transcript"}},
+    {"route": "/MeetingGoogleImport/:meetingId/recordings/:unitId", "method": "get", "params": {"controller": "MeetingGoogleImport", "action": "playback"}},
+    {"route": "/MeetingGoogleImport/:meetingId/recordings/:unitId", "method": "head", "params": {"controller": "MeetingGoogleImport", "action": "playback"}}
+]

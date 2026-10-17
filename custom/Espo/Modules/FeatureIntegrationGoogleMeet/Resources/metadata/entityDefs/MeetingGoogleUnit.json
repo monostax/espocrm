@@ -1,0 +1,26 @@
+{
+    "fields": {
+        "importId": {"type": "varchar", "maxLength": 64, "required": true},
+        "sourceKey": {"type": "varchar", "maxLength": 64, "required": true},
+        "resource": {"type": "varchar", "maxLength": 255},
+        "kind": {"type": "varchar", "maxLength": 32},
+        "documentId": {"type": "varchar", "maxLength": 255},
+        "tabId": {"type": "varchar", "maxLength": 255},
+        "title": {"type": "text"},
+        "readiness": {"type": "varchar", "maxLength": 32},
+        "status": {"type": "varchar", "maxLength": 32, "default": "pending"},
+        "attemptId": {"type": "varchar", "maxLength": 64},
+        "fileId": {"type": "varchar", "maxLength": 255},
+        "storageKey": {"type": "varchar", "maxLength": 100},
+        "bytes": {"type": "varchar", "maxLength": 32},
+        "error": {"type": "varchar", "maxLength": 64},
+        "warnings": {"type": "jsonArray"},
+        "createdAt": {"type": "datetime"},
+        "modifiedAt": {"type": "datetime"}
+    },
+    "indexes": {
+        "source": {"unique": true, "columns": ["importId", "sourceKey"]},
+        "attempt": {"columns": ["attemptId"]}
+    },
+    "transactionalSave": true
+}

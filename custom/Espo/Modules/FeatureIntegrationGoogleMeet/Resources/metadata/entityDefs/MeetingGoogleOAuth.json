@@ -1,0 +1,18 @@
+{
+    "fields": {
+        "stateHash": {"type": "varchar", "maxLength": 64},
+        "sessionHash": {"type": "varchar", "maxLength": 64},
+        "verifier": {"type": "text"},
+        "userId": {"type": "varchar", "maxLength": 64},
+        "accountId": {"type": "int"},
+        "meetingId": {"type": "varchar", "maxLength": 64},
+        "teamId": {"type": "varchar", "maxLength": 64},
+        "credentialId": {"type": "varchar", "maxLength": 64},
+        "origin": {"type": "varchar", "maxLength": 255},
+        "expiresAt": {"type": "datetime"},
+        "consumed": {"type": "bool", "default": false},
+        "createdAt": {"type": "datetime"}
+    },
+    "indexes": {"state": {"unique": true, "columns": ["stateHash"]}},
+    "transactionalSave": true
+}
