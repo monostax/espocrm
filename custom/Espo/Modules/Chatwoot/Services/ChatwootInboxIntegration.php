@@ -517,6 +517,7 @@ class ChatwootInboxIntegration
             // Create native Chatwoot WhatsApp Cloud inbox
             $inboxName = 'WhatsApp - ' . $channel->get('name');
             $inboxResult = $this->createChatwootWhatsappCloudInbox(
+                $channel,
                 $chatwootUrl,
                 $chatwootAccountApiKey,
                 $chatwootAccountId,
@@ -1839,7 +1840,12 @@ class ChatwootInboxIntegration
 
         $this->entityManager->saveEntity($inbox, ['silent' => true]);
 
-        $this->linkProvisionedInboxAccess($channel, $inbox);
+        // Recovery is reconciliation, not a fresh inbox creation. Preserve
+        // existing membership boundaries instead of granting the retrying
+        // user or new teams access to a previously provisioned inbox.
+        if (empty($chatwootInbox['_recovered'])) {
+            $this->linkProvisionedInboxAccess($channel, $inbox);
+        }
 
         return $inbox->getId();
     }
@@ -1967,6 +1973,7 @@ class ChatwootInboxIntegration
      * @throws Error
      */
     private function createChatwootWhatsappCloudInbox(
+        Entity $channel,
         string $chatwootUrl,
         string $apiKey,
         int $accountId,
@@ -1977,6 +1984,15 @@ class ChatwootInboxIntegration
         string $businessAccountId,
         bool $isCoexistence = false,
     ): array {
+        $existing = $this->recoverChatwootWhatsappCloudInbox(
+            $channel, $chatwootUrl, $apiKey, $accountId, $phoneNumber,
+            $accessToken, $phoneNumberId, $businessAccountId, $isCoexistence
+        );
+
+        if ($existing) {
+            return $existing;
+        }
+
         $url = rtrim($chatwootUrl, '/') . "/api/v1/accounts/{$accountId}/inboxes";
 
         $providerConfig = [
@@ -1988,7 +2004,7 @@ class ChatwootInboxIntegration
 
         // embedded_signup skips Chatwoot's create-time webhook auto-setup.
         // Coexistence activation verifies the Meta subscription before creating
-        // the inbox; cloud API keeps auto-setup by omitting source.
+        // the inbox; cloud API queues auto-setup by omitting source.
         if ($isCoexistence) {
             $providerConfig['source'] = 'embedded_signup';
         }
@@ -2006,6 +2022,8 @@ class ChatwootInboxIntegration
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -2018,14 +2036,88 @@ class ChatwootInboxIntegration
         curl_close($ch);
 
         if ($httpCode < 200 || $httpCode >= 300) {
-            $error = json_decode($result, true);
-            $errorMessage = $error['message'] ?? $error['error'] ?? $result;
+            // A timeout/500 can happen after Chatwoot commits the inbox. A
+            // concurrent retry can also return 422 for the unique phone number.
+            if ($httpCode === 0 || $httpCode === 422 || $httpCode >= 500) {
+                $existing = $this->recoverChatwootWhatsappCloudInbox(
+                    $channel, $chatwootUrl, $apiKey, $accountId, $phoneNumber,
+                    $accessToken, $phoneNumberId, $businessAccountId, $isCoexistence
+                );
+
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
+            $error = json_decode($result ?: '{}', true);
+            $errorMessage = $error['message'] ?? $error['error'] ?? ('HTTP ' . $httpCode);
             throw new Error("Failed to create Chatwoot WhatsApp Cloud inbox: " . $errorMessage);
         }
 
         $this->log->info("ChatwootInboxIntegration: Created Chatwoot WhatsApp Cloud inbox '{$inboxName}' for account {$accountId}");
 
         return json_decode($result, true);
+    }
+
+    /** Recover only an exact WhatsApp identity visible within this account. */
+    private function recoverChatwootWhatsappCloudInbox(
+        Entity $channel,
+        string $chatwootUrl,
+        string $apiKey,
+        int $accountId,
+        string $phoneNumber,
+        string $accessToken,
+        string $phoneNumberId,
+        string $businessAccountId,
+        bool $isCoexistence
+    ): ?array {
+        $response = $this->chatwootApiClient->listInboxes($chatwootUrl, $apiKey, $accountId);
+
+        foreach ($response['payload'] ?? [] as $inbox) {
+            if (($inbox['channel_type'] ?? null) !== 'Channel::Whatsapp' ||
+                ($inbox['provider'] ?? null) !== 'whatsapp_cloud' ||
+                ($inbox['phone_number'] ?? null) !== $phoneNumber) {
+                continue;
+            }
+
+            $providerConfig = $inbox['provider_config'] ?? [];
+
+            if ((string) ($providerConfig['phone_number_id'] ?? '') !== $phoneNumberId ||
+                (string) ($providerConfig['business_account_id'] ?? '') !== $businessAccountId ||
+                (bool) ($providerConfig['is_coexistence'] ?? false) !== $isCoexistence) {
+                throw new Error('This phone number already has an inbox with a different WhatsApp configuration.');
+            }
+
+            $localInbox = $this->entityManager->getRDBRepository('ChatwootInbox')->where([
+                'chatwootAccountId' => $channel->get('chatwootAccountId'),
+                'chatwootInboxId' => (int) $inbox['id'],
+            ])->findOne();
+
+            if ($localInbox?->get('chatwootInboxIntegrationId') &&
+                $localInbox->get('chatwootInboxIntegrationId') !== $channel->getId()) {
+                throw new Error('This WhatsApp inbox is already linked to another integration.');
+            }
+
+            // A retry must not overwrite another inbox's credentials or its
+            // redacted voice settings. Token rotation belongs to reconnect.
+            if (($providerConfig['api_key'] ?? null) !== $accessToken) {
+                throw new Error('This WhatsApp inbox uses different credentials. Reconnect the existing inbox instead.');
+            }
+
+            if (!$isCoexistence) {
+                $this->chatwootApiClient->registerWhatsappInboxWebhook(
+                    $chatwootUrl, $apiKey, $accountId, (int) $inbox['id']
+                );
+            }
+
+            $this->log->info("ChatwootInboxIntegration: Recovered WhatsApp inbox {$inbox['id']} for account {$accountId}.");
+
+            $inbox['_recovered'] = true;
+
+            return $inbox;
+        }
+
+        return null;
     }
 
     /**
@@ -2635,6 +2727,7 @@ class ChatwootInboxIntegration
             // Chatwoot enables coexistence composer / WAHA outbound paths.
             $inboxName = 'WhatsApp - ' . $channel->get('name');
             $inboxResult = $this->createChatwootWhatsappCloudInbox(
+                $channel,
                 $chatwootUrl,
                 $chatwootAccountApiKey,
                 (int) $chatwootAccountId,

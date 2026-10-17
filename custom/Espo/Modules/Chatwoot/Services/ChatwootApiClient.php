@@ -2225,6 +2225,26 @@ public function updateInbox(
 }
 
 /**
+ * Queue webhook registration for an existing WhatsApp Cloud inbox.
+ */
+public function registerWhatsappInboxWebhook(
+    string $platformUrl,
+    string $accountApiKey,
+    int $accountId,
+    int $inboxId
+): void {
+    $url = rtrim($platformUrl, '/') . "/api/v1/accounts/{$accountId}/inboxes/{$inboxId}/register_webhook";
+    $response = $this->executeRequest($url, 'POST', '{}', [
+        'api_access_token: ' . $accountApiKey,
+        'Content-Type: application/json',
+    ], false);
+
+    if ($response['code'] < 200 || $response['code'] >= 300) {
+        throw new Error('Failed to queue WhatsApp webhook registration: HTTP ' . $response['code']);
+    }
+}
+
+/**
  * Create an email inbox (Channel::Email) on a Chatwoot account.
  *
  * Payload shape matches Chatwoot InboxesController#create:
