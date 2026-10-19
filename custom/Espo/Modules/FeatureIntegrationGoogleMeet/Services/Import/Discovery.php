@@ -52,7 +52,8 @@ class Discovery
     {
         $this->access->meeting($accountId, $meetingId, true);
         $credential = $this->access->credential($accountId, $credentialId);
-        $params = ['pageSize' => 25, 'filter' => 'end_time IS NOT NULL'];
+        // Meet rejects IS NOT NULL. A fixed timestamp excludes active sessions and stays stable across pages.
+        $params = ['pageSize' => 25, 'filter' => 'end_time > "1970-01-01T00:00:00Z"'];
         if ($cursor) {
             try { $data = json_decode($this->crypt->decrypt($cursor), true, 16, JSON_THROW_ON_ERROR); }
             catch (\Throwable) { throw new BadRequest('Invalid session cursor.'); }
