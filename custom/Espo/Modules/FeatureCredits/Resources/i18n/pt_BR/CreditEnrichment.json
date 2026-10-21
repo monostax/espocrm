@@ -1,5 +1,6 @@
 {
     "labels": {
+        "genericEmail": "Mostrar {count} e-mail genérico/departamental", "genericEmails": "Mostrar {count} e-mails genéricos/departamentais",
         "firstName": "Nome", "lastName": "Sobrenome (obrigatório)", "teamsIds": "Equipes",
         "creationUnavailable": "Sua conta não permite criar novos contatos por aqui, mas você ainda pode vincular os dados a contatos existentes.",
         "intro": "Complete o cadastro consultando bases externas. Você pode revisar os dados encontrados antes de salvá-los. Consultar buscas anteriores é gratuito.",

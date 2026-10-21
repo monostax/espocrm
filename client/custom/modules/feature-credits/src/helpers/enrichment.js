@@ -83,3 +83,34 @@ export function fieldChoices(review) {
     const editable = review.application?.permissions?.editableFields || [];
     return Object.entries(choices).filter(([field]) => editable.includes(field)).map(([field, options]) => ({field, options}));
 }
+
+const foldEmailName = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const genericEmailNames = new Set(('admin administracao atendimento billing cobranca comercial compras ' +
+    'contabilidade contabil contato contatos contact customer dominios domains ' +
+    'finance financeiro financial fiscal help hello info invoice invoices ' +
+    'juridico marketing newsletter noreply office recepcao ' +
+    'recrutamento recursos humanos revista rh sac sales secretaria ' +
+    'suporte support vendas webmaster').split(' '));
+
+// Keep the original value and purchase reference for application.
+export function groupEnrichmentEmails(rows, contactName = '') {
+    const names = foldEmailName(contactName).split(/[^a-z]+/).filter(name => name.length > 2 && !['das', 'dos'].includes(name));
+    const aliases = names.flatMap(name => [`${names[0]}${name}`, `${names[0]?.[0]}${name}`]);
+    const unique = new Map();
+    rows.forEach(row => {
+        const key = row.value.trim().toLowerCase();
+        if (!key) return;
+        const existing = unique.get(key);
+        const sources = [...new Set([...(existing?.sources || []), row.source])]
+            .filter(source => source !== undefined && source !== null).sort((a, b) => a - b);
+        const preferred = existing && (existing.canEdit || !row.canEdit) ? existing : row;
+        unique.set(key, {...preferred, key, sources});
+    });
+    const sorted = [...unique.values()].map(row => {
+        const local = foldEmailName(row.key.split('@')[0].split('+')[0]);
+        const tokens = local.split(/[^a-z]+/).filter(Boolean);
+        const matchesName = tokens.some(token => names.includes(token)) || aliases.includes(tokens.join(''));
+        return {...row, matchesName, generic: !matchesName && (tokens.some(token => genericEmailNames.has(token)) || genericEmailNames.has(tokens.join('')))};
+    }).sort((a, b) => Number(b.matchesName) - Number(a.matchesName));
+    return {personal: sorted.filter(row => !row.generic), generic: sorted.filter(row => row.generic)};
+}

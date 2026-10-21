@@ -43,6 +43,24 @@
     {{#if next}}<button class="btn btn-default" type="button" data-enrichment-more>{{translate 'more' scope='CreditEnrichment'}}</button>{{/if}}
     {{#if detail}}
         <h4>{{translate 'review' scope='CreditEnrichment'}}</h4>
+        {{#if emailReview}}
+        <p class="text-muted">{{translate 'current' scope='CreditEnrichment'}}: {{currentEmail}}</p>
+        {{#each emailNotices}}<p role="status">{{translate 'source' scope='CreditEnrichment'}} {{source}}: {{reason}}</p>{{/each}}
+        {{#each emailGroups}}
+        <details {{#unless generic}}open{{/unless}} class="panel panel-default">
+            <summary class="panel-heading">{{label}}</summary>
+            <ul class="list-group">
+            {{#each rows}}
+                <li class="list-group-item">
+                    <span>{{value}}</span>
+                    {{#each sources}}<span class="label label-default">{{translate 'source' scope='CreditEnrichment'}} {{this}}</span>{{/each}}
+                    {{#if canEdit}}<button type="button" class="btn btn-default btn-xs" data-enrichment-email="{{receiptId}}" data-index="{{index}}">{{translate 'apply' scope='CreditEnrichment'}}</button>{{/if}}
+                </li>
+            {{/each}}
+            </ul>
+        </details>
+        {{/each}}
+        {{else}}
         <dl>{{#each values}}<dt>{{field}}</dt><dd>{{value}}</dd>{{/each}}</dl>
         {{#if detail.application.reason}}<p role="status">{{detail.application.reason}}</p>{{/if}}
         {{#if detail.application.available}}<form data-enrichment-apply>
@@ -65,6 +83,7 @@
             </label></div>{{/each}}
             <button class="btn btn-primary" type="submit">{{translate 'apply' scope='CreditEnrichment'}}</button>
         </form>{{/if}}
+        {{/if}}
     {{/if}}
     </fieldset>
     {{/if}}

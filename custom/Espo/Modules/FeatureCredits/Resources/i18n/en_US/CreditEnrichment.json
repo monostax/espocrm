@@ -1,5 +1,6 @@
 {
     "labels": {
+        "genericEmail": "Show {count} generic/departmental email", "genericEmails": "Show {count} generic/departmental emails",
         "firstName": "First name", "lastName": "Last name (required)", "teamsIds": "Teams",
         "creationUnavailable": "Your account permissions do not allow creating new contacts here, but you can still match existing contacts.",
         "intro": "Enrich records from external data sources. Review found data before saving it to the record. Viewing previous lookups is free.",

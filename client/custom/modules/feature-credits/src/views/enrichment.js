@@ -1,5 +1,5 @@
 import BottomPanelView from 'views/record/panels/bottom';
-import {EnrichmentSession, fieldChoices} from 'feature-credits:helpers/enrichment';
+import {EnrichmentSession, fieldChoices, groupEnrichmentEmails} from 'feature-credits:helpers/enrichment';
 import {formatCredits} from 'feature-credits:helpers/presentation';
 
 export default class extends BottomPanelView {
@@ -10,6 +10,7 @@ export default class extends BottomPanelView {
         this.version = 0;
         this.product = 'email';
         this.items = [];
+        this.emailReviews = [];
         this.addHandler('submit', '[data-enrichment-quote]', e => { e.preventDefault(); this.quote(e.currentTarget); });
         this.addHandler('click', '[data-enrichment-confirm]', () => this.progress('confirm'));
         this.addHandler('click', '[data-enrichment-resume]', () => this.progress('resume'));
@@ -19,13 +20,14 @@ export default class extends BottomPanelView {
         this.addHandler('click', '[data-enrichment-more]', () => this.history(true));
         this.addHandler('click', '[data-enrichment-review]', e => this.review(e.currentTarget.dataset.enrichmentReview));
         this.addHandler('submit', '[data-enrichment-apply]', e => { e.preventDefault(); this.apply(e.currentTarget); });
+        this.addHandler('click', '[data-enrichment-email]', e => this.applyEmail(e.currentTarget.dataset.enrichmentEmail, e.currentTarget.dataset.index));
         this.addHandler('change', '[name=createIfUnmatched]', e => {
             const fields = e.currentTarget.form.querySelector('[data-enrichment-create]');
             fields.disabled = !e.currentTarget.checked;
             fields.hidden = !e.currentTarget.checked;
         });
         this.listenTo(this.model, 'change:tenantId change:id', () => this.context());
-        this.on('remove', () => { ++this.version; this.disposed = true; this.detail = this.current = null; });
+        this.on('remove', () => { ++this.version; this.disposed = true; this.detail = this.current = null; this.emailReviews = []; });
         this.wait(this.context());
     }
 
@@ -35,6 +37,7 @@ export default class extends BottomPanelView {
     async context() {
         ++this.version;
         this.busy = false; this.error = null; this.receipt = this.detail = this.current = this.session = this.saved = this.applicationCommand = null; this.items = []; this.next = null;
+        this.emailReviews = [];
         if (!this.model.id || !this.model.get('tenantId')) return;
         try {
             this.session = new EnrichmentSession({post: (url, body) => Espo.Ajax.postRequest(url, body), storage: window.sessionStorage,
@@ -59,7 +62,7 @@ export default class extends BottomPanelView {
             e?.setHandled?.();
             if (!this.active(version)) return;
             this.error = this.t(e?.status === 401 ? 'sessionExpired' : e?.status === 403 ? 'forbidden' : e?.status === 409 ? 'conflict' : 'unavailable');
-            if ([401, 403].includes(e?.status)) { this.detail = this.current = this.receipt = null; this.items = []; }
+            if ([401, 403].includes(e?.status)) { this.detail = this.current = this.receipt = null; this.items = []; this.emailReviews = []; }
         } finally {
             if (this.active(version)) {
                 this.busy = false;
@@ -103,26 +106,78 @@ export default class extends BottomPanelView {
     history(more) {
         const params = {...this.session?.scope, product: this.product, ...(more ? this.next : {}), limit: 20};
         if (this.busy) return;
-        if (!more) { this.items = []; this.next = null; this.detail = this.current = null; }
+        if (!more) { this.items = []; this.next = null; this.detail = this.current = null; this.emailReviews = []; }
         return this.run(async version => {
             const data = await Espo.Ajax.getRequest('CreditEnrichmentHistory', params);
             if (!this.active(version)) return;
             this.items = more ? [...this.items, ...data.list] : data.list;
             this.next = data.next;
+            if (this.emailReviews.length) await this.loadEmailReviews(version, this.session.scope);
         });
     }
 
     review(id) {
+        if (this.busy) return;
         if (!this.items.some(item => item.receipt.id === id)) return;
         const finder = ['employees', 'socios'].includes(this.product);
         const scope = {...this.session.scope};
         this.detail = this.current = null;
         this.applicationCommand = null;
+        this.emailReviews = [];
         return this.run(async version => {
+            if (scope.targetType === 'Contact' && this.product === 'email') {
+                await this.loadEmailReviews(version, scope);
+                return;
+            }
             const detail = await Espo.Ajax.getRequest('CreditEnrichmentReview', {tenantId: scope.tenantId, id, ...(finder ? {} : {source: 'field'})});
             const current = finder ? null : await Espo.Ajax.getRequest(scope.targetType + '/' + encodeURIComponent(scope.targetId));
             if (!this.active(version)) return;
             this.detail = detail; this.current = current; this.finder = finder;
+        });
+    }
+
+    async loadEmailReviews(version, scope) {
+        const [reviews, current] = await Promise.all([
+            Promise.all(this.items.filter(item => item.receipt.product === 'email').map(item =>
+                Espo.Ajax.getRequest('CreditEnrichmentReview', {tenantId: scope.tenantId, id: item.receipt.id, source: 'field'}))),
+            Espo.Ajax.getRequest(scope.targetType + '/' + encodeURIComponent(scope.targetId)),
+        ]);
+        if (!this.active(version)) return;
+        this.emailReviews = reviews; this.detail = reviews[0]; this.current = current; this.finder = false;
+    }
+
+    emailGroups() {
+        const pending = this.applicationCommand?.body;
+        const rows = this.emailReviews.flatMap(review => Object.values(review.values || {}).map((value, index) => ({
+            value, index, receiptId: review.receipt.id, source: review.receipt.source,
+            canEdit: !review.erased && review.application.available && review.application.permissions?.editableFields?.includes('emailAddress') &&
+                (!pending || (pending.id === review.receipt.id && pending.fields.emailAddress === value)),
+        })));
+        const groups = groupEnrichmentEmails(rows, this.current?.name || [this.current?.firstName, this.current?.lastName].filter(Boolean).join(' '));
+        return Object.entries(groups).filter(([, values]) => values.length).map(([kind, rows]) => ({
+            generic: kind === 'generic', rows,
+            label: kind === 'generic' ? this.t(rows.length === 1 ? 'genericEmail' : 'genericEmails').replace('{count}', rows.length) : this.t('email'),
+        }));
+    }
+
+    applyEmail(id, index) {
+        const review = this.emailReviews.find(item => item.receipt.id === id);
+        if (this.busy || !review?.application.available || !review.application.permissions?.editableFields?.includes('emailAddress')) return;
+        const value = Object.values(review.values || {})[index];
+        if (!value) return;
+        const pending = this.applicationCommand?.body;
+        if (pending && (pending.id !== id || pending.fields.emailAddress !== value)) return;
+        const command = this.applicationCommand || {url: 'CreditEnrichmentFields', body: {
+            tenantId: this.session.scope.tenantId, id, source: 'field', fields: {emailAddress: value},
+            expected: {emailAddress: this.current?.emailAddress ?? null},
+        }};
+        this.applicationCommand = command;
+        return this.run(async version => {
+            try { await Espo.Ajax.postRequest(command.url, command.body); }
+            catch (e) { if (this.active(version) && [400, 409].includes(e?.status)) this.applicationCommand = null; throw e; }
+            if (!this.active(version)) return;
+            this.emailReviews = []; this.detail = this.current = this.applicationCommand = null;
+            this.model.fetch();
         });
     }
 
@@ -179,6 +234,9 @@ export default class extends BottomPanelView {
             products: products.map(value => ({value, label: this.t(value), selected: this.product === value})), account: this.model.entityType === 'Account',
             items: this.items.map(item => ({...item, credits: formatCredits(item.receipt.credits), product: this.t(item.receipt.product)})), next: this.next,
             detail: this.detail, finder: this.finder,
+            emailReview: !!this.emailReviews?.length, emailGroups: this.emailReviews?.length ? this.emailGroups() : [],
+            emailNotices: (this.emailReviews || []).filter(review => review.application.reason).map(review => ({source: review.receipt.source, reason: review.application.reason})),
+            currentEmail: this.current?.emailAddress || '',
             creationTeams: (this.detail?.application.creationForm?.teams || []).map((team, index, teams) => ({...team, selected: teams.length === 1})),
             creationFields: (this.detail?.application.creationForm?.fields || []).map(field => ({...field,
                 label: this.translate(field.name, 'fields', 'Contact'),
