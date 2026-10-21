@@ -460,6 +460,72 @@ final class PhoneVerificationDatabaseTest extends TestCase
     }
 
     #[DataProvider('dialects')]
+    public function testEmailChargeCapAllowsPaidAdmissionAndFreeReuseWithoutUnexpectedCharges(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution): void {
+            $pdo->exec("UPDATE contact SET email_address = 'person@example.com' WHERE id = 'contact'");
+            $source = ['key' => 'email', 'kind' => 'contact_email'];
+            $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]], Kind::EMAIL);
+            $command = (object) [
+                'tenantId' => 'tenant',
+                'contactId' => 'contact',
+                'source' => $source,
+                'requestKey' => 'email-capped',
+                'contextRevision' => $context['rows']['email']['contextRevision'],
+                'maxChargeCredits' => '2.0000',
+            ];
+
+            foreach ([null, 2, true, '2', '1.0000', '8.0000'] as $invalidCap) {
+                $invalid = clone $command;
+                $invalid->maxChargeCredits = $invalidCap;
+                try {
+                    $operations->start($invalid, Kind::EMAIL);
+                    self::fail('Accepted an invalid email charge cap.');
+                } catch (\InvalidArgumentException $e) {
+                    self::assertSame('Invalid maximum verification charge.', $e->getMessage());
+                }
+            }
+
+            $start = $operations->start($command, Kind::EMAIL);
+            self::assertSame('admitted', $start['resolution']);
+            self::assertSame('2.0000', $start['operation']['reservedCredits']);
+            self::assertSame($start, $operations->start($command, Kind::EMAIL));
+
+            $free = clone $command;
+            $free->maxChargeCredits = '0.0000';
+            try {
+                $operations->start($free, Kind::EMAIL);
+                self::fail('Changed the charge cap of an existing request.');
+            } catch (Conflict) {}
+
+            $free->requestKey = 'email-capped-join';
+            $joined = $operations->start($free, Kind::EMAIL);
+            self::assertSame('joined', $joined['resolution']);
+            self::assertSame($start['operation']['id'], $joined['operation']['id']);
+            $execution->run('tenant', $start['operation']['id']);
+
+            $free->requestKey = 'email-capped-reuse';
+            $reused = $operations->start($free, Kind::EMAIL);
+            self::assertSame('reused', $reused['resolution']);
+            self::assertSame($start['operation']['id'], $reused['operation']['id']);
+
+            $free->requestKey = 'email-capped-expired';
+            $this->now = Operations::after($this->now, CapabilityGate::FRESH_REUSE_SECONDS);
+            try {
+                $operations->start($free, Kind::EMAIL);
+                self::fail('Expired free email quote charged.');
+            } catch (Conflict $e) {
+                self::assertStringContainsString('context_changed', (string) $e->getBody());
+            }
+            self::assertCount(1, $this->emailCalls);
+            self::assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM phone_verification_operation')->fetchColumn());
+            self::assertSame('38.0000', $pdo->query("SELECT balance FROM tenant_credit_balance WHERE tenant_id = 'tenant'")->fetchColumn());
+            self::assertSame('0.0000', $pdo->query("SELECT reserved_credits FROM tenant_credit_balance WHERE tenant_id = 'tenant'")->fetchColumn());
+            $this->assertHealthyAccounting($pdo);
+        });
+    }
+
+    #[DataProvider('dialects')]
     public function testEmailPendingPollingRecoveryDeadlineAndErasure(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution, CapabilityGate $gate, Funding $funding, Crypt $crypt): void {

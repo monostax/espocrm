@@ -256,7 +256,7 @@ class Operations
         }
         $maxCharge = $data['maxChargeCredits'] ?? null;
         if (array_key_exists('maxChargeCredits', $data) &&
-            ($kind === Kind::EMAIL || !in_array($maxCharge, ['0.0000', Kind::price($kind)], true))) {
+            !in_array($maxCharge, ['0.0000', Kind::price($kind)], true)) {
             throw new InvalidArgumentException('Invalid maximum verification charge.');
         }
         if ($suppliedDob !== null && $suppliedDob !== '') {

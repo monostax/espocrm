@@ -71,7 +71,9 @@ required. Their durable database windows are independent of tenant admission lim
 
 - `POST /CreditEmailVerification/context`: `tenantId`, `contactId`, `sources[]`.
 - `POST /CreditEmailVerification`: `tenantId`, `contactId`, `source`, `requestKey`,
-  `contextRevision`, optional `refresh`. DOB and arbitrary email inputs are rejected.
+  `contextRevision`, optional `refresh` and `maxChargeCredits` (`0.0000` for free
+  join/reuse only, or `2.0000` to allow a paid check). DOB and arbitrary email inputs
+  are rejected. An expired free quote returns a conflict instead of charging.
 - `GET /CreditEmailVerification/status`: tenant/Contact plus `requestKey` or `operationId`.
 - `GET /CreditEmailVerification/history`: tenant/Contact, optional `limit`,
   `beforeAt` / `beforeId` cursor.
