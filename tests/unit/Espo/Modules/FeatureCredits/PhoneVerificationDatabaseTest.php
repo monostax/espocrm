@@ -503,7 +503,7 @@ final class PhoneVerificationDatabaseTest extends TestCase
     }
 
     #[DataProvider('dialects')]
-    public function testEmailAuthorizationFailuresRejectionAndSharedPilotLimits(string $dialect): void
+    public function testEmailAuthorizationFailuresAndUnlimitedConcurrentVerificationKinds(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution, CapabilityGate $gate): void {
             $pdo->exec("UPDATE contact SET email_address = 'person@example.com' WHERE id = 'contact'");
@@ -524,19 +524,20 @@ final class PhoneVerificationDatabaseTest extends TestCase
             $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact',
                 'sources' => [['key' => 'email', 'kind' => 'contact_email']]], Kind::EMAIL);
             self::assertSame('ownership_rejected', $context['rows']['email']['reason']);
-            for ($i = 0; $i < 5; $i++) {
+            for ($i = 0; $i < 6; $i++) {
                 $pdo->exec("UPDATE contact SET email_address = 'person$i@example.com' WHERE id = 'contact'");
                 $this->emailStart($operations, 'open-' . $i);
             }
             $gate->publish((object) ['enabled' => true], 'admin');
             $source = ['key' => 'phone', 'kind' => 'contact_phone'];
             $context = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'sources' => [$source]]);
-            try {
-                $operations->start((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'source' => $source,
-                    'requestKey' => 'phone-over-limit', 'contextRevision' => $context['rows']['phone']['contextRevision']]);
-                self::fail('Email operations must count against the shared phone pilot allowance.');
-            } catch (Conflict) {}
-            self::assertSame('10.0000', $pdo->query("SELECT reserved_credits FROM tenant_credit_balance WHERE tenant_id = 'tenant'")->fetchColumn());
+            $phone = $operations->start((object) ['tenantId' => 'tenant', 'contactId' => 'contact', 'source' => $source,
+                'requestKey' => 'concurrent-phone', 'contextRevision' => $context['rows']['phone']['contextRevision']]);
+            self::assertSame('admitted', $phone['resolution']);
+            $whatsApp = $operations->start($this->whatsAppCommand($operations, 'concurrent-whatsapp'), Kind::WHATSAPP);
+            self::assertSame('admitted', $whatsApp['resolution']);
+            self::assertSame(8, (int) $pdo->query("SELECT COUNT(*) FROM phone_verification_operation WHERE state = 'admitted'")->fetchColumn());
+            self::assertSame('22.0000', $pdo->query("SELECT reserved_credits FROM tenant_credit_balance WHERE tenant_id = 'tenant'")->fetchColumn());
             $this->assertHealthyAccounting($pdo);
         });
     }
@@ -1460,8 +1461,7 @@ final class PhoneVerificationDatabaseTest extends TestCase
             self::assertSame('0.0000', $otherBalance['reservedCredits']);
             $this->assertHealthyAccounting($pdo, 'other');
 
-            // 4. Pilot rate limits and same-input cooldown (D20, D25).
-            $gate->publish((object) ['maxOutstandingPerTenant' => 1], 'admin');
+            // 4. Independent inputs can remain in flight together.
             $opLimit1 = $operations->start((object) [
                 'tenantId' => 'tenant',
                 'contactId' => 'contact2',
@@ -1471,21 +1471,17 @@ final class PhoneVerificationDatabaseTest extends TestCase
             ]);
             self::assertSame('admitted', $opLimit1['resolution']);
 
-            // Same-input within 60s joins the active operation; different phone while 1 is outstanding hits maxOutstandingPerTenant!
             $pdo->exec("UPDATE contact SET phone_number = '+5511977776666' WHERE id = 'contact2'");
             $ctx2DiffPhone = $operations->context((object) ['tenantId' => 'tenant', 'contactId' => 'contact2', 'sources' => [$source2]]);
-            try {
-                $operations->start((object) [
-                    'tenantId' => 'tenant',
-                    'contactId' => 'contact2',
-                    'source' => $source2,
-                    'requestKey' => 'req-limit-2',
-                    'contextRevision' => $ctx2DiffPhone['rows']['contactPhone']['contextRevision'],
-                ]);
-                self::fail('Exceeded maxOutstandingPerTenant limit.');
-            } catch (Conflict $e) {
-                self::assertStringContainsString('rate_limited', (string) $e->getBody());
-            }
+            $opLimit2 = $operations->start((object) [
+                'tenantId' => 'tenant',
+                'contactId' => 'contact2',
+                'source' => $source2,
+                'requestKey' => 'req-limit-2',
+                'contextRevision' => $ctx2DiffPhone['rows']['contactPhone']['contextRevision'],
+            ]);
+            self::assertSame('admitted', $opLimit2['resolution']);
+            self::assertNotSame($opLimit1['operation']['id'], $opLimit2['operation']['id']);
 
             // Controller rejects forged price or result fields and sets private, no-store header.
             $controller = new CreditPhoneVerification($operations);

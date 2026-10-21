@@ -23,6 +23,13 @@ final class CreditEnrichmentQuotes
         return $this->command($request, $response, 'quote');
     }
 
+    public function getActionStatus(Request $request, Response $response): object
+    {
+        $response->setHeader('Cache-Control', 'private, no-store');
+        try { return (object) CustomerProjection::quote($this->quotes->status($request->getQueryParams())); }
+        catch (InvalidArgumentException $e) { throw new BadRequest($e->getMessage()); }
+    }
+
     public function postActionConfirm(Request $request, Response $response): object
     {
         return $this->command($request, $response, 'confirm');

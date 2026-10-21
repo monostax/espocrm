@@ -60,6 +60,36 @@ trait EnrichmentAdmissionCases
     }
 
     #[DataProvider('dialects')]
+    public function testStatusReadsProgressWithoutAdmissionAndChecksActorTenantAndRecordAccess(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Quotes $quotes): void {
+            $reservations = $this->fundAdmission($pdo);
+            $quote = $quotes->quote($this->input());
+            $query = ['tenantId' => 'tenant', 'quoteId' => $quote['id']];
+            $this->assertSame('not_admitted', $quotes->status($query)['admission']);
+            $this->assertSame($quote['id'], $quotes->status(['tenantId' => 'tenant', 'requestKey' => 'request-1'])['id']);
+            $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM credit_usage')->fetchColumn());
+            $quotes->confirm('tenant', $quote['id']);
+            $hold = $quotes->admit('tenant', $quote['id']);
+            $request = $this->createStub(Request::class);
+            $request->method('getQueryParams')->willReturn($query);
+            $response = $this->createMock(Response::class);
+            $response->expects($this->once())->method('setHeader')->with('Cache-Control', 'private, no-store');
+            $receipt = (array) (new CreditEnrichmentQuotes($quotes))->getActionStatus($request, $response);
+            $this->assertSame('admitted', $receipt['admission']);
+            $this->assertArrayNotHasKey('policyId', $receipt);
+            $reservations->release('tenant', $hold['usageId'], 'enrichment:' . $quote['id']);
+            $this->assertSame('released', $quotes->status($query)['admission']);
+            $this->actor = 'other-user';
+            try { $quotes->status($query); $this->fail('Other actor read a private quote.'); } catch (NotFound) {}
+            $this->actor = 'user';
+            try { $quotes->status([...$query, 'tenantId' => 'other']); $this->fail('Foreign tenant read a quote.'); } catch (NotFound) {}
+            $this->allowed = false;
+            try { $quotes->status($query); $this->fail('Revoked target access read progress.'); } catch (Forbidden) {}
+        });
+    }
+
+    #[DataProvider('dialects')]
     public function testAdmissionApiRetainsAcceptedPricingAndReplaysOneSharedHold(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo, Quotes $quotes, Catalog $catalog): void {
@@ -120,7 +150,7 @@ trait EnrichmentAdmissionCases
     }
 
     #[DataProvider('dialects')]
-    public function testActiveGuardCrossesActorsAndRefreshButAllowsDisjointProductsAndReleasedWork(string $dialect): void
+    public function testOverlappingProductsAcrossActorsAndRefreshHaveIndependentHolds(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo, Quotes $quotes): void {
             $reservations = $this->fundAdmission($pdo, '100');
@@ -128,21 +158,22 @@ trait EnrichmentAdmissionCases
             $hold = $quotes->admit('tenant', $email['id']);
             $this->actor = 'another-user';
             $combined = $this->accepted($quotes, ['requestKey' => 'refresh', 'refresh' => true]);
-            try { $quotes->admit('tenant', $combined['id']); $this->fail('Concurrent overlapping product admitted.'); }
-            catch (Conflict $e) {
-                $this->assertSame(['reason' => 'enrichment_operation_active', 'usageId' => $hold['usageId'], 'products' => ['email']],
-                    json_decode($e->getBody(), true, 8, JSON_THROW_ON_ERROR));
-            }
+            $combinedHold = $quotes->admit('tenant', $combined['id']);
+            $this->assertSame('admitted', $combinedHold['admission']);
+            $this->assertNotSame($hold['usageId'], $combinedHold['usageId']);
             $phone = $this->accepted($quotes, ['requestKey' => 'phone', 'products' => ['phone']]);
             $phoneHold = $quotes->admit('tenant', $phone['id']);
             $this->assertSame('admitted', $phoneHold['admission']);
+            $this->assertSame('23.5000', $pdo->query('SELECT reserved_credits FROM tenant_credit_balance')->fetchColumn());
             $reservations->release('tenant', $hold['usageId'], 'enrichment:' . $email['id']);
-            try { $quotes->admit('tenant', $combined['id']); $this->fail('Combined operation ignored active phone.'); } catch (Conflict) {}
+            $this->assertSame($combinedHold, $quotes->admit('tenant', $combined['id']));
             $reservations->release('tenant', $phoneHold['usageId'], 'enrichment:' . $phone['id']);
             $this->assertSame('admitted', $quotes->admit('tenant', $combined['id'])['admission']);
+            $this->assertSame('8.0000', $pdo->query('SELECT reserved_credits FROM tenant_credit_balance')->fetchColumn());
             $this->actor = 'user';
             $this->assertSame('released', $quotes->admit('tenant', $email['id'])['admission']);
             $this->assertSame(3, (int) $pdo->query('SELECT COUNT(*) FROM credit_usage')->fetchColumn());
+            $this->assertAdmissionAudit($pdo);
         });
     }
 
@@ -216,7 +247,7 @@ trait EnrichmentAdmissionCases
     }
 
     #[DataProvider('dialects')]
-    public function testIndependentAdmissionReplayAndCompetingProductGuards(string $dialect): void
+    public function testIndependentAdmissionReplayAndConcurrentOverlappingProducts(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo, Quotes $quotes) use ($dialect): void {
             $reservations = $this->fundAdmission($pdo, '100');
@@ -230,9 +261,12 @@ trait EnrichmentAdmissionCases
             $b = $this->accepted($quotes, ['requestKey' => 'b', 'refresh' => true]);
             $results = $this->race($pdo, $dialect, 'admit', [
                 ['tenantId' => 'tenant', 'quoteId' => $a['id']], ['tenantId' => 'tenant', 'quoteId' => $b['id']]]);
-            $this->assertCount(1, array_column($results, 'result'));
-            $this->assertSame([Conflict::class], array_column($results, 'error'));
-            $this->assertSame(2, (int) $pdo->query('SELECT COUNT(*) FROM credit_usage')->fetchColumn());
+            $this->assertCount(2, array_column($results, 'result'));
+            $this->assertSame([], array_column($results, 'error'));
+            $this->assertNotSame($results[0]['result']['usageId'], $results[1]['result']['usageId']);
+            $this->assertSame('16.0000', $pdo->query('SELECT reserved_credits FROM tenant_credit_balance')->fetchColumn());
+            $this->assertSame(3, (int) $pdo->query('SELECT COUNT(*) FROM credit_usage')->fetchColumn());
+            $this->assertAdmissionAudit($pdo);
         });
     }
 

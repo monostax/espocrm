@@ -56,9 +56,10 @@ email tasks may finish through free status retrieval; authorization revocation a
 erasure still stop delivery. Shared operational diagnostics are available through
 the existing instance-admin `CreditPhoneVerificationConfiguration` GET endpoint.
 
-All kinds share the limits configured through `CreditPhoneVerificationConfiguration`:
-5 outstanding operations, 10 admissions/minute, 100/day per tenant by default, with
-a 60-second same-fingerprint cooldown. Email activation does not require phone
+All kinds allow unlimited concurrent operations. They share the admission rates
+configured through `CreditPhoneVerificationConfiguration`: 10 admissions/minute,
+100/day per tenant by default, with a 60-second same-fingerprint cooldown. The legacy
+`maxOutstandingPerTenant` setting is ignored. Email activation does not require phone
 activation; its availability ignores phone-specific approval and allowlist settings.
 
 Account-wide submit and status limits each default to 25 requests/second. Set
@@ -102,7 +103,8 @@ determine the platform charge.
 Chatwoot exposes confirmation, shared badges, refresh, and dated history on purchased
 email rows, the primary Contact email, and saved email channels, in English and
 Brazilian Portuguese. The email browser journal is isolated from phone journals and
-contains only IDs/revisions; uncertain HTTP submissions retain the same request key.
+contains only IDs/revisions; each input context has its own journal, so uncertain
+HTTP submissions retain their request key without blocking other inputs.
 
 ## Local validation
 

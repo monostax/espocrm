@@ -942,16 +942,6 @@ class Operations
             );
         }
 
-        $q = $pdo->prepare("SELECT COUNT(*) FROM phone_verification_operation
-            WHERE tenant_id = ? AND state IN ('admitted', 'claimed', 'awaiting') AND deadline_at > ? AND deleted = FALSE");
-        $q->execute([$tenantId, $now]);
-        if ((int) $q->fetchColumn() >= $limits['maxOutstandingPerTenant']) {
-            throw Conflict::createWithBody(
-                'Too many phone verification checks are currently in progress.',
-                '{"reason":"rate_limited","limit":"outstanding"}',
-            );
-        }
-
         $minuteCutoff = self::after($now, -60);
         $q = $pdo->prepare('SELECT COUNT(*) FROM phone_verification_operation
             WHERE tenant_id = ? AND admitted_at > ? AND deleted = FALSE');

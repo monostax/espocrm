@@ -227,7 +227,7 @@ export default class extends BottomPanelView {
         const receipt = this.receipt;
         return {...super.data(), busy: this.busy, error: this.error, hasContext: !!this.session, saved: this.saved,
             canQuote: !this.saved, receipt, canConfirm: receipt?.confirmable && receipt.admission === 'not_admitted',
-            canReset: this.saved?.stage === 'quote' || ['settled', 'released'].includes(receipt?.admission),
+            canReset: this.saved?.stage === 'quote' || ['admitted', 'settled', 'released'].includes(receipt?.admission),
             maximum: formatCredits(receipt?.maximum),
             routes: Object.entries(receipt?.routes || {}).map(([product, steps]) => ({product: this.t(product), steps: steps.map(step => ({...step, credits: formatCredits(step.credits)}))})),
             progress: Object.entries(receipt?.executionProducts || {}).map(([product, value]) => ({product: this.t(product), state: this.t(value.state), stopReason: value.stopReason})),

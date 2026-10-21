@@ -23,7 +23,6 @@ class CapabilityGate
     public const OPERATION_DEADLINE_SECONDS = 300;
     public const FRESH_REUSE_SECONDS = 2592000; // 30 days
     public const RETENTION_SECONDS = 7776000; // 90 days
-    public const DEFAULT_MAX_OUTSTANDING = 5;
     public const DEFAULT_MAX_PER_MINUTE = 10;
     public const DEFAULT_MAX_PER_DAY = 100;
     public const DEFAULT_COOLDOWN_SECONDS = 60;
@@ -60,7 +59,6 @@ class CapabilityGate
             'releaseApprovalRef' => is_string($data['releaseApprovalRef'] ?? null) && $data['releaseApprovalRef'] !== ''
                 ? $data['releaseApprovalRef'] : null,
             'allowlistedTenantIds' => $allowlist,
-            'maxOutstandingPerTenant' => $this->boundedInt($data['maxOutstandingPerTenant'] ?? null, self::DEFAULT_MAX_OUTSTANDING, 1, 100),
             'maxPerMinutePerTenant' => $this->boundedInt($data['maxPerMinutePerTenant'] ?? null, self::DEFAULT_MAX_PER_MINUTE, 1, 1000),
             'maxPerDayPerTenant' => $this->boundedInt($data['maxPerDayPerTenant'] ?? null, self::DEFAULT_MAX_PER_DAY, 1, 10000),
             'sameInputCooldownSeconds' => $this->boundedInt($data['sameInputCooldownSeconds'] ?? null, self::DEFAULT_COOLDOWN_SECONDS, 1, 3600),
@@ -83,7 +81,7 @@ class CapabilityGate
             };
             return ['available' => $reason === null, 'reason' => $reason,
                 'priceCredits' => Kind::price($kind), 'policyVersion' => $this->policyVersion($kind),
-                'limits' => array_intersect_key($cfg, array_flip(['maxOutstandingPerTenant', 'maxPerMinutePerTenant',
+                'limits' => array_intersect_key($cfg, array_flip(['maxPerMinutePerTenant',
                     'maxPerDayPerTenant', 'sameInputCooldownSeconds']))];
         }
         $creds = $kind === Kind::EMAIL ? ($this->emailCredentials ?? new BounceBanCredentials())->get() : $this->credentials->get();
@@ -108,7 +106,6 @@ class CapabilityGate
             'priceCredits' => Kind::price($kind),
             'policyVersion' => $this->policyVersion($kind),
             'limits' => [
-                'maxOutstandingPerTenant' => $cfg['maxOutstandingPerTenant'],
                 'maxPerMinutePerTenant' => $cfg['maxPerMinutePerTenant'],
                 'maxPerDayPerTenant' => $cfg['maxPerDayPerTenant'],
                 'sameInputCooldownSeconds' => $cfg['sameInputCooldownSeconds'],
@@ -145,7 +142,6 @@ class CapabilityGate
             'brazilMinimalInputValidated',
             'releaseApprovalRef',
             'allowlistedTenantIds',
-            'maxOutstandingPerTenant',
             'maxPerMinutePerTenant',
             'maxPerDayPerTenant',
             'sameInputCooldownSeconds',
@@ -186,7 +182,6 @@ class CapabilityGate
             $current['allowlistedTenantIds'] = $tenants;
         }
         foreach ([
-            'maxOutstandingPerTenant' => [1, 100],
             'maxPerMinutePerTenant' => [1, 1000],
             'maxPerDayPerTenant' => [1, 10000],
             'sameInputCooldownSeconds' => [1, 3600],

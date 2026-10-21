@@ -67,7 +67,7 @@ export class EnrichmentSession {
     reset(receipt) {
         const saved = this.read();
         if (!saved) return;
-        if (saved.stage !== 'quote' && (!receipt || receipt.id !== saved.quoteId || !['settled', 'released'].includes(receipt.admission))) {
+        if (saved.stage !== 'quote' && (!receipt || receipt.id !== saved.quoteId || !['admitted', 'settled', 'released'].includes(receipt.admission))) {
             throw new Error('The original operation is unresolved.');
         }
         this.storage.removeItem(this.key);

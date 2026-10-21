@@ -40,6 +40,7 @@
     {"route": "/CreditEnrichmentApplication", "method": "post", "params": {"controller": "CreditEnrichmentApplication", "action": "apply"}},
     {"route": "/CreditEnrichmentReview", "method": "get", "params": {"controller": "CreditEnrichmentReview", "action": "read"}},
     {"route": "/CreditEnrichmentQuotes", "method": "post", "params": {"controller": "CreditEnrichmentQuotes", "action": "quote"}},
+    {"route": "/CreditEnrichmentQuotes/status", "method": "get", "params": {"controller": "CreditEnrichmentQuotes", "action": "status"}},
     {"route": "/CreditEnrichmentQuotes/confirm", "method": "post", "params": {"controller": "CreditEnrichmentQuotes", "action": "confirm"}},
     {"route": "/CreditEnrichmentQuotes/admit", "method": "post", "params": {"controller": "CreditEnrichmentQuotes", "action": "admit"}},
     {"route": "/CreditEnrichmentConfiguration", "method": "post", "params": {"controller": "CreditEnrichmentConfiguration", "action": "publish"}},

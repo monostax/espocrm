@@ -26,7 +26,7 @@ final class EmailVerificationUnitTest extends TestCase
             putenv('VERIFICATION_KILL_SWITCH');
             putenv('VERIFICATION_BOUNCEBAN_API_KEY');
             $config = $this->createStub(Config::class);
-            $config->method('get')->willReturn(null);
+            $config->method('get')->willReturn(['maxOutstandingPerTenant' => 1]);
             $phoneCredentials = $this->createStub(TwilioCredentials::class);
             $phoneCredentials->method('get')->willReturn([]);
             $clock = $this->createStub(Clock::class);
@@ -43,9 +43,13 @@ final class EmailVerificationUnitTest extends TestCase
             self::assertTrue($gate->inspect('another-tenant', Kind::EMAIL)['available']);
             self::assertFalse($gate->inspect('tenant')['available']);
 
-            $gate->publish((object) ['killSwitch' => true, 'maxOutstandingPerTenant' => 3], 'admin');
+            $gate->publish((object) ['killSwitch' => true, 'maxPerMinutePerTenant' => 3], 'admin');
             self::assertTrue($gate->inspect('tenant', Kind::EMAIL)['available']);
-            self::assertSame(3, $gate->inspect('tenant', Kind::EMAIL)['limits']['maxOutstandingPerTenant']);
+            self::assertSame(3, $gate->inspect('tenant', Kind::EMAIL)['limits']['maxPerMinutePerTenant']);
+            self::assertArrayNotHasKey('maxOutstandingPerTenant', $gate->configuration());
+            foreach ([Kind::PHONE, Kind::EMAIL, Kind::WHATSAPP] as $kind) {
+                self::assertArrayNotHasKey('maxOutstandingPerTenant', $gate->inspect('tenant', $kind)['limits']);
+            }
             putenv('VERIFICATION_KILL_SWITCH=true');
             self::assertFalse($gate->inspect('tenant', Kind::EMAIL)['available']);
             self::assertSame('kill_switch', $gate->inspect('tenant', Kind::EMAIL)['reason']);

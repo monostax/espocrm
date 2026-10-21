@@ -53,6 +53,34 @@ final class Quotes
         });
     }
 
+    /** Read current progress without replaying a quote, confirmation, or admission command. */
+    public function status(array $params): array
+    {
+        if (array_diff(array_keys($params), ['tenantId', 'quoteId', 'requestKey']) ||
+            !is_string($params['tenantId'] ?? null) ||
+            (isset($params['quoteId']) === isset($params['requestKey']))) {
+            throw new \InvalidArgumentException('Status requires tenantId and either quoteId or requestKey.');
+        }
+        GrantInput::identity($params['tenantId']);
+        if (isset($params['quoteId'])) {
+            if (!is_string($params['quoteId'])) throw new \InvalidArgumentException('Invalid quote ID.');
+            GrantInput::identity($params['quoteId']);
+        } elseif (!is_string($params['requestKey']) || !preg_match('/\A[a-zA-Z0-9_-]{1,64}\z/', $params['requestKey'])) {
+            throw new \InvalidArgumentException('Invalid quote request key.');
+        }
+        $actor = $this->access->actorId();
+        return $this->locked($params['tenantId'], function (PDO $pdo) use ($params, $actor): array {
+            $field = isset($params['quoteId']) ? 'id' : 'request_key';
+            $q = $pdo->prepare("SELECT * FROM enrichment_quote WHERE tenant_id=? AND created_by_id=? AND $field=?");
+            $q->execute([$params['tenantId'], $actor, $params['quoteId'] ?? $params['requestKey']]);
+            $row = $q->fetch(PDO::FETCH_ASSOC);
+            if (!$row) throw new NotFound('Unknown enrichment quote.');
+            $saved = $this->decode($row);
+            $this->lockedTarget($pdo, new QuoteInput((object) $saved['request']));
+            return $this->receipt($row, $saved);
+        });
+    }
+
     /** Read-only planning: no quote, wallet lock, reservation or supplier execution. */
     public function preview(array $params): array
     {
@@ -158,7 +186,7 @@ final class Quotes
         });
     }
 
-    /** Accepted terms + shared funds + active-product ownership commit together. Never dispatches. */
+    /** Accepted terms and shared funds commit together for each quote. Never dispatches. */
     public function admit(string $tenantId, string $quoteId): array
     {
         GrantInput::identity($tenantId); GrantInput::identity($quoteId);
@@ -185,22 +213,6 @@ final class Quotes
             if (self::hash($identity) !== self::hash($saved['identity']) ||
                 self::hash($availability) !== self::hash($saved['availability'])) {
                 throw new Conflict('Enrichment identity or capability changed; request and confirm a new quote.');
-            }
-            // Tenant lock serializes this predicate, including refresh and different actors/quote IDs.
-            // Use accounting terminal state, not a separate mutable active flag that could strand a guard.
-            $q = $pdo->prepare('SELECT q.*, u.state AS usage_state, u.deleted AS usage_deleted
-                FROM enrichment_quote q LEFT JOIN credit_usage u ON u.id=q.usage_id AND u.tenant_id=q.tenant_id
-                WHERE q.tenant_id=? AND q.target_type=? AND q.target_id=? AND q.usage_id IS NOT NULL');
-            $q->execute([$tenantId, $input->data['targetType'], $input->data['targetId']]);
-            foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $active) {
-                $terms = $this->decode($active);
-                if ($active['usage_state'] === null || $active['usage_deleted']) throw new Conflict('Invalid enrichment operation binding.');
-                if (!in_array($active['usage_state'], ['released', 'settled'], true) &&
-                    array_intersect($terms['request']['products'], $input->data['products'])) {
-                    throw Conflict::createWithBody('An enrichment operation is already active for this record and product.',
-                        json_encode(['reason' => 'enrichment_operation_active', 'usageId' => $active['usage_id'],
-                            'products' => array_values(array_intersect($terms['request']['products'], $input->data['products']))], JSON_THROW_ON_ERROR));
-                }
             }
             $q = $pdo->prepare('SELECT id FROM tenant_credit_billing_rate WHERE tenant_id=? AND deleted=FALSE
                 AND effective_from<=? AND (effective_until IS NULL OR effective_until>?)');
