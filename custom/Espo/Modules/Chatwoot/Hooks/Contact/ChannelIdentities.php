@@ -22,6 +22,7 @@ use Espo\Modules\Chatwoot\Tools\ContactReconciler;
 use Espo\Modules\Chatwoot\Tools\PhoneNormalizer;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use WeakMap;
 
 /**
  * Makes the virtual `channelIdentitiesData` field on Contact writable,
@@ -35,6 +36,10 @@ use Espo\ORM\EntityManager;
  * afterSave: diffs the submitted items against the existing
  * ContactChannelIdentity rows — creates (via ContactReconciler::upsertIdentity,
  * which restores soft-deleted rows in place), updates, and soft-deletes.
+ *
+ * Native `phoneNumber` / `phoneNumberData` and `emailAddress` /
+ * `emailAddressData` saves also append WhatsApp and email identities.
+ * Clearing or replacing a native value never deletes existing identities.
  *
  * Additionally supports the write-only helper fields `whatsappNumber`
  * (`whatsappNumber2`..`whatsappNumber4`) and `instagramHandle` (used by CSV
@@ -58,6 +63,11 @@ class ChannelIdentities
 {
     private const FIELD = 'channelIdentitiesData';
 
+    private const NATIVE_FIELD_MAP = [
+        'phoneNumber' => 'whatsapp',
+        'emailAddress' => 'email',
+    ];
+
     /**
      * Write-only helper fields (CSV import / API).
      * Multiple WhatsApp helpers map to the same channel so a Contact row can
@@ -80,6 +90,9 @@ class ChannelIdentities
      */
     private array $accountIdByTenant = [];
 
+    /** @var WeakMap<Entity, list<\stdClass>> */
+    private WeakMap $pendingAdditiveItems;
+
     /**
      * After Global\Hooks\Contact\SyncTenantFromTeam (order 5), which
      * populates tenantId.
@@ -92,7 +105,9 @@ class ChannelIdentities
         private Metadata $metadata,
         private Acl $acl,
         private User $user,
-    ) {}
+    ) {
+        $this->pendingAdditiveItems = new WeakMap();
+    }
 
     /**
      * @param array<string, mixed> $options
@@ -101,10 +116,9 @@ class ChannelIdentities
      */
     public function beforeSave(Entity $entity, array $options): void
     {
-        $toProcessList = $this->toProcess($entity, $options);
-        $toProcessAdditive = $this->toProcessAdditive($entity, $options);
+        unset($this->pendingAdditiveItems[$entity]);
 
-        if (!$toProcessList && !$toProcessAdditive) {
+        if (!empty($options['skipChannelIdentitiesSave'])) {
             return;
         }
 
@@ -116,7 +130,7 @@ class ChannelIdentities
             return;
         }
 
-        if ($toProcessList) {
+        if ($this->toProcess($entity, $options)) {
             $items = $this->normalizeItems($entity);
 
             foreach ($items as $item) {
@@ -130,19 +144,24 @@ class ChannelIdentities
             $entity->set(self::FIELD, $items);
         }
 
-        if ($toProcessAdditive) {
-            foreach ($this->getAdditiveItems($entity) as $item) {
-                $this->checkConflict($entity, $tenantId, $item);
-                $this->checkAdditiveAcl($entity, $item);
+        $additiveItems = $this->getAdditiveItems($entity);
 
-                // Store the normalized sourceId back on the originating field.
-                $field = $item->_field ?? null;
+        foreach ($additiveItems as $item) {
+            $this->checkConflict($entity, $tenantId, $item);
+            $this->checkAdditiveAcl($entity, $item);
 
-                if (is_string($field) && $field !== '') {
-                    $entity->set($field, $item->sourceId);
-                }
+            // Only write-only helpers are rewritten; native fields retain
+            // their formatting and are persisted by Espo's field savers.
+            $field = $item->_field ?? null;
+
+            if (is_string($field) && isset(self::ADDITIVE_FIELD_MAP[$field])) {
+                $entity->set($field, $item->sourceId);
             }
         }
+
+        // Field savers can populate *Data and change the primary between
+        // hooks. Persist only the values whose conflicts and ACL we checked.
+        $this->pendingAdditiveItems[$entity] = $additiveItems;
     }
 
     /**
@@ -151,9 +170,10 @@ class ChannelIdentities
     public function afterSave(Entity $entity, array $options): void
     {
         $toProcessList = $this->toProcess($entity, $options);
-        $toProcessAdditive = $this->toProcessAdditive($entity, $options);
+        $additiveItems = $this->pendingAdditiveItems[$entity] ?? [];
+        unset($this->pendingAdditiveItems[$entity]);
 
-        if (!$toProcessList && !$toProcessAdditive) {
+        if (!empty($options['skipChannelIdentitiesSave']) || (!$toProcessList && !$additiveItems)) {
             return;
         }
 
@@ -167,20 +187,18 @@ class ChannelIdentities
             $this->syncList($entity, $tenantId);
         }
 
-        if ($toProcessAdditive) {
-            foreach ($this->getAdditiveItems($entity) as $item) {
-                $this->contactReconciler->upsertIdentity(
-                    $entity->getId(),
-                    $tenantId,
-                    $item->channelType,
-                    $item->sourceId,
-                    $item->label,
-                    $this->resolveAccountIdForTenant($tenantId),
-                    null,
-                    null,
-                    $item->handle ?? null,
-                );
-            }
+        foreach ($additiveItems as $item) {
+            $this->contactReconciler->upsertIdentity(
+                $entity->getId(),
+                $tenantId,
+                $item->channelType,
+                $item->sourceId,
+                $item->label,
+                $this->resolveAccountIdForTenant($tenantId),
+                null,
+                null,
+                $item->handle ?? null,
+            );
         }
 
         $refreshed = $this->entityManager->getEntityById('Contact', $entity->getId());
@@ -306,30 +324,8 @@ class ChannelIdentities
     }
 
     /**
-     * @param array<string, mixed> $options
-     */
-    private function toProcessAdditive(Entity $entity, array $options): bool
-    {
-        if (!empty($options['skipChannelIdentitiesSave'])) {
-            return false;
-        }
-
-        foreach (array_keys(self::ADDITIVE_FIELD_MAP) as $field) {
-            if (
-                $entity->has($field) &&
-                $entity->isAttributeChanged($field) &&
-                trim((string) $entity->get($field)) !== ''
-            ) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Normalized items from the write-only helper fields.
-     * One item per non-empty helper value; duplicates (same channel+sourceId)
+     * Normalized items from changed native fields and write-only helpers.
+     * One item per non-empty value; duplicates (same channel+sourceId)
      * are collapsed so multi-column CSV rows can safely repeat a number.
      *
      * @return list<\stdClass>
@@ -340,37 +336,47 @@ class ChannelIdentities
         $items = [];
         $seen = [];
 
-        foreach (self::ADDITIVE_FIELD_MAP as $field => $channelType) {
-            if (!$entity->has($field) || !$entity->isAttributeChanged($field)) {
+        foreach (self::NATIVE_FIELD_MAP + self::ADDITIVE_FIELD_MAP as $field => $channelType) {
+            $dataField = $field . 'Data';
+            $data = isset(self::NATIVE_FIELD_MAP[$field]) ? $entity->get($dataField) : null;
+
+            // Match Espo's field saver: a changed multi-value list takes
+            // precedence over the scalar primary value, including an empty list.
+            if (is_array($data) && $entity->isAttributeChanged($dataField)) {
+                $values = array_map(static fn ($item) => ((object) $item)->$field ?? null, $data);
+            } elseif ($entity->has($field) && $entity->isAttributeChanged($field)) {
+                $values = [$entity->get($field)];
+            } else {
                 continue;
             }
 
-            $value = trim((string) $entity->get($field));
+            foreach ($values as $value) {
+                $value = trim((string) $value);
 
-            if ($value === '') {
-                continue;
+                if ($value === '') {
+                    continue;
+                }
+
+                [$sourceId, $label, $handle] = $this->normalizeValue($channelType, $value);
+
+                $dedupeKey = $channelType . "\0" . $sourceId;
+
+                if (isset($seen[$dedupeKey])) {
+                    continue;
+                }
+
+                $seen[$dedupeKey] = true;
+
+                $items[] = (object) [
+                    'id' => null,
+                    'channelType' => $channelType,
+                    'sourceId' => $sourceId,
+                    'label' => $label,
+                    'handle' => $handle,
+                    'isPrimary' => false,
+                    '_field' => $field,
+                ];
             }
-
-            [$sourceId, $label, $handle] = $this->normalizeValue($channelType, $value);
-
-            $dedupeKey = $channelType . "\0" . $sourceId;
-
-            if (isset($seen[$dedupeKey])) {
-                continue;
-            }
-
-            $seen[$dedupeKey] = true;
-
-            $items[] = (object) [
-                'id' => null,
-                'channelType' => $channelType,
-                'sourceId' => $sourceId,
-                'label' => $label,
-                'handle' => $handle,
-                'isPrimary' => false,
-                // Internal: which helper field produced this item (for write-back).
-                '_field' => $field,
-            ];
         }
 
         return $items;
