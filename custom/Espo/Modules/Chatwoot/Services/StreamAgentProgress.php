@@ -67,12 +67,14 @@ class StreamAgentProgress
     public function scheduleExpiry(Note $reply): void
     {
         // Also clears abandoned placeholders if dispatch fails or a worker is killed outright.
+        // Running replies need room for 45-minute execution and final publication.
+        $delay = $reply->getParentType() === 'AiSession' &&
+            ($reply->getData()->opportunityStreamAgent->status ?? null) === 'queued' ? 86400 : 50 * 60;
         $this->em->createEntity('Job', [
             'name' => ExpireStreamAgentReply::class,
             'className' => ExpireStreamAgentReply::class,
             'queue' => QueueName::Q0,
-            'executeTime' => gmdate('Y-m-d H:i:s', time() + ($reply->getParentType() === 'AiSession' &&
-                ($reply->getData()->opportunityStreamAgent->status ?? null) === 'queued' ? 86400 : 900)),
+            'executeTime' => gmdate('Y-m-d H:i:s', time() + $delay),
             'attempts' => 3,
             'data' => (object) [
                 'noteId' => $reply->getId(),
