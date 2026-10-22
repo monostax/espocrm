@@ -177,6 +177,7 @@ class AppService
             'passwordChangeForNonAdminDisabled' => $passwordChangeForNonAdminDisabled,
             'timeZoneList' => $timeZoneList,
             'auth2FARequired' => $auth2FARequired,
+            'authCookiePartitioned' => (bool) $this->config->get('authTokenSecretCookiePartitioned'),
             'logoutWait' => $logoutWait,
             'systemUserId' => $this->systemUser->getId(),
         ];

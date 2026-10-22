@@ -103,6 +103,7 @@ return [
         'clientCspDisabled',
         'clientCspScriptSourceList',
         'authTokenSecretDisabled',
+        'authTokenSecretCookiePartitioned',
         'authLogDisabled',
         'authApiUserLogDisabled',
         'authFailedAttemptsPeriod',

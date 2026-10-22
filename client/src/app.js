@@ -1058,7 +1058,7 @@ class App {
                 this.storage.set("user", "lastUserId", userId);
                 this.storage.set("user", "anotherUser", this.anotherUser);
 
-                this.setCookieAuth(userName, token);
+                this.setCookieAuth(userName, token, data.appParams?.authCookiePartitioned === true);
 
                 const chatRedirect = localStorage.getItem('chat_redirect');
 
@@ -1212,11 +1212,13 @@ class App {
      * @private
      * @param {string} username
      * @param {string} token
+     * @param {boolean} [partitioned]
      */
-    setCookieAuth(username, token) {
+    setCookieAuth(username, token, partitioned = this.appParams.get('authCookiePartitioned') === true) {
         const date = new Date();
 
-        date.setTime(date.getTime() + 1000 * 24 * 60 * 60 * 1000);
+        date.setTime(token ? date.getTime() + 1000 * 24 * 60 * 60 * 1000 : 1);
+        partitioned = partitioned && window.location.protocol === 'https:';
 
         // Extract tenant domain for cookie sharing across subdomains
         const host = window.location.hostname;
@@ -1230,7 +1232,12 @@ class App {
             domainParam = `; domain=${cookieDomain}`;
         }
 
-        document.cookie = `auth-token=${token}; SameSite=Lax; expires=${date.toUTCString()}; path=/${domainParam}`;
+        if (partitioned) {
+            document.cookie = `auth-token=; SameSite=Lax; expires=${new Date(1).toUTCString()}; path=/${domainParam}`;
+        }
+
+        const policy = partitioned ? 'SameSite=None; Secure; Partitioned' : 'SameSite=Lax';
+        document.cookie = `auth-token=${token}; ${policy}; expires=${date.toUTCString()}; path=/${domainParam}`;
     }
 
     /**
@@ -1299,19 +1306,8 @@ class App {
      * @private
      */
     unsetCookieAuth() {
-        // Extract tenant domain for cookie deletion
-        const host = window.location.hostname;
-        const parts = host.split(".");
-        let domainParam = "";
-
-        // If host has more than 2 parts (e.g., crm.acme.am...), use tenant domain
-        if (parts.length > 2) {
-            parts.shift(); // Remove first subdomain (e.g., 'crm')
-            const cookieDomain = "." + parts.join(".");
-            domainParam = `; domain=${cookieDomain}`;
-        }
-
-        document.cookie = `auth-token=; SameSite=Lax; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/${domainParam}`;
+        // Expired bootstrap sessions may not have loaded the server's cookie policy.
+        this.setCookieAuth('', '', true);
     }
 
     /**

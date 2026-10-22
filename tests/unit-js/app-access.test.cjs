@@ -35,6 +35,7 @@ function fixture({
     type = 'regular', hash = '', search = '', embedded = false, authenticated = true,
     appParams = {chatwootAccountId: '42', chatwootFrontendUrl: chatUrl},
     sso = {ssoUrl: `${chatUrl}/app/login?token=fresh`}, chatRedirect = null, expired = false,
+    cookieAuth = false, protocol = 'https:',
 } = {}) {
     const redirects = [];
     const requests = [];
@@ -44,7 +45,7 @@ function fixture({
     const local = new Map(chatRedirect ? [['chat_redirect', chatRedirect]] : []);
     const window = {
         location: {
-            hostname: 'app.monostax.ai', hash, search,
+            hostname: 'app.monostax.ai', protocol, hash, search,
             replace(url) { redirects.push({url, replace: true}); },
             set href(url) { redirects.push({url, replace: false}); },
         },
@@ -75,6 +76,7 @@ function fixture({
         },
     }, {
         window, URL,
+        document: {set cookie(value) { cookies.push(value); }},
         localStorage: {getItem: key => local.get(key), removeItem: key => local.delete(key)},
     });
     const app = Object.create(App.prototype);
@@ -98,8 +100,10 @@ function fixture({
     app.acl = {set() {}};
     let params = {};
     app.appParams = {setAll(value) { params = value; }, get: key => params[key]};
-    app.setCookieAuth = (name, token) => cookies.push([name, token]);
-    app.unsetCookieAuth = () => cookies.push(['cleared']);
+    if (!cookieAuth) {
+        app.setCookieAuth = (name, token) => cookies.push([name, token]);
+        app.unsetCookieAuth = () => cookies.push(['cleared']);
+    }
     app.onAuth = () => { state.ready++; };
     return {app, state, data, handlers, requests, redirects, cookies, local, stored};
 }
@@ -194,6 +198,48 @@ test('an embed query parameter alone does not allow standalone access', async ()
     await restore(context);
     assert.equal(context.state.ready, 0);
     assert.equal(context.redirects.length, 1);
+});
+
+test('embedded login and restored startup use the server cookie policy for avatar authentication', async () => {
+    for (const authenticated of [true, false]) {
+        const context = fixture({embedded: true, authenticated, cookieAuth: true, appParams: {authCookiePartitioned: true}});
+        await restore(context);
+        if (!authenticated) {
+            context.handlers.login(context.data);
+            await settle();
+        }
+        assert.equal(context.state.ready, 1);
+        const cookies = context.cookies.filter(cookie => cookie.startsWith('auth-token=token;'));
+        assert.equal(cookies.length, authenticated ? 1 : 2);
+        for (const cookie of cookies) {
+            assert.match(cookie, /SameSite=None; Secure; Partitioned/);
+            assert.match(cookie, /path=\/; domain=\.monostax\.ai$/);
+        }
+    }
+});
+
+test('default and insecure deployments keep the first-party avatar cookie policy', async () => {
+    for (const [partitioned, protocol] of [[false, 'https:'], [true, 'http:']]) {
+        const context = fixture({embedded: true, cookieAuth: true, protocol, appParams: {authCookiePartitioned: partitioned}});
+        await restore(context);
+        assert.equal(context.cookies.length, 1);
+        assert.match(context.cookies[0], /auth-token=token; SameSite=Lax;/);
+        assert.doesNotMatch(context.cookies[0], /Partitioned/);
+    }
+});
+
+test('expired bootstrap clears both avatar cookie variants before app parameters are available', async () => {
+    const context = fixture({expired: true, cookieAuth: true});
+    await restore(context);
+    assert.equal(context.state.login, 1);
+    assert.equal(context.cookies.length, 2);
+    for (const cookie of context.cookies) {
+        assert.match(cookie, /^auth-token=;/);
+        assert.ok(Date.parse(cookie.match(/expires=([^;]+)/)[1]) < Date.now());
+        assert.match(cookie, /path=\/; domain=\.monostax\.ai$/);
+    }
+    assert.match(context.cookies[0], /SameSite=Lax/);
+    assert.match(context.cookies[1], /SameSite=None; Secure; Partitioned/);
 });
 
 test('missing account mappings, unavailable SSO, and invalid SSO URLs still redirect to chat', async () => {

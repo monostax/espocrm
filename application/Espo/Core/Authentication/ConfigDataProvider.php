@@ -101,6 +101,11 @@ class ConfigDataProvider
         return (bool) $this->config->get('authTokenSecretDisabled');
     }
 
+    public function isAuthTokenSecretCookiePartitioned(): bool
+    {
+        return (bool) $this->config->get('authTokenSecretCookiePartitioned');
+    }
+
     /**
      * A maintenance mode. Only admin can log in.
      */

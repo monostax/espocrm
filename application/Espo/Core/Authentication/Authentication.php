@@ -559,7 +559,7 @@ class Authentication
             }
 
             if ($sentSecret === $authToken->getSecret()) {
-                $this->setSecretInCookie(null, $response);
+                $this->setSecretInCookie(null, $response, $request);
             }
         }
 
@@ -648,41 +648,37 @@ class Authentication
         $this->entityManager->saveEntity($authLogRecord);
     }
 
-    private function setSecretInCookie(?string $secret, Response $response, ?Request $request = null): void
+    private function setSecretInCookie(?string $secret, Response $response, Request $request): void
     {
-        $time = $secret ? strtotime('+1000 days') : 1;
-
-        $value = $secret ?? 'deleted';
-
-        $headerValue =
-            self::COOKIE_AUTH_TOKEN_SECRET . '=' . urlencode($value) .
-            '; path=/' .
-            '; expires=' . gmdate('D, d M Y H:i:s T', $time) .
-            '; HttpOnly' .
-            '; SameSite=Lax';
+        $secure = self::isSecureRequest($request);
+        $partitioned = $secure && $this->configDataProvider->isAuthTokenSecretCookiePartitioned();
+        $scope = '; path=/';
 
         // Set domain to allow cookie sharing across subdomains (e.g., crm.acme.* and acme.*)
-        if ($request) {
-            $host = $request->getServerParam('HTTP_HOST');
-            
-            if ($host) {
-                // Extract tenant domain from host (e.g., crm.acme.am.monostax.dev.localhost -> .acme.am.monostax.dev.localhost)
-                $parts = explode('.', $host);
-                
-                // If host has more than 2 parts (e.g., crm.acme.am...), remove first part and use remaining as domain
-                if (count($parts) > 2) {
-                    array_shift($parts); // Remove first subdomain (e.g., 'crm')
-                    $cookieDomain = '.' . implode('.', $parts); // Add leading dot for subdomain sharing
-                    $headerValue .= '; Domain=' . $cookieDomain;
-                }
+        $host = $request->getServerParam('HTTP_HOST');
+
+        if ($host) {
+            $parts = explode('.', $host);
+
+            if (count($parts) > 2) {
+                array_shift($parts);
+                $scope .= '; Domain=.' . implode('.', $parts);
             }
         }
 
-        if ($request && self::isSecureRequest($request)) {
-            $headerValue .= "; Secure";
+        $cookie = static fn (?string $value, bool $partitioned): string =>
+            self::COOKIE_AUTH_TOKEN_SECRET . '=' . urlencode($value ?? 'deleted') . $scope .
+            '; expires=' . gmdate('D, d M Y H:i:s T', $value ? strtotime('+1000 days') : 1) .
+            '; HttpOnly' .
+            ($partitioned ? '; SameSite=None; Partitioned' : '; SameSite=Lax') .
+            ($secure ? '; Secure' : '');
+
+        if ($partitioned) {
+            // Avoid duplicate secrets from an older unpartitioned cookie in a direct tab.
+            $response->addHeader('Set-Cookie', $cookie(null, false));
         }
 
-        $response->addHeader('Set-Cookie', $headerValue);
+        $response->addHeader('Set-Cookie', $cookie($secret, $partitioned));
     }
 
     private static function isSecureRequest(Request $request): bool
