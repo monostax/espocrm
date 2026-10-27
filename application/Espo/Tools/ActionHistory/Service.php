@@ -33,11 +33,11 @@ use Espo\Core\Name\Field;
 use Espo\Core\Record\ActionHistory\Action;
 use Espo\Core\Record\Collection as RecordCollection;
 use Espo\Entities\ActionHistoryRecord;
-use Espo\Core\FieldProcessing\ListLoadProcessor;
 use Espo\Core\ORM\EntityManager;
 use Espo\Core\Utils\Metadata;
 use Espo\Core\Utils\Util;
 use Espo\Entities\User;
+use Espo\ORM\Name\Attribute;
 
 class Service
 {
@@ -45,7 +45,6 @@ class Service
         private Metadata $metadata,
         private EntityManager $entityManager,
         private User $user,
-        private ListLoadProcessor $listLoadProcessor
     ) {}
 
     /**
@@ -105,17 +104,58 @@ class Service
             }
         } while ($count === $chunkSize && count($latest) < $wanted);
 
-        $collection = $this->entityManager->getCollectionFactory()->create(
-            ActionHistoryRecord::ENTITY_TYPE,
-            array_slice(array_values($latest), $offset, $maxSize + 1)
-        );
+        $rows = array_slice(array_values($latest), $offset, $maxSize + 1);
+        $names = $this->loadTargetNames($rows);
+
+        $collection = $this->entityManager->getCollectionFactory()->create(ActionHistoryRecord::ENTITY_TYPE, $rows);
 
         foreach ($collection as $entity) {
-            $this->listLoadProcessor->process($entity);
-
+            $entity->set('targetName', $names[$entity->get('targetType')][$entity->get('targetId')] ?? null);
             $entity->set('id', Util::generateId());
         }
 
         return RecordCollection::createNoCount($collection,  $maxSize);
+    }
+
+    /**
+     * Target names, including deleted targets, with one query per target type. The list loaders
+     * ran two lookups per row (one a full-record select), which dominated this endpoint.
+     *
+     * @param ActionHistoryRecord[] $rows
+     * @return array<string, array<string, string>>
+     */
+    private function loadTargetNames(array $rows): array
+    {
+        $ids = [];
+
+        foreach ($rows as $row) {
+            $ids[$row->get('targetType')][] = $row->get('targetId');
+        }
+
+        $names = [];
+
+        foreach ($ids as $type => $typeIds) {
+            if (
+                !$this->entityManager->hasRepository($type) ||
+                !$this->entityManager->getDefs()->getEntity($type)->hasAttribute(Field::NAME)
+            ) {
+                continue;
+            }
+
+            $query = $this->entityManager->getQueryBuilder()
+                ->select([Attribute::ID, Field::NAME])
+                ->from($type)
+                ->withDeleted()
+                ->where([Attribute::ID => array_values(array_unique($typeIds))])
+                ->build();
+
+            foreach ($this->entityManager->getQueryExecutor()->execute($query)->fetchAll() as $item) {
+                if ($item[Field::NAME]) {
+                    $names[$type][$item[Attribute::ID]] = $item[Field::NAME];
+                }
+            }
+        }
+
+        return $names;
     }
 }
