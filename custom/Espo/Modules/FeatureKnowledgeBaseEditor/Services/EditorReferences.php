@@ -60,11 +60,20 @@ class EditorReferences
         $results = [];
         $union = UnionBuilder::create()->all()->order('lastViewedNumber', 'DESC')->order('rank')->order('name');
         $queries = [];
-        $historyQuery = SelectBuilder::create()->from('ActionHistoryRecord')
-            ->select(['targetType', 'targetId', ['MAX:number', 'lastViewedNumber']])
-            ->where(['userId' => $this->user->getId(), 'action' => ['read', 'create'],
+        // Rank by the latest views only: grouping a user's whole history (50k+ rows)
+        // and inlining every viewed id into each union branch cost seconds per keystroke.
+        $recentViews = SelectBuilder::create()->from('ActionHistoryRecord')
+            ->select(['targetType', 'targetId', 'number'])
+            ->where(['userId' => $this->user->getId(), 'deleted' => false, 'action' => ['read', 'create'],
                 'targetType' => $nextActionParent ? array_values(array_intersect($search['types'], ['Task', 'Meeting', 'Call'])) : $search['types']])
-            ->group(['targetType', 'targetId'])->build();
+            ->order('number', 'DESC')->limit(0, 2000)->build();
+        $historyQuery = SelectBuilder::create()->fromQuery($recentViews, 'recentView')
+            ->select([
+                [Expr::alias('recentView.targetType'), 'targetType'],
+                [Expr::alias('recentView.targetId'), 'targetId'],
+                [Expr::max(Expr::alias('recentView.number')), 'lastViewedNumber'],
+            ])
+            ->group(Expr::alias('recentView.targetType'))->group(Expr::alias('recentView.targetId'))->build();
         $history = [];
         foreach ($this->em->getQueryExecutor()->execute($historyQuery)->fetchAll() as $row) {
             $history[$row['targetType']][$row['targetId']] = (int) $row['lastViewedNumber'];
