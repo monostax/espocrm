@@ -11,9 +11,15 @@ use React\EventLoop\LoopInterface;
 /** Authorized API projections on the native socket. Only hashes/control frames leave the server. */
 final class QuerySubscriptions
 {
+    // Every live-record change dirties every projection, so under steady churn
+    // each viewer's reads re-ran back to back. Coalesce to one run per window;
+    // a quiet projection still refreshes on the next 0.25s drain.
+    private const COOLDOWN = 5.0;
+
     private array $entries = [];
     private int $running = 0;
     private ?\React\EventLoop\TimerInterface $scheduled = null;
+    private float $scheduledAt = 0.0;
 
     public function __construct(private string $php, private LoopInterface $loop)
     {
@@ -67,14 +73,18 @@ final class QuerySubscriptions
         return $matched;
     }
 
-    private function schedule(): void
+    private function schedule(float $delay = 0.25): void
     {
-        if (!$this->scheduled) {
-            $this->scheduled = $this->loop->addTimer(0.25, function (): void {
-                $this->scheduled = null;
-                $this->drain();
-            });
+        $at = microtime(true) + $delay;
+        if ($this->scheduled) {
+            if ($this->scheduledAt <= $at) return;
+            $this->loop->cancelTimer($this->scheduled);
         }
+        $this->scheduledAt = $at;
+        $this->scheduled = $this->loop->addTimer($delay, function (): void {
+            $this->scheduled = null;
+            $this->drain();
+        });
     }
 
     private function current(object $entry): bool
@@ -84,12 +94,18 @@ final class QuerySubscriptions
 
     private function drain(): void
     {
+        $now = microtime(true);
         $waiting = [];
+        $cooling = null;
         foreach ($this->entries as $entries) {
             foreach ($entries as $entry) {
-                if ($entry->dirty && !$entry->process) $waiting[] = $entry;
+                if (!$entry->dirty || $entry->process) continue;
+                $ready = $entry->lastRun + self::COOLDOWN;
+                if ($ready <= $now) $waiting[] = $entry;
+                else $cooling = min($cooling ?? $ready, $ready);
             }
         }
+        if ($cooling !== null) $this->schedule($cooling - $now);
         usort($waiting, static fn ($a, $b) => $a->lastRun <=> $b->lastRun);
         foreach ($waiting as $entry) {
             if ($this->running >= 4) return;
