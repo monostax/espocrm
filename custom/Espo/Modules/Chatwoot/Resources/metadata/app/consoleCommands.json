@@ -1,0 +1,7 @@
+{
+    "mergeDuplicateContacts": {
+        "className": "Espo\\Modules\\Chatwoot\\Classes\\Console\\Commands\\MergeDuplicateContacts",
+        "allowedOptions": [],
+        "allowedFlags": ["apply"]
+    }
+}
