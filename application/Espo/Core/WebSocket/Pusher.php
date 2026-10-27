@@ -581,7 +581,8 @@ class Pusher implements WampServerInterface
             if (($category['invalidationTopic'] ?? null) === $topicId) {
                 $created = $data->intentCreatedAtMs ?? null;
                 if (is_numeric($created) && $created <= microtime(true) * 1000 && microtime(true) * 1000 - $created < 5000) {
-                    $this->queries?->invalidate($topicId);
+                    $tenantId = $data->tenantId ?? null;
+                    $this->queries?->invalidate($topicId, is_string($tenantId) && $tenantId !== '' ? $tenantId : null);
                 }
                 return;
             }

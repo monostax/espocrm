@@ -15,6 +15,7 @@ use Espo\Core\Application\ApplicationParams;
 use Espo\Entities\User;
 use Espo\ORM\EntityManager;
 use Espo\Modules\FeatureLiveRecords\Subscription\Projection;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use GuzzleHttp\Psr7\ServerRequest;
 
 /** One fresh application context per viewer batch; never reuse system/other-viewer ACL services. */
@@ -37,7 +38,11 @@ final class LiveRecordQuery implements Command
             $container->getByClass(ApplicationUser::class)->setUser($user);
             $topics = $input['topics'] ?? [$input['topic'] ?? ''];
             if (!is_array($topics) || !array_is_list($topics) || !$topics || count($topics) > 32) return;
-            $starter = $container->getByClass(\Espo\Core\InjectableFactory::class)->create(Starter::class);
+            $factory = $container->getByClass(\Espo\Core\InjectableFactory::class);
+            $starter = $factory->create(Starter::class);
+            // Lets the socket skip other tenants' change hints for this viewer.
+            // Empty (no tenant) means the viewer matches every hint.
+            $tenantIds = $factory->create(UserTenantResolver::class)->resolveTenantIds($user);
             $results = [];
             foreach ($topics as $index => $topic) {
                 try {
@@ -47,8 +52,8 @@ final class LiveRecordQuery implements Command
                     $response = $starter->handleAuthenticatedRead($request);
                     $status = $response->getStatusCode();
                     $results[] = match (true) {
-                        in_array($status, [401, 403, 404], true) => ['denied' => true],
-                        $status === 200 => ['fingerprint' => Projection::fingerprint((string) $response->getBody())],
+                        in_array($status, [401, 403, 404], true) => ['denied' => true, 'tenantIds' => $tenantIds],
+                        $status === 200 => ['fingerprint' => Projection::fingerprint((string) $response->getBody()), 'tenantIds' => $tenantIds],
                         default => [], // Transient failure does not revoke the projection.
                     };
                 } catch (\Throwable) {

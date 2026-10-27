@@ -20,6 +20,7 @@ final class QuerySubscriptions
     private int $running = 0;
     private ?\React\EventLoop\TimerInterface $scheduled = null;
     private float $scheduledAt = 0.0;
+    private array $stats = [];
 
     public function __construct(private string $php, private LoopInterface $loop)
     {
@@ -28,6 +29,7 @@ final class QuerySubscriptions
         // At 30s this sweep alone kept all four check slots busy; data reads
         // still pass API ACL, so only live signals can outlast a revocation.
         $loop->addPeriodicTimer(120, fn () => $this->invalidate());
+        $loop->addPeriodicTimer(60, fn () => $this->report());
     }
 
     public function subscribe(ConnectionInterface $connection, string $userId, string $token, string $topic, array $config): void
@@ -40,7 +42,7 @@ final class QuerySubscriptions
             'topic' => $topic, 'command' => $config['queryCheckCommand'],
             'invalidationTopic' => $config['invalidationTopic'],
             'fingerprint' => null, 'initialized' => false, 'denied' => false,
-            'dirty' => true, 'process' => null, 'lastRun' => 0,
+            'dirty' => true, 'process' => null, 'lastRun' => 0, 'tenantIds' => null,
         ];
         $this->schedule();
     }
@@ -61,14 +63,25 @@ final class QuerySubscriptions
         if (empty($this->entries[$id])) unset($this->entries[$id]);
     }
 
-    public function invalidate(?string $topic = null): bool
+    /**
+     * A tenant hint dirties only viewers known to belong to that tenant. Viewers
+     * with unknown or no tenants (first check pending, cross-tenant admins)
+     * always match; the periodic sweep (no tenant) catches anything missed.
+     */
+    public function invalidate(?string $topic = null, ?string $tenantId = null): bool
     {
         $matched = false;
+        $this->count($tenantId === null ? 'sweeps' : 'hints');
         foreach ($this->entries as $entries) {
             foreach ($entries as $entry) {
                 if ($topic !== null && $entry->invalidationTopic !== $topic) continue;
+                if ($tenantId !== null && $entry->tenantIds && !in_array($tenantId, $entry->tenantIds, true)) {
+                    $this->count('skipped');
+                    continue;
+                }
                 $entry->dirty = true;
                 $matched = true;
+                $this->count('dirtied');
             }
         }
         if ($matched) $this->schedule();
@@ -130,6 +143,8 @@ final class QuerySubscriptions
         // releases the pipes/concurrency slot, rather than orphaning a reader.
         $process = new Process('exec ' . escapeshellarg($this->php) . ' command.php ' . escapeshellarg($entry->command));
         foreach ($batch as $candidate) $candidate->process = $process;
+        $this->count('processes');
+        $this->count('checks', count($batch));
         $output = '';
         try {
             $process->start($this->loop);
@@ -184,6 +199,11 @@ final class QuerySubscriptions
     {
         if (!$this->current($entry)) return;
         $entry->lastRun = microtime(true);
+        $tenantIds = $result['tenantIds'] ?? null;
+        if (is_array($tenantIds) && array_is_list($tenantIds) && count($tenantIds) <= 64 &&
+            !array_filter($tenantIds, static fn ($id) => !is_string($id) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $id))) {
+            $entry->tenantIds = $tenantIds;
+        }
         if (($result['denied'] ?? false) === true) {
             if (!$entry->denied) $entry->connection->event($entry->topic, (object) ['signal' => 'revoked']);
             $entry->denied = true;
@@ -198,6 +218,32 @@ final class QuerySubscriptions
             $entry->initialized = true;
             $entry->denied = false;
             $entry->fingerprint = $result['fingerprint'];
+            if ($changed) $this->count('changed');
         }
+    }
+
+    private function count(string $name, int $by = 1): void
+    {
+        $this->stats[$name] = ($this->stats[$name] ?? 0) + $by;
+    }
+
+    /** One stdout line per minute: the counters that size the next scaling phase. */
+    private function report(): void
+    {
+        $subscriptions = 0;
+        $scoped = 0;
+        foreach ($this->entries as $entries) {
+            foreach ($entries as $entry) {
+                $subscriptions++;
+                if ($entry->tenantIds) $scoped++;
+            }
+        }
+        $line = ['liveQueryStats' => [
+            'connections' => count($this->entries), 'subscriptions' => $subscriptions, 'tenantScoped' => $scoped,
+            'running' => $this->running,
+            ...array_merge(array_fill_keys(['hints', 'sweeps', 'dirtied', 'skipped', 'processes', 'checks', 'changed'], 0), $this->stats),
+        ]];
+        $this->stats = [];
+        fwrite(STDOUT, json_encode($line) . "\n");
     }
 }
