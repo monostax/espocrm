@@ -14,6 +14,8 @@ use Espo\Core\Application;
 use Espo\Core\Application\ApplicationParams;
 use Espo\Entities\User;
 use Espo\ORM\EntityManager;
+use Espo\Core\Utils\Metadata;
+use Espo\Modules\FeatureLiveRecords\Subscription\Dependencies;
 use Espo\Modules\FeatureLiveRecords\Subscription\Projection;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use GuzzleHttp\Psr7\ServerRequest;
@@ -43,6 +45,12 @@ final class LiveRecordQuery implements Command
             // Lets the socket skip other tenants' change hints for this viewer.
             // Empty (no tenant) means the viewer matches every hint.
             $tenantIds = $factory->create(UserTenantResolver::class)->resolveTenantIds($user);
+            // Result lines past 16KB are killed by the socket. Beyond 64 tenants,
+            // report none: the viewer then matches every hint, as tenant-less ones do.
+            if (count($tenantIds) > 64) $tenantIds = [];
+            $metadata = $container->getByClass(Metadata::class);
+            $linkEntity = static fn (string $type, string $link): ?string =>
+                $metadata->get(['entityDefs', $type, 'links', $link, 'entity']);
             $results = [];
             foreach ($topics as $index => $topic) {
                 try {
@@ -51,9 +59,12 @@ final class LiveRecordQuery implements Command
                     $request = (new ServerRequest('GET', 'http://localhost' . $projection['path']))->withQueryParams($query);
                     $response = $starter->handleAuthenticatedRead($request);
                     $status = $response->getStatusCode();
+                    $body = $status === 200 ? (string) $response->getBody() : '';
                     $results[] = match (true) {
                         in_array($status, [401, 403, 404], true) => ['denied' => true, 'tenantIds' => $tenantIds],
-                        $status === 200 => ['fingerprint' => Projection::fingerprint((string) $response->getBody()), 'tenantIds' => $tenantIds],
+                        $status === 200 => array_filter(['fingerprint' => Projection::fingerprint($body), 'tenantIds' => $tenantIds,
+                            'deps' => Dependencies::of($projection['path'], $projection['query'], $body, $linkEntity)],
+                            static fn ($value) => $value !== null),
                         default => [], // Transient failure does not revoke the projection.
                     };
                 } catch (\Throwable) {

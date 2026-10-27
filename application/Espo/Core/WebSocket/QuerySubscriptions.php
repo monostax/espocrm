@@ -47,7 +47,7 @@ final class QuerySubscriptions
             'topic' => $topic, 'command' => $config['queryCheckCommand'],
             'invalidationTopic' => $config['invalidationTopic'],
             'fingerprint' => null, 'initialized' => false, 'denied' => false,
-            'dirty' => true, 'process' => null, 'lastRun' => 0, 'tenantIds' => null,
+            'dirty' => true, 'process' => null, 'lastRun' => 0, 'tenantIds' => null, 'deps' => null,
             'path' => $path = self::pathOf($topic), 'cooldown' => self::cooldownOf($path),
         ];
         $this->schedule();
@@ -73,8 +73,15 @@ final class QuerySubscriptions
      * A tenant hint dirties only viewers known to belong to that tenant. Viewers
      * with unknown or no tenants (first check pending, cross-tenant admins)
      * always match; the periodic sweep (no tenant) catches anything missed.
+     *
+     * Record hints also skip projections whose last check declared
+     * dependencies none of the hint's records touch. Without records (access
+     * resets) or without declared dependencies, the tenant rule alone applies.
+     * Skipping never widens a read: every check re-runs the viewer's own read.
+     *
+     * @param ?list<array{type: string, id: string}> $records
      */
-    public function invalidate(?string $topic = null, ?string $tenantId = null): bool
+    public function invalidate(?string $topic = null, ?string $tenantId = null, ?array $records = null): bool
     {
         $matched = false;
         $this->count($tenantId === null ? 'sweeps' : 'hints');
@@ -83,6 +90,10 @@ final class QuerySubscriptions
                 if ($topic !== null && $entry->invalidationTopic !== $topic) continue;
                 if ($tenantId !== null && $entry->tenantIds && !in_array($tenantId, $entry->tenantIds, true)) {
                     $this->count('skipped');
+                    continue;
+                }
+                if ($tenantId !== null && $records && $entry->deps && !self::touches($entry->deps, $records)) {
+                    $this->count('skippedRecord');
                     continue;
                 }
                 $entry->dirty = true;
@@ -211,6 +222,9 @@ final class QuerySubscriptions
             !array_filter($tenantIds, static fn ($id) => !is_string($id) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $id))) {
             $entry->tenantIds = $tenantIds;
         }
+        // Re-declared on every successful check (membership changes); a denied,
+        // malformed or missing declaration falls back to tenant-wide re-checks.
+        $entry->deps = isset($result['fingerprint']) ? self::deps($result['deps'] ?? null) : null;
         if (($result['denied'] ?? false) === true) {
             if (!$entry->denied) $entry->connection->event($entry->topic, (object) ['signal' => 'revoked']);
             $entry->denied = true;
@@ -230,6 +244,28 @@ final class QuerySubscriptions
                 $this->countPath($entry->path, 'changed');
             }
         }
+    }
+
+    /** @return ?array{types: array<string, true>, ids: array<string, true>} */
+    private static function deps(mixed $deps): ?array
+    {
+        if (!is_array($deps) || !is_array($deps['types'] ?? null) || !is_array($deps['ids'] ?? null) ||
+            !$deps['types'] || count($deps['ids']) > 400) return null;
+        foreach ($deps['types'] as $type) {
+            if (!is_string($type) || !preg_match('/^[A-Z][a-zA-Z0-9]{0,63}$/D', $type)) return null;
+        }
+        foreach ($deps['ids'] as $id) {
+            if (!is_string($id) || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/D', $id)) return null;
+        }
+        return ['types' => array_fill_keys($deps['types'], true), 'ids' => array_fill_keys($deps['ids'], true)];
+    }
+
+    private static function touches(array $deps, array $records): bool
+    {
+        foreach ($records as $record) {
+            if (isset($deps['types'][$record['type']]) || isset($deps['ids'][$record['id']])) return true;
+        }
+        return false;
     }
 
     private function count(string $name, int $by = 1): void
@@ -277,7 +313,7 @@ final class QuerySubscriptions
         $line = ['liveQueryStats' => [
             'connections' => count($this->entries), 'subscriptions' => $subscriptions, 'tenantScoped' => $scoped,
             'running' => $this->running,
-            ...array_merge(array_fill_keys(['hints', 'sweeps', 'dirtied', 'skipped', 'processes', 'checks', 'changed'], 0), $this->stats),
+            ...array_merge(array_fill_keys(['hints', 'sweeps', 'dirtied', 'skipped', 'skippedRecord', 'processes', 'checks', 'changed'], 0), $this->stats),
             'paths' => (object) $top,
         ]];
         $this->stats = [];

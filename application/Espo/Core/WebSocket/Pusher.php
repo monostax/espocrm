@@ -582,7 +582,20 @@ class Pusher implements WampServerInterface
                 $created = $data->intentCreatedAtMs ?? null;
                 if (is_numeric($created) && $created <= microtime(true) * 1000 && microtime(true) * 1000 - $created < 5000) {
                     $tenantId = $data->tenantId ?? null;
-                    $this->queries?->invalidate($topicId, is_string($tenantId) && $tenantId !== '' ? $tenantId : null);
+                    // Access resets and malformed hints carry no records: they
+                    // re-check every projection in the tenant.
+                    $records = null;
+                    if (($data->kind ?? null) !== 'access' && is_array($data->records ?? null) && $data->records) {
+                        $records = [];
+                        foreach ($data->records as $record) {
+                            if (!is_string($record->type ?? null) || !is_string($record->id ?? null)) {
+                                $records = null;
+                                break;
+                            }
+                            $records[] = ['type' => $record->type, 'id' => $record->id];
+                        }
+                    }
+                    $this->queries?->invalidate($topicId, is_string($tenantId) && $tenantId !== '' ? $tenantId : null, $records);
                 }
                 return;
             }
