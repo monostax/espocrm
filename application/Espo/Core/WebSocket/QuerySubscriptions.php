@@ -25,7 +25,9 @@ final class QuerySubscriptions
     {
         // Reauthorize independently of best-effort change hints. A lost/expired
         // ACL hint must not preserve a revoked session or projection forever.
-        $loop->addPeriodicTimer(30, fn () => $this->invalidate());
+        // At 30s this sweep alone kept all four check slots busy; data reads
+        // still pass API ACL, so only live signals can outlast a revocation.
+        $loop->addPeriodicTimer(120, fn () => $this->invalidate());
     }
 
     public function subscribe(ConnectionInterface $connection, string $userId, string $token, string $topic, array $config): void
