@@ -193,7 +193,9 @@ class ContactChatwoot extends \Espo\Core\Templates\Controllers\Base implements D
                 throw new Forbidden('The selected identity does not belong to this contact and workspace.');
             }
             $identityChannel = $selectedIdentity->get('channelType');
-            if ($identityChannel !== $mappedChannelType ||
+            $channelMatches = $identityChannel === $mappedChannelType ||
+                ($mappedChannelType === 'sms' && $identityChannel === 'whatsapp');
+            if (!$channelMatches ||
                 !ContactReconciler::isRoutableSourceId($identityChannel, (string) $selectedIdentity->get('sourceId'))) {
                 throw new BadRequest('The selected identity cannot be used with this inbox.');
             }
