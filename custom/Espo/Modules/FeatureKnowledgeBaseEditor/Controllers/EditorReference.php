@@ -37,9 +37,9 @@ class EditorReference
         return (object) ['list' => $this->references->resolve($refs)];
     }
 
-    public function getActionRecentMentions(Request $request): object
+    public function getActionRecent(Request $request): object
     {
-        return (object) ['list' => $this->references->recentMentions()];
+        return (object) ['list' => $this->references->recent()];
     }
 
     public function getActionBacklinks(Request $request): object

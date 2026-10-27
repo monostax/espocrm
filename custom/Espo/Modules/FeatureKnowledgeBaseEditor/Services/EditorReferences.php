@@ -206,20 +206,39 @@ class EditorReferences
         return Expr::map(...$mapping);
     }
 
-    /** The user's ten latest mentioned records that are still available, newest first. */
-    public function recentMentions(): array
+    /**
+     * The picker's "Recent" tab in one request: the user's ten latest mentioned records, then
+     * the ten latest viewed ones not already listed. The tab used to chain LastViewed, resolve
+     * and recentMentions; each CRM request costs a full bootstrap, so this resolves both at once.
+     */
+    public function recent(): array
+    {
+        $mentioned = array_slice($this->latest([self::MENTION_ACTION]), 0, 10, true);
+        $viewed = array_slice(array_diff_key($this->latest(['read', 'create']), $mentioned), 0, 10, true);
+        $results = [];
+        // resolve() keeps the input order and applies the same ACL as every other reference.
+        foreach ($this->resolve([...array_values($mentioned), ...array_values($viewed)]) as $ref) {
+            if (!$ref['available']) continue;
+            $wasMentioned = isset($mentioned[References::url($ref)]);
+            $results[] = [...$ref, 'recentlyMentioned' => $wasMentioned, 'recentlyViewed' => !$wasMentioned];
+        }
+        return $results;
+    }
+
+    /** Record references from the user's latest history rows, keyed by URL, newest first. */
+    private function latest(array $actions): array
     {
         $this->supportedTypes ??= (new Scopes($this->metadata))->all();
         $latest = [];
-        foreach ($this->history([self::MENTION_ACTION], $this->supportedTypes, 200) as $type => $ids) {
+        foreach ($this->history($actions, $this->supportedTypes, 200) as $type => $ids) {
             foreach ($ids as $id => $number) {
-                $latest[] = [$number, ['kind' => 'record', 'entityType' => $type, 'recordId' => (string) $id]];
+                $ref = ['kind' => 'record', 'entityType' => $type, 'recordId' => (string) $id];
+                // resolve() rejects the whole batch on one malformed ID.
+                if (References::valid($ref)) $latest[References::url($ref)] = [$number, $ref];
             }
         }
-        usort($latest, fn ($a, $b) => $b[0] <=> $a[0]);
-        // resolve() keeps the input order and applies the same ACL as every other reference.
-        $resolved = $this->resolve(array_column(array_slice($latest, 0, 10), 1));
-        return array_values(array_filter($resolved, fn ($ref) => $ref['available']));
+        uasort($latest, fn ($a, $b) => $b[0] <=> $a[0]);
+        return array_map(fn ($item) => $item[1], $latest);
     }
 
     /** Feeds "Mentioned recently". Search re-applies ACL, so this history never exposes a target. */

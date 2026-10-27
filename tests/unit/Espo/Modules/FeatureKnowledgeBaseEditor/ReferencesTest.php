@@ -199,6 +199,40 @@ class ReferencesTest extends TestCase
         $this->assertFalse($results[2]['available']);
     }
 
+    public function testRecentListsMentionedThenViewedFromOneResolvedBatch(): void
+    {
+        [$em, $select] = $this->queryFixture('Account', [
+            $this->entity('Account', ['id' => 'viewed', 'name' => 'Viewed']),
+            $this->entity('Account', ['id' => 'both', 'name' => 'Both']),
+        ]);
+        $mentioned = [
+            ['targetType' => 'Account', 'targetId' => 'both', 'lastNumber' => '50'],
+            ['targetType' => 'Account', 'targetId' => 'bad id!', 'lastNumber' => '60'],
+        ];
+        $viewed = [
+            ['targetType' => 'Account', 'targetId' => 'gone', 'lastNumber' => '44'],
+            ['targetType' => 'Account', 'targetId' => 'both', 'lastNumber' => '40'],
+            ['targetType' => 'Account', 'targetId' => 'viewed', 'lastNumber' => '45'],
+        ];
+        $statement = $this->createMock(\PDOStatement::class);
+        $statement->method('fetchAll')->willReturnOnConsecutiveCalls($mentioned, $viewed);
+        $executor = $this->createMock(\Espo\ORM\Executor\QueryExecutor::class);
+        $executor->expects($this->exactly(2))->method('execute')->willReturn($statement);
+        $em->method('getQueryExecutor')->willReturn($executor);
+        $acl = $this->createMock(Acl::class);
+        foreach (['checkScope', 'checkField', 'checkEntityRead'] as $method) $acl->method($method)->willReturn(true);
+        $metadata = $this->createMock(Metadata::class);
+        $metadata->method('get')->willReturnCallback(fn ($path) => end($path) === 'recordIconAttribute' ? null : true);
+        $metadata->method('getAll')->willReturn((object) [
+            'scopes' => (object) ['Account' => (object) ['entity' => true, 'recordKnowledge' => true]],
+            'entityDefs' => (object) ['Account' => (object) ['fields' => (object) ['name' => (object) []]]],
+        ]);
+        $results = (new EditorReferences($em, $select, $acl, $metadata,
+            $this->createMock(User::class), $this->createMock(FilterFactory::class), $this->createMock(ReferenceSearch::class)))->recent();
+        $this->assertSame([['both', true, false], ['viewed', false, true]], array_map(
+            fn ($ref) => [$ref['recordId'], $ref['recentlyMentioned'], $ref['recentlyViewed']], $results));
+    }
+
     public function testRuntimeUsesResolvedIdentityAndExplicitUnresolvedContext(): void
     {
         $record = ['kind' => 'record', 'entityType' => 'Account', 'recordId' => 'acme', 'label' => 'Stale label'];
