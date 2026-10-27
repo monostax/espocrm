@@ -43,6 +43,11 @@ use Espo\ORM\EntityManager;
  * contacts seen in production fit comfortably.
  *
  * Runs AFTER {@see BackfillChatwootTenant} so tenant ids are populated.
+ *
+ * Not run on rebuild since 2026-10-27: it converged (every run made no
+ * net change), live Chatwoot sync maintains identities and contact
+ * fields, and it added ~3-4 minutes to every CRM container start.
+ * Kept for manual use; re-add it to app/rebuild.json if needed.
  */
 class BackfillChannelIdentities implements RebuildAction
 {
