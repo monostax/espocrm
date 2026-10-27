@@ -115,7 +115,7 @@ class BackfillChannelIdentities implements RebuildAction
     {
         $rows = $this->fetchLinkedRows();
         $processed = 0;
-        $created = 0;
+        $plans = [];
 
         foreach ($rows as $row) {
             $contactId = (string) $row['contact_id'];
@@ -137,16 +137,15 @@ class BackfillChannelIdentities implements RebuildAction
                 if (!$channel || !$sourceId) {
                     continue;
                 }
-                $this->reconciler->upsertIdentity(
-                    contactId: $contactId,
-                    tenantId: $tenantId,
-                    channelType: $channel,
-                    sourceId: $sourceId,
-                    label: $cib['inbox_name'] ?? null,
-                    chatwootAccountId: $chatwootAccountId,
-                    chatwootInboxId: $cib['inbox_id'] ?: null,
-                );
-                $created++;
+                $plans[] = [
+                    'contactId' => $contactId,
+                    'tenantId' => $tenantId,
+                    'channelType' => $channel,
+                    'sourceId' => $sourceId,
+                    'label' => $cib['inbox_name'] ?? null,
+                    'chatwootAccountId' => $chatwootAccountId,
+                    'chatwootInboxId' => $cib['inbox_id'] ?: null,
+                ];
             }
 
             // Synthesize whatsapp/email identities from the
@@ -159,38 +158,132 @@ class BackfillChannelIdentities implements RebuildAction
                 $row['phone_number'] ?? null
             );
             if ($bridgePhone) {
-                $this->reconciler->upsertIdentity(
-                    contactId: $contactId,
-                    tenantId: $tenantId,
-                    channelType: 'whatsapp',
-                    sourceId: $bridgePhone,
-                    label: null,
-                    chatwootAccountId: $chatwootAccountId,
-                    chatwootInboxId: null,
-                );
-                $created++;
+                $plans[] = [
+                    'contactId' => $contactId,
+                    'tenantId' => $tenantId,
+                    'channelType' => 'whatsapp',
+                    'sourceId' => $bridgePhone,
+                    'label' => null,
+                    'chatwootAccountId' => $chatwootAccountId,
+                    'chatwootInboxId' => null,
+                ];
             }
             $bridgeEmail = isset($row['email']) && is_string($row['email']) ? trim($row['email']) : '';
             if ($bridgeEmail !== '') {
-                $this->reconciler->upsertIdentity(
-                    contactId: $contactId,
-                    tenantId: $tenantId,
-                    channelType: 'email',
-                    sourceId: strtolower($bridgeEmail),
-                    label: null,
-                    chatwootAccountId: $chatwootAccountId,
-                    chatwootInboxId: null,
-                );
-                $created++;
+                $plans[] = [
+                    'contactId' => $contactId,
+                    'tenantId' => $tenantId,
+                    'channelType' => 'email',
+                    'sourceId' => strtolower($bridgeEmail),
+                    'label' => null,
+                    'chatwootAccountId' => $chatwootAccountId,
+                    'chatwootInboxId' => null,
+                ];
             }
 
             $processed++;
         }
 
+        [$plans, $contested] = self::settle($plans, fn (array $plan): ?array => $this->currentIdentity($plan));
+
+        foreach ($plans as $plan) {
+            $this->reconciler->upsertIdentity(
+                contactId: $plan['contactId'],
+                tenantId: $plan['tenantId'],
+                channelType: $plan['channelType'],
+                sourceId: $plan['sourceId'],
+                label: $plan['label'],
+                chatwootAccountId: $plan['chatwootAccountId'],
+                chatwootInboxId: $plan['chatwootInboxId'],
+            );
+        }
+
+        $created = count($plans);
         $this->log->warning(
             "BackfillChannelIdentities: pass 1 (linked) — "
-            . "processed {$processed} chatwoot_contact row(s), upserted/touched {$created} identity row(s)"
+            . "processed {$processed} chatwoot_contact row(s), upserted/touched {$created} identity row(s), "
+            . "{$contested} identity(ies) claimed by more than one contact or label (kept current)"
         );
+    }
+
+    /**
+     * Two linked chatwoot_contact rows (duplicate contacts) or two inboxes
+     * can claim the same identity with different owners or labels. Applied
+     * in row order, the last claim won and every rebuild moved the identity
+     * back and forth. Settle each contested identity once: keep its current
+     * owner/label when that is still a claimant, else the smallest claimant.
+     * Uncontested plans pass through unchanged.
+     *
+     * @param list<array<string, ?string>> $plans
+     * @param callable(array<string, ?string>): ?array{contactId: ?string, label: ?string} $current
+     * @return array{0: list<array<string, ?string>>, 1: int}
+     */
+    public static function settle(array $plans, callable $current): array
+    {
+        $claims = [];
+        foreach ($plans as $plan) {
+            $key = $plan['tenantId'] . '|' . $plan['channelType'] . '|' . $plan['sourceId'];
+            $claims[$key]['plan'] ??= $plan;
+            $claims[$key]['contacts'][(string) $plan['contactId']] = true;
+            if ($plan['label'] !== null && $plan['label'] !== '') {
+                $claims[$key]['labels'][$plan['label']] = true;
+            }
+        }
+
+        $chosen = [];
+        $contested = 0;
+        foreach ($claims as $key => $claim) {
+            $contacts = array_map('strval', array_keys($claim['contacts']));
+            $labels = array_map('strval', array_keys($claim['labels'] ?? []));
+            if (count($contacts) < 2 && count($labels) < 2) {
+                continue;
+            }
+            $contested++;
+            $existing = $current($claim['plan']);
+            sort($contacts);
+            sort($labels);
+            $chosen[$key] = [
+                'contactId' => in_array($existing['contactId'] ?? null, $contacts, true) ? $existing['contactId'] : $contacts[0],
+                'label' => count($labels) < 2 ? null : (in_array($existing['label'] ?? null, $labels, true) ? $existing['label'] : $labels[0]),
+            ];
+        }
+
+        foreach ($plans as $index => $plan) {
+            $key = $plan['tenantId'] . '|' . $plan['channelType'] . '|' . $plan['sourceId'];
+            if (!isset($chosen[$key])) {
+                continue;
+            }
+            $plans[$index]['contactId'] = $chosen[$key]['contactId'];
+            if ($chosen[$key]['label'] !== null && $plan['label'] !== null && $plan['label'] !== '') {
+                $plans[$index]['label'] = $chosen[$key]['label'];
+            }
+        }
+
+        return [$plans, $contested];
+    }
+
+    /**
+     * The stored owner/label upsertIdentity would compare against (deleted
+     * rows included, as it restores them).
+     *
+     * @param array<string, ?string> $plan
+     * @return ?array{contactId: ?string, label: ?string}
+     */
+    private function currentIdentity(array $plan): ?array
+    {
+        $statement = $this->entityManager->getPDO()->prepare(
+            'SELECT contact_id, label FROM contact_channel_identity '
+            . 'WHERE tenant_id = :tenant AND channel_type = :channel AND source_id = :source '
+            . 'ORDER BY deleted ASC LIMIT 1'
+        );
+        $statement->execute([
+            'tenant' => $plan['tenantId'],
+            'channel' => $plan['channelType'],
+            'source' => $plan['sourceId'],
+        ]);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        return $row ? ['contactId' => $row['contact_id'], 'label' => $row['label']] : null;
     }
 
     /**
