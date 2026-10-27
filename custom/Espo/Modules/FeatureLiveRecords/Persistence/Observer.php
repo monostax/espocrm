@@ -85,16 +85,28 @@ final class Observer implements MutationObserver
 
                 $after = $operation === 'delete' ? [] : $this->routing->snapshot($entities);
                 $store = new Store($this->em->getPDO());
-                $accessChange = (bool) array_filter($entities, fn ($entity) => in_array(
+                $accessEntities = array_filter($entities, fn ($entity) => in_array(
                     $entity->getEntityType(),
                     Scope::ACCESS,
                     true,
                 ));
+                // Linking records to or from a team changes who can see those
+                // records only. Keep it record-scoped, so viewers holding them
+                // re-check (and are revoked) without resetting the whole tenant.
+                // Team-to-user/role/membership links stay full access resets.
+                $recordTeamLink = in_array($operation, ['link', 'unlink'], true) &&
+                    count($accessEntities) < count($entities) &&
+                    !array_filter($accessEntities, fn ($entity) => $entity->getEntityType() !== 'Team');
+                $accessChange = $accessEntities && !$recordTeamLink;
 
                 foreach (array_unique([...array_keys($before), ...array_keys($after)]) as $tenantId) {
                     $records = array_values(array_merge($before[$tenantId] ?? [], $after[$tenantId] ?? []));
+                    if ($recordTeamLink) {
+                        $records = array_values(array_filter($records, fn ($record) => $record['type'] !== 'Team'));
+                    }
                     // Policy references (e.g. an audit Note for a Role) carry
                     // reset-only routing, with no tenant-local record identity.
+                    // A team whose tenant holds none of the linked records resets.
                     $reset = $accessChange || $records === [];
                     $intent = new Intent($tenantId, $reset ? 'access' : $operation, $reset ? [] : $records);
                     $store->append($intent, new DateTimeImmutable());
