@@ -29,6 +29,7 @@
 
 namespace Espo\Core\Authentication\AuthToken;
 
+use Espo\Core\Field\DateTime;
 use Espo\Core\Name\Field;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Name\Attribute;
@@ -52,6 +53,12 @@ class EspoManager implements Manager
     private RDBRepository $repository;
 
     private const int TOKEN_RANDOM_LENGTH = 16;
+    /**
+     * Every authenticated request renews its token. Writing lastAccess at most once per interval
+     * removes a row write (and its lock, shared by a page's parallel requests) from most requests.
+     * Idle expiry works in hours (AuthTokenControl), so the lag does not change it.
+     */
+    private const int RENEW_INTERVAL_SECONDS = 60;
 
     public function __construct(EntityManager $entityManager)
     {
@@ -126,6 +133,16 @@ class EspoManager implements Manager
 
         if ($authToken->isNew()) {
             throw new RuntimeException("Can renew only not new auth token.");
+        }
+
+        $lastAccess = $authToken->get('lastAccess');
+
+        if (
+            $lastAccess &&
+            DateTime::fromString($lastAccess)->addSeconds(self::RENEW_INTERVAL_SECONDS)
+                ->isGreaterThan(DateTime::createNow())
+        ) {
+            return;
         }
 
         $authToken->setLastAccessNow();
