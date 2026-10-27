@@ -9,7 +9,14 @@ use Espo\ORM\EntityManager;
 use PDO;
 use stdClass;
 
-/** Replace the former Task status without firing activity/automation hooks. Safe to rerun. */
+/**
+ * Replace the former Task status without firing activity/automation hooks. Safe to rerun.
+ *
+ * Not run on rebuild since 2026-10-27: the 'Not Started' status is
+ * migrated and nothing writes it any more; it scanned task, automation and
+ * journey_stage_action on every CRM container start. Kept for manual use;
+ * re-add it to app/rebuild.json if needed.
+ */
 class MigrateTaskPlannedStatus implements RebuildAction
 {
     public function __construct(private EntityManager $entityManager) {}

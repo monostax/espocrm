@@ -29,6 +29,12 @@ use Throwable;
  *
  * Idempotent: only rows with close_date IS NULL + matching event.
  * Raw SQL skips hooks (data migration only).
+ *
+ * Not run on rebuild since 2026-10-27:
+ * Hooks\Opportunity\AutoSetCloseDateOnStatusChange sets closeDate going
+ * forward; it aggregated the whole tracking_event table on every CRM
+ * container start. Kept for manual use; re-add it to app/rebuild.json if
+ * needed.
  */
 class BackfillOpportunityCloseDate implements RebuildAction
 {

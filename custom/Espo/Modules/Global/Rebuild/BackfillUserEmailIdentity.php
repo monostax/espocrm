@@ -10,7 +10,14 @@ use Espo\Entities\User;
 use Espo\Modules\Global\Hooks\User\EmailIdentity;
 use Espo\ORM\EntityManager;
 
-/** Migrate unambiguous human usernames without changing passwords or access. */
+/**
+ * Migrate unambiguous human usernames without changing passwords or access.
+ *
+ * Not run on rebuild since 2026-10-27: the Hooks\User\EmailIdentity hook
+ * keeps usernames in sync on save; it loaded every human user on every CRM
+ * container start. Kept for manual use; re-add it to app/rebuild.json if
+ * needed.
+ */
 class BackfillUserEmailIdentity implements RebuildAction
 {
     public function __construct(

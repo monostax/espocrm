@@ -56,6 +56,11 @@ use Espo\ORM\EntityManager;
  * no longer matches it, so repeated rebuilds are no-ops.
  *
  * Runs AFTER {@see BackfillChannelIdentities} so identities exist.
+ *
+ * Not run on rebuild since 2026-10-27: the ContactReconciler fix stops new
+ * rotated duplicates, and the detection join scanned chatwoot_contact ×
+ * contact_channel_identity on every CRM container start. Kept for manual
+ * use; re-add it to app/rebuild.json if needed.
  */
 class MergeRotatedDuplicateContacts implements RebuildAction
 {

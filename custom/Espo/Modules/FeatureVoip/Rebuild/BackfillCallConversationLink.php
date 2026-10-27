@@ -30,6 +30,11 @@ use Espo\ORM\EntityManager;
  * So we resolve external account id -> CRM ChatwootAccount, then match the
  * conversation and populate the link. Idempotent: skips calls that already
  * have the link set.
+ *
+ * Not run on rebuild since 2026-10-27: VoipCallSync sets the link on
+ * mirrored calls; it re-queried every unmatched call on every CRM
+ * container start. Kept for manual use; re-add it to app/rebuild.json if
+ * needed.
  */
 class BackfillCallConversationLink implements RebuildAction
 {

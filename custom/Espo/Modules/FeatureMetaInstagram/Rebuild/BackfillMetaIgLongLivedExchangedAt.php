@@ -29,6 +29,10 @@ use Espo\ORM\EntityManager;
  *   `expires_at > NOW() + INTERVAL 2 DAY`
  * AND
  *   `provider_id = (any provider with provider='meta-instagram')`.
+ *
+ * Not run on rebuild since 2026-10-27: existing accounts are backfilled;
+ * ChatwootInboxIntegration and RefreshInstagramTokens set the flag going
+ * forward. Kept for manual use; re-add it to app/rebuild.json if needed.
  */
 class BackfillMetaIgLongLivedExchangedAt implements RebuildAction
 {

@@ -1,6 +1,0 @@
-{
-    "actionClassNameList": [
-        "__APPEND__",
-        "Espo\\Modules\\FeatureDocumentPages\\Classes\\RebuildActions\\BackfillContentType"
-    ]
-}

@@ -7,7 +7,13 @@ namespace Espo\Modules\Chatwoot\Rebuild;
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\ORM\EntityManager;
 
-/** Initialize unset memberships with the default operations; preserve all explicit selections. */
+/**
+ * Initialize unset memberships with the default operations; preserve all explicit selections.
+ *
+ * Not run on rebuild since 2026-10-27: entityDefs defaults now initialize
+ * aiCrmOperations, aiCanExecute and aiCanSend on new memberships. Kept for
+ * manual use; re-add it to app/rebuild.json if needed.
+ */
 class BackfillAiCrmOperations implements RebuildAction
 {
     public function __construct(private EntityManager $entityManager) {}

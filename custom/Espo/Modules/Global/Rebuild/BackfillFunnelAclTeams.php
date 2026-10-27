@@ -44,6 +44,11 @@ use Throwable;
  *
  * Idempotent: inserts only missing rows, restores soft-deleted ones, and never
  * removes teams that were added independently.
+ *
+ * Not run on rebuild since 2026-10-27: funnels are migrated to teams, and
+ * since a soft rebuild never drops funnel.team_id, re-running it restored
+ * any original team an admin had removed from a funnel or its stages. Kept
+ * for manual use; re-add it to app/rebuild.json if needed.
  */
 class BackfillFunnelAclTeams implements RebuildAction
 {

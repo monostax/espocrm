@@ -23,6 +23,10 @@ use Throwable;
  *
  * Idempotent: only touches non-deleted Won/Lost rows where `followup_timer`
  * is non-null or `followup_status` is null / not `'FollowupInactive'`.
+ *
+ * Not run on rebuild since 2026-10-27: it is an exact subset of step 1 of
+ * {@see BackfillOpportunityFollowupActiveCollapse}, which still runs. Kept
+ * for manual use; re-add it to app/rebuild.json if needed.
  */
 class BackfillOpportunityFollowupStatus implements RebuildAction
 {

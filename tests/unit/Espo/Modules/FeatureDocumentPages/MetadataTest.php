@@ -40,7 +40,8 @@ class MetadataTest extends TestCase
         $this->assertSame('feature-document-pages:views/document/modals/select-files',
             $metadata->clientDefs->Attachment->sourceDefs->Document->insertModalView);
         $this->assertContains(NormalizeContentInput::class, $metadata->recordDefs->Document->updateInputFilterClassNameList);
-        $this->assertContains(BackfillContentType::class, $metadata->app->rebuild->actionClassNameList);
+        // Converged one-off backfill; kept for manual use, no longer run on rebuild.
+        $this->assertNotContains(BackfillContentType::class, $metadata->app->rebuild->actionClassNameList);
         $this->assertNotContains('__APPEND__', $metadata->app->rebuild->actionClassNameList);
         $this->assertFileExists($metadata->app->jsLibs->{'lexical-kb'}->path);
         $this->assertContains('client/custom/modules/feature-knowledge-base-editor/css/kb-lexical.css',

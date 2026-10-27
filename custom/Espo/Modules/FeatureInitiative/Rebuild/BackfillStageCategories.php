@@ -8,6 +8,12 @@ use Espo\Core\Rebuild\RebuildAction;
 use Espo\Modules\FeatureInitiative\Hooks\Initiative\ValidateProgress;
 use Espo\ORM\EntityManager;
 
+/**
+ * Not run on rebuild since 2026-10-27: stage categories are backfilled and
+ * Hooks\Initiative\ValidateProgress keeps Initiative.status in sync with
+ * its stage on save. Kept for manual use; re-add it to app/rebuild.json if
+ * needed.
+ */
 class BackfillStageCategories implements RebuildAction
 {
     public function __construct(private EntityManager $entityManager) {}

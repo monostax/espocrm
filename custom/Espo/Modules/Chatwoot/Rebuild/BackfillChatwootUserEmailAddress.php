@@ -20,6 +20,12 @@ use Espo\ORM\EntityManager;
 /**
  * Backfills ChatwootUser.emailAddress after migrating from the non-standard
  * `email` field name, which Espo's email field processor did not persist.
+ *
+ * Not run on rebuild since 2026-10-27: it scanned every ChatwootUser and
+ * called the Chatwoot API for each unresolved one on every CRM container
+ * start. The field migration it repairs is done; membership sync writes
+ * emailAddress going forward. Kept for manual use; re-add it to
+ * app/rebuild.json if needed.
  */
 class BackfillChatwootUserEmailAddress implements RebuildAction
 {

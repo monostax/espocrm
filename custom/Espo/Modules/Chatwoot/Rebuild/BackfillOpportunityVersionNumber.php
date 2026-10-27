@@ -45,8 +45,9 @@ use Espo\ORM\EntityManager;
  *     Decision #1g Branch A would silently match zero rows on legacy data.
  *
  * Idempotent across repeated `php rebuild` invocations: the UPDATE only
- * touches NULL rows, and the ALTER is a no-op once the column is already
- * NOT NULL DEFAULT 1.
+ * touches NULL rows, and once the column is NOT NULL with a default both
+ * steps are skipped (information_schema probe), so later starts issue no
+ * UPDATE or DDL.
  *
  * MySQL and PostgreSQL syntax branches are handled separately. Other
  * platforms are logged and skipped.
@@ -86,8 +87,36 @@ class BackfillOpportunityVersionNumber implements RebuildAction
             return;
         }
 
+        // Once pinned there can be no NULL rows left, so skip both the
+        // full-table UPDATE and the ALTER on a hot table at every start.
+        if ($this->isPinned($pdo)) {
+            return;
+        }
+
         $this->backfillNulls($pdo);
         $this->enforceNotNull($pdo);
+    }
+
+    /**
+     * True when the column is already NOT NULL with a default, as left by
+     * {@see enforceNotNull()}. Soft schema rebuilds do not revert it.
+     */
+    private function isPinned(\PDO $pdo): bool
+    {
+        $schema = $this->getDriverName($pdo) === 'pgsql' ? 'current_schema()' : 'DATABASE()';
+
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT 1 FROM information_schema.columns " .
+                "WHERE table_schema = {$schema} AND table_name = :table AND column_name = :column " .
+                "AND is_nullable = 'NO' AND column_default IS NOT NULL"
+            );
+            $stmt->execute([':table' => self::TABLE, ':column' => self::COLUMN]);
+
+            return (bool) $stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     private function columnExists(\PDO $pdo): bool

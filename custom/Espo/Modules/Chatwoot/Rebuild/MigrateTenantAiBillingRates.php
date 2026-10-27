@@ -20,6 +20,11 @@ use Espo\ORM\EntityManager;
  * TenantAiBillingRate period (effectiveFrom = 2000-01-01) when the tenant
  * has no rate history yet. Safe to re-run.
  *
+ * Not run on rebuild since 2026-10-27: the legacy rates are migrated, and
+ * re-running it re-created a 2000-01-01 → ∞ rate from the mirrored flat
+ * fields whenever an admin deleted a tenant's last TenantAiBillingRate.
+ * Kept for manual use; re-add it to app/rebuild.json if needed.
+ *
  * @noinspection PhpUnused
  */
 class MigrateTenantAiBillingRates implements RebuildAction
