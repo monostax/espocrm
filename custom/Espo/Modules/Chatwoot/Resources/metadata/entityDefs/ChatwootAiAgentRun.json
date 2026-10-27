@@ -141,11 +141,10 @@
         "modelUsage": {"type": "jsonObject", "view": "views/fields/json-object", "readOnly": true, "tooltip": true},
         "runOutcome": {
             "type": "varchar",
+            "maxLength": 24,
             "readOnly": true,
-            "notStorable": true,
             "utility": true,
-            "directAccessDisabled": true,
-            "select": {"select": "AI_RUN_OUTCOME:modelUsage"}
+            "directAccessDisabled": true
         },
         "model": {
             "type": "varchar",

@@ -4,8 +4,6 @@ namespace tests\unit\Espo\Modules\Chatwoot\Tools\Billing;
 
 use DateTimeImmutable;
 use Espo\Core\Utils\Config;
-use Espo\Core\Utils\Database\ConfigDataProvider;
-use Espo\Modules\Chatwoot\ORM\FunctionConverters\AgentRunOutcome;
 use Espo\Modules\Chatwoot\Tools\Billing\AiBudget;
 use Espo\ORM\{BaseEntity, EntityCollection, EntityFactory, EntityManager, Metadata, MetadataDataProvider, TransactionManager};
 use Espo\ORM\Mapper\Mapper;
@@ -40,7 +38,7 @@ class AiBudgetTest extends TestCase
         $this->pdo->exec('CREATE TABLE tenant_ai_billing_rate (id VARCHAR(17) PRIMARY KEY, deleted BOOLEAN DEFAULT FALSE,
             tenant_id VARCHAR(17), effective_from DATE, effective_to DATE, overage_policy VARCHAR(16), billing_model VARCHAR(16), plan_included_credits INTEGER)');
         $this->pdo->exec('CREATE TABLE chatwoot_ai_agent_run (id VARCHAR(17) PRIMARY KEY, deleted BOOLEAN DEFAULT FALSE,
-            tenant_id VARCHAR(17), run_at TIMESTAMP, model_usage TEXT, billing_waived BOOLEAN DEFAULT FALSE)');
+            tenant_id VARCHAR(17), run_at TIMESTAMP, run_outcome VARCHAR(24), billing_waived BOOLEAN DEFAULT FALSE)');
         $this->pdo->exec('CREATE TABLE ai_usage_reservation (id VARCHAR(17) PRIMARY KEY, deleted BOOLEAN DEFAULT FALSE,
             tenant_id VARCHAR(17), run_id VARCHAR(17) UNIQUE, workflow_run_id VARCHAR(64), execution_id VARCHAR(36),
             period VARCHAR(7), state VARCHAR(16), auxiliary BOOLEAN, admitted_at TIMESTAMP, settled_at TIMESTAMP)');
@@ -64,13 +62,12 @@ class AiBudgetTest extends TestCase
     private function service(PDO $pdo): AiBudget
     {
         $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-        if ($driver === 'sqlite') $pdo->sqliteCreateFunction('JSON_UNQUOTE', static fn ($value) => $value);
         $definitions = [];
         foreach ([
             'Tenant' => [],
             'ChatwootAccount' => ['tenantId', 'chatwootAccountId'],
             'TenantAiBillingRate' => ['tenantId', 'effectiveFrom', 'effectiveTo', 'overagePolicy', 'billingModel', 'planIncludedCredits'],
-            'ChatwootAiAgentRun' => ['tenantId', 'runAt', 'modelUsage', 'billingWaived'],
+            'ChatwootAiAgentRun' => ['tenantId', 'runAt', 'runOutcome', 'billingWaived'],
             'AiUsageReservation' => ['tenantId', 'runId', 'workflowRunId', 'executionId', 'period', 'state', 'auxiliary', 'admittedAt', 'settledAt'],
         ] as $type => $fields) {
             $attributes = [];
@@ -89,12 +86,7 @@ class AiBudgetTest extends TestCase
         $factory->method('create')->willReturnCallback(static fn ($type) => new BaseEntity($type, $definitions[$type]));
         $composers = [];
         foreach (['Mysql' => MysqlQueryComposer::class, 'Postgresql' => PostgresqlQueryComposer::class] as $platform => $class) {
-            $converters = $this->createStub(FunctionConverterFactory::class);
-            $converters->method('isCreatable')->willReturnCallback(static fn ($name) => $name === 'AI_RUN_OUTCOME');
-            $config = $this->createStub(ConfigDataProvider::class);
-            $config->method('getPlatform')->willReturn($platform);
-            $converters->method('create')->willReturn(new AgentRunOutcome($config));
-            $composers[$platform] = new $class($pdo, $factory, $metadata, $converters);
+            $composers[$platform] = new $class($pdo, $factory, $metadata, $this->createStub(FunctionConverterFactory::class));
         }
         $composer = $composers[$driver === 'pgsql' ? 'Postgresql' : 'Mysql'];
         $query = function ($select) use ($pdo, $composer, $driver, $composers) {
@@ -215,7 +207,7 @@ class AiBudgetTest extends TestCase
     {
         $this->seed(600);
         $this->assertFalse($this->budget->execute($this->admit(1))->allowed);
-        $this->pdo->exec("UPDATE chatwoot_ai_agent_run SET model_usage = '{\"run\":{\"outcome\":\"failed\"}}' WHERE id = 'legacy-0'");
+        $this->pdo->exec("UPDATE chatwoot_ai_agent_run SET run_outcome = 'failed' WHERE id = 'legacy-0'");
         $this->assertTrue($this->budget->execute($this->admit(1))->allowed);
         $this->pdo->exec("UPDATE tenant_ai_billing_rate SET plan_included_credits = 601");
         $this->assertTrue($this->budget->execute($this->admit(2))->allowed);

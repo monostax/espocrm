@@ -44,8 +44,9 @@ class MetadataTest extends TestCase
         $this->assertSame('Tenant', $rate->links->tenant->entity);
         $this->assertTrue($metadata->entityAcl->TenantAiBillingRate->fields->billingModel->onlyAdmin);
         $outcome = $metadata->entityDefs->ChatwootAiAgentRun->fields->runOutcome;
-        $this->assertTrue($outcome->notStorable);
-        $this->assertSame('AI_RUN_OUTCOME:modelUsage', $outcome->select->select);
+        // Stored, so budget admission never parses modelUsage JSON under the tenant lock.
+        $this->assertObjectNotHasProperty('notStorable', $outcome);
+        $this->assertObjectNotHasProperty('select', $outcome);
         foreach (['Mysql', 'Postgresql'] as $platform) {
             $class = $metadata->app->orm->platforms->{$platform}->functionConverterClassNameMap->AI_RUN_OUTCOME;
             $this->assertTrue(is_a($class, \Espo\ORM\QueryComposer\Part\FunctionConverter::class, true));

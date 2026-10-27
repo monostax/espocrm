@@ -12,8 +12,6 @@ use Espo\Core\Utils\Config;
 use Espo\Modules\FeatureCredits\Accounting\ExecutionIdentity;
 use Espo\Modules\FeatureCredits\Accounting\ExecutionRouting;
 use Espo\ORM\EntityManager;
-use Espo\ORM\Query\Part\Condition as Cond;
-use Espo\ORM\Query\Part\Expression as Expr;
 use Espo\ORM\Query\SelectBuilder;
 
 /** Tenant-wide admission, independent of asynchronous usage-event persistence.
@@ -214,11 +212,13 @@ final class AiBudget
         // Exclude ALL reserved identities from historical counts, not just this month:
         // an engagement belongs to its admission month even when it finishes after midnight.
         $reservedIds = SelectBuilder::create()->from('AiUsageReservation')->select('runId')->build();
+        // Stored runOutcome, not the modelUsage JSON: parsing ~10KB blobs per run held
+        // the tenant lock for seconds on large tenants.
         $legacy = $this->entityManager->getRDBRepository('ChatwootAiAgentRun')->where([
             'tenantId' => $tenantId, 'runAt>=' => $period['start'], 'runAt<' => $period['end'],
             'id!=s' => $reservedIds,
             'OR' => [['billingWaived' => false], ['billingWaived' => null]],
-        ])->where(Cond::notEqual(Expr::create("IFNULL:(AI_RUN_OUTCOME:modelUsage, '')"), 'failed'))->count();
+        ])->where(['OR' => [['runOutcome' => null], ['runOutcome!=' => 'failed']]])->count();
         $base = $this->entityManager->getRDBRepository('AiUsageReservation');
         $reserved = $base->where(['tenantId' => $tenantId, 'period' => $period['period'], 'state' => 'reserved'])->count();
         // A later billing waiver also restores the credit. Missing async run rows
