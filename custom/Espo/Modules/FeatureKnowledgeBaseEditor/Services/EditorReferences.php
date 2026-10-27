@@ -24,6 +24,9 @@ use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
 
 class EditorReferences
 {
+    /** User mentions and AI agents (ChatwootAccountUserMembership, aiOnly filter). */
+    private const PRIORITY_TYPES = ['User', 'ChatwootAccountUserMembership'];
+
     private ?array $supportedTypes = null;
 
     public function __construct(
@@ -58,7 +61,9 @@ class EditorReferences
         $this->supportedTypes ??= (new Scopes($this->metadata))->all();
         $search = $this->referenceSearch->parse($query, $this->supportedTypes);
         $results = [];
-        $union = UnionBuilder::create()->all()->order('lastViewedNumber', 'DESC')->order('rank')->order('name');
+        // People and AI agents are what @-mentions are mostly for: list them before records.
+        $union = UnionBuilder::create()->all()->order('priority')->order('lastViewedNumber', 'DESC')
+            ->order('rank')->order('name');
         $queries = [];
         // Rank by the latest views only: grouping a user's whole history (50k+ rows)
         // and inlining every viewed id into each union branch cost seconds per keystroke.
@@ -126,7 +131,8 @@ class EditorReferences
                         Expr::column('name'), ReferenceSearch::wordPattern($term)), true));
                 }
                 $columns = [
-                    'id', 'name', ['VALUE:' . $type, 'entityType'], [(string) $rank, 'rank'],
+                    'id', 'name', ['VALUE:' . $type, 'entityType'],
+                    [in_array($type, self::PRIORITY_TYPES, true) ? '0' : '1', 'priority'], [(string) $rank, 'rank'],
                 ];
                 $union->query($queryBuilder->select([...$columns, ['0', 'lastViewedNumber']])->build());
                 if (!empty($history[$type])) {
