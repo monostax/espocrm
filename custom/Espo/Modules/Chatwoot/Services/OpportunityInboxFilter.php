@@ -139,6 +139,33 @@ class OpportunityInboxFilter
             ])->where($matches ? ['OR' => $matches] : ['id' => []])->distinct();
     }
 
+    /**
+     * Team ACL reads `teamsIds`, which otherwise lazy-loads one query per conversation
+     * (thousands per call). Load the same non-deleted team links in bulk instead, so
+     * checkEntityRead decides on identical data.
+     *
+     * @param Entity[] $conversations
+     */
+    private function preloadTeams(array $conversations): void
+    {
+        $byId = [];
+        foreach ($conversations as $conversation) $byId[$conversation->getId()] = [];
+        foreach (array_chunk(array_keys($byId), 1000) as $ids) {
+            $query = SelectBuilder::create()->from('EntityTeam', 'entityTeam')
+                ->select(['entityId', 'teamId'])
+                ->join('Team', 'team', ['team.id:' => 'entityTeam.teamId', 'team.deleted' => false])
+                ->where(['entityType' => 'ChatwootConversation', 'entityId' => $ids, 'deleted' => false])
+                ->order('teamId')->build();
+            foreach ($this->em->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                $byId[$row['entityId']][] = $row['teamId'];
+            }
+        }
+        foreach ($conversations as $conversation) {
+            $conversation->set('teamsIds', $byId[$conversation->getId()]);
+            $conversation->setFetched('teamsIds', $byId[$conversation->getId()]);
+        }
+    }
+
     /** CRM ownership/team ACL AND live Chatwoot permissions, never an account token. */
     private function visibleConversations(Entity $account, array $inboxes, SelectBuilder $scope): array
     {
@@ -148,8 +175,10 @@ class OpportunityInboxFilter
                 'chatwootAccountId' => $account->getId(),
                 'inboxId' => array_keys($inboxes),
             ])->distinct()->build();
+        $conversations = iterator_to_array($this->em->getRDBRepository('ChatwootConversation')->clone($query)->find());
+        $this->preloadTeams($conversations);
         $candidates = [];
-        foreach ($this->em->getRDBRepository('ChatwootConversation')->clone($query)->find() as $conversation) {
+        foreach ($conversations as $conversation) {
             // The custom CRM select filter handles inbox membership; the entity
             // check additionally enforces the default own/team/shared-record ACL.
             if (!$this->acl->checkEntityRead($conversation)) continue;

@@ -12,7 +12,10 @@ use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Condition as Cond;
+use Espo\ORM\Query\Part\Expression as Expr;
+use Espo\ORM\Query\Part\Where\Comparison as Cmp;
 use Espo\ORM\Query\SelectBuilder;
+use Espo\ORM\Query\UnionBuilder;
 use Espo\Tools\Stream\MassNotePreparator;
 
 /** Reuses the Note discussion wire fields introduced for Opportunities. Cursors are activity-specific. */
@@ -42,23 +45,31 @@ class ActivityDiscussion
         ];
     }
 
+    /**
+     * Uncorrelated parent-id sets, so MariaDB materializes the few matching posts and
+     * drives into the parent by primary key. Correlated EXISTS made it probe every
+     * parent in the tenant (88k contacts, ~1.5s) through the ACL subqueries first.
+     */
     public function applyFilter(SelectBuilder $query, string $type, bool $unread): void
     {
-        $alias = lcfirst($type);
-        $notes = SelectBuilder::create()->from('Note', 'activityPost')->select('id')->where([
-            'parentType' => $type, 'parentId:' => "$alias.id", 'type' => 'Post', 'opportunityPostDeleted' => false,
+        $notes = SelectBuilder::create()->from('Note', 'activityPost')->select('parentId', 'id')->where([
+            'parentType' => $type, 'type' => 'Post', 'opportunityPostDeleted' => false,
         ]);
         if ($unread) {
             $notes->where($this->unreadWhere('activityPost'));
-            $marked = SelectBuilder::create()->from('ActivityReadState')->select('id')->where([
-                'parentType' => $type, 'parentId:' => "$alias.id", 'userId' => $this->user->getId(),
+            $marked = SelectBuilder::create()->from('ActivityReadState')->select('parentId', 'id')->where([
+                'parentType' => $type, 'userId' => $this->user->getId(),
                 'threadKey' => 'main', 'isMarkedUnread' => true,
             ])->build();
-            $query->where(Cond::or(Cond::exists($notes->build()), Cond::exists($marked)));
+            $union = UnionBuilder::create()->query($notes->build())->query($marked)->build();
+            $ids = SelectBuilder::create()->fromQuery($union, 'activityUnread')->select('id')->build();
         } else {
-            $notes->where(['opportunityMentionUserIds*' => '%"' . $this->user->getId() . '"%']);
-            $query->where(Cond::exists($notes->build()));
+            $ids = $notes->where([
+                'opportunityMentionUserIds!=' => null,
+                'opportunityMentionUserIds*' => '%"' . $this->user->getId() . '"%',
+            ])->build();
         }
+        $query->where(Cmp::in(Expr::column('id'), $ids));
     }
 
     public function states(string $type, array $ids): array

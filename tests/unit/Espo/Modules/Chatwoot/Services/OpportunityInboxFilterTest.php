@@ -49,6 +49,7 @@ class OpportunityInboxFilterTest extends TestCase
     private bool $tenantMember = true;
     private bool $tokenAvailable = true;
     private bool $apiFails = false;
+    private array $aclTeams = [];
 
     protected function setUp(): void
     {
@@ -62,6 +63,8 @@ class OpportunityInboxFilterTest extends TestCase
             'ChatwootConversationOpportunity' => ['id', 'opportunityId', 'chatwootConversationId', 'deleted'],
             'ChatwootUser' => ['id', 'assignedUserId', 'platformId', 'userAccessToken', 'deleted'],
             'ChatwootPlatform' => ['id', 'backendUrl', 'deleted'],
+            'EntityTeam' => ['id', 'entityId', 'entityType', 'teamId', 'deleted'],
+            'Team' => ['id', 'deleted'],
         ];
         foreach ($tables as $type => $fields) {
             $columns = [];
@@ -72,6 +75,7 @@ class OpportunityInboxFilterTest extends TestCase
             }
             $this->pdo->exec('CREATE TABLE ' . $this->snake($type) . ' (' . implode(', ', $columns) . ')');
         }
+        $this->defs['ChatwootConversation']['attributes']['teamsIds'] = ['type' => 'jsonArray', 'notStorable' => true];
         $this->defs['Opportunity']['relations']['chatwootConversations'] = [
             'type' => 'manyMany', 'entity' => 'ChatwootConversation',
             'relationName' => 'ChatwootConversationOpportunity', 'midKeys' => ['opportunityId', 'chatwootConversationId'],
@@ -105,8 +109,10 @@ class OpportunityInboxFilterTest extends TestCase
         $acl->method('checkScope')->willReturnCallback(fn ($type) => !in_array($type, $this->hiddenScopes));
         $acl->method('checkField')->willReturnCallback(fn ($type, $field) => !in_array("$type.$field", $this->hiddenFields));
         $acl->method('checkLink')->willReturnCallback(fn ($type, $field) => !in_array("$type.$field", $this->hiddenFields));
-        $acl->method('checkEntityRead')->willReturnCallback(fn ($entity) =>
-            $this->admin || ($entity->get('readable') && $entity->get('entityReadable') !== 0));
+        $acl->method('checkEntityRead')->willReturnCallback(function ($entity) {
+            $this->aclTeams[$entity->getId()] = $entity->get('teamsIds');
+            return $this->admin || ($entity->get('readable') && $entity->get('entityReadable') !== 0);
+        });
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn('viewer');
         $user->method('isActive')->willReturn(true);
@@ -248,6 +254,23 @@ class OpportunityInboxFilterTest extends TestCase
             self::assertSame([['id' => 'a', 'name' => 'A', 'count' => 2], ['id' => 'b', 'name' => 'B', 'count' => 1]], $this->counts());
             self::assertSame(['one', 'two'], $this->ids());
             self::assertSame(['one'], $this->ids('b'));
+        }
+    }
+
+    public function testTeamAclSeesBulkLoadedLiveTeamLinksOnly(): void
+    {
+        $this->insert('Team', ['id' => 'live']);
+        $this->insert('Team', ['id' => 'gone', 'deleted' => 1]);
+        $this->insert('EntityTeam', ['id' => 'l1', 'entityId' => 'c1', 'entityType' => 'ChatwootConversation', 'teamId' => 'live']);
+        $this->insert('EntityTeam', ['id' => 'l2', 'entityId' => 'c1', 'entityType' => 'ChatwootConversation', 'teamId' => 'gone']);
+        $this->insert('EntityTeam', ['id' => 'l3', 'entityId' => 'c2', 'entityType' => 'ChatwootConversation', 'teamId' => 'live', 'deleted' => 1]);
+        $this->insert('EntityTeam', ['id' => 'l4', 'entityId' => 'c3', 'entityType' => 'Contact', 'teamId' => 'live']);
+        foreach ([$this->mysql, $this->postgres] as $this->composer) {
+            $this->aclTeams = [];
+            $this->counts();
+            self::assertSame(['live'], $this->aclTeams['c1']);
+            self::assertSame([], $this->aclTeams['c2']);
+            self::assertSame([], $this->aclTeams['c3']);
         }
     }
 

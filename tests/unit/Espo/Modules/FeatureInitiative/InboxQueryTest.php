@@ -109,6 +109,13 @@ class InboxQueryTest extends TestCase
             VALUES ('post-a', 'Initiative', 'a', 'Post', 'other', 1), ('post-c', 'Initiative', 'c', 'Post', 'other', 2)");
     }
 
+    /** SQLite accepts the same SQL but not the parentheses around UNION members. */
+    private function sqlite(string $sql): string
+    {
+        $sql = str_replace(['((SELECT', ') UNION (SELECT'], ['(SELECT', ' UNION SELECT'], $sql);
+        return preg_replace('/\)\) AS ([`"])activityUnread/', ') AS $1activityUnread', $sql);
+    }
+
     private function sqlName(string $name): string
     {
         return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
@@ -119,7 +126,7 @@ class InboxQueryTest extends TestCase
         self::assertSame(['id'], $this->scope->getRaw()['select']);
         foreach ($this->composers as $composer) {
             $query = SelectBuilder::create()->from('Initiative')->select(['id'])->where(['id=s' => $this->scope])->order('id')->build();
-            self::assertSame(['a', 'b'], $this->pdo->query($composer->composeSelect($query))->fetchAll(PDO::FETCH_COLUMN));
+            self::assertSame(['a', 'b'], $this->pdo->query($this->sqlite($composer->composeSelect($query)))->fetchAll(PDO::FETCH_COLUMN));
         }
     }
 
@@ -130,7 +137,7 @@ class InboxQueryTest extends TestCase
         $query->select($key, 'groupKey')->select(Expr::count(Expr::column('id')), 'count')->group(Expr::alias('groupKey'))->order(Expr::alias('groupKey'));
         $result = null;
         foreach ($this->composers as $composer) {
-            $rows = $this->pdo->query($composer->composeSelect($query->build()))->fetchAll(PDO::FETCH_KEY_PAIR);
+            $rows = $this->pdo->query($this->sqlite($composer->composeSelect($query->build())))->fetchAll(PDO::FETCH_KEY_PAIR);
             if ($result !== null) self::assertSame($result, $rows);
             $result = $rows;
         }
@@ -152,7 +159,7 @@ class InboxQueryTest extends TestCase
         [$query, $key] = $this->inbox->groupedQuery($this->scope, $request, 'readStatus');
         $query->select('id')->select($key, 'groupKey')->order(Expr::alias('groupKey'), 'DESC')->limit(0, 1);
         foreach ($this->composers as $composer) {
-            self::assertSame(['a'], $this->pdo->query($composer->composeSelect($query->build()))->fetchAll(PDO::FETCH_COLUMN));
+            self::assertSame(['a'], $this->pdo->query($this->sqlite($composer->composeSelect($query->build())))->fetchAll(PDO::FETCH_COLUMN));
         }
     }
 }

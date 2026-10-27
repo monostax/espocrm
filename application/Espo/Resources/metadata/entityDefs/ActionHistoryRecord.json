@@ -74,5 +74,10 @@
         "textFilterFields": ["ipAddress", "userName"],
         "countDisabled": true
     },
+    "indexes": {
+        "userNumber": {
+            "columns": ["userId", "deleted", "number"]
+        }
+    },
     "hooksDisabled": true
 }

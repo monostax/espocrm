@@ -64,24 +64,51 @@ class Service
 
         $maxSize = $maxSize ?? 0;
         $offset = $offset ?? 0;
+        $wanted = $offset + $maxSize + 1;
 
-        $collection = $this->entityManager
-            ->getRDBRepositoryByClass(ActionHistoryRecord::class)
-            ->where([
+        // Walk the user's history newest-first on (userId, deleted, number) and stop once
+        // enough distinct targets are seen. GROUP BY over the whole history read every
+        // row the user ever viewed (50k+ for active users) on each call.
+        $chunkSize = max(200, $wanted * 10);
+        $latest = [];
+        $before = null;
+
+        do {
+            $where = [
                 'userId' => $this->user->getId(),
                 'action' => [Action::READ, Action::CREATE],
                 'targetType' => $targetTypeList,
-            ])
-            ->order('MAX:' . Field::CREATED_AT, 'DESC')
-            ->select([
-                'targetId',
-                'targetType',
-                'MAX:number',
-                ['MAX:createdAt', Field::CREATED_AT],
-            ])
-            ->group(['targetId', 'targetType'])
-            ->limit($offset, $maxSize + 1)
-            ->find();
+            ];
+
+            if ($before !== null) {
+                $where['number<'] = $before;
+            }
+
+            $rows = $this->entityManager
+                ->getRDBRepositoryByClass(ActionHistoryRecord::class)
+                ->where($where)
+                ->select(['targetId', 'targetType', 'number', Field::CREATED_AT])
+                ->order('number', 'DESC')
+                ->limit(0, $chunkSize)
+                ->find();
+
+            $count = 0;
+
+            foreach ($rows as $row) {
+                $count++;
+                $before = $row->get('number');
+                $key = $row->get('targetType') . ':' . $row->get('targetId');
+
+                if (!isset($latest[$key]) && count($latest) < $wanted) {
+                    $latest[$key] = $row;
+                }
+            }
+        } while ($count === $chunkSize && count($latest) < $wanted);
+
+        $collection = $this->entityManager->getCollectionFactory()->create(
+            ActionHistoryRecord::ENTITY_TYPE,
+            array_slice(array_values($latest), $offset, $maxSize + 1)
+        );
 
         foreach ($collection as $entity) {
             $this->listLoadProcessor->process($entity);

@@ -81,6 +81,10 @@
         },
         "opportunityUnread": {
             "columns": ["parentType", "parentId", "type", "deleted", "number"]
+        },
+        "opportunityMention": {
+            "columns": ["parentType", "opportunityMentionUserIds"],
+            "lengths": [null, 4]
         }
     }
 }

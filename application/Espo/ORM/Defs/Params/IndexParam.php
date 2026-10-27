@@ -53,4 +53,10 @@ class IndexParam
      * Flags.
      */
     public const FLAGS = 'flags';
+
+    /**
+     * Column prefix lengths, positionally matching columns (null for a full column).
+     * Lets text columns be indexed on MySQL/MariaDB; ignored by PostgreSQL.
+     */
+    public const LENGTHS = 'lengths';
 }

@@ -54,7 +54,7 @@ class OpportunityReadStateService
         }
 
         $userId = $this->user->getId();
-        $mention = ['opportunityMentionUserIds*' => '%"' . $userId . '"%'];
+        $mention = self::mentionWhere($userId);
         $scope = SelectBuilder::create()->clone($queryBuilder->build())
             ->select(['id'])->order([])->limit(null, null)->build();
         $posts = SelectBuilder::create()
@@ -66,55 +66,68 @@ class OpportunityReadStateService
                 'OR' => [['createdById!=' => $userId], ['createdById' => null]],
             ])->where(['type' => OpportunityStreamEvents::TYPES])->where($this->eventAccess->where($this->user));
 
-        if ($onlyUnread) {
-            $posts->join('Opportunity', 'unreadOpportunity', [
-                'unreadOpportunity.id:' => 'streamPost.parentId',
-                'unreadOpportunity.deleted' => false,
-            ]);
-            $posts->leftJoin('OpportunityReadState', 'readState', [
-                'readState.opportunityId:' => 'streamPost.parentId',
-                'readState.userId' => $userId,
-                'readState.deleted' => false,
-            ])->where($this->personalUnreadWhere($userId))->where([
-                'OR' => [
-                    $mention,
-                    [
-                        'unreadOpportunity.status!=' => ['Won', 'Lost'],
-                        'OR' => [
-                            ['unreadOpportunity.assignedUserId' => null],
-                            ['unreadOpportunity.assignedUserId' => $userId],
-                            ['readState.isParticipant' => true],
-                        ],
-                    ],
-                ],
-            ]);
-        } else {
-            // Like the conversation Mentions inbox, retain read mentions too.
-            $posts->where($mention);
-        }
-
-        // GROUP BY makes this a one-row-per-opportunity derived table. In particular,
+        // GROUP BY makes each one-row-per-opportunity derived table. In particular,
         // MariaDB must not re-evaluate the event ACL and unread predicate for every
         // opportunity, as it did with the correlated EXISTS inside the manual-mark OR.
-        $alias = $onlyUnread ? 'unreadStream' : 'mentionedStream';
-        $queryBuilder->leftJoin($posts->build(), $alias,
-            Expr::equal(Expr::alias("$alias.parentId"), Expr::column('id')));
-        $condition = Cond::not(Cond::equal(Expr::alias("$alias.parentId"), null));
-        if ($onlyUnread) {
-            // Manual reminders also apply to closed, unrelated, and empty streams.
-            $markedUnread = SelectBuilder::create()
-                ->from('OpportunityReadState', 'markedUnreadState')
-                ->select('opportunityId')->group('opportunityId')
-                ->where([
-                    'userId' => $userId,
-                    'isMarkedUnread' => true,
-                    'deleted' => false,
-                ]);
-            $queryBuilder->leftJoin($markedUnread->build(), 'manualUnread',
-                Expr::equal(Expr::alias('manualUnread.opportunityId'), Expr::column('id')));
-            $condition = Cond::or($condition,
-                Cond::not(Cond::equal(Expr::alias('manualUnread.opportunityId'), null)));
+        if (!$onlyUnread) {
+            // Like the conversation Mentions inbox, retain read mentions too.
+            $queryBuilder->leftJoin($posts->where($mention)->build(), 'mentionedStream',
+                Expr::equal(Expr::alias('mentionedStream.parentId'), Expr::column('id')));
+            $queryBuilder->where(Cond::not(Cond::equal(Expr::alias('mentionedStream.parentId'), null)));
+
+            return;
         }
+
+        $posts->join('Opportunity', 'unreadOpportunity', [
+            'unreadOpportunity.id:' => 'streamPost.parentId',
+            'unreadOpportunity.deleted' => false,
+        ])->where([
+            'OR' => [
+                $mention,
+                [
+                    'unreadOpportunity.status!=' => ['Won', 'Lost'],
+                    'OR' => [
+                        ['unreadOpportunity.assignedUserId' => null],
+                        ['unreadOpportunity.assignedUserId' => $userId],
+                        ['readState.isParticipant' => true],
+                    ],
+                ],
+            ],
+        ]);
+        $readState = [
+            'readState.opportunityId:' => 'streamPost.parentId',
+            'readState.userId' => $userId,
+            'readState.deleted' => false,
+        ];
+        // Main-stream unread requires the viewer's read state, so an inner join drives it
+        // from their few states; thread replies come from the thread index. A single OR
+        // of both under a LEFT JOIN read every note in the database.
+        $stream = SelectBuilder::create()->clone($posts->build())
+            ->join('OpportunityReadState', 'readState', $readState)
+            ->where($this->streamUnreadWhere());
+        $threads = SelectBuilder::create()->clone($posts->build())
+            ->leftJoin('OpportunityReadState', 'readState', $readState)
+            ->where(OpportunityThreadState::unreadWhere($userId, 'streamPost'));
+        $condition = null;
+        foreach (['unreadStream' => $stream, 'unreadThread' => $threads] as $alias => $unread) {
+            $queryBuilder->leftJoin($unread->build(), $alias,
+                Expr::equal(Expr::alias("$alias.parentId"), Expr::column('id')));
+            $joined = Cond::not(Cond::equal(Expr::alias("$alias.parentId"), null));
+            $condition = $condition ? Cond::or($condition, $joined) : $joined;
+        }
+        // Manual reminders also apply to closed, unrelated, and empty streams.
+        $markedUnread = SelectBuilder::create()
+            ->from('OpportunityReadState', 'markedUnreadState')
+            ->select('opportunityId')->group('opportunityId')
+            ->where([
+                'userId' => $userId,
+                'isMarkedUnread' => true,
+                'deleted' => false,
+            ]);
+        $queryBuilder->leftJoin($markedUnread->build(), 'manualUnread',
+            Expr::equal(Expr::alias('manualUnread.opportunityId'), Expr::column('id')));
+        $condition = Cond::or($condition,
+            Cond::not(Cond::equal(Expr::alias('manualUnread.opportunityId'), null)));
 
         $queryBuilder->where($condition);
     }
@@ -131,7 +144,7 @@ class OpportunityReadStateService
         }
 
         $userId = $this->user->getId();
-        $mention = ['opportunityMentionUserIds*' => '%"' . $userId . '"%'];
+        $mention = self::mentionWhere($userId);
         $scope = SelectBuilder::create()->clone($queryBuilder->build())
             ->select(['id'])->order([])->limit(null, null)->build();
         $posts = SelectBuilder::create()
@@ -652,19 +665,30 @@ class OpportunityReadStateService
         ];
     }
 
+    /** The NOT NULL guard lets IDX_OPPORTUNITY_MENTION find the few mention notes; LIKE alone reads every post. */
+    private static function mentionWhere(string $userId): array
+    {
+        return ['opportunityMentionUserIds!=' => null, 'opportunityMentionUserIds*' => '%"' . $userId . '"%'];
+    }
+
     private function personalUnreadWhere(string $userId): array
     {
         return ['OR' => [
-            [
-                'opportunityThreadRootId' => null,
-                'readState.lastSeenAt!=' => null,
-                'OR' => [
-                    ['readState.lastSeenNumber!=' => null, 'number>:' => 'readState.lastSeenNumber'],
-                    ['readState.lastSeenNumber' => null, 'createdAt>:' => 'readState.lastSeenAt'],
-                ],
-            ],
+            $this->streamUnreadWhere(),
             OpportunityThreadState::unreadWhere($userId, 'streamPost'),
         ]];
+    }
+
+    private function streamUnreadWhere(): array
+    {
+        return [
+            'opportunityThreadRootId' => null,
+            'readState.lastSeenAt!=' => null,
+            'OR' => [
+                ['readState.lastSeenNumber!=' => null, 'number>:' => 'readState.lastSeenNumber'],
+                ['readState.lastSeenNumber' => null, 'createdAt>:' => 'readState.lastSeenAt'],
+            ],
+        ];
     }
 
     private function latestOtherPost(string $id, string $userId): ?Entity

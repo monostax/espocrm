@@ -105,4 +105,14 @@ class IndexDefs
     {
         return $this->data[IndexParam::FLAGS] ?? [];
     }
+
+    /**
+     * Get column prefix lengths.
+     *
+     * @return array<int, ?int>
+     */
+    public function getLengthList(): array
+    {
+        return $this->data[IndexParam::LENGTHS] ?? [];
+    }
 }

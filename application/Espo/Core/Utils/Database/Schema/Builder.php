@@ -395,7 +395,10 @@ class Builder
                 continue;
             }
 
-            $table->addIndex($columns, $indexDefs->getKey(), $indexDefs->getFlagList());
+            $lengths = $indexDefs->getLengthList();
+
+            $table->addIndex($columns, $indexDefs->getKey(), $indexDefs->getFlagList(),
+                $lengths ? ['lengths' => $lengths] : []);
         }
     }
 
