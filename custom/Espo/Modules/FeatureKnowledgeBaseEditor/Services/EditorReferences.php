@@ -26,6 +26,8 @@ class EditorReferences
 {
     /** User mentions and AI agents (ChatwootAccountUserMembership, aiOnly filter). */
     private const PRIORITY_TYPES = ['User', 'ChatwootAccountUserMembership'];
+    /** ActionHistoryRecord action for a record reference the user added to editor content. */
+    public const MENTION_ACTION = 'mention';
 
     private ?array $supportedTypes = null;
 
@@ -61,28 +63,15 @@ class EditorReferences
         $this->supportedTypes ??= (new Scopes($this->metadata))->all();
         $search = $this->referenceSearch->parse($query, $this->supportedTypes);
         $results = [];
-        // People and AI agents are what @-mentions are mostly for: list them before records.
-        $union = UnionBuilder::create()->all()->order('priority')->order('lastViewedNumber', 'DESC')
-            ->order('rank')->order('name');
+        // What the user mentioned recently comes first; then people and AI agents, which
+        // are what @-mentions are mostly for, before records.
+        $union = UnionBuilder::create()->all()->order('lastMentionedNumber', 'DESC')->order('priority')
+            ->order('lastViewedNumber', 'DESC')->order('rank')->order('name');
         $queries = [];
-        // Rank by the latest views only: grouping a user's whole history (50k+ rows)
-        // and inlining every viewed id into each union branch cost seconds per keystroke.
-        $recentViews = SelectBuilder::create()->from('ActionHistoryRecord')
-            ->select(['targetType', 'targetId', 'number'])
-            ->where(['userId' => $this->user->getId(), 'deleted' => false, 'action' => ['read', 'create'],
-                'targetType' => $nextActionParent ? array_values(array_intersect($search['types'], ['Task', 'Meeting', 'Call'])) : $search['types']])
-            ->order('number', 'DESC')->limit(0, 2000)->build();
-        $historyQuery = SelectBuilder::create()->fromQuery($recentViews, 'recentView')
-            ->select([
-                [Expr::alias('recentView.targetType'), 'targetType'],
-                [Expr::alias('recentView.targetId'), 'targetId'],
-                [Expr::max(Expr::alias('recentView.number')), 'lastViewedNumber'],
-            ])
-            ->group(Expr::alias('recentView.targetType'))->group(Expr::alias('recentView.targetId'))->build();
-        $history = [];
-        foreach ($this->em->getQueryExecutor()->execute($historyQuery)->fetchAll() as $row) {
-            $history[$row['targetType']][$row['targetId']] = (int) $row['lastViewedNumber'];
-        }
+        $historyTypes = $nextActionParent
+            ? array_values(array_intersect($search['types'], ['Task', 'Meeting', 'Call'])) : $search['types'];
+        $viewed = $this->history(['read', 'create'], $historyTypes, 2000);
+        $mentioned = $this->history([self::MENTION_ACTION], $historyTypes, 200);
         $this->supportedTypes ??= (new Scopes($this->metadata))->all();
         foreach ($this->supportedTypes as $rank => $type) {
             if (!in_array($type, $search['types'], true)) continue;
@@ -134,16 +123,16 @@ class EditorReferences
                     'id', 'name', ['VALUE:' . $type, 'entityType'],
                     [in_array($type, self::PRIORITY_TYPES, true) ? '0' : '1', 'priority'], [(string) $rank, 'rank'],
                 ];
-                $union->query($queryBuilder->select([...$columns, ['0', 'lastViewedNumber']])->build());
-                if (!empty($history[$type])) {
-                    $mapping = [Expr::column('id')];
-                    foreach ($history[$type] as $id => $number) array_push($mapping, $id, $number);
-                    $mapping[] = 0;
-                    $lastViewed = Expr::map(...$mapping);
-                    // Only sort the user's viewed IDs, never the whole matching table.
-                    $union->query($queryBuilder->where(['id' => array_keys($history[$type])])
-                        ->order([])->order(Expr::alias('lastViewedNumber'), 'DESC')->order('name')
-                        ->select([...$columns, [$lastViewed, 'lastViewedNumber']])->build());
+                $union->query($queryBuilder
+                    ->select([...$columns, ['0', 'lastMentionedNumber'], ['0', 'lastViewedNumber']])->build());
+                $recent = ($mentioned[$type] ?? []) + ($viewed[$type] ?? []);
+                if ($recent) {
+                    // Only sort the user's mentioned/viewed IDs, never the whole matching table.
+                    $union->query($queryBuilder->where(['id' => array_keys($recent)])
+                        ->order([])->order(Expr::alias('lastMentionedNumber'), 'DESC')
+                        ->order(Expr::alias('lastViewedNumber'), 'DESC')->order('name')
+                        ->select([...$columns, [self::lastNumber($mentioned[$type] ?? []), 'lastMentionedNumber'],
+                            [self::lastNumber($viewed[$type] ?? []), 'lastViewedNumber']])->build());
                 }
             } catch (Forbidden) { continue; }
         }
@@ -176,11 +165,76 @@ class EditorReferences
             if (!$entity) continue;
             $results[] = [
                 'kind' => 'record', 'entityType' => $type, 'recordId' => $entity->getId(), 'label' => $entity->get('name'),
+                'recentlyMentioned' => (bool) $row['lastMentionedNumber'],
                 'recentlyViewed' => (bool) $row['lastViewedNumber'],
                 ...$this->visual($entity),
             ];
         }
         return $results;
+    }
+
+    /**
+     * Latest history number per target, from the user's newest rows only: grouping a user's
+     * whole history (50k+ rows) and inlining every id into each union branch cost seconds per keystroke.
+     */
+    private function history(array $actions, array $types, int $limit): array
+    {
+        $recent = SelectBuilder::create()->from('ActionHistoryRecord')
+            ->select(['targetType', 'targetId', 'number'])
+            ->where(['userId' => $this->user->getId(), 'deleted' => false, 'action' => $actions, 'targetType' => $types])
+            ->order('number', 'DESC')->limit(0, $limit)->build();
+        $query = SelectBuilder::create()->fromQuery($recent, 'recentView')
+            ->select([
+                [Expr::alias('recentView.targetType'), 'targetType'],
+                [Expr::alias('recentView.targetId'), 'targetId'],
+                [Expr::max(Expr::alias('recentView.number')), 'lastNumber'],
+            ])
+            ->group(Expr::alias('recentView.targetType'))->group(Expr::alias('recentView.targetId'))->build();
+        $history = [];
+        foreach ($this->em->getQueryExecutor()->execute($query)->fetchAll() as $row) {
+            $history[$row['targetType']][$row['targetId']] = (int) $row['lastNumber'];
+        }
+        return $history;
+    }
+
+    private static function lastNumber(array $numbers): Expr|string
+    {
+        if (!$numbers) return '0';
+        $mapping = [Expr::column('id')];
+        foreach ($numbers as $id => $number) array_push($mapping, $id, $number);
+        $mapping[] = 0;
+        return Expr::map(...$mapping);
+    }
+
+    /** The user's ten latest mentioned records that are still available, newest first. */
+    public function recentMentions(): array
+    {
+        $this->supportedTypes ??= (new Scopes($this->metadata))->all();
+        $latest = [];
+        foreach ($this->history([self::MENTION_ACTION], $this->supportedTypes, 200) as $type => $ids) {
+            foreach ($ids as $id => $number) {
+                $latest[] = [$number, ['kind' => 'record', 'entityType' => $type, 'recordId' => (string) $id]];
+            }
+        }
+        usort($latest, fn ($a, $b) => $b[0] <=> $a[0]);
+        // resolve() keeps the input order and applies the same ACL as every other reference.
+        $resolved = $this->resolve(array_column(array_slice($latest, 0, 10), 1));
+        return array_values(array_filter($resolved, fn ($ref) => $ref['available']));
+    }
+
+    /** Feeds "Mentioned recently". Search re-applies ACL, so this history never exposes a target. */
+    public function logMentions(array $refs): void
+    {
+        if ($this->user->isSystem()) return;
+        foreach ($refs as $ref) {
+            $this->em->createEntity('ActionHistoryRecord', [
+                'action' => self::MENTION_ACTION, 'userId' => $this->user->getId(),
+                'targetType' => $ref['entityType'], 'targetId' => $ref['recordId'],
+                'authTokenId' => $this->user->get('authTokenId'),
+                'authLogRecordId' => $this->user->get('authLogRecordId'),
+                'ipAddress' => $this->user->get('ipAddress'),
+            ]);
+        }
     }
 
     /** One ACL-filtered select per entity group, never one lookup per chip. */

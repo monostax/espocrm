@@ -24,19 +24,29 @@ class ReferenceIndex
         $this->em->getQueryExecutor()->execute($query);
     }
 
-    /** Runs in the source entity's transactional save, after the content is persisted. */
-    public function replace(Entity $source): void
+    /**
+     * Runs in the source entity's transactional save, after the content is persisted.
+     * Returns the record references that were not indexed for this source before.
+     */
+    public function replace(Entity $source): array
     {
         [$field, $state] = References::FIELDS[$source->getEntityType()];
         $refs = References::fromEntity($source);
+        $indexed = [];
+        $rows = $this->em->getRDBRepository('EditorReferenceIndex')->select(['targetType', 'targetId'])
+            ->where(['sourceType' => $source->getEntityType(), 'sourceId' => $source->getId()])->find();
+        foreach ($rows as $row) $indexed[$row->get('targetType') . ':' . $row->get('targetId')] = true;
         $this->remove($source);
+        $added = [];
         foreach ($refs as $ref) {
             if ($ref['kind'] !== 'record') continue;
             $this->em->createEntity('EditorReferenceIndex', [
                 'sourceType' => $source->getEntityType(), 'sourceId' => $source->getId(), 'sourceField' => $field,
                 'targetType' => $ref['entityType'], 'targetId' => $ref['recordId'],
             ]);
+            if (!isset($indexed[$ref['entityType'] . ':' . $ref['recordId']])) $added[] = $ref;
         }
+        return $added;
     }
 
     public function list(string $type, string $id, string $cursor): array

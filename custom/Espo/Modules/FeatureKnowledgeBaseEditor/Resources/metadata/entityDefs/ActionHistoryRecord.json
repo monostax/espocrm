@@ -1,4 +1,9 @@
 {
+    "fields": {
+        "action": {
+            "options": ["__APPEND__", "mention"]
+        }
+    },
     "indexes": {
         "editorReferenceHistory": {
             "columns": ["userId", "deleted", "action", "targetType", "targetId", "number"]
