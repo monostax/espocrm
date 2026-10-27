@@ -1,4 +1,5 @@
 {
+    "versionNumberNotNull": true,
     "fields": {
         "accountWebsite": {
             "type": "foreign",

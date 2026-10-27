@@ -556,6 +556,13 @@ class Converter
                 CoreAttributeParam::NOT_EXPORTABLE => true,
                 AttributeParam::DEFAULT => 0,
             ];
+
+            // Entities whose column was pinned NOT NULL DEFAULT 1 must declare it, or every
+            // soft rebuild reverts the pin and rewrites the whole table.
+            if ($this->metadata->get(['entityDefs', $entityType, 'versionNumberNotNull'])) {
+                $ormMetadata[$entityType][EntityParam::ATTRIBUTES][Field::VERSION_NUMBER][AttributeParam::NOT_NULL] = true;
+                $ormMetadata[$entityType][EntityParam::ATTRIBUTES][Field::VERSION_NUMBER][AttributeParam::DEFAULT] = 1;
+            }
         }
 
         return $ormMetadata;
