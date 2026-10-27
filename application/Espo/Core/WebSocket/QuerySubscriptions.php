@@ -11,10 +11,14 @@ use React\EventLoop\LoopInterface;
 /** Authorized API projections on the native socket. Only hashes/control frames leave the server. */
 final class QuerySubscriptions
 {
-    // Every live-record change dirties every projection, so under steady churn
-    // each viewer's reads re-ran back to back. Coalesce to one run per window;
-    // a quiet projection still refreshes on the next 0.25s drain.
+    // Every live-record change in a tenant dirties its viewers' projections, so
+    // under steady churn reads re-ran back to back. Coalesce to one run per
+    // window; a quiet projection still refreshes on the next 0.25s drain.
+    // Sidebar counts (COUNT queries, ~64% of checks, <10% changed) and static
+    // inbox metadata/options tolerate longer windows than lists.
     private const COOLDOWN = 5.0;
+    private const COUNTS_COOLDOWN = 30.0;
+    private const STATIC_COOLDOWN = 60.0;
 
     private array $entries = [];
     private int $running = 0;
@@ -44,7 +48,7 @@ final class QuerySubscriptions
             'invalidationTopic' => $config['invalidationTopic'],
             'fingerprint' => null, 'initialized' => false, 'denied' => false,
             'dirty' => true, 'process' => null, 'lastRun' => 0, 'tenantIds' => null,
-            'path' => self::pathOf($topic),
+            'path' => $path = self::pathOf($topic), 'cooldown' => self::cooldownOf($path),
         ];
         $this->schedule();
     }
@@ -117,7 +121,7 @@ final class QuerySubscriptions
         foreach ($this->entries as $entries) {
             foreach ($entries as $entry) {
                 if (!$entry->dirty || $entry->process) continue;
-                $ready = $entry->lastRun + self::COOLDOWN;
+                $ready = $entry->lastRun + $entry->cooldown;
                 if ($ready <= $now) $waiting[] = $entry;
                 else $cooling = min($cooling ?? $ready, $ready);
             }
@@ -236,6 +240,13 @@ final class QuerySubscriptions
     private function countPath(string $path, string $name): void
     {
         $this->pathStats[$path][$name] = ($this->pathStats[$path][$name] ?? 0) + 1;
+    }
+
+    private static function cooldownOf(string $path): float
+    {
+        if (preg_match('~/(?:counts|navigationCounts|notReadCount)$~D', $path)) return self::COUNTS_COOLDOWN;
+        if (preg_match('~/(?:inboxMetadata|inboxOptions|metadata|options)$~D', $path)) return self::STATIC_COOLDOWN;
+        return self::COOLDOWN;
     }
 
     /** The projection's API path with record ids folded, e.g. /Opportunity/:id/stream. */
