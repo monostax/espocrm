@@ -21,6 +21,7 @@ final class QuerySubscriptions
     private ?\React\EventLoop\TimerInterface $scheduled = null;
     private float $scheduledAt = 0.0;
     private array $stats = [];
+    private array $pathStats = [];
 
     public function __construct(private string $php, private LoopInterface $loop)
     {
@@ -43,6 +44,7 @@ final class QuerySubscriptions
             'invalidationTopic' => $config['invalidationTopic'],
             'fingerprint' => null, 'initialized' => false, 'denied' => false,
             'dirty' => true, 'process' => null, 'lastRun' => 0, 'tenantIds' => null,
+            'path' => self::pathOf($topic),
         ];
         $this->schedule();
     }
@@ -145,6 +147,7 @@ final class QuerySubscriptions
         foreach ($batch as $candidate) $candidate->process = $process;
         $this->count('processes');
         $this->count('checks', count($batch));
+        foreach ($batch as $candidate) $this->countPath($candidate->path, 'checks');
         $output = '';
         try {
             $process->start($this->loop);
@@ -218,7 +221,10 @@ final class QuerySubscriptions
             $entry->initialized = true;
             $entry->denied = false;
             $entry->fingerprint = $result['fingerprint'];
-            if ($changed) $this->count('changed');
+            if ($changed) {
+                $this->count('changed');
+                $this->countPath($entry->path, 'changed');
+            }
         }
     }
 
@@ -227,23 +233,44 @@ final class QuerySubscriptions
         $this->stats[$name] = ($this->stats[$name] ?? 0) + $by;
     }
 
+    private function countPath(string $path, string $name): void
+    {
+        $this->pathStats[$path][$name] = ($this->pathStats[$path][$name] ?? 0) + 1;
+    }
+
+    /** The projection's API path with record ids folded, e.g. /Opportunity/:id/stream. */
+    private static function pathOf(string $topic): string
+    {
+        if (!str_starts_with($topic, 'liveQuery.')) return 'other';
+        $data = json_decode((string) base64_decode(strtr(substr($topic, 10), '-_', '+/'), true), true);
+        if (!is_array($data) || !is_string($data['path'] ?? null)) return 'other';
+        return (string) preg_replace('~/(?:[0-9a-f]{17}|\d+)(?=/|$)~', '/:id', $data['path']);
+    }
+
     /** One stdout line per minute: the counters that size the next scaling phase. */
     private function report(): void
     {
         $subscriptions = 0;
         $scoped = 0;
+        $paths = $this->pathStats;
         foreach ($this->entries as $entries) {
             foreach ($entries as $entry) {
                 $subscriptions++;
                 if ($entry->tenantIds) $scoped++;
+                $paths[$entry->path]['subs'] = ($paths[$entry->path]['subs'] ?? 0) + 1;
             }
         }
+        // Top paths by checks run: [open subscriptions, checks, checks that found a change].
+        uasort($paths, static fn ($a, $b) => ($b['checks'] ?? 0) <=> ($a['checks'] ?? 0) ?: ($b['subs'] ?? 0) <=> ($a['subs'] ?? 0));
+        $top = array_map(static fn ($p) => [$p['subs'] ?? 0, $p['checks'] ?? 0, $p['changed'] ?? 0], array_slice($paths, 0, 15, true));
         $line = ['liveQueryStats' => [
             'connections' => count($this->entries), 'subscriptions' => $subscriptions, 'tenantScoped' => $scoped,
             'running' => $this->running,
             ...array_merge(array_fill_keys(['hints', 'sweeps', 'dirtied', 'skipped', 'processes', 'checks', 'changed'], 0), $this->stats),
+            'paths' => (object) $top,
         ]];
         $this->stats = [];
-        fwrite(STDOUT, json_encode($line) . "\n");
+        $this->pathStats = [];
+        fwrite(STDOUT, json_encode($line, JSON_UNESCAPED_SLASHES) . "\n");
     }
 }
