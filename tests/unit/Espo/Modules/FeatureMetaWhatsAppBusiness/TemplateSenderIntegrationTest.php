@@ -56,6 +56,18 @@ class TemplateSenderIntegrationTest extends TestCase
         } catch (Error) { $this->assertSame([], $api->calls); }
     }
 
+    public function testRealChatwootMessagePayloadPreservesNamedBodyParameters(): void
+    {
+        $api = $this->client();
+        $api->sendTemplateMessage('https://chat.test', 'key', 1, 2, 3, 'order_ready', 'pt_BR',
+            ['tenant_name' => 'Monostax', 'order_id' => '123'], 'UTILITY', 'Order 123 for Monostax');
+        $this->assertCount(2, $api->calls);
+        $this->assertSame([
+            'name' => 'order_ready', 'category' => 'utility', 'language' => 'pt_BR',
+            'processed_params' => ['body' => ['order_id' => '123', 'tenant_name' => 'Monostax']],
+        ], $api->calls[1]['body']['template_params']);
+    }
+
     public function testJourneyPreflightsOnceThenSendsIndependentValuesToEachRecipient(): void
     {
         $target = $this->createStub(Entity::class); $target->method('getEntityType')->willReturn('Contact');
@@ -75,6 +87,30 @@ class TemplateSenderIntegrationTest extends TestCase
             $this->assertSame(['1' => '123'], $args[5]);
             $this->assertSame('Body 123', $args[7]);
             $this->assertSame(['1' => 'Ana'], $args[11]);
+            return ['message_id' => 1, 'conversation_id' => 2];
+        });
+        $context = new ActionContext($target, $record, $record, $journey, 'enter', $params, 'tenant');
+        (new SendWhatsAppTemplate($outbound, $this->createStub(TenantGuard::class), $this->createStub(Log::class)))->run($context);
+    }
+
+    public function testJourneyPreservesNamedMappingsAndRendersTheMessagePreview(): void
+    {
+        $target = $this->createStub(Entity::class); $target->method('getEntityType')->willReturn('Tenant');
+        $record = $this->createStub(Entity::class); $record->method('getId')->willReturn('record');
+        $journey = $this->createStub(Entity::class); $journey->method('getId')->willReturn('journey');
+        $params = ['chatwootInboxId' => 'inbox', 'templateName' => 'order_ready', 'templateLanguage' => 'pt_BR',
+            'templateBody' => 'Hello {{tenant_name}}, order {{order_id}} is ready.',
+            'parameterMapping' => ['tenant_name' => '{{name}}', 'order_id' => '123']];
+        $outbound = $this->createMock(JourneyWhatsAppOutbound::class);
+        $outbound->method('resolvePhones')->willReturn(['+5511999999999']);
+        $outbound->method('resolveConnection')->willReturn(['connection' => true]);
+        $outbound->expects($this->once())->method('preflightTemplate')->willReturn(TemplateParametersTest::namedTemplate());
+        $outbound->method('resolveParameterMapping')->willReturnCallback(fn ($mapping) =>
+            $mapping ? ['tenant_name' => 'Monostax', 'order_id' => '123'] : []);
+        $outbound->expects($this->once())->method('sendTemplate')->willReturnCallback(function (...$args) {
+            $this->assertSame(['tenant_name' => 'Monostax', 'order_id' => '123'], $args[5]);
+            $this->assertSame('Hello Monostax, order 123 is ready.', $args[7]);
+            $this->assertSame([], $args[11]);
             return ['message_id' => 1, 'conversation_id' => 2];
         });
         $context = new ActionContext($target, $record, $record, $journey, 'enter', $params, 'tenant');

@@ -69,6 +69,21 @@ class TemplatePreflightTest extends TestCase
 
     public static function cacheDelays(): array { return [[0], [2]]; }
 
+    public function testApprovedNamedBodyTemplatePassesPreflightWithMatchingCatalog(): void
+    {
+        $live = TemplateParametersTest::namedTemplate();
+        $api = $this->createMock(ChatwootApiClient::class);
+        $api->expects($this->once())->method('refreshTemplateCatalog');
+        $api->expects($this->once())->method('readTemplateCatalog')->willReturn([$live]);
+        $api->expects($this->never())->method('sendTemplateMessage');
+        $service = $this->preflight($api, $live);
+        $this->assertSame($live, $service->check(
+            $this->entity(['chatwootInboxIntegrationId' => 'integration', 'chatwootInboxId' => 8]),
+            'https://chat.test', 'key', 9, 'order_ready', 'pt_BR',
+            ['tenant_name' => '{{name}}', 'order_id' => '{{order}}'], [], null, null,
+        ));
+    }
+
     public function testRefreshFailureNeverChecksOrSends(): void
     {
         $api = $this->createMock(ChatwootApiClient::class);

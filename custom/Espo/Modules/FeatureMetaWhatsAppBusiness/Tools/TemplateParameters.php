@@ -20,12 +20,18 @@ class TemplateParameters
         if (!is_array($value)) {
             throw new Error('Invalid template parameter mapping.');
         }
-        foreach ($value as $number => $expression) {
-            if (!preg_match('/^[1-9][0-9]*$/D', (string) $number) || !is_string($expression)) {
-                throw new Error('Template mappings require numbered string values.');
+        $positional = null;
+        foreach ($value as $key => $expression) {
+            $numbered = preg_match('/^[1-9][0-9]*$/D', (string) $key) === 1;
+            if ((!$numbered && !preg_match('/^[a-z_][a-z0-9_]*$/D', (string) $key)) || !is_string($expression)) {
+                throw new Error('Template mappings require numbered or named string values.');
             }
+            if ($positional !== null && $positional !== $numbered) {
+                throw new Error('Named and positional template parameters cannot be mixed.');
+            }
+            $positional = $numbered;
         }
-        ksort($value, SORT_NUMERIC);
+        ksort($value, $positional === false ? SORT_STRING : SORT_NUMERIC);
         return $value;
     }
 
@@ -33,19 +39,24 @@ class TemplateParameters
     {
         $body = self::mapping($body);
         $header = self::mapping($header);
-        if (($template['parameter_format'] ?? 'POSITIONAL') !== 'POSITIONAL') {
-            throw new Error('Named template parameters are not supported by this sender.');
+        $format = $template['parameter_format'] ?? 'POSITIONAL';
+        if (!in_array($format, ['POSITIONAL', 'NAMED'], true)) {
+            throw new Error('Unsupported template parameter format.');
         }
         $required = ['BODY' => [], 'HEADER' => []];
         $media = TemplateDefinition::mediaFormat($template);
         foreach ($template['components'] ?? [] as $component) {
             $type = $component['type'] ?? '';
             if (isset($required[$type]) && isset($component['text'])) {
-                $required[$type] = TemplateDefinition::variables($component['text']);
+                // Chatwoot supports named body values; text headers remain positional.
+                $required[$type] = $format === 'NAMED' && $type === 'BODY'
+                    ? self::namedVariables($component['text'])
+                    : TemplateDefinition::variables($component['text']);
             }
         }
         foreach (['BODY' => $body, 'HEADER' => $header] as $type => $mapping) {
-            if (array_map('intval', array_keys($mapping)) !== $required[$type]) {
+            $keys = array_map($format === 'NAMED' && $type === 'BODY' ? 'strval' : 'intval', array_keys($mapping));
+            if ($keys !== $required[$type]) {
                 throw new Error("Repair the {$type} parameter mapping to match the live template. Header values are never inferred from body values.");
             }
             self::assertResolved($mapping);
@@ -59,6 +70,18 @@ class TemplateParameters
         } elseif ($mediaUrl || $mediaType) {
             throw new Error('Remove the media header configuration for this text template.');
         }
+    }
+
+    private static function namedVariables(string $text): array
+    {
+        preg_match_all('/\{\{([a-z_][a-z0-9_]*)\}\}/', $text, $matches);
+        $rest = preg_replace('/\{\{([a-z_][a-z0-9_]*)\}\}/', '', $text);
+        if (str_contains($rest, '{{') || str_contains($rest, '}}')) {
+            throw new Error('Invalid named template variables.');
+        }
+        $names = array_values(array_unique($matches[1]));
+        sort($names, SORT_STRING);
+        return $names;
     }
 
     public static function assertResolved(array $values, bool $rendered = false): void
