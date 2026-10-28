@@ -110,7 +110,7 @@
             "columns": ["cpf", "tenantId", "deleted"]
         },
         "tenantId": {
-            "columns": ["tenantId"]
+            "columns": ["tenantId", "deleted"]
         }
     }
 }
