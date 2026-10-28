@@ -169,7 +169,11 @@ class OpportunityInboxFilter
     /** CRM ownership/team ACL AND live Chatwoot permissions, never an account token. */
     private function visibleConversations(Entity $account, array $inboxes, SelectBuilder $scope): array
     {
+        // Load only what checkEntityRead (owner, preloaded teams, inbox) and the
+        // remote lookup read. Full rows pulled 7 name joins and message text
+        // through DISTINCT: ~0.5 s per call on thousands of conversations.
         $query = $this->select->create()->from('ChatwootConversation')->withStrictAccessControl()->buildQueryBuilder()
+            ->select(['id', 'chatwootConversationId', 'inboxId', 'assignedUserId'])
             ->join('opportunities', 'inboxOpportunity')->where([
                 'inboxOpportunity.id=s' => $this->scopeIds($account, $scope),
                 'chatwootAccountId' => $account->getId(),

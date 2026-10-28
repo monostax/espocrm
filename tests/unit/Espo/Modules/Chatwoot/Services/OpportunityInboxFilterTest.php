@@ -59,7 +59,7 @@ class OpportunityInboxFilterTest extends TestCase
             'Opportunity' => ['id', 'tenantId', 'assignedUserId', 'readable', 'deleted'],
             'ChatwootAccount' => ['id', 'tenantId', 'platformId', 'chatwootAccountId', 'readable', 'deleted'],
             'ChatwootInbox' => ['id', 'name', 'chatwootAccountId', 'chatwootInboxId', 'readable', 'deleted'],
-            'ChatwootConversation' => ['id', 'chatwootAccountId', 'chatwootConversationId', 'inboxId', 'readable', 'entityReadable', 'deleted'],
+            'ChatwootConversation' => ['id', 'chatwootAccountId', 'chatwootConversationId', 'inboxId', 'assignedUserId', 'readable', 'deleted'],
             'ChatwootConversationOpportunity' => ['id', 'opportunityId', 'chatwootConversationId', 'deleted'],
             'ChatwootUser' => ['id', 'assignedUserId', 'platformId', 'userAccessToken', 'deleted'],
             'ChatwootPlatform' => ['id', 'backendUrl', 'deleted'],
@@ -111,7 +111,14 @@ class OpportunityInboxFilterTest extends TestCase
         $acl->method('checkLink')->willReturnCallback(fn ($type, $field) => !in_array("$type.$field", $this->hiddenFields));
         $acl->method('checkEntityRead')->willReturnCallback(function ($entity) {
             $this->aclTeams[$entity->getId()] = $entity->get('teamsIds');
-            return $this->admin || ($entity->get('readable') && $entity->get('entityReadable') !== 0);
+            if ($entity->getEntityType() === 'ChatwootConversation') {
+                // Conversations load a narrow select; the real checker reads these.
+                foreach (['assignedUserId', 'inboxId', 'teamsIds'] as $attribute) {
+                    self::assertTrue($entity->has($attribute), "ACL input $attribute must be loaded.");
+                }
+                return $this->admin || $entity->get('assignedUserId') !== 'stranger';
+            }
+            return $this->admin || $entity->get('readable');
         });
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn('viewer');
@@ -175,7 +182,7 @@ class OpportunityInboxFilterTest extends TestCase
         $this->conversation('c2', 102, 'a', ['one']);
         $this->conversation('c3', 103, 'b', ['one']);
         $this->conversation('crm-denied', 104, 'a', ['denied'], ['readable' => 0]);
-        $this->conversation('entity-denied', 105, 'a', ['denied'], ['entityReadable' => 0]);
+        $this->conversation('entity-denied', 105, 'a', ['denied'], ['assignedUserId' => 'stranger']);
         $this->conversation('native-denied', 106, 'a', ['denied']);
         unset($this->remoteVisibility[106]);
         $this->conversation('moved', 107, 'a', ['denied']);
@@ -205,7 +212,7 @@ class OpportunityInboxFilterTest extends TestCase
     private function conversation(string $id, int $remote, string $inbox, array $opportunities, array $overrides = []): void
     {
         $this->insert('ChatwootConversation', $overrides + ['id' => $id, 'chatwootAccountId' => 'account-a',
-            'chatwootConversationId' => $remote, 'inboxId' => $inbox, 'readable' => 1, 'entityReadable' => 1]);
+            'chatwootConversationId' => $remote, 'inboxId' => $inbox, 'readable' => 1]);
         $this->remoteVisibility[$remote] = $inbox === 'b' ? 12 : 11;
         foreach ($opportunities as $opp) {
             $this->insert('ChatwootConversationOpportunity', ['id' => "$id-$opp", 'opportunityId' => $opp, 'chatwootConversationId' => $id]);
