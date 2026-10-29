@@ -196,6 +196,12 @@
         "minify": true
     },
     {
+        "name": "posthog-js",
+        "src": "client/lib/original/posthog-js.js",
+        "dest": "client/lib/posthog-js.js",
+        "prepareCommand": "npx rollup node_modules/posthog-js/dist/module.slim.no-external.js --format amd --exports named --file client/lib/original/posthog-js.js"
+    },
+    {
         "name": "ace-builds",
         "files": [
             {

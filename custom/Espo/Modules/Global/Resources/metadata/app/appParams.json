@@ -11,5 +11,9 @@
     },
     "isTenantAdmin": {
         "className": "Espo\\Modules\\Global\\Classes\\AppParams\\IsTenantAdmin"
+    },
+    "productAnalytics": {
+        "className": "Espo\\Modules\\Global\\Classes\\AppParams\\ProductAnalytics",
+        "deferInEmbeddedTable": true
     }
 }

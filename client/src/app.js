@@ -358,6 +358,9 @@ class App {
     /** @private */
     embeddedTable = false;
 
+    /** @private @type {{reset: function(): void}|null} */
+    productAnalytics = null;
+
     /** @private */
     aclName = "acl";
 
@@ -663,8 +666,31 @@ class App {
         this.acl.implementationClassMap = aclImplementationClassMap;
 
         this.initRouter();
+        this.initProductAnalytics();
 
         this.webSocketManager.subscribe('appParamsUpdate', () => this.appParams.load());
+    }
+
+    /**
+     * Monostax product analytics (PostHog), on while the `productAnalytics` app param is set.
+     * Embedded tables are tracked by the Chatwoot page around them; an admin acting as
+     * another user is not that user.
+     *
+     * @private
+     */
+    initProductAnalytics() {
+        const params = this.appParams.get('productAnalytics');
+
+        if (!params || this.embeddedTable || this.anotherUser) {
+            return;
+        }
+
+        this.loader.requirePromise('global:helpers/product-analytics')
+            .then(ProductAnalytics => {
+                ProductAnalytics.start(params, this.user, this.appParams.get('chatwootAccountId'), this.router);
+                this.productAnalytics = ProductAnalytics;
+            })
+            .catch(error => console.warn('Product analytics did not start.', error));
     }
 
     /**
@@ -1140,6 +1166,8 @@ class App {
         if (!silent) {
             this.storage.clear("user", "auth");
             this.storage.clear("user", "anotherUser");
+
+            this.productAnalytics?.reset();
         }
 
         const action = logoutWait ? "logoutWait" : "login";

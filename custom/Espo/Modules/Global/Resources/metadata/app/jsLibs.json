@@ -4,5 +4,9 @@
         "devPath": "client/custom/modules/global/lib/original/fullcalendar-scheduler-bundle.js",
         "exportsTo": "FullCalendar",
         "exportsAs": "ResourceTimeGrid"
+    },
+    "posthog-js": {
+        "path": "client/lib/posthog-js.js",
+        "devPath": "client/lib/original/posthog-js.js"
     }
 }
