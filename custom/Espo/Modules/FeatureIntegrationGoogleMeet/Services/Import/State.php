@@ -41,8 +41,8 @@ class State
                 if ($row['readiness'] !== 'ready' || !$preview['kinds']['notes']['allowed']) continue;
                 foreach ($selected as $key => $tab) {
                     if ($tab->documentId !== ($row['documentId'] ?? null)) continue;
-                    $eligible['notes'][] = [...$row, 'kind' => 'notes', 'sourceKey' => $key, 'tabId' => $tab->tabId,
-                        'title' => $tab->documentId . ' / ' . $tab->tabId];
+                    // The worker replaces the empty title with the tab's title when it reads the document.
+                    $eligible['notes'][] = [...$row, 'kind' => 'notes', 'sourceKey' => $key, 'tabId' => $tab->tabId, 'title' => ''];
                     unset($selected[$key]);
                 }
                 continue;
@@ -156,6 +156,7 @@ class State
         if (!$aggregate) return $result;
         if ($aggregate->get('tenantId') !== $this->access->tenantId($accountId)) throw new Forbidden();
         $result['conference'] = $aggregate->get('conference');
+        $result['conferenceStart'] = $aggregate->get('conferenceStart');
         $result['credentialId'] = $aggregate->get('credentialId');
         foreach ($this->em->getRDBRepository('MeetingGoogleUnit')->where(['importId' => $aggregate->getId()])->order('createdAt')->find() as $unit) {
             $kind = $unit->get('kind');

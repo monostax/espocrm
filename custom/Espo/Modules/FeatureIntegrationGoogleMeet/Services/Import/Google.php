@@ -77,7 +77,7 @@ class Google
 
     public function file(string $account, string $id, float $deadline): array
     {
-        return $this->get($account, self::DRIVE . self::id($id), ['fields' => 'id,size,mimeType,md5Checksum'], $deadline);
+        return $this->get($account, self::DRIVE . self::id($id), ['fields' => 'id,name,size,mimeType,md5Checksum'], $deadline);
     }
 
     public function download(string $account, string $id, string $path, array $metadata, float $deadline): int

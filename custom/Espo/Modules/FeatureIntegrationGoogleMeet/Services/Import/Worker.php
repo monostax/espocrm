@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureIntegrationGoogleMeet\Services\Import;
 
+use Espo\Core\Utils\Config;
+use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -11,7 +13,16 @@ use Espo\ORM\EntityManager;
 class Worker
 {
     public function __construct(private EntityManager $em, private Access $access, private Documents $documents,
-        private Google $google, private Files $files) {}
+        private Google $google, private Files $files, private User $user, private Config $config) {}
+
+    /** Readers know a session by when it started, in the initiating user's time zone. */
+    private function label(string $time): string
+    {
+        if ($time === '') return 'Google Meet';
+        $zone = $this->em->getEntityById('Preferences', $this->user->getId())?->get('timeZone') ?: $this->config->get('timeZone');
+        try { return 'Google Meet — ' . (new \DateTimeImmutable($time))->setTimezone(new \DateTimeZone($zone ?: 'UTC'))->format('Y-m-d H:i'); }
+        catch (\Throwable) { return 'Google Meet'; }
+    }
 
     private function context(string $id, string $fence): array
     {
@@ -54,7 +65,7 @@ class Worker
             $bytes = $this->google->download($account, $fileId, $this->files->path($key), $metadata, $deadline);
             return ['stagingKey' => $key, 'bytes' => $bytes];
         }
-        $label = 'Google Meet — ' . $conference . ' — ' . ($session['startTime'] ?? '');
+        $label = $this->label((string) ($session['startTime'] ?? ''));
         if ($kind === 'notes') {
             $documents = [];
             foreach ($units as $unit) {
@@ -69,7 +80,7 @@ class Worker
                 if (array_diff_key($selected, $tabs)) throw new Failure('selectedTabMissing');
                 foreach ($tabs as $tabId => $tab) {
                     if (isset($selected[$tabId])) {
-                        $parts[] = Text::notes($tab, $label . ' — ' . $documentId);
+                        $parts[] = Text::notes($tab, $label);
                         $titles[$documentId . '/' . $tabId] = $tab['title'];
                     }
                 }

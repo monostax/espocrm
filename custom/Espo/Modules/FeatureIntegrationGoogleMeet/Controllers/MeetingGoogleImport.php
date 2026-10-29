@@ -62,7 +62,7 @@ class MeetingGoogleImport extends \Espo\Modules\FeatureRecordKnowledge\Controlle
     {
         [$account, $meeting] = $this->identity($request);
         return $this->safe($response, fn () => $this->discovery->sessions($account, $meeting,
-            (string) $request->getQueryParam('credentialId'), $request->getQueryParam('cursor')));
+            (string) $request->getQueryParam('credentialId'), $request->getQueryParam('cursor'), $request->getQueryParam('scope') === 'all'));
     }
 
     public function postActionPreview(Request $request, Response $response): object

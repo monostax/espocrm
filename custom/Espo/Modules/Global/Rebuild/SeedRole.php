@@ -344,9 +344,10 @@ class SeedRole implements RebuildAction
                     'delete' => 'no',
                     'stream' => 'team',
                 ],
-                // FeatureJourney — agents can view journeys/records; authoring
-                // is tenant-admin (override below). Record/Log ACL delegates
-                // to parent Journey via AccessChecker.
+                // FeatureJourney — agents can view journeys and enroll targets
+                // through the engine-backed relationship API. Authoring and
+                // direct Record writes remain tenant-admin (override below);
+                // Record/Log entity ACL delegates to the parent Journey.
                 'Journey' => [
                     'create' => 'no',
                     'read' => 'team',
@@ -372,7 +373,7 @@ class SeedRole implements RebuildAction
                     'delete' => 'no',
                 ],
                 'JourneyRecord' => [
-                    'create' => 'no',
+                    'create' => 'yes',
                     'read' => 'team',
                     'edit' => 'no',
                     'delete' => 'no',
@@ -1583,7 +1584,7 @@ class SeedRole implements RebuildAction
                         'delete' => 'team',
                     ],
                     'JourneyRecord' => [
-                        'create' => 'no',
+                        'create' => 'yes',
                         'read' => 'team',
                         'edit' => 'team',
                         'delete' => 'no',

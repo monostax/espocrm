@@ -25,7 +25,10 @@ class AccessChecker implements AccessEntityCREDSChecker
 
     public function checkCreate(User $user, ScopeData $data): bool
     {
-        return $this->aclManager->checkScope($user, 'Journey', 'edit');
+        // The create scope gates engine-backed enrollment, not journey authoring.
+        // Direct record creation still requires parent edit access below.
+        return ($data->isTrue() || $data->getCreate() === 'yes') &&
+            $this->aclManager->checkScope($user, 'Journey', 'read');
     }
 
     public function checkRead(User $user, ScopeData $data): bool

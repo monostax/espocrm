@@ -224,6 +224,18 @@ class JourneyRelationshipsTest extends TestCase
         self::assertEquals((object) ['ok' => false, 'reason' => 'on_enter_failed'], $this->service->enroll($this->tenant, $this->target, 'journey-a'));
     }
 
+    public function testEnrollmentDoesNotRequireJourneyAuthoringOrEnrollmentEditAccess(): void
+    {
+        $this->denied = ['Journey:edit', 'JourneyRecord:edit', 'JourneyRecord:delete'];
+        $journey = $this->journey();
+        $this->engine->expects($this->once())->method('tryEnrollOne')
+            ->with($journey, 'Opportunity', 'opportunity-a', null)->willReturn(['ok' => true]);
+
+        self::assertTrue($this->service->list($this->tenant, $this->target, 0)->canEnroll);
+        self::assertCount(1, $this->service->options($this->tenant, $this->target, '', 0)->list);
+        self::assertTrue($this->service->enroll($this->tenant, $this->target, 'journey-a')->ok);
+    }
+
     /** @dataProvider foreignEnrollments */
     public function testReadAndUnlinkRejectForeignEnrollment(array $attributes, string $action): void
     {

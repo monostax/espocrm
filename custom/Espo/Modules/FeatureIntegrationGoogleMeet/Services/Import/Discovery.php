@@ -48,16 +48,35 @@ class Discovery
             'setupAvailable' => (bool) ($provider?->get('isActive') && $provider->get('clientId') && $provider->get('clientSecret'))];
     }
 
-    public function sessions(int $accountId, string $meetingId, string $credentialId, ?string $cursor): array
+    /** Google Calendar sync stores the event's Meet link as the Meeting's join URL. */
+    public static function meetingCode(Entity $meeting): ?string
     {
-        $this->access->meeting($accountId, $meetingId, true);
+        return preg_match('~^https://meet\.google\.com/([a-z]{3}-[a-z]{4}-[a-z]{3})(?:[/?#]|$)~iD', (string) $meeting->get('joinUrl'), $match)
+            ? strtolower($match[1]) : null;
+    }
+
+    public function sessions(int $accountId, string $meetingId, string $credentialId, ?string $cursor, bool $all = false): array
+    {
+        $meeting = $this->access->meeting($accountId, $meetingId, true);
         $credential = $this->access->credential($accountId, $credentialId);
+        $code = self::meetingCode($meeting);
         // Meet rejects IS NOT NULL. A fixed timestamp excludes active sessions and stays stable across pages.
-        $params = ['pageSize' => 25, 'filter' => 'end_time > "1970-01-01T00:00:00Z"'];
+        $filter = 'end_time > "1970-01-01T00:00:00Z"';
+        if ($code && !$all) {
+            $filter .= ' AND space.meeting_code = "' . $code . '"';
+            // Recurring events share one link, and each occurrence is its own Meeting.
+            if ($start = $meeting->get('dateStart')) {
+                $from = strtotime($start . ' UTC') - 43200;
+                $to = strtotime(($meeting->get('dateEnd') ?: $start) . ' UTC') + 43200;
+                $filter .= ' AND start_time >= "' . gmdate('Y-m-d\TH:i:s\Z', $from) . '" AND start_time <= "' . gmdate('Y-m-d\TH:i:s\Z', $to) . '"';
+            }
+        }
+        $params = ['pageSize' => 25, 'filter' => $filter];
         if ($cursor) {
             try { $data = json_decode($this->crypt->decrypt($cursor), true, 16, JSON_THROW_ON_ERROR); }
             catch (\Throwable) { throw new BadRequest('Invalid session cursor.'); }
-            if (($data['credential'] ?? null) !== $credentialId || ($data['account'] ?? null) !== $accountId || ($data['expires'] ?? 0) < time()) {
+            if (($data['credential'] ?? null) !== $credentialId || ($data['account'] ?? null) !== $accountId || ($data['expires'] ?? 0) < time()
+                || ($data['filter'] ?? null) !== $filter) {
                 throw new BadRequest('Invalid session cursor.');
             }
             $params['pageToken'] = $data['page'];
@@ -66,12 +85,12 @@ class Discovery
         $list = [];
         foreach ($data['conferenceRecords'] ?? [] as $session) {
             if (!isset($session['endTime'])) continue;
-            $list[] = ['name' => Google::conference($session['name']), 'space' => $session['space'] ?? '',
-                'startTime' => $session['startTime'] ?? '', 'endTime' => $session['endTime']];
+            $list[] = ['name' => Google::conference($session['name']), 'startTime' => $session['startTime'] ?? '', 'endTime' => $session['endTime']];
         }
-        return ['list' => $list, 'cursor' => empty($data['nextPageToken']) ? null : $this->crypt->encrypt(json_encode([
-            'credential' => $credentialId, 'account' => $accountId, 'page' => $data['nextPageToken'], 'expires' => time() + 3600,
-        ]))];
+        return ['list' => $list, 'meetingCode' => $code, 'filtered' => $code && !$all,
+            'cursor' => empty($data['nextPageToken']) ? null : $this->crypt->encrypt(json_encode([
+                'credential' => $credentialId, 'account' => $accountId, 'page' => $data['nextPageToken'], 'filter' => $filter, 'expires' => time() + 3600,
+            ]))];
     }
 
     public function preview(int $accountId, string $meetingId, string $credentialId, string $conference, bool $readContent = true): array
@@ -102,14 +121,16 @@ class Discovery
                     $resource = $artifact['name'];
                     if (!preg_match('~^' . preg_quote($conference . '/' . $collection . '/', '~') . '[A-Za-z0-9_-]+$~D', $resource)) throw new Failure('invalidSource');
                     $ready = ($artifact['state'] ?? '') === 'FILE_GENERATED';
+                    // Resource names identify nothing to a reader; titles come from Drive or Docs when readable.
                     $unit = ['kind' => $kind === 'notes' ? 'notesDocument' : $kind, 'resource' => $resource,
                         'sourceKey' => self::key($kind === 'notes' ? 'notesDocument' : $kind, $resource),
-                        'title' => $resource, 'readiness' => $ready ? 'ready' : 'pending'];
+                        'title' => '', 'readiness' => $ready ? 'ready' : 'pending'];
                     if ($kind === 'recording' && $ready) {
                         $unit['fileId'] = Google::id($artifact['driveDestination']['file'] ?? '');
                         if ($readContent) try {
                             $file = $this->google->file($account, $unit['fileId'], $deadline);
                             $unit['bytes'] = $file['size'] ?? null;
+                            $unit['title'] = (string) ($file['name'] ?? '');
                             if (($file['mimeType'] ?? '') !== 'video/mp4') $unit['error'] = 'unsupportedMedia';
                             if (isset($unit['bytes']) && (int) $unit['bytes'] > Google::MAX_BYTES) $unit['error'] = 'tooLarge';
                         } catch (Failure $e) { $unit['readiness'] = 'denied'; $unit['error'] = $e->category; }
@@ -118,7 +139,7 @@ class Discovery
                         $unit['documentId'] = Google::id($artifact['docsDestination']['document'] ?? '');
                         if ($readContent) try {
                             $doc = $this->google->doc($account, $unit['documentId'], $deadline);
-                            $unit['title'] = $doc['title'] ?? $unit['documentId'];
+                            $unit['title'] = (string) ($doc['title'] ?? '');
                             foreach (Text::tabs($doc) as $tab) {
                                 $key = self::key('notes', $unit['documentId'], $tab['id']);
                                 $units[$key] = ['sourceKey' => $key, 'kind' => 'notes', 'resource' => $resource,
@@ -140,7 +161,7 @@ class Discovery
                 }
             }
         }
-        return ['conference' => $conference, 'startTime' => $session['startTime'] ?? '',
+        return ['conference' => $conference, 'startTime' => $session['startTime'] ?? '', 'endTime' => $session['endTime'],
             'kinds' => $kinds, 'units' => array_values($units)];
     }
 }
