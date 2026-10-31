@@ -480,13 +480,11 @@ class SeedRole implements RebuildAction
                     'stream' => 'team',
                 ],
                 'Calendar' => true,
-                'Account' => [
-                    'create' => 'yes',
-                    'read' => 'team',
-                    'edit' => 'team',
-                    'delete' => 'team',
-                    'stream' => 'team',
-                ],
+                // Accounts are the B2B pack: only tenant-b2b grants them. Explicit
+                // false, because with aclStrictMode off an unset scope gets Espo's
+                // default level. Roles merge to the most permissive grant, so a
+                // team with tenant-b2b still gets its Account access.
+                'Account' => false,
                 'Contact' => [
                     'create' => 'yes',
                     'read' => 'team',
