@@ -1,43 +1,30 @@
 # Catch Up / Em dia
 
-## Current status: disabled in the UI
+Em dia is the personal decision deck in Chatwoot (`/app/accounts/:accountId/catch-up`). This module serves its opportunity and task cards, their per-user snoozes, and the signed requests for AI-written card copy. Chatwoot entry points and card behavior: `components/chatwoot/source/app/javascript/dashboard/routes/dashboard/catchup/README.md`.
 
-Catch Up was hidden on **2026-09-26** because the feature is not ready for release.
+## Opt-in, credits and limits
 
-- The **Em dia / Catch Up** workspace tab and Conversation Workflow settings panel have been removed from Chatwoot.
-- The former entry point, `/app/accounts/:accountId/catch-up`, redirects to **Conversations** in the same account.
-- Setting `catch_up_enabled` to `true` does not restore the UI. Re-enabling the feature requires restoring its UI entry points after it is ready.
-- The CRM and Chatwoot APIs, account configuration and summary workflow remain implemented with their existing opt-in and authorization checks.
+**Default: disabled for every account.** Administrators enable it in **Settings → Conversation Workflow → Em dia**. The settings are `account.settings.catch_up_enabled` and `catch_up_daily_generation_limit`, exposed as `features.catch_up` without adding a bit to the full 63-bit feature mask. CRM reads the opt-in from the Chatwoot Platform Account API before every feed, snapshot, review, snooze and summary request. A missing flag or failed lookup never enables it.
 
-Chatwoot entry-point documentation: `components/chatwoot/source/app/javascript/dashboard/routes/dashboard/catchup/README.md`.
+Once enabled, the AI writes each card's copy as the user reaches it and prepares the next two, so enabling Em dia does spend credits:
 
-## Retained opt-in configuration and cost controls
+- Each written card is charged to the tenant's AI credits (`unified-prepaid-v1`). Opportunity cards are charged to the Opportunity, task cards to the Task, conversation cards to the ChatwootConversation.
+- Account limit: **300 cards per UTC day** by default, configurable from 0 to 2000 and shared by all users. With 0, cards render template copy and spend nothing.
+- Installation ceiling: `CATCH_UP_INSTALLATION_DAILY_LIMIT` on Hatchet workers, default **20000** per UTC day.
+- Hatchet retries count against the limits. Cache hits, polling and feeds do not.
+- Each model call receives at most **32 KB of evidence/facts** and requests at most **2,048 output tokens**.
 
-**Default: disabled for every existing and new account.** Deploying or enabling Catch Up does not schedule LLM work. Each new summary requires a user to click **Summarize with AI**.
-
-Before the UI was disabled, administrators could enable it in **Settings → Conversation Workflow → Catch Up / Em dia**, alongside Statusless mode. That panel is now hidden. The retained configuration uses these daily generation limits:
-
-- Default: **20 model attempts per account per UTC day**, shared by all users, conversation summaries and opportunity summaries.
-- Allowed account range: **0–50**. Set **0** to use the feed and existing drafts without generating new summaries.
-- Installation-wide ceiling: **100 model attempts per UTC day**, configurable on Hatchet workers with `CATCH_UP_INSTALLATION_DAILY_LIMIT` (0 stops new model calls).
-- Hatchet retries consume the same quota. Cache hits, polling, reading the feed and using existing drafts do not consume summary quota.
-- Each model call receives at most **32 KB of evidence/facts**, plus a short fixed instruction, and requests at most **2,048 output tokens**.
-- Limits reset at midnight UTC. These are generation/token bounds, not a fixed dollar guarantee; provider prices determine the invoice.
-
-The settings are `account.settings.catch_up_enabled` and `catch_up_daily_generation_limit`. The opt-in is exposed as `features.catch_up` without adding a bit to the already-full 63-bit feature mask. There is no database migration or automatic enablement. Existing accounts without the setting are disabled.
-
-Chatwoot gates all Catch Up endpoints. CRM reads the same authoritative opt-in from the Chatwoot Platform Account API before feed, review and summary access. Missing flags and failed lookups never enable the feature. The backend also requires a signed enabled policy; budgets are charged atomically immediately before each model attempt. Turning it off blocks new requests and result access; work already submitted may finish within those bounds.
+There is no automatic enablement. The `CatchUpSnooze` entity is created by `php rebuild.php`.
 
 ## Behavior
 
-- Unread updates use the existing personal conversation/opportunity attention filters.
-- Conversation drafts are included even after the conversation has been read. Drafts use Chatwoot's existing store, websocket events and send/edit/discard APIs.
-- The attention view includes pending conversation drafts and the current user's open opportunities with an overdue or missing next action.
-- Cards load in pages. Conversation pages follow last activity; opportunity pages use a stable ID cursor.
-- Reading a preview does not acknowledge it. **Reviewed** advances only to the displayed source snapshot. Thread replies use their own bounded read markers. Newer messages remain unread.
-- **Skip for now** only moves through the current session; refresh includes skipped items again.
-- Summaries are requested explicitly through the backend's **`catch-up-summary` Hatchet workflow**, bounded to the current evidence window, and cached by authorized content, language, model and prompt version. Existing read/tenant/inbox/field permissions are checked on every request and poll.
-- Long unread histories are reviewed in windows of 30 entries, with earlier context. Source IDs link back to messages or the opportunity/thread.
+- **Attention** opportunity cards are the user's open opportunities whose selected next action is late or missing (`RecordActivityBuckets`). **Unread** cards use the personal opportunity attention filter.
+- **Task cards** are the user's pending tasks due today or late, through the Tasks workspace query (same ACL and team tenancy). A task that is the next step of the user's own open opportunity is left to the opportunity card.
+- Snapshots carry the facts the card copy is written from: stage, amount, contact, the hydrated next action, the reason, the last customer message and today's date in the reader's zone. Facts only change at day granularity, so summary polls are not superseded every minute.
+- Reading a card does not acknowledge it. Committing a card reviews the displayed snapshot first; thread replies keep their own bounded read markers and newer messages stay unread. A changed card answers 409.
+- Task completion and rescheduling go through the normal Task record service and require the displayed `status`, `dateEnd` and `dateEndDate`. A task changed since it was shown answers 409.
+- **Adiar** stores a per-user `CatchUpSnooze` (at most 30 days ahead) that the feeds exclude until it expires. The record itself is not changed.
+- Long unread histories are reviewed in windows of 30 entries, with earlier context.
 
 ## Deployment
 
@@ -60,25 +47,28 @@ Completed summaries live in backend Redis for 24 hours. Pending reservations exp
 
 AI/manual reply drafts continue to use the existing draft workflows and actions. Navigating away stops browser polling; a running summary can finish and be reused later.
 
-The new CRM endpoints are defined exclusively in this module:
+The CRM endpoints are defined exclusively in this module:
 
-- `GET /CatchUp?accountId=<Chatwoot account>&view=unread|attention&cursor=<id>&timeZone=<IANA zone>`
-- `GET /CatchUp/:opportunityId`
+- `GET /CatchUp?accountId=<Chatwoot account>&view=unread|attention&cursor=<id>&timeZone=<IANA zone>&limit=<1-20>`; add `source=task` for task cards (offset cursor)
+- `GET /CatchUp/:opportunityId?timeZone=`
 - `POST /CatchUp/:opportunityId/review` with `{snapshot}`
-- `POST /CatchUp/:opportunityId/summary` with `{locale}` to start/reuse, or `{locale, requestId}` to poll
+- `POST /CatchUp/:opportunityId/summary` with `{locale, timeZone}` to start/reuse, or `{locale, timeZone, requestId}` to poll
+- `GET /CatchUpTask/:taskId?accountId=&timeZone=` and `POST /CatchUpTask/:taskId/summary`
+- `POST /CatchUpTask/:taskId/complete` and `/reschedule` with `{accountId, expectedStatus, expectedDateEnd, expectedDateEndDate}` plus `{dateEndDate}` or `{dateEnd}` (ISO time)
+- `POST /CatchUpSnooze` with `{type: Opportunity|Task, id, until}`
+
+Summary responses carry `card` (`emoji`, `headline`, `whyNow`, `insight`, `keyPoints`, `nextTask`) next to the plain-text `summary`.
 
 Review snapshots use per-user/per-opportunity CRM cache slots with 24-hour validity. CRM cache clearing invalidates old review tokens; refreshing a card obtains a new one. Summary results live in the backend cache.
 
-## Manual verification
+## Automated checks
 
-For the current disabled state, confirm that **Em dia** is absent from the workspace rail, the Catch Up settings panel is absent from Conversation Workflow, and `/app/accounts/:accountId/catch-up` redirects to Conversations in the same account, including for accounts with `catch_up_enabled: true`.
-
-Automated checks from the CRM source directory:
+From the CRM source directory:
 
 ```sh
-php phpunit.phar custom/Espo/Modules/FeatureCatchUp/Tests/FeedTest.php
+php phpunit.phar custom/Espo/Modules/FeatureCatchUp/Tests
+php phpunit.phar tests/unit/Espo/Modules/FeatureCredits/SourceReferenceTest.php
 php phpunit.phar tests/unit/Espo/Modules/Chatwoot/Services/OpportunityStreamQueriesTest.php
-php vendor/bin/phpstan analyse --no-progress --memory-limit=1G --level=3 custom/Espo/Modules/FeatureCatchUp/Services custom/Espo/Modules/FeatureCatchUp/Controllers
 ```
 
 From `components/backend/source`:
@@ -87,14 +77,4 @@ From `components/backend/source`:
 node --import tsx --experimental-test-module-mocks --test 'source/modules/hatchet/workflows/$catchUpSummary.test.ts'
 ```
 
-### Feature checklist for a future re-enable
-
-The following checks apply after restoring the UI entry points in development:
-
-1. Open **Em dia** from the workspace rail. Confirm unread conversations and opportunities match the user's normal access.
-2. Review an existing manual/AI draft. Send, discard, and edit it; edit should open the original conversation composer. Template drafts retain their template editor.
-3. Open the same draft from another browser. Sending/discarding there must update its status and prevent a second send.
-4. While a card is open, receive a new message. Review the old card, refresh, and confirm the new message remains unread.
-5. In an opportunity with unread thread replies, review one window and confirm later replies remain unread.
-6. Generate a summary twice without changing the source; the second request should reuse cached output. Changing content or language must invalidate the cache.
-7. Check mobile width and keyboard left/right navigation. **Skip for now** must not mark the item read.
+Manual checks are listed in the Chatwoot README.

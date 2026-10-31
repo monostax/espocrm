@@ -2,5 +2,10 @@
     {"route": "/CatchUp", "method": "get", "params": {"controller": "CatchUp", "action": "list"}},
     {"route": "/CatchUp/:id", "method": "get", "params": {"controller": "CatchUp", "action": "read", "id": ":id"}},
     {"route": "/CatchUp/:id/review", "method": "post", "params": {"controller": "CatchUp", "action": "review", "id": ":id"}},
-    {"route": "/CatchUp/:id/summary", "method": "post", "params": {"controller": "CatchUp", "action": "summary", "id": ":id"}}
+    {"route": "/CatchUp/:id/summary", "method": "post", "params": {"controller": "CatchUp", "action": "summary", "id": ":id"}},
+    {"route": "/CatchUpTask/:id", "method": "get", "params": {"controller": "CatchUp", "action": "readTask", "id": ":id"}},
+    {"route": "/CatchUpTask/:id/summary", "method": "post", "params": {"controller": "CatchUp", "action": "summaryTask", "id": ":id"}},
+    {"route": "/CatchUpTask/:id/complete", "method": "post", "params": {"controller": "CatchUp", "action": "completeTask", "id": ":id"}},
+    {"route": "/CatchUpTask/:id/reschedule", "method": "post", "params": {"controller": "CatchUp", "action": "rescheduleTask", "id": ":id"}},
+    {"route": "/CatchUpSnooze", "method": "post", "params": {"controller": "CatchUp", "action": "snooze"}}
 ]

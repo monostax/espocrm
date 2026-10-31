@@ -13,6 +13,10 @@ use Espo\ORM\EntityManager;
 /** Chatwoot account settings own the opt-in. A missing flag, ambiguous mapping or failed lookup never enables it. */
 class Rollout
 {
+    /** Card copy is generated for every card a user reaches; keep in step with Chatwoot's CatchUpConfiguration. */
+    public const DEFAULT_DAILY_LIMIT = 300;
+    public const MAX_DAILY_LIMIT = 2000;
+
     public function __construct(private EntityManager $em, private SelectBuilderFactory $select, private ChatwootApiClient $api) {}
 
     public function forAccount(Entity $account): array
@@ -22,10 +26,10 @@ class Rollout
         $remote = $this->api->getAccount($platform->get('backendUrl'), $platform->get('accessToken'), (int) $account->get('chatwootAccountId'));
         $settings = $remote['catch_up'] ?? [];
         if (($remote['status'] ?? '') !== 'active' || ($settings['enabled'] ?? false) !== true) throw new Forbidden('Catch Up is not enabled for this account.');
-        $limit = $settings['dailyLimit'] ?? 20;
+        $limit = $settings['dailyLimit'] ?? self::DEFAULT_DAILY_LIMIT;
         if (empty($settings['instance'])) throw new Forbidden();
-        return ['enabled' => true, 'instance' => rtrim($settings['instance'], '/'),
-            'accountId' => (string) $account->get('chatwootAccountId'), 'dailyLimit' => is_int($limit) ? min(50, max(0, $limit)) : 20];
+        return ['enabled' => true, 'instance' => rtrim($settings['instance'], '/'), 'accountId' => (string) $account->get('chatwootAccountId'),
+            'dailyLimit' => is_int($limit) ? min(self::MAX_DAILY_LIMIT, max(0, $limit)) : self::DEFAULT_DAILY_LIMIT];
     }
 
     public function forTenant(string $tenantId): array

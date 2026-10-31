@@ -11,7 +11,7 @@ class Summary
 {
     public function __construct(private User $user) {}
 
-    /** The backend enqueues/polls Hatchet. All evidence has just passed Feed's ACL checks. */
+    /** The backend enqueues/polls Hatchet. All evidence has just passed Feed's or TaskFeed's ACL checks. */
     public function request(array $snapshot, string $locale, ?string $requestId = null): array
     {
         $secret = getenv('CATCH_UP_BACKEND_SECRET');
@@ -20,7 +20,7 @@ class Summary
         if (!$secret || !$baseUrl || !$instance) throw new ServiceUnavailable('Catch Up backend is not configured.');
         $payload = [
             'source' => [
-                'type' => 'opportunity', 'instance' => $instance, 'tenantId' => (string) $snapshot['tenantId'],
+                'type' => $snapshot['type'], 'instance' => $instance, 'tenantId' => (string) $snapshot['tenantId'],
                 'userId' => $this->user->getId(), 'recordId' => $snapshot['id'],
             ],
             'facts' => (object) $snapshot['facts'], 'evidence' => $snapshot['evidence'], 'locale' => $locale,
@@ -42,6 +42,6 @@ class Summary
         if (!in_array($status, [200, 202], true) || !is_string($response)) throw new ServiceUnavailable('Catch Up backend is temporarily unavailable.');
         $data = json_decode($response, true);
         if (!is_array($data) || empty($data['status'])) throw new ServiceUnavailable('Invalid Catch Up backend response.');
-        return array_intersect_key($data, array_flip(['status', 'requestId', 'summary', 'model']));
+        return array_intersect_key($data, array_flip(['status', 'requestId', 'summary', 'card', 'model']));
     }
 }

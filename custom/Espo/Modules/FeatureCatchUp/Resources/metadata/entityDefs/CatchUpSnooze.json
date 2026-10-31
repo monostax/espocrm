@@ -1,0 +1,13 @@
+{
+    "fields": {
+        "user": { "type": "link", "required": true },
+        "targetType": { "type": "varchar", "maxLength": 32, "required": true },
+        "targetId": { "type": "varchar", "maxLength": 24, "required": true },
+        "snoozedUntil": { "type": "datetime", "required": true }
+    },
+    "links": { "user": { "type": "belongsTo", "entity": "User" } },
+    "indexes": {
+        "userTarget": { "columns": ["userId", "targetType", "targetId", "deleted"], "unique": true },
+        "userActive": { "columns": ["userId", "targetType", "snoozedUntil"] }
+    }
+}

@@ -50,8 +50,8 @@ class RolloutTest extends TestCase
     public function testEnabledAccountSharesTheChatwootBudgetScopeAndCaps(): void
     {
         $policy = $this->check(['status' => 'active', 'catch_up' => [
-            'enabled' => true, 'instance' => 'https://chat.example.test/', 'dailyLimit' => 999,
+            'enabled' => true, 'instance' => 'https://chat.example.test/', 'dailyLimit' => 9999,
         ]]);
-        self::assertSame(['enabled' => true, 'instance' => 'https://chat.example.test', 'accountId' => '9', 'dailyLimit' => 50], $policy);
+        self::assertSame(['enabled' => true, 'instance' => 'https://chat.example.test', 'accountId' => '9', 'dailyLimit' => 2000], $policy);
     }
 }

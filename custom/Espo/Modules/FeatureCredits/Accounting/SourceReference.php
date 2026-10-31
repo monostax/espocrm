@@ -12,7 +12,7 @@ use PDO;
 final readonly class SourceReference
 {
     public const TABLES = ['ChatwootAiAgentRun' => 'chatwoot_ai_agent_run', 'Opportunity' => 'opportunity', 'Contact' => 'contact'];
-    public const LINKED_TYPES = ['ChatwootConversation', 'Note', 'ChatwootAccountUserMembership'];
+    public const LINKED_TYPES = ['ChatwootConversation', 'Note', 'ChatwootAccountUserMembership', 'Task'];
     private const PARENTS = ['Opportunity' => 'opportunity', 'Initiative' => 'initiative',
         'Account' => 'account', 'Contact' => 'contact', 'AiSession' => 'ai_session'];
 
@@ -22,7 +22,7 @@ final readonly class SourceReference
             throw new InvalidArgumentException('Unsupported credit source.');
         }
         GrantInput::identity($id);
-        if ($requestId !== null && (!in_array($type, ['Opportunity', 'ChatwootConversation'], true) ||
+        if ($requestId !== null && (!in_array($type, ['Opportunity', 'ChatwootConversation', 'Task'], true) ||
             !preg_match('/^[a-f0-9]{64}$/D', $requestId))) {
             throw new InvalidArgumentException('Invalid summary request identity.');
         }
@@ -65,6 +65,8 @@ final readonly class SourceReference
             return (bool) $read('SELECT id FROM chatwoot_account WHERE id = ? AND tenant_id = ? AND deleted = FALSE',
                 [$source['chatwoot_account_id'], $tenantId]);
         }
+        // Catch Up task cards are charged to the Task itself.
+        if ($this->type === 'Task') return self::activityBelongsToTenant($pdo, $read, 'Task', $this->id, $tenantId);
         if ($this->type !== 'Note') {
             return (bool) $read('SELECT id FROM ' . self::TABLES[$this->type] . ' WHERE id = ? AND tenant_id = ? AND deleted = FALSE', [$this->id, $tenantId]);
         }
@@ -74,18 +76,23 @@ final readonly class SourceReference
         if (isset(self::PARENTS[$type])) {
             return (bool) $read('SELECT id FROM ' . self::PARENTS[$type] . ' WHERE id = ? AND tenant_id = ? AND deleted = FALSE', [$note['parent_id'], $tenantId]);
         }
-        // Task/Meeting tenancy uses the existing activity team contract. Calls
-        // with an explicit tenant must use that tenant, never a team fallback.
         if (!in_array($type, ['Task', 'Meeting', 'Call'], true)) return false;
+        return self::activityBelongsToTenant($pdo, $read, $type, (string) $note['parent_id'], $tenantId);
+    }
+
+    /** Task/Meeting tenancy uses the existing activity team contract. Calls
+     * with an explicit tenant must use that tenant, never a team fallback. */
+    private static function activityBelongsToTenant(PDO $pdo, callable $read, string $type, string $id, string $tenantId): bool
+    {
         $table = strtolower($type);
         if ($type === 'Call') $table = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? '`call`' : '"call"';
-        $parent = $read('SELECT ' . ($type === 'Call' ? 'tenant_id' : 'id') . " FROM $table WHERE id = ? AND deleted = FALSE", [$note['parent_id']]);
-        if (!$parent) return false;
-        if ($type === 'Call' && $parent['tenant_id'] !== null) return $parent['tenant_id'] === $tenantId;
+        $activity = $read('SELECT ' . ($type === 'Call' ? 'tenant_id' : 'id') . " FROM $table WHERE id = ? AND deleted = FALSE", [$id]);
+        if (!$activity) return false;
+        if ($type === 'Call' && $activity['tenant_id'] !== null) return $activity['tenant_id'] === $tenantId;
         return (bool) $read('SELECT et.id FROM entity_team et JOIN team t ON t.id = et.team_id AND t.deleted = FALSE
             WHERE et.entity_id = ? AND et.entity_type = ? AND et.deleted = FALSE AND
             (et.team_id IN (SELECT base_user_team_id FROM tenant WHERE id = ?) OR
              et.team_id IN (SELECT team_id FROM tenant_other_user_team WHERE tenant_id = ? AND deleted = FALSE))',
-            [$note['parent_id'], $type, $tenantId, $tenantId]);
+            [$id, $type, $tenantId, $tenantId]);
     }
 }

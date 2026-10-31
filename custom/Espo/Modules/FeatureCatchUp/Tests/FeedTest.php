@@ -9,6 +9,7 @@ use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\DataCache;
+use Espo\Core\Utils\Metadata;
 use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\OpportunityActivityBuckets;
@@ -17,7 +18,8 @@ use Espo\Modules\Chatwoot\Services\OpportunityThreadState;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\Rollout;
-use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
+use Espo\Modules\FeatureCatchUp\Services\Snoozes;
+use Espo\Modules\FeatureCatchUp\Services\Workspace;
 use Espo\ORM\EntityManager;
 use Espo\ORM\TransactionManager;
 use PHPUnit\Framework\TestCase;
@@ -41,9 +43,9 @@ class FeedTest extends TestCase
         $transactions->method('run')->willReturnCallback(fn ($work) => $work());
         $em->method('getTransactionManager')->willReturn($transactions);
         $service = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user,
-            $this->createMock(UserTenantResolver::class), $states, $threads,
-            $this->createMock(OpportunityEventAccess::class),
-            $this->createMock(OpportunityActivityBuckets::class), $cache, $this->createMock(Rollout::class));
+            $states, $threads, $this->createMock(OpportunityEventAccess::class),
+            $this->createMock(OpportunityActivityBuckets::class), $cache, $this->createMock(Rollout::class),
+            $this->createMock(Workspace::class), $this->createMock(Snoozes::class), $this->createMock(Metadata::class));
         return [$service, $states, $threads, $cache, $em];
     }
 

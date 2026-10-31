@@ -150,6 +150,12 @@ trait SourceAdmissionCases
                         $source->assertTenantLocked($pdo, 'tenant');
                         $this->assertFalse($source->belongsToTenant($pdo, 'other', true));
                     } finally { $pdo->rollBack(); }
+                    // Catch Up task cards charge the Task directly, under the same team contract.
+                    $task = $type === 'Task' ? new SourceReference('Task', 'parent', str_repeat('a', 64)) : null;
+                    if ($task) {
+                        $this->assertTrue($task->belongsToTenant($pdo, 'tenant'));
+                        $this->assertFalse($task->belongsToTenant($pdo, 'other'));
+                    }
                     $pdo->exec("UPDATE $table SET deleted = TRUE");
                     $this->assertFalse($source->belongsToTenant($pdo, 'tenant'));
                     $pdo->exec("UPDATE $table SET deleted = FALSE, tenant_id = 'other'");
@@ -160,6 +166,7 @@ trait SourceAdmissionCases
                     }
                     $pdo->prepare('UPDATE entity_team SET deleted = TRUE WHERE entity_type = ?')->execute([$type]);
                     $this->assertFalse($source->belongsToTenant($pdo, 'tenant'));
+                    if ($task) $this->assertFalse($task->belongsToTenant($pdo, 'tenant'));
                 }
             } finally {
                 foreach (array_reverse($tables) as $table) $pdo->exec('DROP TABLE IF EXISTS ' . $quote($table));
