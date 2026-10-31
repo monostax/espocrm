@@ -4,7 +4,15 @@
         "tenant-admin": "Inquilino Admin",
         "tenant-b2b": "Inquilino B2B",
         "tenant-clinica": "Inquilino Cl\u00ednica",
-        "tenant-user-api": "Inquilino / API do Usu\u00e1rio"
+        "tenant-user-api": "Inquilino / API do Usu\u00e1rio",
+        "tenant-pack-calls": "Pacote: Liga\u00e7\u00f5es, discador e caixas de voz",
+        "tenant-pack-meetings": "Pacote: Reuni\u00f5es",
+        "tenant-pack-initiatives": "Pacote: Iniciativas",
+        "tenant-pack-journeys": "Pacote: Jornadas",
+        "tenant-pack-playbooks": "Pacote: Playbooks",
+        "tenant-pack-campaigns": "Pacote: Campanhas e mensagens em massa",
+        "tenant-pack-sms": "Pacote: Canais de SMS",
+        "tenant-pack-enrichment": "Pacote: Enriquecimento e verifica\u00e7\u00e3o"
     },
     "actions": {
         "create": "Cadastrar"

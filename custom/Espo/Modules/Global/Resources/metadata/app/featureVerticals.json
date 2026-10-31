@@ -6,5 +6,45 @@
     "clinica": {
         "roleStaticId": "tenant-clinica",
         "label": "Clinica"
+    },
+    "calls": {
+        "roleStaticId": "tenant-pack-calls",
+        "label": "Calls, dialer and voice inboxes",
+        "pack": true
+    },
+    "meetings": {
+        "roleStaticId": "tenant-pack-meetings",
+        "label": "Meetings",
+        "pack": true
+    },
+    "initiatives": {
+        "roleStaticId": "tenant-pack-initiatives",
+        "label": "Initiatives",
+        "pack": true
+    },
+    "journeys": {
+        "roleStaticId": "tenant-pack-journeys",
+        "label": "Journeys",
+        "pack": true
+    },
+    "playbooks": {
+        "roleStaticId": "tenant-pack-playbooks",
+        "label": "Playbooks",
+        "pack": true
+    },
+    "campaigns": {
+        "roleStaticId": "tenant-pack-campaigns",
+        "label": "Campaigns and bulk messages",
+        "pack": true
+    },
+    "sms": {
+        "roleStaticId": "tenant-pack-sms",
+        "label": "SMS channels",
+        "pack": true
+    },
+    "enrichment": {
+        "roleStaticId": "tenant-pack-enrichment",
+        "label": "Enrichment and verification",
+        "pack": true
     }
 }

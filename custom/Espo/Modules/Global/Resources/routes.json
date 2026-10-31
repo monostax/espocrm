@@ -5,6 +5,11 @@
         "actionClassName": "Espo\\Modules\\Global\\Tools\\Activities\\Api\\GetList"
     },
     {
+        "route": "/FeaturePack/action/forAccount",
+        "method": "get",
+        "actionClassName": "Espo\\Modules\\Global\\Tools\\FeaturePack\\Api\\GetForAccount"
+    },
+    {
         "route": "/CustomField/action/meta",
         "method": "get",
         "params": {

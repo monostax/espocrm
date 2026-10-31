@@ -1,0 +1,9 @@
+{
+    "feature-packs": {
+        "className": "Espo\\Modules\\Global\\Classes\\ConsoleCommands\\FeaturePacks",
+        "listed": true,
+        "noSystemUser": true,
+        "allowedOptions": ["tenant", "add", "remove"],
+        "allowedFlags": ["apply"]
+    }
+}

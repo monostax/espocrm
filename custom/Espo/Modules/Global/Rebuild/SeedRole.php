@@ -49,7 +49,7 @@ class SeedRole implements RebuildAction
                   $this->metadata->get(['app', 'recordId', 'dbType']) === 'uuid';
 
         // Define all roles to be seeded
-        $roles = $this->getRoleDefinitions();
+        $roles = [...$this->getRoleDefinitions(), ...$this->getPackRoleDefinitions()];
 
         $createdCount = 0;
         $updatedCount = 0;
@@ -1675,6 +1675,33 @@ class SeedRole implements RebuildAction
             //     ...
             // ],
         ];
+    }
+
+    /**
+     * Marker roles for feature packs (`app.featureVerticals` entries with
+     * `"pack": true`). They grant nothing: attaching one to a tenant's base
+     * team only tells the Chatwoot shell to show that pack's modules.
+     */
+    protected function getPackRoleDefinitions(): array
+    {
+        $roles = [];
+
+        foreach ($this->metadata->get(['app', 'featureVerticals']) ?? [] as $config) {
+            $staticId = $config['roleStaticId'] ?? null;
+
+            if (empty($config['pack']) || !is_string($staticId) || $staticId === '') {
+                continue;
+            }
+
+            $roles[] = [
+                'staticId' => $staticId,
+                'name' => $staticId,
+                'data' => (object) [],
+                'fieldData' => (object) [],
+            ];
+        }
+
+        return $roles;
     }
 
     /**

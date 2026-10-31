@@ -4,6 +4,14 @@
         "tenant-admin": "Tenant Admin",
         "tenant-b2b": "Tenant B2B",
         "tenant-clinica": "Tenant Clinica",
-        "tenant-user-api": "Tenant / User API"
+        "tenant-user-api": "Tenant / User API",
+        "tenant-pack-calls": "Pack: Calls, dialer and voice inboxes",
+        "tenant-pack-meetings": "Pack: Meetings",
+        "tenant-pack-initiatives": "Pack: Initiatives",
+        "tenant-pack-journeys": "Pack: Journeys",
+        "tenant-pack-playbooks": "Pack: Playbooks",
+        "tenant-pack-campaigns": "Pack: Campaigns and bulk messages",
+        "tenant-pack-sms": "Pack: SMS channels",
+        "tenant-pack-enrichment": "Pack: Enrichment and verification"
     }
 }

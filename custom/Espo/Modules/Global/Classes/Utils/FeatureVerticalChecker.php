@@ -79,15 +79,88 @@ class FeatureVerticalChecker
     }
 
     /**
+     * Get the feature verticals enabled for a tenant: the add-on roles attached
+     * to its base user team and other user teams.
+     *
+     * Unlike getVerticals(), this does not depend on who asks, so every user of
+     * a workspace sees the same modules. Callers authorize access to the tenant.
+     *
+     * @return string[]
+     */
+    public function getTenantVerticals(string $tenantId): array
+    {
+        $tenant = $this->entityManager->getEntityById('Tenant', $tenantId);
+
+        if (!$tenant) {
+            return [];
+        }
+
+        $teamIds = $tenant->getLinkMultipleIdList('otherUserTeams');
+        $baseTeamId = $tenant->get('baseUserTeamId');
+
+        if (is_string($baseTeamId) && $baseTeamId !== '') {
+            $teamIds[] = $baseTeamId;
+        }
+
+        return $this->mapRoleIdsToVerticals($this->getTeamRoleIds($teamIds));
+    }
+
+    /**
      * Get all known vertical names from metadata.
      *
      * @return string[]
      */
-    private function getAllVerticalNames(): array
+    public function getAllVerticalNames(): array
     {
         $verticals = $this->metadata->get(['app', 'featureVerticals']) ?? [];
 
         return array_keys($verticals);
+    }
+
+    /**
+     * @param string[] $roleIds
+     * @return string[]
+     */
+    private function mapRoleIdsToVerticals(array $roleIds): array
+    {
+        $roleIdToVerticalMap = $this->buildRoleIdToVerticalMap();
+        $verticals = [];
+
+        foreach ($roleIds as $roleId) {
+            if (isset($roleIdToVerticalMap[$roleId])) {
+                $verticals[] = $roleIdToVerticalMap[$roleId];
+            }
+        }
+
+        return array_values(array_unique($verticals));
+    }
+
+    /**
+     * @param string[] $teamIds
+     * @return string[]
+     */
+    private function getTeamRoleIds(array $teamIds): array
+    {
+        $teamIds = array_values(array_unique(array_filter($teamIds)));
+
+        if ($teamIds === []) {
+            return [];
+        }
+
+        $roleIds = [];
+
+        $teams = $this->entityManager
+            ->getRDBRepository('Team')
+            ->where(['id' => $teamIds])
+            ->find();
+
+        foreach ($teams as $team) {
+            foreach ($team->getLinkMultipleIdList('roles') as $roleId) {
+                $roleIds[] = $roleId;
+            }
+        }
+
+        return array_values(array_unique($roleIds));
     }
 
     /**
