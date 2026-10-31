@@ -43,6 +43,25 @@ final class BillingCatalogDefinitionTest extends TestCase
         $this->assertSame([], (new CatalogDefinition($input))->receipt()['offers']);
     }
 
+    public function testPrivateScopeRoundTripsWithoutChangingExistingPublicHashes(): void
+    {
+        $input = BillingFixtures::definition();
+        $public = new CatalogDefinition($input);
+        $this->assertSame('3fdbca489fffa70aab4d63b3970555361a7fb4aa6687a33bfcadcf39a5421e86', $public->id);
+        $this->assertSame('1ea32f3d6a759c38f5ddc27be2080ac713b857e02e60f219b9e3fc2f8807e447', $public->offers['monthly-br']->termsId);
+        $input->offers[0]->tenantId = 'tenant';
+        $private = new CatalogDefinition($input);
+        $this->assertNotSame($public->id, $private->id);
+        $this->assertSame('tenant', $private->offers['monthly-br']->tenantId);
+        $this->assertNotSame($public->offers['monthly-br']->termsId, $private->offers['monthly-br']->termsId);
+        $this->assertSame($public->offers['monthly-us']->termsId, $private->offers['monthly-us']->termsId);
+        $this->assertSame($public->offers['pack-br']->termsId, $private->offers['pack-br']->termsId);
+        $restored = new CatalogDefinition(json_decode(json_encode($private->definition, JSON_THROW_ON_ERROR), false, 32, JSON_THROW_ON_ERROR));
+        $this->assertSame($private->receipt(), $restored->receipt());
+        $input->offers[0]->tenantId = 'other';
+        $this->assertNotSame($private->id, (new CatalogDefinition($input))->id);
+    }
+
     public static function invalidDefinitions(): iterable
     {
         $changes = [
@@ -72,6 +91,14 @@ final class BillingCatalogDefinitionTest extends TestCase
             'interval type' => static fn ($d) => $d->offers[0]->interval = [],
             'yearly' => static fn ($d) => $d->offers[0]->interval = 'year',
             'free offer' => static fn ($d) => $d->offers[0]->price = '0',
+            'null private tenant' => static fn ($d) => $d->offers[0]->tenantId = null,
+            'empty private tenant' => static fn ($d) => $d->offers[0]->tenantId = '',
+            'private tenant list' => static fn ($d) => $d->offers[0]->tenantId = ['tenant'],
+            'private tenant number' => static fn ($d) => $d->offers[0]->tenantId = 123,
+            'private tenant flag' => static fn ($d) => $d->offers[0]->tenantId = false,
+            'private tenant whitespace' => static fn ($d) => $d->offers[0]->tenantId = ' tenant',
+            'private tenant length' => static fn ($d) => $d->offers[0]->tenantId = str_repeat('a', 25),
+            'unrecognized tenant list' => static fn ($d) => $d->offers[0]->tenantIds = ['tenant'],
         ];
         foreach ($changes as $name => $change) {
             $input = BillingFixtures::definition(); $change($input);

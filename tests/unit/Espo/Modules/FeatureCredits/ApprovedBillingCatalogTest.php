@@ -71,4 +71,26 @@ final class ApprovedBillingCatalogTest extends TestCase
         $this->assertSame('2099-01-01 00:00:00', $catalog->effectiveFrom);
         $this->assertSame($out, $run(['2099-01-01 00:00:00'])[1]);
     }
+
+    public function testApprovedFerrazVelosoOfferIsPrivateAndPreservesAllPublicTerms(): void
+    {
+        $root = 'custom/Espo/Modules/FeatureCredits/Resources/billing/';
+        $publicInput = json_decode(file_get_contents($root . 'launch-2026-10-13.json'), false, 32, JSON_THROW_ON_ERROR);
+        $privateInput = json_decode(file_get_contents($root . 'ifv-2026-11.json'), false, 32, JSON_THROW_ON_ERROR);
+        $publicInput->effectiveFrom = $privateInput->effectiveFrom;
+        $public = new CatalogDefinition($publicInput); $private = new CatalogDefinition($privateInput);
+        $this->assertSame('2026-11-01 03:00:00', $private->effectiveFrom);
+        $this->assertCount(7, $private->products); $this->assertCount(10, $private->offers);
+        foreach ($public->offers as $id => $terms) $this->assertSame($terms->jsonSerialize(), $private->offers[$id]->jsonSerialize());
+        $terms = $private->offers['ifv-4200-br'];
+        $this->assertSame('4200.0000', $terms->credits);
+        $this->assertSame('2023.00', $terms->price);
+        $this->assertSame('BRL', $terms->currency);
+        $this->assertSame('month', $terms->interval);
+        $this->assertSame('subscription', $terms->operation);
+        $this->assertSame('6a9ffb3cddbc6b3d2', $terms->tenantId);
+        $this->assertTrue($terms->availableToTenant('6a9ffb3cddbc6b3d2'));
+        $this->assertFalse($terms->availableToTenant('other'));
+        $this->assertFalse($terms->availableToTenant(null));
+    }
 }

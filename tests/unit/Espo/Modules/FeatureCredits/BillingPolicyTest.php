@@ -65,7 +65,7 @@ final class BillingPolicyTest extends TestCase
             ['credits' => 100.0], ['credits' => '-1'], ['credits' => '0.00001'],
             ['operation' => 'purchase', 'credits' => '0', 'interval' => null],
             ['operation' => 'purchase'], ['interval' => null], ['interval' => 'year'],
-            ['operation' => 'postpaid'],
+            ['operation' => 'postpaid'], ['tenantId' => ''], ['tenantId' => '../tenant'], ['tenantId' => ' tenant'],
         ] as $i => $changes) yield (string) $i => [$changes];
     }
 
@@ -88,6 +88,37 @@ final class BillingPolicyTest extends TestCase
             }
         }
         unset($snapshot->price);
+        $this->expectException(InvalidArgumentException::class);
+        OfferTerms::fromSnapshot($snapshot);
+    }
+
+    public function testPrivateOfferScopeIsHashedAndRequiresTheExactTenant(): void
+    {
+        $public = $this->terms();
+        $private = $this->terms(['tenantId' => 'tenant']);
+        $this->assertArrayNotHasKey('tenantId', $public->jsonSerialize());
+        $this->assertNotSame($public->termsId, $private->termsId);
+        $this->assertNotSame($private->termsId, $this->terms(['tenantId' => 'other'])->termsId);
+        $this->assertTrue($private->availableToTenant('tenant'));
+        $this->assertFalse($private->availableToTenant('other'));
+        $this->assertFalse($private->availableToTenant('Tenant'));
+        $this->assertFalse($private->availableToTenant(null));
+        $this->assertTrue($public->availableToTenant(null));
+        $this->assertTrue(Routing::checkout($private, 'BR', null, null, false, $this->capability(), 'tenant')['eligible']);
+        foreach ([null, 'other', 'Tenant'] as $tenantId) {
+            $route = Routing::checkout($private, 'BR', null, null, false, $this->capability(), $tenantId);
+            $this->assertFalse($route['eligible']);
+            $this->assertSame('offer_unavailable', $route['blockedReason']);
+            $this->assertNull($route['integrationId']);
+        }
+        $snapshot = json_decode(json_encode($private, JSON_THROW_ON_ERROR), false, 32, JSON_THROW_ON_ERROR);
+        $this->assertSame($private->jsonSerialize(), OfferTerms::fromSnapshot($snapshot)->jsonSerialize());
+        foreach (['other', null, '', [], false] as $tenantId) {
+            $bad = clone $snapshot; $bad->tenantId = $tenantId;
+            try { OfferTerms::fromSnapshot($bad); $this->fail('Private scope was changed without changing the original terms.'); }
+            catch (InvalidArgumentException) { $this->addToAssertionCount(1); }
+        }
+        unset($snapshot->tenantId);
         $this->expectException(InvalidArgumentException::class);
         OfferTerms::fromSnapshot($snapshot);
     }

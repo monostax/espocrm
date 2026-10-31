@@ -57,7 +57,7 @@ final readonly class CatalogDefinition
         $this->products = $products;
         $offers = $definitions = [];
         foreach ($data['offers'] as $raw) {
-            $offer = self::fields($raw, ['offerId', 'version', 'productId', 'productVersion', 'countries', 'currency', 'price', 'interval']);
+            $offer = self::fields($raw, ['offerId', 'version', 'productId', 'productVersion', 'countries', 'currency', 'price', 'interval'], ['tenantId']);
             self::identity($offer['offerId']);
             self::identity($offer['productId']);
             self::version($offer['version']);
@@ -66,13 +66,17 @@ final readonly class CatalogDefinition
                 ($offer['interval'] !== null && !is_string($offer['interval']))) {
                 throw new InvalidArgumentException('Invalid commercial offer.');
             }
+            if (array_key_exists('tenantId', $offer) && !is_string($offer['tenantId'])) {
+                throw new InvalidArgumentException('A private offer requires an explicit tenant identity.');
+            }
             $product = $products[$offer['productId']] ?? null;
             if (!$product || $product['productVersion'] !== $offer['productVersion']) {
                 throw new InvalidArgumentException('Offer must reference its included product version.');
             }
             if (isset($offers[$offer['offerId']])) throw new InvalidArgumentException('Duplicate catalog offer.');
             $terms = new OfferTerms($offer['offerId'], $offer['version'], $offer['productId'], $offer['productVersion'],
-                $product['operation'], $offer['countries'], $offer['currency'], $offer['price'], $product['credits'], $offer['interval']);
+                $product['operation'], $offer['countries'], $offer['currency'], $offer['price'], $product['credits'], $offer['interval'],
+                $offer['tenantId'] ?? null);
             $offers[$terms->offerId] = $terms;
             $offer['countries'] = $terms->countries;
             $offer['price'] = $terms->price;
@@ -102,11 +106,11 @@ final readonly class CatalogDefinition
         return hash('sha256', json_encode(['billing-product-v1', $product], JSON_THROW_ON_ERROR));
     }
 
-    private static function fields(mixed $input, array $keys): array
+    private static function fields(mixed $input, array $keys, array $optional = []): array
     {
         if (!$input instanceof stdClass) throw new InvalidArgumentException('Catalog entries must be JSON objects.');
         $data = get_object_vars($input);
-        if (array_diff(array_keys($data), $keys) || array_diff($keys, array_keys($data))) {
+        if (array_diff(array_keys($data), [...$keys, ...$optional]) || array_diff($keys, array_keys($data))) {
             throw new InvalidArgumentException('Invalid billing catalog fields.');
         }
         // Normalize object-key order before any hash computation.

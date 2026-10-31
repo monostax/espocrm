@@ -29,6 +29,7 @@ final class Catalog
         $pdo->beginTransaction();
         try {
             $this->assertFuture($catalog);
+            $this->assertPrivateTenants($catalog);
             $pdo->prepare('INSERT INTO credit_billing_catalog
                 (id, version, catalog_id, effective_from, definition, created_at, created_by_id)
                 VALUES (?,?,?,?,?,?,?)')->execute([RecordId::generate(), $catalog->version, $catalog->id,
@@ -136,6 +137,21 @@ final class Catalog
     private function assertFuture(CatalogDefinition $catalog): void
     {
         if ($catalog->effectiveFrom <= $this->clock->now()) throw new Conflict('New billing catalogs must start in the future.');
+    }
+
+    private function assertPrivateTenants(CatalogDefinition $catalog): void
+    {
+        $tenants = [];
+        foreach ($catalog->offers as $terms) {
+            if ($terms->tenantId !== null) $tenants[$terms->tenantId] = $terms->tenantId;
+        }
+        if (!$tenants) return;
+        sort($tenants, SORT_STRING);
+        $q = $this->entityManager->getPDO()->prepare('SELECT id FROM tenant WHERE id=? AND deleted=FALSE' . $this->sharedLockClause());
+        foreach ($tenants as $tenantId) {
+            $q->execute([$tenantId]);
+            if ($q->fetchColumn() !== $tenantId) throw new InvalidArgumentException('A private offer requires an existing active tenant.');
+        }
     }
 
     private function findVersion(string $version): array|false

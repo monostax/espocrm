@@ -212,6 +212,45 @@ final class BillingAccountsDatabaseTest extends TestCase
     }
 
     #[DataProvider('dialects')]
+    public function testPrivateOfferIsHiddenAndCannotBeAcceptedByAnotherTenantEvenWithExactTerms(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo): void {
+            [$accounts, $catalog] = $this->services($pdo);
+            $input = BillingFixtures::definition();
+            $input->offers[] = (object) ['offerId' => 'monthly-private', 'version' => 'v1', 'productId' => 'monthly',
+                'productVersion' => 'v1', 'countries' => ['BR'], 'currency' => 'BRL', 'price' => '2023',
+                'interval' => 'month', 'tenantId' => 'tenant'];
+            $catalog->publish($input, 'admin');
+            foreach (['tenant', 'other'] as $tenantId) $accounts->changeCountry($tenantId, 'country', 0, 'BR', 'admin');
+            $this->now = $input->effectiveFrom;
+            $own = $accounts->context('tenant'); $foreign = $accounts->context('other');
+            $this->assertSame(['monthly-br', 'monthly-private', 'pack-br'], array_column(array_column($own['offers'], 'terms'), 'offerId'));
+            $this->assertSame(['monthly-br', 'pack-br'], array_column(array_column($foreign['offers'], 'terms'), 'offerId'));
+            $this->assertStringNotContainsString('monthly-private', json_encode($foreign, JSON_THROW_ON_ERROR));
+            $this->assertStringNotContainsString('2023.00', json_encode($foreign, JSON_THROW_ON_ERROR));
+            $args = $this->acceptance($catalog, 'private-plan', 'monthly-private');
+            $before = $this->snapshot($pdo);
+            $forged = $args; $forged[0] = 'other';
+            try { $accounts->accept(...$forged); $this->fail('A foreign tenant accepted a known private offer.'); }
+            catch (Conflict) { $this->assertSame($before, $this->snapshot($pdo)); }
+            $receipt = $accounts->accept(...$args);
+            $this->assertSame('tenant', $receipt['terms']['tenantId']);
+            $this->assertSame('2023.00', $receipt['terms']['price']);
+            $this->assertArrayNotHasKey('tenantId', \Espo\Modules\FeatureCredits\Billing\CustomerProjection::acceptance($receipt)['terms']);
+            $this->assertSame($receipt, $accounts->accept(...$args));
+            $withdraw = BillingFixtures::definition('private-withdrawn', '2026-10-14 00:00:00');
+            $catalog->publish($withdraw, 'admin'); $this->now = $withdraw->effectiveFrom;
+            $this->assertSame($receipt, $accounts->accept(...$args));
+            $this->assertSame($receipt, $accounts->readObligation('tenant', $receipt['obligationId'])['acceptance']);
+            try { $accounts->readObligation('other', $receipt['obligationId']); $this->fail('A foreign tenant read the private acceptance.'); }
+            catch (NotFound) { $this->addToAssertionCount(1); }
+            foreach (['credit_billing_creation', 'credit_grant', 'credit_transaction', 'tenant_credit_balance'] as $table) {
+                $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn());
+            }
+        });
+    }
+
+    #[DataProvider('dialects')]
     public function testAllUnresolvedStatesPinProviderAndIntegrationAndCannotBeCancelledLocally(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo): void {

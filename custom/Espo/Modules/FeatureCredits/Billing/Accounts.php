@@ -39,7 +39,7 @@ final class Accounts
             }
             $offers = [];
             foreach ($catalog->offers as $terms) {
-                if (!in_array($account['billing_country'], $terms->countries, true)) continue;
+                if (!$terms->availableToTenant($tenantId) || !in_array($account['billing_country'], $terms->countries, true)) continue;
                 $offers[] = ['terms' => $terms->jsonSerialize(), 'eligibility' => $this->eligibility($account, $obligations, $terms)];
             }
             return $result + ['catalogId' => $catalog->id, 'catalogUnavailable' => false, 'offers' => $offers];
@@ -101,7 +101,9 @@ final class Accounts
             $this->revision($account, $revision);
             $catalog = $this->catalog->currentForAcceptance();
             $terms = $catalog->offers[$offerId] ?? null;
-            if ($catalog->id !== $catalogId || !$terms || $terms->termsId !== $termsId) throw new Conflict('Commercial terms changed; review the current offer.');
+            if ($catalog->id !== $catalogId || !$terms || !$terms->availableToTenant($tenantId) || $terms->termsId !== $termsId) {
+                throw new Conflict('Commercial terms changed; review the current offer.');
+            }
             $eligibility = $this->eligibility($account, $obligations, $terms);
             if (!$eligibility['eligible']) throw new Conflict($eligibility['blockedReason']);
             if ($account['effective_provider'] !== $eligibility['effectiveProvider']) throw new Conflict('Billing assignment is inconsistent.');
@@ -169,7 +171,7 @@ final class Accounts
     {
         $route = Routing::assignment($account['billing_country'], $account['provider_override'], $account['effective_provider'], (bool) $obligations);
         $capability = $this->providers->capability($route['effectiveProvider']);
-        $result = Routing::checkout($terms, $account['billing_country'], $account['provider_override'], $account['effective_provider'], (bool) $obligations, $capability);
+        $result = Routing::checkout($terms, $account['billing_country'], $account['provider_override'], $account['effective_provider'], (bool) $obligations, $capability, $account['tenant_id']);
         if ($result['eligible'] && $obligations && $obligations[0]['integration_id'] !== $capability->integrationId) {
             $result['eligible'] = false; $result['blockedReason'] = 'billing_integration_pinned'; $result['integrationId'] = null;
         }
@@ -231,7 +233,7 @@ final class Accounts
             $snapshot = json_decode($row['terms_snapshot'], false, 32, JSON_THROW_ON_ERROR);
             if (!$snapshot instanceof \stdClass) throw new InvalidArgumentException('Invalid accepted terms.');
             $terms = OfferTerms::fromSnapshot($snapshot);
-            if ($terms->termsId !== $row['terms_id'] || $terms->operation !== $row['operation'] ||
+            if (!$terms->availableToTenant($row['tenant_id']) || $terms->termsId !== $row['terms_id'] || $terms->operation !== $row['operation'] ||
                 !in_array($row['state'], [...self::OPEN, ...self::CLOSED], true)) throw new InvalidArgumentException('Inconsistent accepted terms.');
         } catch (InvalidArgumentException | \JsonException | \OverflowException | \Brick\Math\Exception\MathException) {
             throw new Conflict('Stored billing acceptance is invalid.');

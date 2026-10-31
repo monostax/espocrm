@@ -12,6 +12,7 @@ use Espo\Modules\FeatureCredits\Accounting\Clock;
 use Espo\Modules\FeatureCredits\Billing\{Catalog, CatalogDefinition};
 use Espo\Modules\FeatureCredits\Controllers\CreditBillingConfiguration;
 use Espo\ORM\EntityManager;
+use InvalidArgumentException;
 use PDO;
 use PDOException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -207,6 +208,43 @@ final class BillingCatalogDatabaseTest extends TestCase
                 $this->now = $now;
                 $this->assertSame($receipt['catalog'], $catalog->current()->receipt());
             }
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testPrivateOfferPublicationRequiresAnActiveTenantAndScopeVersionsAreImmutable(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo): void {
+            $pdo->exec('CREATE TABLE tenant (id VARCHAR(24) PRIMARY KEY, deleted BOOLEAN NOT NULL DEFAULT FALSE)');
+            try {
+                $pdo->exec("INSERT INTO tenant (id,deleted) VALUES ('tenant',FALSE),('other',FALSE),('deleted',TRUE),('123',FALSE)");
+                $catalog = $this->catalog($pdo); $input = BillingFixtures::definition();
+                $input->offers[0]->tenantId = 'tenant';
+                $first = $catalog->publish($input, 'admin');
+                $this->assertSame($first, $catalog->publish($input, 'admin'));
+                $this->now = $input->effectiveFrom;
+                $this->assertSame('tenant', $catalog->current()->offers['monthly-br']->tenantId);
+                $before = $this->snapshot($pdo);
+                foreach (['other', null] as $tenantId) {
+                    $changed = BillingFixtures::definition('changed-private', '2026-10-14 00:00:00');
+                    if ($tenantId !== null) $changed->offers[0]->tenantId = $tenantId;
+                    try { $catalog->publish($changed, 'admin'); $this->fail('An existing offer version changed its private audience.'); }
+                    catch (Conflict) { $this->assertSame($before, $this->snapshot($pdo)); }
+                }
+                foreach (['absent', 'deleted', 'TENANT'] as $tenantId) {
+                    $invalid = BillingFixtures::definition('invalid-private', '2026-10-14 00:00:00');
+                    $invalid->offers[0]->version = 'v2'; $invalid->offers[0]->tenantId = $tenantId;
+                    try { $catalog->publish($invalid, 'admin'); $this->fail('An unavailable private tenant was published.'); }
+                    catch (InvalidArgumentException) {
+                        $this->assertFalse($pdo->inTransaction());
+                        $this->assertSame($before, $this->snapshot($pdo));
+                    }
+                }
+                $next = BillingFixtures::definition('private-v2', '2026-10-14 00:00:00');
+                $next->offers[0]->version = 'v2'; $next->offers[0]->tenantId = '123';
+                $catalog->publish($next, 'admin');
+                $this->assertSame($first['catalog'], $catalog->resolve($first['catalog']['catalogId'])->receipt());
+            } finally { $pdo->exec('DROP TABLE tenant'); }
         });
     }
 

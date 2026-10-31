@@ -29,9 +29,11 @@ final readonly class OfferTerms implements JsonSerializable
         mixed $price,
         mixed $credits,
         public ?string $interval,
+        public ?string $tenantId = null,
     ) {
         GrantInput::identity($offerId);
         GrantInput::identity($productId);
+        if ($tenantId !== null) GrantInput::identity($tenantId);
         foreach ([$version, $productVersion] as $value) {
             if (!preg_match('/^[a-z0-9][a-z0-9._:-]{0,63}$/D', $value)) {
                 throw new InvalidArgumentException('Canonical commercial versions are required.');
@@ -73,14 +75,22 @@ final readonly class OfferTerms implements JsonSerializable
         return ['termsId' => $this->termsId] + $this->definition();
     }
 
+    public function availableToTenant(?string $tenantId): bool
+    {
+        return $this->tenantId === null || $this->tenantId === $tenantId;
+    }
+
     /** Restore original stored terms, never a current catalog lookup. A hash is not payment authority. */
     public static function fromSnapshot(stdClass $snapshot): self
     {
         $fields = get_object_vars($snapshot);
         $expected = ['termsId', 'schema', 'offerId', 'version', 'productId', 'productVersion',
             'operation', 'countries', 'currency', 'price', 'credits', 'interval'];
-        if (array_diff(array_keys($fields), $expected) || array_diff($expected, array_keys($fields))) {
+        if (array_diff(array_keys($fields), [...$expected, 'tenantId']) || array_diff($expected, array_keys($fields))) {
             throw new InvalidArgumentException('Invalid commercial snapshot fields.');
+        }
+        if (array_key_exists('tenantId', $fields) && !is_string($fields['tenantId'])) {
+            throw new InvalidArgumentException('Invalid private offer tenant.');
         }
         foreach (array_diff($expected, ['countries', 'interval']) as $key) {
             if (!is_string($fields[$key])) {
@@ -93,7 +103,7 @@ final readonly class OfferTerms implements JsonSerializable
         }
         $terms = new self($snapshot->offerId, $snapshot->version, $snapshot->productId, $snapshot->productVersion,
             $snapshot->operation, $snapshot->countries, $snapshot->currency, $snapshot->price,
-            $snapshot->credits, $snapshot->interval);
+            $snapshot->credits, $snapshot->interval, $fields['tenantId'] ?? null);
         if (!hash_equals($terms->termsId, $snapshot->termsId)) {
             throw new InvalidArgumentException('Commercial snapshot hash mismatch.');
         }
@@ -109,6 +119,6 @@ final readonly class OfferTerms implements JsonSerializable
             'operation' => $this->operation, 'countries' => $this->countries,
             'currency' => $this->currency, 'price' => $this->price,
             'credits' => $this->credits, 'interval' => $this->interval,
-        ];
+        ] + ($this->tenantId === null ? [] : ['tenantId' => $this->tenantId]);
     }
 }

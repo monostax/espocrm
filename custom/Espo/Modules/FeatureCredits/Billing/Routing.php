@@ -53,10 +53,12 @@ final class Routing
         ?string $assigned,
         bool $hasObligations,
         ?ProviderCapability $capability = null,
+        ?string $tenantId = null,
     ): array {
         $route = self::assignment($country, $override, $assigned, $hasObligations);
         $provider = $route['effectiveProvider'];
         $reason = match (true) {
+            !$terms->availableToTenant($tenantId) => 'offer_unavailable',
             $country === null => 'billing_country_required',
             !in_array($country, $terms->countries, true) => 'market_ineligible',
             $provider === null => 'billing_route_missing',
