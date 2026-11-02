@@ -21,6 +21,7 @@ use Espo\Modules\Chatwoot\Services\OpportunityActivityBuckets;
 use Espo\Modules\Chatwoot\Services\OpportunityActivitySummary;
 use Espo\Modules\Chatwoot\Services\OpportunityBulkPostAccess;
 use Espo\Modules\Chatwoot\Services\OpportunityGroupSummary;
+use Espo\Modules\Chatwoot\Services\OpportunityInboxFilter;
 use Espo\Modules\Chatwoot\Services\OpportunitySpreadsheetSummary;
 use Espo\Modules\Chatwoot\Classes\Select\Opportunity\StreamActivity;
 use Espo\Modules\Chatwoot\Services\OpportunityReadStateService;
@@ -52,6 +53,7 @@ class OpportunityGroupSummaryTest extends TestCase
     private OpportunityGroupSummary $service;
     private OpportunitySpreadsheetSummary $spreadsheet;
     private OpportunityActivityBuckets $buckets;
+    private OpportunityInboxFilter $inboxes;
     private array $accounts;
     private array $hiddenFields = [];
     private array $hiddenScopes = [];
@@ -72,7 +74,8 @@ class OpportunityGroupSummaryTest extends TestCase
         $defs = [];
         $tables = [
             'Opportunity' => ['id', 'tenantId', 'opportunityStageId', 'funnelId', 'assignedUserId', 'status',
-                'amount', 'amountCurrency', 'name', 'probability', 'accountId', 'nextActionId', 'nextActionType', 'readable', 'unread', 'deleted'],
+                'amount', 'amountCurrency', 'name', 'probability', 'accountId', 'nextActionId', 'nextActionType', 'readable', 'unread', 'deleted',
+                'sourceChannel', 'followupLifetimeCount'],
             'Account' => ['id', 'name', 'deleted'],
             'Visibility' => ['id', 'opportunityId', 'deleted'],
             'Meeting' => ['id', 'parentId', 'parentType', 'dateEnd', 'dateEndDate', 'pending', 'readable', 'deleted'],
@@ -83,7 +86,7 @@ class OpportunityGroupSummaryTest extends TestCase
             $columns = [];
             foreach ($fields as $field) {
                 $column = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $field));
-                $numeric = in_array($field, ['amount', 'probability', 'pending', 'readable', 'unread', 'deleted']);
+                $numeric = in_array($field, ['amount', 'probability', 'pending', 'readable', 'unread', 'deleted', 'followupLifetimeCount']);
                 $columns[] = "$column " . ($numeric ? 'NUMERIC DEFAULT ' . ($field === 'pending' ? 1 : 0) : 'TEXT');
                 $defs[$type]['attributes'][$field] = ['type' => $numeric ? 'float' : 'varchar'];
             }
@@ -188,7 +191,10 @@ class OpportunityGroupSummaryTest extends TestCase
         $currency->method('getDefaultCurrency')->willReturn('USD');
         $currency->method('getCurrencyRates')->willReturn(Rates::fromAssoc(['BRL' => 1.0, 'USD' => 5.0], 'BRL'));
         $this->buckets = new OpportunityActivityBuckets($factory, $acl);
-        $this->service = new OpportunityGroupSummary($em, $factory, $fetcher, $workspace, $readStates, $this->buckets, $currency, $acl);
+        $this->inboxes = $this->createMock(OpportunityInboxFilter::class);
+        $this->service = new OpportunityGroupSummary(
+            $em, $factory, $fetcher, $workspace, $readStates, $this->buckets, $currency, $acl, $this->inboxes
+        );
         $this->spreadsheet = new OpportunitySpreadsheetSummary(
             $em, $this->service, $currency, $this->createMock(StreamActivity::class), $acl
         );
@@ -338,6 +344,58 @@ class OpportunityGroupSummaryTest extends TestCase
         }
     }
 
+    public function testStatusSplitServesSourceAndFollowupTablesInOneQuery(): void
+    {
+        // a is duplicated by the Visibility join; c is 80 USD = 400 BRL; null has no amount.
+        $this->pdo->exec("UPDATE opportunity SET
+            status = CASE id WHEN 'a' THEN 'Won' WHEN 'b' THEN 'Lost' ELSE 'Open' END,
+            source_channel = CASE id WHEN 'a' THEN 'CTWA' WHEN 'b' THEN 'CTWA' END,
+            followup_lifetime_count = CASE id WHEN 'a' THEN 2 WHEN 'b' THEN 0 WHEN 'c' THEN 1 END");
+        foreach ([$this->mysql, $this->postgres] as $this->composer) {
+            $this->queryCount = 0;
+            $groups = $this->summary(['groupBy' => 'sourceChannel', 'statusSplit' => 'true'])['groups'];
+            self::assertSame(1, $this->queryCount);
+            self::assertSame([2, 998.0], [$groups->{'sourceChannel:CTWA'}['count'], $groups->{'sourceChannel:CTWA'}['amount']]);
+            self::assertEquals((object) [
+                'Won' => ['count' => 1, 'amount' => 499.0],
+                'Lost' => ['count' => 1, 'amount' => 499.0],
+            ], $groups->{'sourceChannel:CTWA'}['statuses']);
+            self::assertEquals((object) ['Open' => ['count' => 2, 'amount' => 400.0]], $groups->{'sourceChannel:'}['statuses']);
+
+            // The lifetime count decides; a NULL count means no follow-up was sent.
+            $groups = $this->summary(['groupBy' => 'followupUsed', 'statusSplit' => 'true'])['groups'];
+            self::assertSame([2, 899.0], [$groups->{'followupUsed:yes'}['count'], $groups->{'followupUsed:yes'}['amount']]);
+            self::assertEquals((object) [
+                'Won' => ['count' => 1, 'amount' => 499.0],
+                'Open' => ['count' => 1, 'amount' => 400.0],
+            ], $groups->{'followupUsed:yes'}['statuses']);
+            self::assertEquals((object) [
+                'Lost' => ['count' => 1, 'amount' => 499.0],
+                'Open' => ['count' => 1, 'amount' => 0.0],
+            ], $groups->{'followupUsed:no'}['statuses']);
+
+            // Without the split the response keeps its original shape.
+            self::assertSame(['count' => 2, 'amount' => 998.0], $this->summary(['groupBy' => 'sourceChannel'])['groups']->{'sourceChannel:CTWA'});
+        }
+    }
+
+    public function testNewGroupingsAndStatusSplitRequireFieldAccess(): void
+    {
+        foreach ([
+            ['Opportunity.sourceChannel', ['groupBy' => 'sourceChannel']],
+            ['Opportunity.followupLifetimeCount', ['groupBy' => 'followupUsed']],
+            ['Opportunity.status', ['groupBy' => 'funnel', 'statusSplit' => 'true']],
+        ] as [$field, $params]) {
+            $this->hiddenFields = [$field];
+            try {
+                $this->summary($params);
+                self::fail("$field must be readable for " . json_encode($params));
+            } catch (Forbidden) {
+                self::assertTrue(true);
+            }
+        }
+    }
+
     public function testReadStatusDoesNotMultiplyDuplicatesAndNoGroupingHasOneTotal(): void
     {
         foreach ([$this->mysql, $this->postgres] as $this->composer) {
@@ -357,6 +415,49 @@ class OpportunityGroupSummaryTest extends TestCase
         self::assertNull($result['currency']);
         self::assertSame(['count' => 3, 'amount' => null], $result['groups']->{'stage:stage'});
         self::assertStringNotContainsString('amount_currency', $this->lastSql);
+    }
+
+    public function testInboxGroupsSplitStatusesInsideTheAuthorizedScope(): void
+    {
+        $this->inboxes->expects(self::once())->method('summary')->willReturnCallback(
+            function (SelectBuilder $scope, $accountId, $amount) {
+                self::assertSame('1', $accountId);
+                self::assertNotNull($amount, 'Readable amounts use the base-currency expression.');
+                // The inbox filter receives the strict-ACL, tenant-bound workspace scope.
+                $ids = $this->pdo->query($this->composer->composeSelect(
+                    (clone $scope)->select(['id'])->order('id')->build()
+                ))->fetchAll(PDO::FETCH_COLUMN);
+                self::assertSame(['a', 'b', 'c', 'null'], $ids);
+                return [
+                    ['id' => 'wa', 'name' => 'WhatsApp', 'status' => 'Open', 'count' => 2, 'amount' => 100.5],
+                    ['id' => 'wa', 'name' => 'WhatsApp', 'status' => 'Won', 'count' => 1, 'amount' => 50.25],
+                    ['id' => 'ig', 'name' => 'Instagram', 'status' => 'Lost', 'count' => 1, 'amount' => 10.0],
+                ];
+            }
+        );
+        $result = $this->summary(['groupBy' => 'inbox']);
+        self::assertSame('BRL', $result['currency']);
+        $wa = $result['groups']->{'inbox:wa'};
+        self::assertSame(['WhatsApp', 3, 150.75], [$wa['name'], $wa['count'], $wa['amount']]);
+        self::assertSame(['count' => 1, 'amount' => 50.25], $wa['statuses']->Won);
+        self::assertSame(['count' => 1, 'amount' => 10.0], $result['groups']->{'inbox:ig'}['statuses']->Lost);
+    }
+
+    public function testInboxGroupsRequireStatusAccessAndHideMoneyWithoutAmountAccess(): void
+    {
+        $this->inboxes->method('summary')->willReturnCallback(function ($scope, $accountId, $amount) {
+            self::assertNull($amount);
+            return [['id' => 'wa', 'name' => 'WhatsApp', 'status' => 'Open', 'count' => 2, 'amount' => null]];
+        });
+        $this->hiddenFields = ['Opportunity.amount'];
+        $result = $this->summary(['groupBy' => 'inbox']);
+        self::assertNull($result['currency']);
+        self::assertSame(['count' => 2, 'amount' => null], $result['groups']->{'inbox:wa'}['statuses']->Open);
+        self::assertNull($result['groups']->{'inbox:wa'}['amount']);
+
+        $this->hiddenFields = ['Opportunity.status'];
+        $this->expectException(Forbidden::class);
+        $this->summary(['groupBy' => 'inbox']);
     }
 
     public function testGroupingFieldAclIsRequired(): void

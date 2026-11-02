@@ -23,6 +23,7 @@
 
 namespace Espo\Modules\Global\Rebuild;
 
+use Espo\Modules\Global\Classes\Utils\FeatureVerticalChecker;
 use Espo\Core\Rebuild\RebuildAction;
 use Espo\Core\Utils\Metadata;
 use Espo\Core\Utils\Log;
@@ -1780,10 +1781,6 @@ class SeedRole implements RebuildAction
      */
     protected function prepareId(string $id, bool $toHash): string
     {
-        if ($toHash) {
-            return md5($id);
-        }
-
-        return $id;
+        return FeatureVerticalChecker::roleIdFor($id, $toHash);
     }
 }

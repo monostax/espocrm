@@ -28,6 +28,7 @@ class OpportunityGroupSummary
         'assignee' => ['assignedUserId', 'assignedUser'],
         'status' => ['status', 'status'],
         'followupStatus' => ['followupStatus', 'followupStatus'],
+        'sourceChannel' => ['sourceChannel', 'sourceChannel'],
     ];
 
     public function __construct(
@@ -39,16 +40,27 @@ class OpportunityGroupSummary
         private OpportunityActivityBuckets $activityBuckets,
         private ConfigDataProvider $currency,
         private Acl $acl,
+        private OpportunityInboxFilter $inboxes,
     ) {}
 
     public function get(Request $request): array
     {
         $groupBy = $request->getQueryParam('groupBy');
-        if (!in_array($groupBy, [...array_keys(self::FIELDS), 'none', 'readStatus', 'activity'], true)) {
+        $groupings = [...array_keys(self::FIELDS), 'none', 'readStatus', 'activity', 'inbox', 'followupUsed'];
+        if (!in_array($groupBy, $groupings, true)) {
             throw new BadRequest('A workspace and valid grouping are required.');
         }
         $scope = $this->buildScope($request);
-        if (isset(self::FIELDS[$groupBy]) && !$this->acl->checkField('Opportunity', self::FIELDS[$groupBy][1])) {
+        if ($groupBy === 'inbox') {
+            return $this->inboxGroups($request, $scope);
+        }
+        $field = self::FIELDS[$groupBy][1] ?? ($groupBy === 'followupUsed' ? 'followupLifetimeCount' : null);
+        if ($field && !$this->acl->checkField('Opportunity', $field)) {
+            throw new Forbidden();
+        }
+        // Each group can carry its Open/Won/Lost split, so one request serves a status table.
+        $split = $request->getQueryParam('statusSplit') === 'true';
+        if ($split && !$this->acl->checkField('Opportunity', 'status')) {
             throw new Forbidden();
         }
 
@@ -64,6 +76,12 @@ class OpportunityGroupSummary
                 'followupStatus:FollowupActive',
                 'followupStatus:FollowupInactive',
             ),
+            // The lifetime count never resets, unlike the per-cycle followupCount.
+            'followupUsed' => Expr::if(
+                Expr::greaterOrEqual(Expr::ifNull(Expr::column('followupLifetimeCount'), 0), 1),
+                'followupUsed:yes',
+                'followupUsed:no',
+            ),
             default => Expr::concat($groupBy . ':', Expr::ifNull(Expr::column(self::FIELDS[$groupBy][0]), '')),
         };
         $canReadAmount = $this->acl->checkField('Opportunity', 'amount');
@@ -71,19 +89,81 @@ class OpportunityGroupSummary
             ->select(Expr::count(Expr::column('id')), 'count')
             ->select($canReadAmount ? Expr::sum($this->baseAmount()) : Expr::value(null), 'amount')
             ->group(Expr::alias('groupKey'));
+        if ($split) {
+            $query->select(Expr::column('status'), 'groupStatus')->group(Expr::alias('groupStatus'));
+        }
 
         $groups = [];
         $rows = $this->entityManager->getQueryExecutor()->execute($query->build());
         while ($row = $rows->fetch(PDO::FETCH_ASSOC)) {
-            $groups[$row['groupKey']] = [
-                'count' => (int) $row['count'],
-                'amount' => $canReadAmount ? round((float) ($row['amount'] ?? 0), 2) : null,
-            ];
+            $this->addRow(
+                $groups,
+                $row['groupKey'],
+                (int) $row['count'],
+                $canReadAmount ? round((float) ($row['amount'] ?? 0), 2) : null,
+                $split ? ($row['groupStatus'] ?? '') : null,
+            );
+        }
+        return $this->response($groups, $canReadAmount);
+    }
+
+    /**
+     * Fold one aggregate row into its group; with a status, also into the group's
+     * per-status split.
+     *
+     * @param array<string, array<string, mixed>> $groups
+     */
+    private function addRow(array &$groups, string $key, int $count, ?float $amount, ?string $status): void
+    {
+        $groups[$key] = ($groups[$key] ?? []) + ['count' => 0, 'amount' => $amount === null ? null : 0.0];
+        $groups[$key]['count'] += $count;
+        if ($amount !== null) {
+            $groups[$key]['amount'] = round($groups[$key]['amount'] + $amount, 2);
+        }
+        if ($status !== null) {
+            $groups[$key]['statuses'][$status] = ['count' => $count, 'amount' => $amount];
+        }
+    }
+
+    /** @param array<string, array<string, mixed>> $groups */
+    private function response(array $groups, bool $canReadAmount): array
+    {
+        foreach ($groups as $key => $group) {
+            if (isset($group['statuses'])) {
+                $groups[$key]['statuses'] = (object) $group['statuses'];
+            }
         }
         return [
             'currency' => $canReadAmount ? $this->currency->getBaseCurrency() : null,
             'groups' => (object) $groups,
         ];
+    }
+
+    /**
+     * Inbox totals split by status. Inbox membership comes from the conversations an
+     * opportunity is linked to, so one opportunity can count in several inboxes.
+     */
+    private function inboxGroups(Request $request, Select $scope): array
+    {
+        if (!$this->acl->checkField('Opportunity', 'status')) {
+            throw new Forbidden();
+        }
+        $query = SelectBuilder::create()->from('Opportunity')->where(['id=s' => $scope]);
+        $this->applyActivityFilter($query, $scope, $request);
+        $canReadAmount = $this->acl->checkField('Opportunity', 'amount');
+        $rows = $this->inboxes->summary(
+            $query,
+            $request->getQueryParam('chatwootAccountId'),
+            $canReadAmount ? $this->baseAmount() : null,
+        );
+
+        $groups = [];
+        foreach ($rows as $row) {
+            $key = 'inbox:' . $row['id'];
+            $groups[$key] ??= ['name' => $row['name']];
+            $this->addRow($groups, $key, $row['count'], $row['amount'], $row['status'] ?? '');
+        }
+        return $this->response($groups, $canReadAmount);
     }
 
     /** Shared by group and spreadsheet summaries so both describe the same full view. */

@@ -55,20 +55,10 @@ class OpportunityInboxFilter
     /** @return list<array{id: string, name: string, count: int}> */
     public function counts(SelectBuilder $scope, mixed $chatwootAccountId): array
     {
-        // Older navigation callers have no workspace. Never infer an all-tenant scope.
-        if ($chatwootAccountId === null || !$this->canRead()) return [];
+        [$inboxes, $pairs] = $this->authorizedPairs($scope, $chatwootAccountId) ?? [[], null];
+        if (!$pairs) return [];
 
-        $account = $this->account($chatwootAccountId);
-        $inboxes = $this->inboxes($account);
-        if (!$inboxes) return [];
-
-        $conversations = $this->visibleConversations($account, $inboxes, $scope);
-        if (!$conversations) return [];
-
-        // Deduplicate opportunity/inbox pairs before aggregation: several linked
-        // conversations (or team ACL joins) must never multiply an opportunity.
-        $pairs = $this->pairs($account, $scope, $conversations)
-            ->select([['id', 'opportunityId'], ['inboxConversation.inboxId', 'inboxId']])->build();
+        $pairs = $pairs->select([['id', 'opportunityId'], ['inboxConversation.inboxId', 'inboxId']])->build();
         $query = SelectBuilder::create()->fromQuery($pairs, 'inboxOpportunities')
             ->select(Expr::alias('inboxOpportunities.inboxId'), 'inboxId')
             ->select(Expr::count(Expr::alias('inboxOpportunities.opportunityId')), 'count')
@@ -80,6 +70,65 @@ class OpportunityInboxFilter
         }
         usort($result, fn ($a, $b) => strnatcasecmp($a['name'], $b['name']));
         return $result;
+    }
+
+    /**
+     * Per-inbox totals by status, on the same authorization and pair deduplication
+     * as counts(). An opportunity linked to several inboxes counts once in each.
+     *
+     * @return list<array{id: string, name: string, status: ?string, count: int, amount: ?float}>
+     */
+    public function summary(SelectBuilder $scope, mixed $chatwootAccountId, ?Expr $amount): array
+    {
+        [$inboxes, $pairs] = $this->authorizedPairs($scope, $chatwootAccountId) ?? [[], null];
+        if (!$pairs) return [];
+
+        // The amount is a per-opportunity value, so it survives the pair DISTINCT
+        // and is summed once per opportunity and inbox.
+        $pairs = $pairs->select([['id', 'opportunityId'], ['inboxConversation.inboxId', 'inboxId'], ['status', 'status']])
+            ->select($amount ?? Expr::value(null), 'amount')->build();
+        $query = SelectBuilder::create()->fromQuery($pairs, 'inboxOpportunities')
+            ->select(Expr::alias('inboxOpportunities.inboxId'), 'inboxId')
+            ->select(Expr::alias('inboxOpportunities.status'), 'status')
+            ->select(Expr::count(Expr::alias('inboxOpportunities.opportunityId')), 'count')
+            ->select(Expr::sum(Expr::alias('inboxOpportunities.amount')), 'amount')
+            ->group(Expr::alias('inboxOpportunities.inboxId'))
+            ->group(Expr::alias('inboxOpportunities.status'))->build();
+        $result = [];
+        foreach ($this->em->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $inbox = $inboxes[$row['inboxId']];
+            $result[] = [
+                'id' => $inbox->getId(),
+                'name' => (string) $inbox->get('name'),
+                'status' => $row['status'],
+                'count' => (int) $row['count'],
+                'amount' => $amount ? round((float) ($row['amount'] ?? 0), 2) : null,
+            ];
+        }
+        return $result;
+    }
+
+    /**
+     * Readable inboxes and the deduplicated opportunity/inbox pair query for the
+     * conversations the viewer can see in both the CRM and Chatwoot.
+     *
+     * @return ?array{array<string, Entity>, SelectBuilder}
+     */
+    private function authorizedPairs(SelectBuilder $scope, mixed $chatwootAccountId): ?array
+    {
+        // Older navigation callers have no workspace. Never infer an all-tenant scope.
+        if ($chatwootAccountId === null || !$this->canRead()) return null;
+
+        $account = $this->account($chatwootAccountId);
+        $inboxes = $this->inboxes($account);
+        if (!$inboxes) return null;
+
+        $conversations = $this->visibleConversations($account, $inboxes, $scope);
+        if (!$conversations) return null;
+
+        // Deduplicate opportunity/inbox pairs before aggregation: several linked
+        // conversations (or team ACL joins) must never multiply an opportunity.
+        return [$inboxes, $this->pairs($account, $scope, $conversations)];
     }
 
     private function canRead(): bool

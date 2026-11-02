@@ -35,6 +35,8 @@ use Espo\ORM\EntityManager;
  */
 class FeatureVerticalChecker
 {
+    public const ROLE_ID_LENGTH = 17;
+
     public function __construct(
         private EntityManager $entityManager,
         private Metadata $metadata,
@@ -236,10 +238,21 @@ class FeatureVerticalChecker
      */
     private function prepareId(string $id, bool $toHash): string
     {
+        return self::roleIdFor($id, $toHash);
+    }
+
+    /**
+     * Role ID for a static role ID, shared by seeding, pack assignment and
+     * resolution. Espo record IDs are varchar(17): a longer static ID (such as
+     * `tenant-pack-initiatives`) gets a stable 17-character hash instead of
+     * failing to insert. Shorter IDs are kept as they are.
+     */
+    public static function roleIdFor(string $staticId, bool $toHash): string
+    {
         if ($toHash) {
-            return md5($id);
+            return md5($staticId);
         }
 
-        return $id;
+        return strlen($staticId) > self::ROLE_ID_LENGTH ? substr(md5($staticId), 0, self::ROLE_ID_LENGTH) : $staticId;
     }
 }

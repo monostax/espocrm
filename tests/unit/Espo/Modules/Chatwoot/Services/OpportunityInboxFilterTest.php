@@ -23,6 +23,7 @@ use Espo\ORM\EntityManager;
 use Espo\ORM\Executor\QueryExecutor;
 use Espo\ORM\Metadata;
 use Espo\ORM\MetadataDataProvider;
+use Espo\ORM\Query\Part\Expression as Expr;
 use Espo\ORM\Query\SelectBuilder;
 use Espo\ORM\QueryComposer\MysqlQueryComposer;
 use Espo\ORM\QueryComposer\PostgresqlQueryComposer;
@@ -56,7 +57,7 @@ class OpportunityInboxFilterTest extends TestCase
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $tables = [
-            'Opportunity' => ['id', 'tenantId', 'assignedUserId', 'readable', 'deleted'],
+            'Opportunity' => ['id', 'tenantId', 'assignedUserId', 'status', 'amount', 'readable', 'deleted'],
             'ChatwootAccount' => ['id', 'tenantId', 'platformId', 'chatwootAccountId', 'readable', 'deleted'],
             'ChatwootInbox' => ['id', 'name', 'chatwootAccountId', 'chatwootInboxId', 'readable', 'deleted'],
             'ChatwootConversation' => ['id', 'chatwootAccountId', 'chatwootConversationId', 'inboxId', 'assignedUserId', 'readable', 'deleted'],
@@ -69,7 +70,7 @@ class OpportunityInboxFilterTest extends TestCase
         foreach ($tables as $type => $fields) {
             $columns = [];
             foreach ($fields as $field) {
-                $numeric = in_array($field, ['readable', 'entityReadable', 'deleted']);
+                $numeric = in_array($field, ['readable', 'entityReadable', 'deleted', 'amount']);
                 $columns[] = $this->snake($field) . ($numeric ? ' INTEGER DEFAULT 0' : ' TEXT');
                 $this->defs[$type]['attributes'][$field] = ['type' => $numeric ? 'int' : 'varchar'];
             }
@@ -176,7 +177,8 @@ class OpportunityInboxFilterTest extends TestCase
         }
         foreach (['one', 'two', 'hidden', 'other', 'denied', 'empty'] as $id) {
             $this->insert('Opportunity', ['id' => $id, 'tenantId' => $id === 'other' ? 'tenant-b' : 'tenant-a',
-                'assignedUserId' => $id === 'one' ? 'viewer' : null, 'readable' => $id === 'hidden' ? 0 : 1]);
+                'assignedUserId' => $id === 'one' ? 'viewer' : null, 'readable' => $id === 'hidden' ? 0 : 1,
+                'status' => $id === 'two' ? 'Won' : 'Open', 'amount' => ['one' => 100, 'two' => 40][$id] ?? 7]);
         }
         $this->conversation('c1', 101, 'a', ['one', 'two', 'other', 'hidden']);
         $this->conversation('c2', 102, 'a', ['one']);
@@ -247,6 +249,15 @@ class OpportunityInboxFilterTest extends TestCase
         return $this->service->counts($scope, 1);
     }
 
+    private function summary(array $where = [], bool $amount = true): array
+    {
+        $scope = SelectBuilder::create()->from('Opportunity')->where($where);
+        if (!$this->admin) $scope->where(['readable' => 1]);
+        $rows = $this->service->summary($scope, 1, $amount ? Expr::column('amount') : null);
+        usort($rows, fn ($a, $b) => [$a['id'], $a['status']] <=> [$b['id'], $b['status']]);
+        return $rows;
+    }
+
     private function ids(string $inbox = 'a', int $account = 1): array
     {
         $query = $this->service->matchingIds(['inboxId' => $inbox, 'chatwootAccountId' => $account]);
@@ -262,6 +273,31 @@ class OpportunityInboxFilterTest extends TestCase
             self::assertSame(['one', 'two'], $this->ids());
             self::assertSame(['one'], $this->ids('b'));
         }
+    }
+
+    public function testSummarySplitsStatusesAndSumsEachOpportunityOncePerInbox(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $this->composer) {
+            // 'one' reaches inbox A through two conversations: counted and summed once there.
+            self::assertSame([
+                ['id' => 'a', 'name' => 'A', 'status' => 'Open', 'count' => 1, 'amount' => 100.0],
+                ['id' => 'a', 'name' => 'A', 'status' => 'Won', 'count' => 1, 'amount' => 40.0],
+                ['id' => 'b', 'name' => 'B', 'status' => 'Open', 'count' => 1, 'amount' => 100.0],
+            ], $this->summary());
+            self::assertSame([
+                ['id' => 'a', 'name' => 'A', 'status' => 'Open', 'count' => 1, 'amount' => null],
+                ['id' => 'b', 'name' => 'B', 'status' => 'Open', 'count' => 1, 'amount' => null],
+            ], $this->summary(['status' => 'Open'], false));
+        }
+    }
+
+    public function testSummaryUsesTheSamePermissionsAsCounts(): void
+    {
+        $this->hiddenFields = ['ChatwootConversation.inbox'];
+        self::assertSame([], $this->summary());
+        $this->hiddenFields = [];
+        $this->allowedInboxes = ['b'];
+        self::assertSame(['b'], array_column($this->summary(), 'id'));
     }
 
     public function testTeamAclSeesBulkLoadedLiveTeamLinksOnly(): void

@@ -157,6 +157,6 @@ class FeaturePacks implements Command
         $toHash = $this->metadata->get(['app', 'recordId', 'type']) === 'uuid4' ||
             $this->metadata->get(['app', 'recordId', 'dbType']) === 'uuid';
 
-        return $toHash ? md5($staticId) : $staticId;
+        return FeatureVerticalChecker::roleIdFor($staticId, $toHash);
     }
 }
