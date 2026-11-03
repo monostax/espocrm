@@ -34,12 +34,20 @@ use Espo\Tools\OAuth\TokensProvider;
  *     Missing this window means the customer must offboard + redo
  *     onboarding entirely.
  *
+ * Meta delivers the resulting `history` and `smb_app_state_sync` webhooks
+ * once, to whichever Chatwoot inbox owns the phone number. Chatwoot drops
+ * events for a number with no inbox, so the sync waits until the CRM has
+ * created that inbox (status `pending`, reason `awaiting_inbox`).
+ *
  * This service is invoked:
- *   - immediately after a successful Embedded Signup `FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING`
- *     event (via {@see WhatsAppEmbeddedSignup} controller), and
- *   - by the {@see \Espo\Modules\Chatwoot\Jobs\SyncWhatsAppCoexistenceData}
- *     job (retry path, e.g. when the customer hadn't finished the in-app
- *     step yet when we first tried).
+ *   - after a successful Embedded Signup `FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING`
+ *     event (via {@see WhatsAppEmbeddedSignup} controller). On a first
+ *     onboarding the inbox doesn't exist yet, so this defers;
+ *   - by Coexistence inbox activation and status checks in
+ *     {@see \Espo\Modules\Chatwoot\Services\ChatwootInboxIntegration},
+ *     once the inbox exists; and
+ *   - by the {@see \Espo\Modules\FeatureMetaWhatsAppBusiness\Jobs\SyncWhatsAppCoexistenceData}
+ *     job (retry path after a failed attempt).
  */
 class WhatsAppCoexistenceSyncService
 {
@@ -104,7 +112,8 @@ class WhatsAppCoexistenceSyncService
      * Run the full Coexistence sync for a single OAuthAccount.
      *
      * Steps:
-     *   1. Read `whatsappPhoneNumberId` from the OAuthAccount.
+     *   1. Read `whatsappPhoneNumberId` from the OAuthAccount. Return
+     *      `pending` / `awaiting_inbox` when no Chatwoot inbox exists for it.
      *   2. Verify `platform_type=CLOUD_API` AND `is_on_biz_app=true`.
      *      If not, return early with `pending` status — the job will retry.
      *   3. POST /{phone_number_id}/smb_app_data {sync_type:smb_app_state_sync}.
@@ -116,6 +125,7 @@ class WhatsAppCoexistenceSyncService
      *
      * @return array{
      *     status: 'synced'|'pending'|'failed',
+     *     reason?: 'awaiting_inbox',
      *     isOnBizApp: bool,
      *     platformType: ?string,
      *     historySynced?: bool,
@@ -138,6 +148,23 @@ class WhatsAppCoexistenceSyncService
                 "OAuthAccount {$oAuthAccountId} has no whatsappPhoneNumberId. " .
                 "Cannot run Coexistence sync — the Embedded Signup session_info must have set it."
             );
+        }
+
+        // Meta allows one sync per onboarding. Requesting it before the inbox
+        // exists loses the history and contacts, and the stamp below would
+        // stop activation from asking again.
+        if (!$this->hasChatwootInbox($oAuthAccountId, $phoneNumberId)) {
+            $this->log->info(
+                "WhatsAppCoexistenceSyncService: no Chatwoot inbox yet for phone {$phoneNumberId} " .
+                "(OAuthAccount {$oAuthAccountId}); sync deferred to inbox activation."
+            );
+
+            return [
+                'status' => 'pending',
+                'reason' => 'awaiting_inbox',
+                'isOnBizApp' => false,
+                'platformType' => null,
+            ];
         }
 
         $tokens = $this->tokensProvider->get($oAuthAccountId);
@@ -225,5 +252,41 @@ class WhatsAppCoexistenceSyncService
             'platformType' => $platformType,
             'historySynced' => $historySynced,
         ];
+    }
+
+    /**
+     * Whether a live inbox integration for this account and phone has its
+     * Chatwoot inbox. The numeric id is stored on the linked ChatwootInbox
+     * (see {@see \Espo\Modules\Chatwoot\Services\ChatwootInboxIdResolver}).
+     */
+    private function hasChatwootInbox(string $oAuthAccountId, string $phoneNumberId): bool
+    {
+        $integrationIds = [];
+
+        $integrations = $this->entityManager
+            ->getRDBRepository('ChatwootInboxIntegration')
+            ->select(['id'])
+            ->where([
+                'oAuthAccountId' => $oAuthAccountId,
+                'phoneNumberId' => $phoneNumberId,
+            ])
+            ->find();
+
+        foreach ($integrations as $integration) {
+            $integrationIds[] = $integration->getId();
+        }
+
+        if ($integrationIds === []) {
+            return false;
+        }
+
+        return $this->entityManager
+            ->getRDBRepository('ChatwootInbox')
+            ->select(['id'])
+            ->where([
+                'chatwootInboxIntegrationId' => $integrationIds,
+                'chatwootInboxId!=' => null,
+            ])
+            ->findOne() !== null;
     }
 }

@@ -38,9 +38,8 @@ use stdClass;
  * correctly. We do NOT duplicate the token exchange.
  *
  * What this controller is for: the **Embedded Signup-specific metadata**
- * the popup returns via the `WA_EMBEDDED_SIGNUP` postMessage event
- * (sessionInfoVersion 3), which the standard OAuth flow knows nothing
- * about:
+ * the popup returns via the `WA_EMBEDDED_SIGNUP` postMessage event,
+ * which the standard OAuth flow knows nothing about:
  *
  *   - `waba_id` / `phone_number_id` (must be persisted on the OAuthAccount
  *     so we can drive Cloud API + Coexistence sync afterwards)
@@ -53,8 +52,9 @@ use stdClass;
  * `postSmbAppData` calls in the sync service can use the real token.
  *
  * For Coexistence (`featureType=whatsapp_business_app_onboarding`), this
- * controller also kicks off the {@see SyncWhatsAppCoexistenceData} job
- * which is bound by Meta's hard 24h deadline.
+ * controller also attempts the history/contacts sync, which is bound by
+ * Meta's hard 24h deadline. On a first onboarding no Chatwoot inbox exists
+ * yet, so the sync defers to inbox activation instead of losing the data.
  */
 class WhatsAppEmbeddedSignup
 {
@@ -333,7 +333,11 @@ class WhatsAppEmbeddedSignup
                 ];
             }
 
-            if (!isset($syncResult['status']) || $syncResult['status'] !== 'synced') {
+            // Without an inbox, a retry job would defer again; inbox
+            // activation runs the sync instead.
+            $awaitingInbox = ($syncResult['reason'] ?? null) === 'awaiting_inbox';
+
+            if (!$awaitingInbox && ($syncResult['status'] ?? null) !== 'synced') {
                 $this->jobSchedulerFactory->create()
                     ->setClassName(SyncWhatsAppCoexistenceData::class)
                     ->setData(['oAuthAccountId' => $oAuthAccountId])

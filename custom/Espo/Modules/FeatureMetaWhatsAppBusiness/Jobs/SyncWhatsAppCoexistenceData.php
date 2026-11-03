@@ -19,11 +19,11 @@ use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppCoexistenceSyncSer
 /**
  * Job wrapper around {@see WhatsAppCoexistenceSyncService::sync()}.
  *
- * Queued by {@see \Espo\Modules\FeatureMetaWhatsAppBusiness\Controllers\WhatsAppEmbeddedSignup}
- * after a successful Embedded Signup flow returns
- * `FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING`, and (optionally) re-queued by
- * the embedded-signup controller when the customer hasn't finished the
- * in-app verification step yet (sync returns `status=pending`).
+ * Queued once as a retry when a sync attempt for an existing inbox doesn't
+ * finish: by Coexistence inbox activation in
+ * {@see \Espo\Modules\Chatwoot\Services\ChatwootInboxIntegration}, or by
+ * {@see \Espo\Modules\FeatureMetaWhatsAppBusiness\Controllers\WhatsAppEmbeddedSignup}
+ * on a re-onboarding. Never queued while the inbox is missing.
  *
  * Carries a single `oAuthAccountId` so the same job class can drive sync
  * for any onboarded number.

@@ -26,7 +26,9 @@ use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\FeatureCredential\Tools\Credential\CredentialResolver;
 use Espo\Modules\FeatureMetaInstagram\Services\InstagramGraphApiClient;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\MetaGraphApiClient;
+use Espo\Modules\FeatureMetaWhatsAppBusiness\Jobs\SyncWhatsAppCoexistenceData;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Services\WhatsAppCoexistenceSyncService;
+use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Tools\OAuth\TokensProvider;
 use stdClass;
 
@@ -54,7 +56,8 @@ class ChatwootInboxIntegration
         private Config $config,
         private EmailChannelBridge $emailChannelBridge,
         private SyncEmailOAuthCredentials $syncEmailOAuthCredentials,
-        private ChatwootIntegrationUserAccess $integrationUserAccess
+        private ChatwootIntegrationUserAccess $integrationUserAccess,
+        private JobSchedulerFactory $jobSchedulerFactory
     ) {}
 
     /**
@@ -2628,17 +2631,17 @@ class ChatwootInboxIntegration
     //       GET /{phone_number_id}.is_on_biz_app     → true
     //   - In addition, we have a HARD 24h deadline to POST
     //     /{phone_number_id}/smb_app_data with sync_type=smb_app_state_sync
-    //     (handled by WhatsAppCoexistenceSyncService, queued during the
-    //     Embedded Signup finish step).
+    //     and history (WhatsAppCoexistenceSyncService). Meta sends the data
+    //     once, so the sync runs only after the inbox below exists.
     //
     // So `activateWhatsappCoexistence`:
     //   1. Resolves token + waba + phone_number_id from the OAuthAccount
     //      (set there by WhatsAppEmbeddedSignup::finish from session_info).
     //   2. Ensures the Meta App is subscribed to the WABA before creating an inbox.
     //   3. Creates the Chatwoot WhatsApp Cloud inbox (same as Cloud API).
-    //   4. Probes platform_type. If `CLOUD_API + is_on_biz_app`, marks ACTIVE.
-    //      Otherwise marks PENDING_COEXISTENCE_CONFIRMATION and leaves the
-    //      WhatsAppCoexistenceSyncService job to do the rest async.
+    //   4. Probes platform_type. If `CLOUD_API + is_on_biz_app`, marks ACTIVE
+    //      and runs the sync. Otherwise marks PENDING_COEXISTENCE_CONFIRMATION;
+    //      checkStatus runs the sync once Meta reports the number ready.
 
     private function activateWhatsappCoexistence(Entity $channel): Entity
     {
@@ -2781,22 +2784,11 @@ class ChatwootInboxIntegration
 
             $this->entityManager->saveEntity($channel);
 
-            // When the number is already coexistence-ready, run SMB history/contacts
-            // sync here too (finish/hydrate may have been skipped or timed out).
-            // Still inside Meta's 24h window after in-app confirmation.
+            // The inbox now exists, so this is where the SMB history/contacts
+            // sync normally runs: finish defers it until Meta's events have an
+            // inbox to land in. Still inside Meta's 24h window.
             if ($coexistenceReady && !$oAuthAccount->get('whatsappCoexistenceSyncedAt')) {
-                try {
-                    $syncResult = $this->whatsAppCoexistenceSyncService->sync($oAuthAccountId);
-                    $this->log->info(
-                        "ChatwootInboxIntegration: triggered Coexistence sync from activation for {$oAuthAccountId}: " .
-                        json_encode($syncResult)
-                    );
-                } catch (\Exception $e) {
-                    $this->log->warning(
-                        "ChatwootInboxIntegration: Coexistence sync from activation failed for {$oAuthAccountId}: " .
-                        $e->getMessage()
-                    );
-                }
+                $this->runCoexistenceSync($oAuthAccountId, 'activation');
             }
 
             $this->log->info("ChatwootInboxIntegration: WhatsApp Coexistence channel {$channelId} activated (status=" . $channel->get('status') . ").");
@@ -2810,6 +2802,39 @@ class ChatwootInboxIntegration
             $this->entityManager->saveEntity($channel);
             throw new Error("Activation failed: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Run the Coexistence history/contacts sync for an account whose inbox
+     * exists. Meta's 24h window is still open, so a sync that doesn't finish
+     * is retried once from the job queue: once the channel is ACTIVE the UI
+     * stops polling checkStatus and nothing else would ask again.
+     */
+    private function runCoexistenceSync(string $oAuthAccountId, string $source): void
+    {
+        $syncResult = null;
+
+        try {
+            $syncResult = $this->whatsAppCoexistenceSyncService->sync($oAuthAccountId);
+            $this->log->info(
+                "ChatwootInboxIntegration: triggered Coexistence sync from {$source} for {$oAuthAccountId}: " .
+                json_encode($syncResult)
+            );
+        } catch (\Exception $e) {
+            $this->log->warning(
+                "ChatwootInboxIntegration: Coexistence sync from {$source} failed for {$oAuthAccountId}: " .
+                $e->getMessage()
+            );
+        }
+
+        if (($syncResult['status'] ?? null) === 'synced') {
+            return;
+        }
+
+        $this->jobSchedulerFactory->create()
+            ->setClassName(SyncWhatsAppCoexistenceData::class)
+            ->setData(['oAuthAccountId' => $oAuthAccountId])
+            ->schedule();
     }
 
     /**
@@ -3020,18 +3045,7 @@ class ChatwootInboxIntegration
                 $oAuthAccount = $this->entityManager->getEntityById('OAuthAccount', $oAuthAccountId);
 
                 if ($oAuthAccount && !$oAuthAccount->get('whatsappCoexistenceSyncedAt')) {
-                    try {
-                        $syncResult = $this->whatsAppCoexistenceSyncService->sync($oAuthAccountId);
-                        $this->log->info(
-                            "ChatwootInboxIntegration: triggered Coexistence sync from checkStatus for {$oAuthAccountId}: " .
-                            json_encode($syncResult)
-                        );
-                    } catch (\Exception $e) {
-                        $this->log->warning(
-                            "ChatwootInboxIntegration: Coexistence sync from checkStatus failed for {$oAuthAccountId}: " .
-                            $e->getMessage()
-                        );
-                    }
+                    $this->runCoexistenceSync($oAuthAccountId, 'checkStatus');
                 }
 
                 if ($currentStatus !== 'ACTIVE') {
