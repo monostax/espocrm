@@ -1,0 +1,10 @@
+{
+    "scopeNames": {
+        "SelfServiceProvisioning": "Provisionamento self-service",
+        "SelfServiceControl": "Controle do self-service"
+    },
+    "scopeNamesPlural": {
+        "SelfServiceProvisioning": "Provisionamentos self-service",
+        "SelfServiceControl": "Controles do self-service"
+    }
+}

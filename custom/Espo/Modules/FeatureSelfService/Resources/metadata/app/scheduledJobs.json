@@ -1,0 +1,8 @@
+{
+    "RunSelfServiceProvisionings": {
+        "name": "Run Self-Service Provisionings",
+        "scheduling": "* * * * *",
+        "isSystem": false,
+        "jobClassName": "Espo\\Modules\\FeatureSelfService\\Jobs\\RunProvisionings"
+    }
+}

@@ -1,4 +1,18 @@
 {
+    "fields": {
+        "provisioningKey": {
+            "type": "varchar",
+            "maxLength": 64,
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true
+        }
+    },
     "links": {
         "tenantsAsBaseUserTeam": {
             "type": "hasMany",
@@ -10,6 +24,12 @@
             "entity": "Tenant",
             "foreign": "otherUserTeams",
             "relationName": "tenantOtherUserTeam"
+        }
+    },
+    "indexes": {
+        "provisioningKey": {
+            "columns": ["provisioningKey"],
+            "unique": true
         }
     }
 }

@@ -1,0 +1,7 @@
+{
+    "self-service": {
+        "className": "Espo\\Modules\\FeatureSelfService\\Classes\\ConsoleCommands\\SelfService",
+        "listed": true,
+        "allowedOptions": ["reason", "key", "owner", "name", "language", "timeZone", "id"]
+    }
+}

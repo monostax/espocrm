@@ -96,7 +96,12 @@ class CreateBaseTeam
             return;
         }
 
-        $teamId = $this->teamProvisioner->findOrCreateTeamWithRole($tenantName, $roleId);
+        $teamId = $this->teamProvisioner->ensureTenantTeam(
+            (string) $entity->getId(),
+            TenantTeamProvisioner::PURPOSE_BASE,
+            $tenantName,
+            $roleId,
+        );
 
         $entity->set('baseUserTeamId', $teamId);
 

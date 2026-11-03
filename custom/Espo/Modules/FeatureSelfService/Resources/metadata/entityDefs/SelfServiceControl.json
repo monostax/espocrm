@@ -1,0 +1,11 @@
+{
+    "fields": {
+        "paused": { "type": "bool", "default": false },
+        "reason": { "type": "varchar", "maxLength": 255 },
+        "changedBy": { "type": "link" },
+        "changedAt": { "type": "datetime" }
+    },
+    "links": {
+        "changedBy": { "type": "belongsTo", "entity": "User" }
+    }
+}

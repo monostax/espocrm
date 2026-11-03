@@ -1,0 +1,39 @@
+{
+    "fields": {
+        "dedupeKey": { "type": "varchar", "maxLength": 128, "required": true },
+        "inputHash": { "type": "varchar", "maxLength": 64 },
+        "input": { "type": "jsonObject" },
+        "status": {
+            "type": "enum",
+            "options": ["pending", "running", "paused", "completed", "failed"],
+            "default": "pending"
+        },
+        "step": {
+            "type": "enum",
+            "options": ["tenant", "owner", "chatwootAccount", "ownerMembership", "done"],
+            "default": "tenant"
+        },
+        "tenant": { "type": "link" },
+        "owner": { "type": "link" },
+        "chatwootAccount": { "type": "link" },
+        "slug": { "type": "varchar", "maxLength": 60 },
+        "revision": { "type": "int", "default": 0 },
+        "attempts": { "type": "int", "default": 0 },
+        "lastError": { "type": "text" },
+        "nextAttemptAt": { "type": "datetime" },
+        "leaseToken": { "type": "varchar", "maxLength": 32 },
+        "leaseUntil": { "type": "datetime" },
+        "completedAt": { "type": "datetime" },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "tenant": { "type": "belongsTo", "entity": "Tenant" },
+        "owner": { "type": "belongsTo", "entity": "User" },
+        "chatwootAccount": { "type": "belongsTo", "entity": "ChatwootAccount" }
+    },
+    "indexes": {
+        "dedupeKey": { "columns": ["dedupeKey"], "unique": true },
+        "due": { "columns": ["status", "nextAttemptAt"] }
+    }
+}

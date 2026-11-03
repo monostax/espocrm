@@ -27,6 +27,7 @@ use Espo\Core\Exceptions\Error;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Chatwoot\Services\ChatwootAccountCreationJournal;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\ConciergeAvatarService;
 use Espo\Modules\Chatwoot\Services\ConciergeEmailDomainResolver;
@@ -36,6 +37,11 @@ use Espo\Modules\Chatwoot\Services\IntegrationUserNameResolver;
  * Hook to synchronize ChatwootAccount with Chatwoot Platform API.
  * Creates BOTH account AND concierge user on Chatwoot BEFORE saving to database.
  * This ensures the database only contains accounts that fully exist in Chatwoot.
+ *
+ * Each remote id is recorded in {@see ChatwootAccountCreationJournal} as soon as
+ * Chatwoot returns it. When a later step fails, saving again with the same
+ * ChatwootAccount id reuses the remote account and concierge user instead of
+ * creating new ones.
  */
 class SyncWithChatwoot
 {
@@ -57,6 +63,7 @@ class SyncWithChatwoot
         private ConciergeAvatarService $conciergeAvatarService,
         private ConciergeEmailDomainResolver $conciergeEmailDomainResolver,
         private IntegrationUserNameResolver $integrationUserNameResolver,
+        private ChatwootAccountCreationJournal $creationJournal,
     ) {}
 
     /**
@@ -112,31 +119,58 @@ class SyncWithChatwoot
                 throw new Error('ChatwootPlatform does not have an access token.');
             }
 
-            // STEP 1: Create account on Chatwoot
-            $this->log->info('Creating Chatwoot account: ' . $entity->get('name'));
-            
-            $accountData = $this->prepareAccountData($entity);
-            $accountResponse = $this->apiClient->createAccount($platformUrl, $accessToken, $accountData);
+            $entityId = (string) $entity->getId();
+            $journal = $this->creationJournal->find($entityId);
 
-            if (!isset($accountResponse['id'])) {
-                throw new Error('Chatwoot API response missing account ID.');
+            // STEP 1: Create account on Chatwoot, or reuse the one an earlier
+            // attempt for this same ChatwootAccount id created.
+            $chatwootAccountId = (int) ($journal['remoteAccountId'] ?? 0);
+
+            if ($chatwootAccountId > 0) {
+                // Throws when Chatwoot can't confirm it; never create a second account.
+                $this->apiClient->getAccount($platformUrl, $accessToken, $chatwootAccountId);
+                $this->log->info("Resuming Chatwoot account {$chatwootAccountId} for ChatwootAccount {$entityId}.");
+            } else {
+                $this->log->info('Creating Chatwoot account: ' . $entity->get('name'));
+
+                $accountData = $this->prepareAccountData($entity);
+                $accountResponse = $this->apiClient->createAccount($platformUrl, $accessToken, $accountData);
+
+                if (!isset($accountResponse['id'])) {
+                    throw new Error('Chatwoot API response missing account ID.');
+                }
+
+                $chatwootAccountId = (int) $accountResponse['id'];
+                $this->creationJournal->recordAccount($entityId, $chatwootAccountId);
+
+                $this->log->info('Chatwoot account created successfully with ID: ' . $chatwootAccountId);
             }
 
-            $chatwootAccountId = $accountResponse['id'];
             $createdAccountId = $chatwootAccountId;
-            
-            $this->log->info('Chatwoot account created successfully with ID: ' . $chatwootAccountId);
 
-            // STEP 2: Create concierge user for this account
-            $this->log->info('Creating concierge user for account: ' . $chatwootAccountId);
-            
-            $conciergeUser = $this->createConciergeUser(
-                $platformUrl,
-                $accessToken,
-                $chatwootAccountId,
-                $entity->get('name'),
-                $entity
-            );
+            // STEP 2: Create concierge user for this account, or reuse it.
+            $conciergeUserId = (int) ($journal['conciergeUserId'] ?? 0);
+
+            if ($conciergeUserId > 0) {
+                $conciergeUser = $this->resumeConciergeUser(
+                    $platformUrl,
+                    $accessToken,
+                    $chatwootAccountId,
+                    $conciergeUserId,
+                    (string) ($journal['conciergeEmail'] ?? ''),
+                    $entity
+                );
+            } else {
+                $this->log->info('Creating concierge user for account: ' . $chatwootAccountId);
+
+                $conciergeUser = $this->createConciergeUser(
+                    $platformUrl,
+                    $accessToken,
+                    $chatwootAccountId,
+                    $entity->get('name'),
+                    $entity
+                );
+            }
 
             if (!$conciergeUser) {
                 throw new Error('Failed to create concierge user for account.');
@@ -182,14 +216,13 @@ class SyncWithChatwoot
                 ': ' . $e->getMessage()
             );
             
-            // Note: Chatwoot doesn't have a transaction system, so we need to manually clean up
-            // In production, you might want to implement cleanup logic here
-            // For now, we just log and prevent the database insert
-            
+            // Chatwoot has no transactions. What was created is recorded in the
+            // creation journal, so saving again with this ChatwootAccount id
+            // resumes instead of creating a second remote account.
             if ($createdAccountId) {
                 $this->log->error(
-                    'Orphaned Chatwoot account created with ID: ' . $createdAccountId . 
-                    '. Manual cleanup may be required.'
+                    'Chatwoot account ' . $createdAccountId . ' is recorded for ChatwootAccount ' .
+                    $entity->getId() . '; retry with the same id to resume, or remove it in Chatwoot.'
                 );
             }
 
@@ -268,13 +301,28 @@ class SyncWithChatwoot
             ]
         ];
 
-        $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, $userData);
+        $userResponse = $this->apiClient->createUser($platformUrl, $accessToken, $userData, true);
 
         if (!isset($userResponse['id'])) {
             throw new Error('Failed to create concierge user: missing user ID in response');
         }
 
         $chatwootUserId = $userResponse['id'];
+
+        if (($userResponse['existing'] ?? false) === true) {
+            // An earlier attempt created this account's concierge but its reply
+            // was lost. resumeConciergeUser() verifies that before reusing it.
+            return $this->resumeConciergeUser(
+                $platformUrl,
+                $accessToken,
+                $chatwootAccountId,
+                (int) $chatwootUserId,
+                $email,
+                $entity
+            );
+        }
+
+        $this->creationJournal->recordConcierge((string) $entity->getId(), (int) $chatwootUserId, $email);
 
         // The integration user can manage account settings, but is never an assignee.
         // WAHA inboxes grant it direct conversation access during provisioning.
@@ -310,6 +358,70 @@ class SyncWithChatwoot
             'password' => $password,
             'name' => $name,
             'access_token' => $accessToken,
+            'account_user_id' => isset($accountUserResponse['id']) ? (int) $accountUserResponse['id'] : null,
+            'avatar_url' => $avatarUrl,
+        ];
+    }
+
+    /**
+     * Reuse the concierge user an earlier attempt created.
+     *
+     * Only a user Chatwoot shows as this account's concierge is reused: the
+     * marker is in custom_attributes, which only the platform API sets. Its
+     * password was never stored, so a fresh one is set; the access token is
+     * read back from Chatwoot. Attaching to the account is idempotent.
+     *
+     * @return array<string, mixed>
+     * @throws Error
+     */
+    private function resumeConciergeUser(
+        string $platformUrl,
+        string $accessToken,
+        int $chatwootAccountId,
+        int $chatwootUserId,
+        string $email,
+        Entity $entity
+    ): array {
+        $this->log->info("Resuming concierge user {$chatwootUserId} for account {$chatwootAccountId}.");
+
+        $user = $this->apiClient->getUser($platformUrl, $accessToken, $chatwootUserId);
+        $attributes = is_array($user['custom_attributes'] ?? null) ? $user['custom_attributes'] : [];
+
+        if (($attributes['type'] ?? null) !== 'concierge' || (int) ($attributes['account_id'] ?? 0) !== $chatwootAccountId) {
+            throw new Error("Chatwoot user {$chatwootUserId} is not the concierge of account {$chatwootAccountId}.");
+        }
+
+        $this->creationJournal->recordConcierge((string) $entity->getId(), $chatwootUserId, $email);
+        $password = $this->generateSecurePassword();
+        $this->apiClient->updateUser($platformUrl, $accessToken, $chatwootUserId, ['password' => $password]);
+
+        $accountUserResponse = $this->apiClient->attachUserToAccount(
+            $platformUrl,
+            $accessToken,
+            $chatwootAccountId,
+            $chatwootUserId,
+            'administrator',
+            true,
+            false
+        );
+
+        $userAccessToken = $user['access_token'] ?? null;
+        $avatarUrl = null;
+
+        if ($userAccessToken) {
+            $avatarUrl = $this->conciergeAvatarService->uploadForConcierge(
+                $platformUrl,
+                $userAccessToken,
+                $chatwootUserId
+            );
+        }
+
+        return [
+            'user_id' => $chatwootUserId,
+            'email' => $email !== '' ? $email : (string) ($user['email'] ?? ''),
+            'password' => $password,
+            'name' => (string) ($user['name'] ?? $this->integrationUserNameResolver->resolve($entity)),
+            'access_token' => $userAccessToken,
             'account_user_id' => isset($accountUserResponse['id']) ? (int) $accountUserResponse['id'] : null,
             'avatar_url' => $avatarUrl,
         ];

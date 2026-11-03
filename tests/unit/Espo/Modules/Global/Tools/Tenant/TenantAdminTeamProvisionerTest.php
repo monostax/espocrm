@@ -10,6 +10,9 @@ use Espo\Modules\Global\Tools\Tenant\TenantTeamProvisioner;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityCollection;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Executor\QueryExecutor;
+use Espo\ORM\Query\Query;
+use Espo\ORM\QueryBuilder;
 use Espo\ORM\Repository\RDBRelation;
 use Espo\ORM\Repository\RDBRepository;
 use Espo\ORM\Repository\RDBSelectBuilder;
@@ -38,17 +41,20 @@ class TenantAdminTeamProvisionerTest extends TestCase
     /** @var list<array<string, mixed>> */
     private array $createdTeams = [];
 
+    /** @var list<Query> */
+    private array $executedQueries = [];
+
     /**
      * @param list<string> $existingRoleIds        Role rows that exist in the instance.
      * @param list<string> $tenantOtherTeamIds     Teams already linked as otherUserTeams.
      * @param array<string, list<string>> $teamRoles Team id => role ids it already holds.
-     * @param array<string, string> $teamsByName    Team name => existing team id.
+     * @param array<string, string> $teamsByKey     Team provisioning key => existing team id.
      */
     private function makeProvisioner(
         array $existingRoleIds = ['tenant-admin'],
         array $tenantOtherTeamIds = [],
         array $teamRoles = [],
-        array $teamsByName = [],
+        array $teamsByKey = [],
     ): TenantAdminTeamProvisioner {
         $entityManager = $this->createMock(EntityManager::class);
 
@@ -74,8 +80,17 @@ class TenantAdminTeamProvisionerTest extends TestCase
         $entityManager->method('getRDBRepository')->willReturnCallback(
             fn (string $entityType): RDBRepository => $entityType === 'Tenant'
                 ? $this->tenantRepository($tenantOtherTeamIds)
-                : $this->teamRepository($tenantOtherTeamIds, $teamRoles, $teamsByName),
+                : $this->teamRepository($tenantOtherTeamIds, $teamRoles, $teamsByKey),
         );
+
+        $executor = $this->createMock(QueryExecutor::class);
+        $executor->method('execute')->willReturnCallback(function (Query $query): \PDOStatement {
+            $this->executedQueries[] = $query;
+
+            return $this->createMock(\PDOStatement::class);
+        });
+        $entityManager->method('getQueryExecutor')->willReturn($executor);
+        $entityManager->method('getQueryBuilder')->willReturn(new QueryBuilder());
 
         // Real TenantTeamProvisioner over the same mocked EntityManager: the
         // shared role-resolution and find-or-create logic is exercised for real
@@ -117,23 +132,27 @@ class TenantAdminTeamProvisionerTest extends TestCase
     /**
      * @param list<string> $tenantOtherTeamIds
      * @param array<string, list<string>> $teamRoles
-     * @param array<string, string> $teamsByName
+     * @param array<string, string> $teamsByKey
      */
     private function teamRepository(
         array $tenantOtherTeamIds,
         array $teamRoles,
-        array $teamsByName,
+        array $teamsByKey,
     ): RDBRepository {
         $repository = $this->createMock(RDBRepository::class);
 
         $repository->method('where')->willReturnCallback(
-            function (array $clause) use ($tenantOtherTeamIds, $teamRoles, $teamsByName): RDBSelectBuilder {
+            function (array $clause) use ($tenantOtherTeamIds, $teamRoles, $teamsByKey): RDBSelectBuilder {
                 $builder = $this->createMock(RDBSelectBuilder::class);
                 $builder->method('join')->willReturnSelf();
 
                 if (array_key_exists('name', $clause)) {
-                    // findOrCreateTeam(): reuse an exact-name match.
-                    $id = $teamsByName[$clause['name']] ?? null;
+                    $this->fail('Teams must never be looked up by name.');
+                }
+
+                if (array_key_exists('provisioningKey', $clause)) {
+                    // ensureTenantTeam(): reuse the tenant's keyed team.
+                    $id = $teamsByKey[$clause['provisioningKey']] ?? null;
                     $builder->method('findOne')->willReturn($id ? $this->entityStub($id) : null);
 
                     return $builder;
@@ -226,7 +245,27 @@ class TenantAdminTeamProvisionerTest extends TestCase
         $teamId = $this->provision($provisioner, 'Acme');
 
         $this->assertSame('team-new', $teamId);
-        $this->assertSame([['name' => 'Acme / Admin']], $this->createdTeams);
+        $this->assertSame(
+            [['name' => 'Acme / Admin', 'provisioningKey' => 'tenant-admin:tenant-1']],
+            $this->createdTeams,
+        );
+    }
+
+    /**
+     * A soft-deleted team keeps its key; it is released before the insert so
+     * the unique index admits the replacement.
+     */
+    public function testReleasesTheKeyOfASoftDeletedTeamBeforeCreating(): void
+    {
+        $provisioner = $this->makeProvisioner();
+
+        $this->provision($provisioner, 'Acme');
+
+        $this->assertCount(1, $this->executedQueries);
+        $raw = $this->executedQueries[0]->getRaw();
+        $this->assertSame('Team', $raw['from']);
+        $this->assertSame(['provisioningKey' => null], $raw['set']);
+        $this->assertSame(['provisioningKey' => 'tenant-admin:tenant-1', 'deleted' => true], $raw['whereClause']);
     }
 
     public function testLinksTheSharedTenantAdminRoleNotAPerTenantCopy(): void
@@ -295,18 +334,18 @@ class TenantAdminTeamProvisionerTest extends TestCase
 
         $this->provision($provisioner, 'Acme');
 
-        $this->assertSame([['name' => 'Acme / Admin']], $this->createdTeams);
+        $this->assertSame('Acme / Admin', $this->createdTeams[0]['name']);
         $this->assertSame(['team-new'], $this->relatedOtherUserTeams);
     }
 
     /**
-     * Team.name has no unique constraint, so an exact-name match is reused
+     * A team left keyed to this tenant (e.g. by a failed earlier run) is reused
      * rather than duplicated.
      */
-    public function testReusesAnExistingTeamWithTheSameName(): void
+    public function testReusesTheTenantsKeyedTeam(): void
     {
         $provisioner = $this->makeProvisioner(
-            teamsByName: ['Acme / Admin' => 'team-existing'],
+            teamsByKey: ['tenant-admin:tenant-1' => 'team-existing'],
         );
 
         $teamId = $this->provision($provisioner, 'Acme');
@@ -317,10 +356,26 @@ class TenantAdminTeamProvisionerTest extends TestCase
         $this->assertSame(['team-existing'], $this->relatedOtherUserTeams);
     }
 
+    /**
+     * Two businesses with the same name get separate admin teams: another
+     * tenant's team is never reused, whatever it is called.
+     */
+    public function testSameNamedTenantsGetSeparateTeams(): void
+    {
+        $provisioner = $this->makeProvisioner(
+            teamsByKey: ['tenant-admin:tenant-other' => 'team-of-other-acme'],
+        );
+
+        $teamId = $this->provision($provisioner, 'Acme');
+
+        $this->assertSame('team-new', $teamId);
+        $this->assertSame('tenant-admin:tenant-1', $this->createdTeams[0]['provisioningKey']);
+    }
+
     public function testDoesNotRelinkARoleTheTeamAlreadyHolds(): void
     {
         $provisioner = $this->makeProvisioner(
-            teamsByName: ['Acme / Admin' => 'team-existing'],
+            teamsByKey: ['tenant-admin:tenant-1' => 'team-existing'],
             teamRoles: ['team-existing' => ['tenant-admin']],
         );
 

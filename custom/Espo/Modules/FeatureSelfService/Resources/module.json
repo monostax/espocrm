@@ -1,0 +1,6 @@
+{
+    "order": 90,
+    "version": "0.1.0",
+    "name": "FeatureSelfService",
+    "description": "Self-service workspace provisioning, behind a deployment switch and a runtime pause."
+}

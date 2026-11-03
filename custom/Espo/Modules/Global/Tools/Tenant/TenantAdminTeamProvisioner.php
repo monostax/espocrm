@@ -121,7 +121,9 @@ class TenantAdminTeamProvisioner
             return $existingId;
         }
 
-        $teamId = $this->teamProvisioner->findOrCreateTeamWithRole(
+        $teamId = $this->teamProvisioner->ensureTenantTeam(
+            (string) $tenant->getId(),
+            TenantTeamProvisioner::PURPOSE_ADMIN,
             $this->adminTeamName($tenantName),
             $roleId,
         );

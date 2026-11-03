@@ -1,0 +1,22 @@
+{
+    "fields": {
+        "remoteAccountId": {
+            "type": "int"
+        },
+        "conciergeUserId": {
+            "type": "int"
+        },
+        "conciergeEmail": {
+            "type": "varchar",
+            "maxLength": 255
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    }
+}

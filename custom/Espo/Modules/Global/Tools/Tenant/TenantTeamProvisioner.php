@@ -28,6 +28,9 @@ use Espo\ORM\EntityManager;
  */
 class TenantTeamProvisioner
 {
+    public const PURPOSE_BASE = 'base';
+    public const PURPOSE_ADMIN = 'admin';
+
     public function __construct(
         private EntityManager $entityManager,
     ) {}
@@ -51,26 +54,57 @@ class TenantTeamProvisioner
     }
 
     /**
-     * Find-or-create a Team by exact name and ensure it holds $roleId.
+     * Find-or-create the tenant's Team for $purpose and ensure it holds $roleId.
      *
-     * Team.name carries no unique constraint, so an exact-name match is reused
-     * instead of stacking duplicates on repeated runs (and so a Team orphaned by
-     * a failed Tenant insert is recycled rather than duplicated on retry).
+     * The Team is identified by a unique provisioning key built from the tenant
+     * id, never by name. Tenant names are not unique: matching by name let two
+     * businesses with the same name share one team, and with it each other's
+     * records. Repeated runs (and a retry after a failed hook) still reuse the
+     * same Team. Its display name stays editable.
      */
-    public function findOrCreateTeamWithRole(string $name, string $roleId): string
+    public function ensureTenantTeam(string $tenantId, string $purpose, string $name, string $roleId): string
     {
-        $team = $this->entityManager
-            ->getRDBRepository('Team')
-            ->where(['name' => $name])
-            ->findOne();
-
-        if (!$team) {
-            $team = $this->entityManager->createEntity('Team', ['name' => $name]);
-        }
+        $key = self::provisioningKey($tenantId, $purpose);
+        $team = $this->findTeamByKey($key) ?? $this->createTeam($key, $name);
 
         $this->ensureRoleLinked($team, $roleId);
 
         return (string) $team->getId();
+    }
+
+    public static function provisioningKey(string $tenantId, string $purpose): string
+    {
+        return 'tenant-' . $purpose . ':' . $tenantId;
+    }
+
+    private function findTeamByKey(string $key): ?Entity
+    {
+        return $this->entityManager
+            ->getRDBRepository('Team')
+            ->where(['provisioningKey' => $key])
+            ->findOne();
+    }
+
+    private function createTeam(string $key, string $name): Entity
+    {
+        // A soft-deleted Team keeps its key; release it so the unique index
+        // admits the replacement.
+        $this->entityManager->getQueryExecutor()->execute(
+            $this->entityManager
+                ->getQueryBuilder()
+                ->update()
+                ->in('Team')
+                ->set(['provisioningKey' => null])
+                ->where(['provisioningKey' => $key, 'deleted' => true])
+                ->build()
+        );
+
+        try {
+            return $this->entityManager->createEntity('Team', ['name' => $name, 'provisioningKey' => $key]);
+        } catch (\Throwable $e) {
+            // A concurrent provisioner inserted the same key first.
+            return $this->findTeamByKey($key) ?? throw $e;
+        }
     }
 
     private function ensureRoleLinked(Entity $team, string $roleId): void
