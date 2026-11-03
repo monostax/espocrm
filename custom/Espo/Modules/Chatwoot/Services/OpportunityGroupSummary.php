@@ -13,7 +13,11 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Record\SearchParamsFetcher;
 use Espo\Core\Select\SelectBuilderFactory;
+use Espo\Core\Utils\Config;
+use Espo\Entities\User;
+use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\Part\Condition as Cond;
 use Espo\ORM\Query\Part\Expression as Expr;
 use Espo\ORM\Query\Select;
 use Espo\ORM\Query\SelectBuilder;
@@ -41,18 +45,24 @@ class OpportunityGroupSummary
         private ConfigDataProvider $currency,
         private Acl $acl,
         private OpportunityInboxFilter $inboxes,
+        private Config $config,
+        private OpportunityEventAccess $eventAccess,
+        private User $user,
     ) {}
 
     public function get(Request $request): array
     {
         $groupBy = $request->getQueryParam('groupBy');
-        $groupings = [...array_keys(self::FIELDS), 'none', 'readStatus', 'activity', 'inbox', 'followupUsed'];
+        $groupings = [...array_keys(self::FIELDS), 'none', 'readStatus', 'activity', 'inbox', 'followupUsed', 'followupReply'];
         if (!in_array($groupBy, $groupings, true)) {
             throw new BadRequest('A workspace and valid grouping are required.');
         }
         $scope = $this->buildScope($request);
         if ($groupBy === 'inbox') {
             return $this->inboxGroups($request, $scope);
+        }
+        if ($groupBy === 'followupReply') {
+            return $this->followupReplyGroups($request, $scope);
         }
         $field = self::FIELDS[$groupBy][1] ?? ($groupBy === 'followupUsed' ? 'followupLifetimeCount' : null);
         if ($field && !$this->acl->checkField('Opportunity', $field)) {
@@ -164,6 +174,76 @@ class OpportunityGroupSummary
             $this->addRow($groups, $key, $row['count'], $row['amount'], $row['status'] ?? '');
         }
         return $this->response($groups, $canReadAmount);
+    }
+
+    /**
+     * Automatic follow-up outcome, split by status: no follow-up, followed up
+     * without a reply, or the customer replied within 24 hours of a follow-up.
+     * Comparing followed-up and untouched opportunities misleads (follow-ups go
+     * to leads that went quiet; handoffs to humans stop them), so this measures
+     * the follow-up's own funnel instead. Only follow-ups sent since customer
+     * messages are recorded count, so a missing reply always means no reply.
+     * Replies are message events the user may read, as in the timeline.
+     */
+    private function followupReplyGroups(Request $request, Select $scope): array
+    {
+        if (!$this->acl->checkField('Opportunity', 'followupLifetimeCount') ||
+            !$this->acl->checkField('Opportunity', 'status') ||
+            !$this->acl->checkScope('ChatwootConversation', 'read')) {
+            throw new Forbidden();
+        }
+        $since = (string) $this->config->get(OpportunityMessageEvents::STARTED_AT);
+        $sent = ['kind' => 'followup-trigger', 'sentFollowupMessage' => true, 'runAt>=' => $since];
+        // Each derived table has one row per opportunity, so neither multiplies.
+        $sends = SelectBuilder::create()->from('ChatwootAiAgentRun', 'followupRun')
+            ->select('opportunityId')->select(Expr::count(Expr::column('id')), 'followups')
+            ->where($sent)->where(['opportunityId=s' => $scope])->group('opportunityId')->build();
+        $sinceSend = Expr::subtract(
+            Expr::unixTimestamp(Expr::column('createdAt')),
+            Expr::unixTimestamp(Expr::column('followupRun.runAt')),
+        );
+        $replies = SelectBuilder::create()->from('Note', 'reply')
+            ->select('parentId')->group('parentId')
+            ->join('ChatwootAiAgentRun', 'followupRun', [
+                'followupRun.opportunityId:' => 'reply.parentId',
+                'followupRun.deleted' => false,
+                ...array_combine(array_map(fn ($key) => "followupRun.$key", array_keys($sent)), $sent),
+            ])
+            ->where([
+                'parentType' => 'Opportunity',
+                'parentId=s' => $scope,
+                'type' => OpportunityStreamEvents::MESSAGE_RECEIVED,
+            ])
+            ->where($this->eventAccess->where($this->user))
+            ->where(Cond::and(Cond::greater($sinceSend, 0), Cond::lessOrEqual($sinceSend, 86400)))
+            ->build();
+
+        $query = SelectBuilder::create()->from('Opportunity')->where(['id=s' => $scope])
+            ->leftJoin($sends, 'followupSends', Expr::equal(Expr::alias('followupSends.opportunityId'), Expr::column('id')))
+            ->leftJoin($replies, 'followupReplies', Expr::equal(Expr::alias('followupReplies.parentId'), Expr::column('id')));
+        $this->applyActivityFilter($query, $scope, $request);
+        $canReadAmount = $this->acl->checkField('Opportunity', 'amount');
+        $query->select([])
+            ->select(Expr::if(
+                Expr::isNotNull(Expr::alias('followupReplies.parentId')),
+                'followupReply:replied',
+                Expr::if(Expr::isNotNull(Expr::alias('followupSends.opportunityId')), 'followupReply:noReply', 'followupReply:none'),
+            ), 'groupKey')
+            ->select(Expr::column('status'), 'groupStatus')
+            ->select(Expr::count(Expr::column('id')), 'count')
+            ->select($canReadAmount ? Expr::sum($this->baseAmount()) : Expr::value(null), 'amount')
+            ->select(Expr::sum(Expr::ifNull(Expr::alias('followupSends.followups'), 0)), 'followups')
+            ->group(Expr::alias('groupKey'))->group(Expr::alias('groupStatus'));
+
+        $groups = [];
+        $rows = $this->entityManager->getQueryExecutor()->execute($query->build());
+        while ($row = $rows->fetch(PDO::FETCH_ASSOC)) {
+            $key = $row['groupKey'];
+            $this->addRow($groups, $key, (int) $row['count'],
+                $canReadAmount ? round((float) ($row['amount'] ?? 0), 2) : null, $row['groupStatus'] ?? '');
+            $groups[$key]['followups'] = ($groups[$key]['followups'] ?? 0) + (int) $row['followups'];
+        }
+        return ['since' => $since] + $this->response($groups, $canReadAmount);
     }
 
     /** Shared by group and spreadsheet summaries so both describe the same full view. */

@@ -16,12 +16,15 @@ use Espo\Core\Record\SearchParamsFetcher;
 use Espo\Core\Select\SearchParams;
 use Espo\Core\Select\SelectBuilder as AccessBuilder;
 use Espo\Core\Select\SelectBuilderFactory;
+use Espo\Core\Utils\Config;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\OpportunityActivityBuckets;
 use Espo\Modules\Chatwoot\Services\OpportunityActivitySummary;
 use Espo\Modules\Chatwoot\Services\OpportunityBulkPostAccess;
 use Espo\Modules\Chatwoot\Services\OpportunityGroupSummary;
 use Espo\Modules\Chatwoot\Services\OpportunityInboxFilter;
+use Espo\Modules\Chatwoot\Services\OpportunityMessageEvents;
+use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
 use Espo\Modules\Chatwoot\Services\OpportunitySpreadsheetSummary;
 use Espo\Modules\Chatwoot\Classes\Select\Opportunity\StreamActivity;
 use Espo\Modules\Chatwoot\Services\OpportunityReadStateService;
@@ -71,6 +74,7 @@ class OpportunityGroupSummaryTest extends TestCase
         $this->pdo->sqliteCreateFunction('CONCAT', fn (...$parts) => implode('', $parts));
         $this->pdo->sqliteCreateFunction('IF', fn ($condition, $yes, $no) => $condition ? $yes : $no);
         $this->pdo->sqliteCreateFunction('LEAST', fn (...$values) => min($values));
+        $this->pdo->sqliteCreateFunction('UNIX_TIMESTAMP', fn ($value) => strtotime($value . ' UTC'));
         $defs = [];
         $tables = [
             'Opportunity' => ['id', 'tenantId', 'opportunityStageId', 'funnelId', 'assignedUserId', 'status',
@@ -81,16 +85,18 @@ class OpportunityGroupSummaryTest extends TestCase
             'Meeting' => ['id', 'parentId', 'parentType', 'dateEnd', 'dateEndDate', 'pending', 'readable', 'deleted'],
             'Call' => ['id', 'parentId', 'parentType', 'dateEnd', 'pending', 'readable', 'deleted'],
             'Task' => ['id', 'parentId', 'parentType', 'dateEnd', 'dateEndDate', 'pending', 'readable', 'deleted'],
+            'ChatwootAiAgentRun' => ['id', 'opportunityId', 'kind', 'sentFollowupMessage', 'runAt', 'deleted'],
+            'Note' => ['id', 'parentId', 'parentType', 'type', 'relatedType', 'relatedId', 'createdAt', 'deleted'],
         ];
         foreach ($tables as $type => $fields) {
             $columns = [];
             foreach ($fields as $field) {
                 $column = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $field));
-                $numeric = in_array($field, ['amount', 'probability', 'pending', 'readable', 'unread', 'deleted', 'followupLifetimeCount']);
+                $numeric = in_array($field, ['amount', 'probability', 'pending', 'readable', 'unread', 'deleted', 'followupLifetimeCount', 'sentFollowupMessage']);
                 $columns[] = "$column " . ($numeric ? 'NUMERIC DEFAULT ' . ($field === 'pending' ? 1 : 0) : 'TEXT');
                 $defs[$type]['attributes'][$field] = ['type' => $numeric ? 'float' : 'varchar'];
             }
-            $this->pdo->exec('CREATE TABLE ' . strtolower($type) . ' (' . implode(', ', $columns) . ')');
+            $this->pdo->exec('CREATE TABLE ' . strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $type)) . ' (' . implode(', ', $columns) . ')');
         }
         $defs['Opportunity']['attributes']['accountName'] = [
             'type' => 'foreign', 'notStorable' => true, 'relation' => 'account', 'foreign' => 'name',
@@ -192,8 +198,14 @@ class OpportunityGroupSummaryTest extends TestCase
         $currency->method('getCurrencyRates')->willReturn(Rates::fromAssoc(['BRL' => 1.0, 'USD' => 5.0], 'BRL'));
         $this->buckets = new OpportunityActivityBuckets($factory, $acl);
         $this->inboxes = $this->createMock(OpportunityInboxFilter::class);
+        $config = $this->createMock(Config::class);
+        $config->method('get')->willReturnCallback(fn ($key) => $key === OpportunityMessageEvents::STARTED_AT ? '2026-09-07 00:00:00' : null);
+        $eventAccess = $this->createMock(OpportunityEventAccess::class);
+        // Stands in for conversation ACL on message events.
+        $eventAccess->method('where')->willReturn(['relatedId!=' => 'secret-conversation']);
         $this->service = new OpportunityGroupSummary(
-            $em, $factory, $fetcher, $workspace, $readStates, $this->buckets, $currency, $acl, $this->inboxes
+            $em, $factory, $fetcher, $workspace, $readStates, $this->buckets, $currency, $acl, $this->inboxes,
+            $config, $eventAccess, $user,
         );
         $this->spreadsheet = new OpportunitySpreadsheetSummary(
             $em, $this->service, $currency, $this->createMock(StreamActivity::class), $acl
@@ -377,6 +389,72 @@ class OpportunityGroupSummaryTest extends TestCase
             // Without the split the response keeps its original shape.
             self::assertSame(['count' => 2, 'amount' => 998.0], $this->summary(['groupBy' => 'sourceChannel'])['groups']->{'sourceChannel:CTWA'});
         }
+    }
+
+    public function testFollowupReplyCountsRepliesWithin24HoursOfTrackedSendsInOneQuery(): void
+    {
+        $this->pdo->exec("UPDATE opportunity SET status = CASE id WHEN 'a' THEN 'Won' WHEN 'b' THEN 'Lost' ELSE 'Open' END");
+        $this->pdo->exec("INSERT INTO chatwoot_ai_agent_run (id, opportunity_id, kind, sent_followup_message, run_at, deleted) VALUES
+            ('a1', 'a', 'followup-trigger', 1, '2026-10-01 10:00:00', 0),
+            ('a2', 'a', 'followup-trigger', 1, '2026-10-02 10:00:00', 0),
+            ('b1', 'b', 'followup-trigger', 1, '2026-10-01 10:00:00', 0),
+            ('b-deleted', 'b', 'followup-trigger', 1, '2026-10-03 10:00:00', 1),
+            ('c-untracked', 'c', 'followup-trigger', 1, '2026-09-06 10:00:00', 0),
+            ('c-unsent', 'c', 'followup-trigger', 0, '2026-10-01 10:00:00', 0),
+            ('c-customer', 'c', 'customer-message', 1, '2026-10-01 10:00:00', 0),
+            ('n1', 'null', 'followup-trigger', 1, '2026-10-01 10:00:00', 0),
+            ('h1', 'hidden', 'followup-trigger', 1, '2026-10-01 10:00:00', 0),
+            ('o1', 'other', 'followup-trigger', 1, '2026-10-01 10:00:00', 0)");
+        $reply = "'Opportunity', 'ChatwootMessageReceived', 'ChatwootConversation'";
+        $this->pdo->exec("INSERT INTO note (id, parent_id, parent_type, type, related_type, related_id, created_at, deleted) VALUES
+            ('a-reply', 'a', $reply, 'conv-a', '2026-10-01 12:00:00', 0),
+            ('a-reply-2', 'a', $reply, 'conv-a', '2026-10-02 11:00:00', 0),
+            ('b-before', 'b', $reply, 'conv-b', '2026-10-01 09:00:00', 0),
+            ('b-late', 'b', $reply, 'conv-b', '2026-10-02 10:00:01', 0),
+            ('b-deleted', 'b', $reply, 'conv-b', '2026-10-01 11:00:00', 1),
+            ('b-of-deleted-run', 'b', $reply, 'conv-b', '2026-10-03 11:00:00', 0),
+            ('c-reply', 'c', $reply, 'conv-c', '2026-09-06 11:00:00', 0),
+            ('c-post', 'c', 'Opportunity', 'Post', NULL, NULL, '2026-10-01 11:00:00', 0),
+            ('n-secret', 'null', $reply, 'secret-conversation', '2026-10-01 11:00:00', 0),
+            ('h-reply', 'hidden', $reply, 'conv-h', '2026-10-01 11:00:00', 0),
+            ('o-reply', 'other', $reply, 'conv-o', '2026-10-01 11:00:00', 0)");
+        $this->composer = $this->mysql;
+        $this->queryCount = 0;
+        $summary = $this->summary(['groupBy' => 'followupReply', 'statusSplit' => 'true']);
+        self::assertSame(1, $this->queryCount);
+        self::assertSame('2026-09-07 00:00:00', $summary['since']);
+        $groups = $summary['groups'];
+        // a: two sends, replied 2h after the first; duplicated by the scope join but counted once.
+        self::assertSame([1, 499.0, 2], [$groups->{'followupReply:replied'}['count'],
+            $groups->{'followupReply:replied'}['amount'], $groups->{'followupReply:replied'}['followups']]);
+        self::assertEquals((object) ['Won' => ['count' => 1, 'amount' => 499.0]], $groups->{'followupReply:replied'}['statuses']);
+        // b: replies before, after 24h, deleted, or after a deleted run; null: the reply is in a conversation the user cannot read.
+        self::assertSame([2, 2], [$groups->{'followupReply:noReply'}['count'], $groups->{'followupReply:noReply'}['followups']]);
+        self::assertEquals((object) [
+            'Lost' => ['count' => 1, 'amount' => 499.0],
+            'Open' => ['count' => 1, 'amount' => 0.0],
+        ], $groups->{'followupReply:noReply'}['statuses']);
+        // c: only untracked, unsent, or non-follow-up runs.
+        self::assertSame([1, 400.0, 0], [$groups->{'followupReply:none'}['count'],
+            $groups->{'followupReply:none'}['amount'], $groups->{'followupReply:none'}['followups']]);
+        self::assertCount(3, (array) $groups);
+    }
+
+    public function testFollowupReplyRequiresFollowupStatusAndConversationAccess(): void
+    {
+        foreach (['Opportunity.followupLifetimeCount', 'Opportunity.status'] as $field) {
+            $this->hiddenFields = [$field];
+            try {
+                $this->summary(['groupBy' => 'followupReply', 'statusSplit' => 'true']);
+                self::fail("$field must be readable");
+            } catch (Forbidden) {
+                self::assertTrue(true);
+            }
+        }
+        $this->hiddenFields = [];
+        $this->hiddenScopes = ['ChatwootConversation'];
+        $this->expectException(Forbidden::class);
+        $this->summary(['groupBy' => 'followupReply', 'statusSplit' => 'true']);
     }
 
     public function testNewGroupingsAndStatusSplitRequireFieldAccess(): void
