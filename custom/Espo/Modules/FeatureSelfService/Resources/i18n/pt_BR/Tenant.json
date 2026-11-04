@@ -7,7 +7,9 @@
         "trialStartsAt": "Teste começa em",
         "trialEndsAt": "Teste termina em",
         "frozenAt": "Congelado em",
-        "chatwootAccess": "Acesso no chat"
+        "chatwootAccess": "Acesso no chat",
+        "seats": "Atendentes (pagos)",
+        "paidThrough": "Pago até"
     },
     "options": {
         "plan": {

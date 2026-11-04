@@ -15,7 +15,8 @@ use Espo\Core\Job\JobDataLess;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAccess;
 
 /**
- * Freezes self-service workspaces whose trial ended and keeps Chatwoot's copy
+ * Applies paid plans (active, past due, frozen after the grace days), freezes
+ * self-service workspaces whose trial ended, and keeps Chatwoot's copy
  * of each workspace's access in line, retrying pushes that failed.
  */
 class ApplyWorkspaceAccess implements JobDataLess
@@ -24,6 +25,7 @@ class ApplyWorkspaceAccess implements JobDataLess
 
     public function run(): void
     {
+        $this->access->applyBilling();
         $this->access->freezeEndedTrials();
         $this->access->syncChatwoot();
     }

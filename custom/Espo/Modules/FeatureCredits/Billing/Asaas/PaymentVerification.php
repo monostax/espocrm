@@ -23,8 +23,10 @@ final class PaymentVerification
         }
         $method = $data['billingType'] ?? null;
         // A boleto may be paid by PIX. UNDEFINED permits the supported launch methods only.
+        // Asaas keeps an ask-the-payer charge UNDEFINED until the payer picks a
+        // method on the invoice page; it may be open like that, never settled.
         $methods = match ($body['billingType']) {
-            'UNDEFINED' => ['PIX', 'BOLETO', 'CREDIT_CARD'], 'BOLETO' => ['BOLETO', 'PIX'], default => [$body['billingType']],
+            'UNDEFINED' => ['PIX', 'BOLETO', 'CREDIT_CARD', 'UNDEFINED'], 'BOLETO' => ['BOLETO', 'PIX'], default => [$body['billingType']],
         };
         if (!in_array($method, $methods, true)) throw new Conflict('Unexpected payment method.');
         $due = $data['originalDueDate'] ?? null;
@@ -51,6 +53,7 @@ final class PaymentVerification
             if (isset($data[$adjustment]) && (!is_array($data[$adjustment]) || !self::money($data[$adjustment]['value'] ?? null, '0'))) $review = true;
         }
         if (isset($data['interestValue']) && !self::money($data['interestValue'], '0')) $review = true;
+        if ($method === 'UNDEFINED' && !in_array($status, ['PENDING', 'OVERDUE'], true)) $review = true;
         $paid = !$review && ($status === 'RECEIVED' || ($status === 'CONFIRMED' && in_array($method, ['BOLETO', 'CREDIT_CARD'], true)));
         // PIX CONFIRMED is precautionary review, not the PIX RECEIVED settlement signal.
         if ($method === 'PIX' && $status === 'CONFIRMED') $review = true;

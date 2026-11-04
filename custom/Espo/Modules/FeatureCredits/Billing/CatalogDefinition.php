@@ -57,7 +57,7 @@ final readonly class CatalogDefinition
         $this->products = $products;
         $offers = $definitions = [];
         foreach ($data['offers'] as $raw) {
-            $offer = self::fields($raw, ['offerId', 'version', 'productId', 'productVersion', 'countries', 'currency', 'price', 'interval'], ['tenantId']);
+            $offer = self::fields($raw, ['offerId', 'version', 'productId', 'productVersion', 'countries', 'currency', 'price', 'interval'], ['tenantId', 'seats']);
             self::identity($offer['offerId']);
             self::identity($offer['productId']);
             self::version($offer['version']);
@@ -76,10 +76,11 @@ final readonly class CatalogDefinition
             if (isset($offers[$offer['offerId']])) throw new InvalidArgumentException('Duplicate catalog offer.');
             $terms = new OfferTerms($offer['offerId'], $offer['version'], $offer['productId'], $offer['productVersion'],
                 $product['operation'], $offer['countries'], $offer['currency'], $offer['price'], $product['credits'], $offer['interval'],
-                $offer['tenantId'] ?? null);
+                $offer['tenantId'] ?? null, isset($offer['seats']) ? self::seatFields($offer['seats']) : null);
             $offers[$terms->offerId] = $terms;
             $offer['countries'] = $terms->countries;
             $offer['price'] = $terms->price;
+            if ($terms->seats !== null) $offer['seats'] = $terms->seats;
             $definitions[$terms->offerId] = $offer;
         }
         ksort($offers, SORT_STRING);
@@ -115,6 +116,12 @@ final readonly class CatalogDefinition
         }
         // Normalize object-key order before any hash computation.
         return array_replace(array_fill_keys($keys, null), $data);
+    }
+
+    /** Seat pricing of an offer, validated by OfferTerms. */
+    private static function seatFields(mixed $input): array
+    {
+        return self::fields($input, ['plan', 'unitPrice', 'min', 'max']);
     }
 
     private static function identity(mixed $value): void

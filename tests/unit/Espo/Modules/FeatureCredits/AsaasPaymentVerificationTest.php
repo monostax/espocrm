@@ -107,6 +107,16 @@ final class AsaasPaymentVerificationTest extends TestCase
         $this->assertTrue(PaymentVerification::verify($this->payment('CREDIT_CARD', 'CONFIRMED'), 'pay_original', $this->command('UNDEFINED'), 'pay_original')['paid']);
     }
 
+    public function testAnAskThePayerInvoiceMayStayUndefinedOnlyWhileOpen(): void
+    {
+        foreach (['PENDING', 'OVERDUE'] as $status) {
+            $open = PaymentVerification::verify($this->payment('UNDEFINED', $status), 'pay_original', $this->command('UNDEFINED'), 'pay_original');
+            $this->assertFalse($open['paid']); $this->assertFalse($open['review']);
+        }
+        $settled = PaymentVerification::verify($this->payment('UNDEFINED', 'RECEIVED'), 'pay_original', $this->command('UNDEFINED'), 'pay_original');
+        $this->assertFalse($settled['paid']); $this->assertTrue($settled['review']);
+    }
+
     public function testMonthlyCalendarUsesOriginalAnchorWithLeapYearAndNoEndOfMonthDrift(): void
     {
         $this->assertSame(['start' => '2028-02-29 03:00:00', 'end' => '2028-03-31 03:00:00'], MonthlyPeriod::forDueDate('2028-01-31', '2028-02-29'));

@@ -7,7 +7,9 @@
         "trialStartsAt": "Trial starts at",
         "trialEndsAt": "Trial ends at",
         "frozenAt": "Frozen at",
-        "chatwootAccess": "Chat access"
+        "chatwootAccess": "Chat access",
+        "seats": "Attendants (paid)",
+        "paidThrough": "Paid through"
     },
     "options": {
         "plan": {

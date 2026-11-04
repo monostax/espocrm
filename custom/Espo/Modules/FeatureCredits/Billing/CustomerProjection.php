@@ -15,7 +15,7 @@ final class CustomerProjection
     public static function terms(array $value): array
     {
         return self::only($value, ['termsId', 'schema', 'offerId', 'version', 'productId', 'productVersion',
-            'operation', 'countries', 'currency', 'price', 'credits', 'interval']);
+            'operation', 'countries', 'currency', 'price', 'credits', 'interval', 'seats']);
     }
 
     public static function acceptance(array $value): array

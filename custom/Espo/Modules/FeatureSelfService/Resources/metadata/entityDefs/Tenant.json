@@ -31,6 +31,8 @@
         "trialStartsAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
         "trialEndsAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
         "frozenAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
+        "seats": { "type": "int", "min": 0, "readOnly": true, "customizationDisabled": true },
+        "paidThrough": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
         "chatwootAccess": {
             "type": "varchar",
             "maxLength": 16,

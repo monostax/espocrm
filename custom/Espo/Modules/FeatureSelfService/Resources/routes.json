@@ -8,5 +8,7 @@
     {"route": "/SelfService/oauth/finish", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "oauthFinish"}},
     {"route": "/SelfService/oauth/complete", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "oauthComplete"}},
     {"route": "/SelfService/workspace", "method": "get", "params": {"controller": "SelfServiceWorkspace", "action": "state"}},
-    {"route": "/SelfService/workspace/refresh", "method": "post", "params": {"controller": "SelfServiceWorkspace", "action": "refresh"}}
+    {"route": "/SelfService/workspace/refresh", "method": "post", "params": {"controller": "SelfServiceWorkspace", "action": "refresh"}},
+    {"route": "/SelfService/plans", "method": "get", "params": {"controller": "SelfServiceWorkspace", "action": "plans"}},
+    {"route": "/SelfService/checkout", "method": "post", "params": {"controller": "SelfServiceWorkspace", "action": "checkout"}}
 ]

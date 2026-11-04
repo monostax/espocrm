@@ -37,6 +37,9 @@ class WorkspaceAccess
     public const ACCESS_ACTIVE = 'active';
     public const ACCESS_FROZEN = 'frozen';
 
+    /** Days an unpaid renewal keeps the workspace open, with a banner. */
+    public const GRACE_DAYS = 3;
+
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
@@ -62,6 +65,7 @@ class WorkspaceAccess
                 'subscriptionStatus' => self::STATUS_TRIAL,
                 'trialEndsAt!=' => null,
                 'trialEndsAt<=' => $now,
+                'paidThrough' => null,
             ])
             ->find() as $tenant) {
             $this->setStatus($tenant, self::STATUS_FROZEN);
@@ -70,6 +74,78 @@ class WorkspaceAccess
         }
 
         return $frozen;
+    }
+
+    /**
+     * Bring paid workspaces in line with their plan subscription: the plan,
+     * seats and paid-through date come from its paid billing periods. Paid
+     * through a future date → active; up to GRACE_DAYS after it → past due;
+     * later → frozen. Workspaces that never paid keep the trial rules. Returns
+     * how many tenants changed.
+     */
+    public function applyBilling(?string $tenantId = null, ?string $now = null): int
+    {
+        $now ??= gmdate('Y-m-d H:i:s');
+        $where = ['plan!=' => ''] + ($tenantId !== null ? ['id' => $tenantId] : []);
+        $changed = 0;
+
+        foreach ($this->entityManager->getRDBRepository('Tenant')->where($where)->find() as $tenant) {
+            $paid = $this->paidPlan((string) $tenant->getId());
+
+            if ($paid === null) {
+                continue;
+            }
+
+            $graceEnds = gmdate('Y-m-d H:i:s', strtotime($paid['paidThrough'] . ' UTC') + self::GRACE_DAYS * 86400);
+            $status = $now < $paid['paidThrough'] ? self::STATUS_ACTIVE
+                : ($now < $graceEnds ? self::STATUS_PAST_DUE : self::STATUS_FROZEN);
+
+            if ($tenant->get('plan') === $paid['plan'] && (int) $tenant->get('seats') === $paid['seats'] &&
+                $tenant->get('paidThrough') === $paid['paidThrough'] && $tenant->get('subscriptionStatus') === $status) {
+                continue;
+            }
+
+            $tenant->set(['plan' => $paid['plan'], 'seats' => $paid['seats'], 'paidThrough' => $paid['paidThrough']]);
+
+            if ($tenant->get('subscriptionStatus') !== $status) {
+                $this->setStatus($tenant, $status);
+                $this->log->info("SelfService: tenant {$tenant->getId()} is {$status} (paid through {$paid['paidThrough']}).");
+            } else {
+                $this->entityManager->saveEntity($tenant, ['silent' => true]);
+            }
+
+            $changed++;
+        }
+
+        return $changed;
+    }
+
+    /**
+     * The plan subscription paid furthest ahead, from the billing engine.
+     *
+     * @return ?array{plan: string, seats: int, paidThrough: string}
+     */
+    private function paidPlan(string $tenantId): ?array
+    {
+        $query = $this->entityManager->getPDO()->prepare(
+            "SELECT o.terms_snapshot, MAX(p.ends_at) AS paid_through
+             FROM credit_billing_obligation o
+             JOIN credit_billing_period p ON p.obligation_id = o.id AND p.paid_payment_id IS NOT NULL AND p.ends_at IS NOT NULL
+             WHERE o.tenant_id = ? AND o.deleted = FALSE AND o.operation = 'subscription'
+             GROUP BY o.id, o.terms_snapshot
+             ORDER BY paid_through DESC"
+        );
+        $query->execute([$tenantId]);
+
+        foreach ($query->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $seats = json_decode((string) $row['terms_snapshot'], true)['seats'] ?? null;
+
+            if (isset($seats['plan'], $seats['quantity'])) {
+                return ['plan' => $seats['plan'], 'seats' => (int) $seats['quantity'], 'paidThrough' => (string) $row['paid_through']];
+            }
+        }
+
+        return null;
     }
 
     public function setStatus(Entity $tenant, string $status): void

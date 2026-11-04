@@ -40,6 +40,8 @@ final class Accounts
             $offers = [];
             foreach ($catalog->offers as $terms) {
                 if (!$terms->availableToTenant($tenantId) || !in_array($account['billing_country'], $terms->countries, true)) continue;
+                // Plans are sold by the self-service checkout, which supplies the seats.
+                if ($terms->seats !== null) continue;
                 $offers[] = ['terms' => $terms->jsonSerialize(), 'eligibility' => $this->eligibility($account, $obligations, $terms)];
             }
             return $result + ['catalogId' => $catalog->id, 'catalogUnavailable' => false, 'offers' => $offers];
@@ -80,16 +82,23 @@ final class Accounts
     }
 
     /** Persist accepted terms only. Every replay is dispatch-denied; no adapter I/O or funding here. */
+    /**
+     * @param ?int $quantity Seats, required by (and only by) seat-priced offers. The
+     *     accepted terms then carry the quantity and the monthly total as their price.
+     */
     public function accept(
         string $tenantId, string $key, int $revision, string $catalogId, string $offerId, string $termsId, string $actor,
+        ?int $quantity = null,
     ): array {
         $this->command($key, $revision, $actor);
         foreach ([$catalogId, $termsId] as $id) {
             if (!preg_match('/^[a-f0-9]{64}$/D', $id)) throw new InvalidArgumentException('Exact catalog and offer references are required.');
         }
         if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,23}$/D', $offerId)) throw new InvalidArgumentException('Invalid offer identity.');
-        $hash = $this->hash(['billing-acceptance-v1', $tenantId, $key, $revision, $catalogId, $offerId, $termsId, $actor]);
-        return $this->locked($tenantId, function (PDO $pdo, string $now) use ($tenantId, $key, $revision, $catalogId, $offerId, $termsId, $actor, $hash): array {
+        $hash = $quantity === null
+            ? $this->hash(['billing-acceptance-v1', $tenantId, $key, $revision, $catalogId, $offerId, $termsId, $actor])
+            : $this->hash(['billing-acceptance-v2', $tenantId, $key, $revision, $catalogId, $offerId, $termsId, $actor, $quantity]);
+        return $this->locked($tenantId, function (PDO $pdo, string $now) use ($tenantId, $key, $revision, $catalogId, $offerId, $termsId, $actor, $hash, $quantity): array {
             $q = $pdo->prepare('SELECT * FROM credit_billing_obligation WHERE tenant_id=? AND request_key=?');
             $q->execute([$tenantId, $key]);
             if ($existing = $q->fetch(PDO::FETCH_ASSOC)) {
@@ -103,6 +112,18 @@ final class Accounts
             $terms = $catalog->offers[$offerId] ?? null;
             if ($catalog->id !== $catalogId || !$terms || !$terms->availableToTenant($tenantId) || $terms->termsId !== $termsId) {
                 throw new Conflict('Commercial terms changed; review the current offer.');
+            }
+            if (($terms->seats !== null) !== ($quantity !== null)) {
+                throw new InvalidArgumentException('Seat-priced offers, and only they, take a seat quantity.');
+            }
+            if ($terms->seats !== null) {
+                $terms = $terms->withQuantity($quantity);
+                // One plan per workspace, whatever its pack.
+                foreach ($obligations as $obligation) {
+                    if (isset($this->acceptanceReceipt($obligation)['terms']['seats'])) {
+                        throw new Conflict('A plan subscription is already pending or active.');
+                    }
+                }
             }
             $eligibility = $this->eligibility($account, $obligations, $terms);
             if (!$eligibility['eligible']) throw new Conflict($eligibility['blockedReason']);
@@ -119,7 +140,7 @@ final class Accounts
             $row = [
                 'id' => $id, 'tenant_id' => $tenantId, 'request_key' => $key, 'input_hash' => $hash,
                 'provider' => $eligibility['effectiveProvider'], 'integration_id' => $eligibility['integrationId'],
-                'catalog_id' => $catalogId, 'terms_id' => $termsId, 'terms_snapshot' => json_encode($terms, JSON_THROW_ON_ERROR),
+                'catalog_id' => $catalogId, 'terms_id' => $terms->termsId, 'terms_snapshot' => json_encode($terms, JSON_THROW_ON_ERROR),
                 'operation' => $terms->operation, 'billing_country' => $account['billing_country'], 'assignment_revision' => $revision,
                 'state' => 'accepted', 'created_at' => $now, 'created_by_id' => $actor,
             ];
