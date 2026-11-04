@@ -35,6 +35,16 @@ class Access
         return $this->productTarget($input, $target, $type);
     }
 
+    /** Workspace-level gate for bulk runs, which list and act on several records of one tenant. */
+    public function tenant(string $tenantId): void
+    {
+        $this->actorId();
+        if ($this->acl->getPermissionLevel('useEnrichmentCredits') !== 'yes' ||
+            !$this->tenants->canActForTenant($this->user, $tenantId)) {
+            throw new Forbidden('Enrichment access required.');
+        }
+    }
+
     /** Record-level gate for read-only action discovery; product ACLs are checked per action. */
     public function record(QuoteInput $input): Entity
     {

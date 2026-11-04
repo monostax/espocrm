@@ -97,11 +97,13 @@ class EnrichmentQuoteDatabaseTest extends TestCase
             $pdo->exec("INSERT INTO tenant (id) VALUES ('tenant'), ('other')");
             $pdo->exec('CREATE TABLE contact (id VARCHAR(17) PRIMARY KEY, tenant_id VARCHAR(17) NOT NULL,
                 deleted BOOLEAN NOT NULL DEFAULT FALSE, cpf VARCHAR(14), first_name VARCHAR(64), email_address VARCHAR(128), linkedin_url VARCHAR(512),
-                date_of_birth VARCHAR(10), data_nascimento VARCHAR(10))');
+                date_of_birth VARCHAR(10), data_nascimento VARCHAR(10), email_enriched_at VARCHAR(19), email_enrichment_result VARCHAR(16),
+                phone_enriched_at VARCHAR(19), phone_enrichment_result VARCHAR(16))');
             $pdo->exec("INSERT INTO contact (id, tenant_id, cpf, first_name, email_address) VALUES
                 ('contact', 'tenant', '52998224725', 'Person', 'person@example.test')");
             $pdo->exec('CREATE TABLE account (id VARCHAR(17) PRIMARY KEY, tenant_id VARCHAR(17) NOT NULL,
-                deleted BOOLEAN NOT NULL DEFAULT FALSE, cnpj VARCHAR(18), name VARCHAR(64), website VARCHAR(128), linkedin_url VARCHAR(512))');
+                deleted BOOLEAN NOT NULL DEFAULT FALSE, cnpj VARCHAR(18), name VARCHAR(64), website VARCHAR(128), linkedin_url VARCHAR(512),
+                socios_enriched_at VARCHAR(19), socios_enrichment_result VARCHAR(16))');
             $pdo->exec("INSERT INTO account (id, tenant_id, cnpj, name, website) VALUES
                 ('contact', 'tenant', '11222333000181', 'Company', 'https://example.test')");
             $pdo->exec('CREATE TABLE contact_channel_identity (id VARCHAR(17) PRIMARY KEY, contact_id VARCHAR(17), tenant_id VARCHAR(17),

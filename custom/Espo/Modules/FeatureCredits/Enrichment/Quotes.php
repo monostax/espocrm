@@ -230,6 +230,60 @@ final class Quotes
         });
     }
 
+    /**
+     * Read-only plan for one record of a bulk run: the exact quote request for this record and its
+     * maximum, or why it is skipped. Field lookups keep only the selected sources this record can use.
+     */
+    public function batchPlan(array $base): array
+    {
+        $input = new QuoteInput((object) [...$base, 'requestKey' => 'preview']);
+        $target = $this->access->target($input);
+        if ($input->isDiscovery()) {
+            $plan = $this->previewPlan($input, $target);
+            if (!array_filter($plan['routes'])) return ['reason' => 'no_route'];
+            $request = [...$base, 'waterfall' => $plan['request']['waterfall'],
+                ...($plan['request']['budget'] !== null ? ['budget' => $plan['request']['budget']] : [])];
+            return ['request' => $request, 'maximum' => $plan['maximum']];
+        }
+        $available = $this->availability->inspect($base['tenantId'], $base['targetType'], $input->data['products'],
+            $this->access->identity($target), true);
+        // Public source numbers only, so the dashboard can price any source subset without another preview.
+        $offered = [];
+        foreach (SelectedProviders::SOURCES as $source => $provider) {
+            if (!empty($available[$provider])) $offered[$source] = array_keys($available[$provider]);
+        }
+        $sources = array_values(array_filter($input->data['sources'], static fn (int $source): bool => isset($offered[$source])));
+        if (!$sources) return ['reason' => 'no_route', 'available' => $offered];
+        $request = [...$base, 'sources' => $sources];
+        $plan = $this->snapshot(new QuoteInput((object) [...$request, 'requestKey' => 'preview']), $target);
+        if (!array_filter($plan['routes'])) return ['reason' => 'no_route', 'available' => $offered];
+        return ['request' => $request, 'maximum' => $plan['maximum'], 'available' => $offered];
+    }
+
+    /** Current price per public source and the sources a single-record quote would preselect. */
+    public function sourceRates(string $targetType, array $products): array
+    {
+        $card = $this->catalog->current();
+        $rates = $card->ratesFor($targetType);
+        $result = [];
+        foreach (SelectedProviders::SOURCES as $source => $provider) {
+            foreach ($products as $product) {
+                if (isset($rates[$provider][$product])) $result[$source][$product] = $rates[$provider][$product]['credits'];
+            }
+        }
+        $defaults = [];
+        foreach ($products as $product) {
+            foreach (RoutingPolicy::definition($card->definition['routingPolicy'])[$targetType] as $provider) {
+                if (!isset($rates[$provider][$product])) continue;
+                $defaults[] = array_search($provider, SelectedProviders::SOURCES, true);
+                break;
+            }
+        }
+        $defaults = array_values(array_unique($defaults));
+        sort($defaults);
+        return ['rates' => (object) $result, 'defaults' => $defaults];
+    }
+
     private function snapshot(QuoteInput $input, Entity $target): array
     {
         $request = $input->data;

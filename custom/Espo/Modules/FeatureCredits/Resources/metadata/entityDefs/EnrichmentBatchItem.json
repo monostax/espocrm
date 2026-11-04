@@ -1,0 +1,94 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "batch": {
+            "type": "link",
+            "notNull": true
+        },
+        "tenant": {
+            "type": "link",
+            "notNull": true
+        },
+        "targetId": {
+            "type": "varchar",
+            "maxLength": 24,
+            "notNull": true
+        },
+        "position": {
+            "type": "int",
+            "notNull": true
+        },
+        "state": {
+            "type": "varchar",
+            "maxLength": 16,
+            "notNull": true
+        },
+        "reason": {
+            "type": "varchar",
+            "maxLength": 32
+        },
+        "quote": {
+            "type": "link"
+        },
+        "maximum": {
+            "type": "varchar",
+            "maxLength": 32
+        },
+        "credits": {
+            "type": "varchar",
+            "maxLength": 32
+        },
+        "outcome": {
+            "type": "jsonObject"
+        },
+        "startedAt": {
+            "type": "datetime"
+        },
+        "finishedAt": {
+            "type": "datetime"
+        }
+    },
+    "links": {
+        "batch": {
+            "type": "belongsTo",
+            "entity": "EnrichmentBatch"
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        },
+        "quote": {
+            "type": "belongsTo",
+            "entity": "EnrichmentQuote"
+        }
+    },
+    "indexes": {
+        "position": {
+            "columns": [
+                "batchId",
+                "position"
+            ],
+            "unique": true
+        },
+        "target": {
+            "columns": [
+                "batchId",
+                "targetId"
+            ],
+            "unique": true
+        },
+        "state": {
+            "columns": [
+                "batchId",
+                "state",
+                "position"
+            ]
+        },
+        "inFlight": {
+            "columns": [
+                "state",
+                "batchId"
+            ]
+        }
+    }
+}

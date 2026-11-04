@@ -270,6 +270,7 @@ final class Purchases
                     $pdo->prepare('UPDATE enrichment_quote SET discovery_stop_reason=? WHERE id=?')->execute([$reason,$quote]);
                     $row['discovery_stop_reason'] = $reason;
                 }
+                EnrichmentStatus::recordLocked($pdo,$row,$now);
             }
             $pdo->prepare("UPDATE enrichment_discovery_call SET state='waived',completed_at=?,request_ciphertext=NULL
                 WHERE quote_id=? AND tenant_id=? AND state='claimed'")->execute([$now,$quote,$tenant]);

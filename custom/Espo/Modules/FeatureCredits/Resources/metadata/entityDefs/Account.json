@@ -1,0 +1,28 @@
+{
+    "fields": {
+        "sociosEnrichedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "layoutMassUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "audited": false
+        },
+        "sociosEnrichmentResult": {
+            "type": "enum",
+            "options": [
+                "found",
+                "not_found"
+            ],
+            "style": {
+                "found": "success",
+                "not_found": "default"
+            },
+            "readOnly": true,
+            "layoutMassUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "audited": false
+        }
+    }
+}

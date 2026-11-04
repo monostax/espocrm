@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "sociosEnrichedAt": "Sócios enriquecidos em",
+        "sociosEnrichmentResult": "Resultado do enriquecimento de sócios"
+    },
+    "options": {
+        "sociosEnrichmentResult": {
+            "found": "Encontrado",
+            "not_found": "Nada encontrado"
+        }
+    }
+}

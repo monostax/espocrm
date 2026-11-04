@@ -3,6 +3,54 @@
         "dateOfBirth": {
             "type": "date",
             "isPersonalData": true
+        },
+        "emailEnrichedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "layoutMassUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "audited": false
+        },
+        "emailEnrichmentResult": {
+            "type": "enum",
+            "options": [
+                "found",
+                "not_found"
+            ],
+            "style": {
+                "found": "success",
+                "not_found": "default"
+            },
+            "readOnly": true,
+            "layoutMassUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "audited": false
+        },
+        "phoneEnrichedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "layoutMassUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "audited": false
+        },
+        "phoneEnrichmentResult": {
+            "type": "enum",
+            "options": [
+                "found",
+                "not_found"
+            ],
+            "style": {
+                "found": "success",
+                "not_found": "default"
+            },
+            "readOnly": true,
+            "layoutMassUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "audited": false
         }
     }
 }

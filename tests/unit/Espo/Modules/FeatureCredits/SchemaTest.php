@@ -52,8 +52,8 @@ trait SchemaFixture
         $data = [];
         foreach (['entityDefs', 'scopes', 'recordDefs'] as $category) {
             foreach (glob(self::ROOT . "$category/*.json") as $path) {
-                // Role and Contact extend core entities; they are not credit accounting tables.
-                if ($category === 'entityDefs' && in_array(basename($path), ['Role.json', 'Contact.json'], true)) continue;
+                // Role, Contact and Account extend core entities; they are not credit accounting tables.
+                if ($category === 'entityDefs' && in_array(basename($path), ['Role.json', 'Contact.json', 'Account.json'], true)) continue;
                 $data[$category][basename($path, '.json')] = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
             }
         }
@@ -121,7 +121,7 @@ class SchemaTest extends TestCase
     public function testGeneratedFinancialSchema(string $dialect): void
     {
         $schema = $this->schema($dialect);
-        $this->assertCount(34, $schema->getTables());
+        $this->assertCount(36, $schema->getTables());
         foreach ($schema->getTables() as $table) {
             if (!in_array($table->getName(), ['ai_model_credit_rate', 'enrichment_credit_catalog',
                 'credit_billing_catalog', 'credit_billing_product', 'credit_market_offer', 'credit_billing_event', 'verification_provider_window'], true)) {

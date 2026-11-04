@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureCredits\Jobs;
 use Espo\Core\Job\JobDataLess;
 use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Utils\Log;
+use Espo\Modules\FeatureCredits\Enrichment\BatchRunner;
 use Espo\Modules\FeatureCredits\Enrichment\Execution;
 use Espo\Modules\FeatureCredits\Enrichment\ExecutionRouter;
 
@@ -14,7 +15,7 @@ use Espo\Modules\FeatureCredits\Enrichment\ExecutionRouter;
 final class DispatchEnrichment implements JobDataLess
 {
     public function __construct(private Execution $execution, private JobSchedulerFactory $scheduler, private Log $log,
-        private ExecutionRouter $router) {}
+        private ExecutionRouter $router, private BatchRunner $batches) {}
     public function run(): void
     {
         $this->execution->expireResults();
@@ -29,5 +30,7 @@ final class DispatchEnrichment implements JobDataLess
                 $this->log->error('Enrichment scheduling or cleanup failed for quote=' . $row['id']);
             }
         }
+        // Bulk runs re-schedule themselves; this only revives one whose next step was lost.
+        foreach ($this->batches->stale() as $batch) RunEnrichmentBatch::schedule($this->scheduler, $batch);
     }
 }

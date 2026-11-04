@@ -308,6 +308,7 @@ class Execution
         $this->settlement->settleLocked($pdo,$wallet,$now,$usage,$hold,$charge);
         // The protected purchased marker and charge become visible in the same commit.
         $pdo->prepare("UPDATE enrichment_attempt SET purchased_at=? WHERE quote_id=? AND state='matched'")->execute([$now,$row['id']]);
+        EnrichmentStatus::recordLocked($pdo,$row,$now);
     }
 
     private function waive(PDO $pdo, string $id, string $now): void

@@ -1,0 +1,88 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {
+            "type": "link",
+            "notNull": true
+        },
+        "createdBy": {
+            "type": "link",
+            "notNull": true
+        },
+        "requestKey": {
+            "type": "varchar",
+            "maxLength": 64,
+            "notNull": true
+        },
+        "targetType": {
+            "type": "varchar",
+            "maxLength": 16,
+            "notNull": true
+        },
+        "product": {
+            "type": "varchar",
+            "maxLength": 16,
+            "notNull": true
+        },
+        "settings": {
+            "type": "jsonObject",
+            "notNull": true
+        },
+        "state": {
+            "type": "varchar",
+            "maxLength": 16,
+            "notNull": true
+        },
+        "pauseReason": {
+            "type": "varchar",
+            "maxLength": 32
+        },
+        "total": {
+            "type": "int",
+            "notNull": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "notNull": true
+        },
+        "steppedAt": {
+            "type": "datetime"
+        },
+        "completedAt": {
+            "type": "datetime"
+        }
+    },
+    "links": {
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "indexes": {
+        "requestUnique": {
+            "columns": [
+                "tenantId",
+                "createdById",
+                "requestKey"
+            ],
+            "unique": true
+        },
+        "active": {
+            "columns": [
+                "state",
+                "steppedAt"
+            ]
+        },
+        "actor": {
+            "columns": [
+                "tenantId",
+                "createdById",
+                "createdAt"
+            ]
+        }
+    }
+}

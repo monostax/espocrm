@@ -1,5 +1,19 @@
 {
     "fields": {
-        "dateOfBirth": "Data de Nascimento"
+        "dateOfBirth": "Data de Nascimento",
+        "emailEnrichedAt": "E-mail enriquecido em",
+        "emailEnrichmentResult": "Resultado do enriquecimento de e-mail",
+        "phoneEnrichedAt": "Telefone enriquecido em",
+        "phoneEnrichmentResult": "Resultado do enriquecimento de telefone"
+    },
+    "options": {
+        "emailEnrichmentResult": {
+            "found": "Encontrado",
+            "not_found": "Nada encontrado"
+        },
+        "phoneEnrichmentResult": {
+            "found": "Encontrado",
+            "not_found": "Nada encontrado"
+        }
     }
 }

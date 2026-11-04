@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "sociosEnrichedAt": "Partners enriched at",
+        "sociosEnrichmentResult": "Partners enrichment result"
+    },
+    "options": {
+        "sociosEnrichmentResult": {
+            "found": "Found",
+            "not_found": "Nothing found"
+        }
+    }
+}

@@ -38,6 +38,7 @@
         "CreditBilling": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "CreditBillingConfiguration": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "CreditEnrichmentQuotes": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
+        "CreditEnrichmentBatches": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "CreditEnrichmentReview": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "CreditEnrichmentHistory": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
         "CreditEnrichmentFields": ["Espo\\Modules\\FeatureCredits\\Classes\\Api\\PrivateResponse"],
