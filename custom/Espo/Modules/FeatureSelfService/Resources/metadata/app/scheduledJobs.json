@@ -4,5 +4,11 @@
         "scheduling": "* * * * *",
         "isSystem": false,
         "jobClassName": "Espo\\Modules\\FeatureSelfService\\Jobs\\RunProvisionings"
+    },
+    "ApplySelfServiceWorkspaceAccess": {
+        "name": "Apply Self-Service Workspace Access",
+        "scheduling": "*/5 * * * *",
+        "isSystem": false,
+        "jobClassName": "Espo\\Modules\\FeatureSelfService\\Jobs\\ApplyWorkspaceAccess"
     }
 }

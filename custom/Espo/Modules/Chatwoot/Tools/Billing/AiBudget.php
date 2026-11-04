@@ -54,6 +54,11 @@ final class AiBudget
             $tenant = $this->entityManager->getRDBRepository('Tenant')
                 ->where(['id' => $tenantId])->forUpdate()->findOne();
             if (!$tenant) throw new BadRequest('Unknown tenant.');
+            // A frozen self-service workspace (trial ended, invoice overdue) admits no
+            // new AI work; runs already admitted still settle.
+            if ($operation !== 'settle' && $tenant->get('plan') && $tenant->get('subscriptionStatus') === 'frozen') {
+                return (object) ['allowed' => false, 'reason' => 'workspace_frozen'];
+            }
             $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
             $period = self::period($now, $this->config->get('timeZone', 'UTC'));
 

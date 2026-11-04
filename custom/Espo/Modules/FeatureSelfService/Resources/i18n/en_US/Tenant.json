@@ -6,7 +6,8 @@
         "channelConnectedAt": "First channel connected at",
         "trialStartsAt": "Trial starts at",
         "trialEndsAt": "Trial ends at",
-        "frozenAt": "Frozen at"
+        "frozenAt": "Frozen at",
+        "chatwootAccess": "Chat access"
     },
     "options": {
         "plan": {
@@ -27,5 +28,8 @@
             "connectWhatsapp": "Connect WhatsApp",
             "done": "Done"
         }
+    },
+    "tooltips": {
+        "chatwootAccess": "What Chatwoot was last told: active, or frozen (no sending, no AI)."
     }
 }

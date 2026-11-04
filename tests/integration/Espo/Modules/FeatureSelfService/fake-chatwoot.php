@@ -64,7 +64,8 @@ $call = $method . ' ' . preg_replace('#/\d+#', '/:id', $path);
 $state['calls'][] = $call;
 
 foreach ($state['faults'] as $i => $fault) {
-    if ($fault['call'] === $call && $fault['times'] > 0) {
+    // Optional `path`: only that exact path, not every id behind the call.
+    if ($fault['call'] === $call && $fault['times'] > 0 && (!isset($fault['path']) || $fault['path'] === $path)) {
         $state['faults'][$i]['times']--;
         // "afterCreate" lets the request take effect and then loses the reply.
         if (empty($fault['afterCreate'])) {
@@ -91,6 +92,13 @@ if (preg_match('#^/platform/api/v1/accounts$#', $path) && $method === 'POST') {
     $accountId = $id();
     $state['accounts'][$accountId] = ['id' => $accountId, 'name' => $body['name'] ?? ''];
     $finish(200, $state['accounts'][$accountId]);
+}
+
+if (preg_match('#^/platform/api/v1/accounts/(\d+)$#', $path, $m) && $method === 'PATCH' && isset($state['accounts'][$m[1]])) {
+    // Like Chatwoot: custom_attributes merge, a null value removes the key.
+    $merged = array_merge($state['accounts'][$m[1]]['custom_attributes'] ?? [], $body['custom_attributes'] ?? []);
+    $state['accounts'][$m[1]]['custom_attributes'] = array_filter($merged, fn ($value) => $value !== null);
+    $finish(200, $state['accounts'][$m[1]]);
 }
 
 if (preg_match('#^/platform/api/v1/accounts/(\d+)$#', $path, $m)) {

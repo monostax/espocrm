@@ -17,21 +17,26 @@ use Espo\ORM\Repository\Option\SaveOption;
 
 class SeedScheduledJob implements RebuildAction
 {
-    private const JOB = 'RunSelfServiceProvisionings';
+    private const JOBS = [
+        'RunSelfServiceProvisionings' => ['Run Self-Service Provisionings', '* * * * *'],
+        'ApplySelfServiceWorkspaceAccess' => ['Apply Self-Service Workspace Access', '*/5 * * * *'],
+    ];
 
     public function __construct(private EntityManager $entityManager) {}
 
     public function process(): void
     {
-        if ($this->entityManager->getRDBRepository('ScheduledJob')->where(['job' => self::JOB])->findOne()) {
-            return;
-        }
+        foreach (self::JOBS as $job => [$name, $scheduling]) {
+            if ($this->entityManager->getRDBRepository('ScheduledJob')->where(['job' => $job])->findOne()) {
+                continue;
+            }
 
-        $this->entityManager->createEntity('ScheduledJob', [
-            'name' => 'Run Self-Service Provisionings',
-            'job' => self::JOB,
-            'status' => 'Active',
-            'scheduling' => '* * * * *',
-        ], [SaveOption::SKIP_ALL => true]);
+            $this->entityManager->createEntity('ScheduledJob', [
+                'name' => $name,
+                'job' => $job,
+                'status' => 'Active',
+                'scheduling' => $scheduling,
+            ], [SaveOption::SKIP_ALL => true]);
+        }
     }
 }

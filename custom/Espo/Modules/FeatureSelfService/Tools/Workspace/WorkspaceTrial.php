@@ -65,6 +65,9 @@ class WorkspaceTrial
             'onboardingStep' => $tenant->get('onboardingStep'),
             'trialStartsAt' => $tenant->get('trialStartsAt'),
             'trialEndsAt' => $tenant->get('trialEndsAt'),
+            // Frozen because the trial ran out (not an overdue invoice).
+            'trialEnded' => $tenant->get('subscriptionStatus') === 'frozen' &&
+                $tenant->get('trialEndsAt') && $tenant->get('trialEndsAt') <= gmdate('Y-m-d H:i:s'),
         ];
     }
 

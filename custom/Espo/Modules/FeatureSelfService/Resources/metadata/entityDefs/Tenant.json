@@ -30,6 +30,15 @@
         "channelConnectedAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
         "trialStartsAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
         "trialEndsAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
-        "frozenAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true }
+        "frozenAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
+        "chatwootAccess": {
+            "type": "varchar",
+            "maxLength": 16,
+            "readOnly": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "tooltip": true
+        }
     }
 }

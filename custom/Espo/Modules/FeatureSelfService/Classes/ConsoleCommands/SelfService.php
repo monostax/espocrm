@@ -19,6 +19,7 @@ use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServiceUnavailable;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Provisioner;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\ProvisioningRequest;
+use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAccess;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use InvalidArgumentException;
@@ -36,6 +37,9 @@ use InvalidArgumentException;
  *       Provision a workspace for an existing regular user, and run it.
  *   php command.php self-service run --id=<provisioningId>
  *       Run (or retry) one provisioning now.
+ *   php command.php self-service workspace --tenant=<tenantId> [--status=trial|active|frozen] [--end-trial]
+ *       Show a workspace's plan, status and trial dates; set its status, or end its trial
+ *       now (frozen on the next access run). Chatwoot is updated right away.
  */
 class SelfService implements Command
 {
@@ -43,6 +47,7 @@ class SelfService implements Command
         private SelfServicePolicy $policy,
         private Provisioner $provisioner,
         private EntityManager $entityManager,
+        private WorkspaceAccess $access,
     ) {}
 
     public function run(Params $params, IO $io): void
@@ -54,7 +59,8 @@ class SelfService implements Command
                 'resume' => $this->resume($io),
                 'provision' => $this->provision($params, $io),
                 'run' => $this->runOne($params, $io),
-                default => $this->fail($io, 'Unknown action. Use status, pause, resume, provision or run.'),
+                'workspace' => $this->workspace($params, $io),
+                default => $this->fail($io, 'Unknown action. Use status, pause, resume, provision, run or workspace.'),
             };
         } catch (SelfServiceUnavailable $e) {
             $this->fail($io, $e->getMessage() . ' Set CRM_SELF_SERVICE_ENABLED=true and resume to provision.');
@@ -134,6 +140,51 @@ class SelfService implements Command
         }
 
         $this->report($io, $record);
+    }
+
+    private function workspace(Params $params, IO $io): void
+    {
+        $tenant = $this->entityManager->getEntityById('Tenant', (string) $params->getOption('tenant'));
+
+        if (!$tenant || !$tenant->get('plan')) {
+            $this->fail($io, 'No self-service workspace with that tenant id.');
+
+            return;
+        }
+
+        $status = $params->getOption('status');
+
+        if ($status !== null) {
+            if (!in_array($status, [WorkspaceAccess::STATUS_TRIAL, WorkspaceAccess::STATUS_ACTIVE, WorkspaceAccess::STATUS_FROZEN], true)) {
+                $this->fail($io, 'Status must be trial, active or frozen.');
+
+                return;
+            }
+
+            $this->access->setStatus($tenant, $status);
+        }
+
+        if ($params->hasFlag('endTrial')) {
+            $tenant->set('trialEndsAt', gmdate('Y-m-d H:i:s'));
+            $this->entityManager->saveEntity($tenant, ['silent' => true]);
+            $this->access->freezeEndedTrials();
+        }
+
+        if ($status !== null || $params->hasFlag('endTrial')) {
+            $this->access->syncChatwoot();
+            $tenant = $this->entityManager->getEntityById('Tenant', $tenant->getId());
+        }
+
+        $io->writeLine(sprintf(
+            'Tenant %s: plan %s, %s, onboarding %s, trial %s to %s, chat access %s.',
+            $tenant->getId(),
+            $tenant->get('plan'),
+            $tenant->get('subscriptionStatus'),
+            $tenant->get('onboardingStep'),
+            $tenant->get('trialStartsAt') ?? '-',
+            $tenant->get('trialEndsAt') ?? '-',
+            $tenant->get('chatwootAccess') ?: '-',
+        ));
     }
 
     private function report(IO $io, Entity $record): void
