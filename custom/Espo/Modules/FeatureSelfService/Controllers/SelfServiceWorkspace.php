@@ -27,6 +27,7 @@ use Espo\Modules\FeatureSelfService\Tools\Plans\PlanOffers;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanRecommendation;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAccess;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
+use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceWallet;
 use InvalidArgumentException;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\Entity;
@@ -92,7 +93,17 @@ class SelfServiceWorkspace
                 ->createWith(SyncInboxesFromChatwoot::class, ['wahaInboxAdoption' => $adoption])
                 ->syncAccountInboxes($account);
             $adoption->refreshAdoptedStatuses($account);
-            $this->trial->startIfConnected($tenant);
+
+            if ($this->trial->startIfConnected($tenant)) {
+                // The trial's credits now, not at the next job run; a failure here
+                // is retried by ApplyWorkspaceAccess and must not fail onboarding.
+                try {
+                    $this->injectableFactory->create(WorkspaceWallet::class)->grantTrialCredits(
+                        $this->entityManager->getEntityById('Tenant', (string) $tenant->getId()) ?? $tenant
+                    );
+                } catch (\Throwable) {
+                }
+            }
             $tenant = $this->entityManager->getEntityById('Tenant', (string) $tenant->getId()) ?? $tenant;
         }
 

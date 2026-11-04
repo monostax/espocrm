@@ -22,5 +22,11 @@
         "isSystem": true,
         "scheduling": "* * * * *",
         "jobClassName": "Espo\\Modules\\FeatureCredits\\Jobs\\DispatchPhoneVerification"
+    },
+    "RecoverCreditOperations": {
+        "name": "Recover Credit Operations and Deliver Outcomes",
+        "isSystem": true,
+        "scheduling": "* * * * *",
+        "jobClassName": "Espo\\Modules\\FeatureCredits\\Jobs\\RecoverCreditOperations"
     }
 }

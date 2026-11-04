@@ -47,7 +47,7 @@ final class Reservations
             AND effective_from <= ? AND (effective_until IS NULL OR effective_until > ?)');
         $query->execute([$input->tenantId, $now, $now]);
         if ($query->fetchAll(PDO::FETCH_COLUMN) !== [$input->billingRateId]) {
-            throw new Conflict('Admission requires exactly one matching active tenant agreement.');
+            throw Conflict::createWithBody('Admission requires exactly one matching active tenant agreement.', '{"reason":"agreement_required"}');
         }
         $input->source?->assertTenantLocked($pdo, $input->tenantId);
         $balance = $this->funding->expireLocked($pdo, $input->tenantId, Amount::fromString($wallet['balance']), $now);

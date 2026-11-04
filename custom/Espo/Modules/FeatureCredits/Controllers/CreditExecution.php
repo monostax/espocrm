@@ -6,6 +6,7 @@ namespace Espo\Modules\FeatureCredits\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Modules\FeatureCredits\Accounting\ExecutionRouting;
 use Espo\Modules\FeatureCredits\Accounting\AuthorizationInput;
@@ -17,6 +18,7 @@ use Espo\Modules\FeatureCredits\Accounting\Outcomes;
 use Espo\Modules\FeatureCredits\Accounting\Reservations;
 use Espo\Modules\FeatureCredits\Accounting\Settlements;
 use Espo\Modules\FeatureCredits\Accounting\TerminalInput;
+use Espo\ORM\EntityManager;
 use InvalidArgumentException;
 use JsonException;
 use stdClass;
@@ -25,7 +27,8 @@ use stdClass;
 final class CreditExecution
 {
     public function __construct(private Outcomes $outcomes, private Settlements $settlements, private Reservations $reservations,
-        private AiCatalog $catalog, private Requests $requests, private AdmissionConfiguration $configuration) {}
+        private AiCatalog $catalog, private Requests $requests, private AdmissionConfiguration $configuration,
+        private EntityManager $entityManager) {}
 
     public function postActionExecute(Request $request): object
     {
@@ -54,6 +57,13 @@ final class CreditExecution
         if ($input instanceof AuthorizationInput) {
             $policy = $this->catalog->resolve($input->modelRateId);
             if ($input->operation === 'admit') {
+                // A frozen self-service workspace (trial over, invoice overdue) starts no
+                // new AI work. Legacy admission already refuses it before routing here;
+                // this also covers direct unified callers. Admitted work still finishes.
+                $tenant = $this->entityManager->getEntityById('Tenant', $input->tenantId);
+                if ($tenant?->get('plan') && $tenant->get('subscriptionStatus') === 'frozen') {
+                    throw Conflict::createWithBody('Workspace is frozen.', '{"reason":"workspace_frozen"}');
+                }
                 $bound = $policy->request($input->tenantId, 'initial-bound', $execution->executionId, 'initial-bound')->credits;
                 $receipt = $this->reservations->reserve(new ReservationInput($input->tenantId, 'ai', $execution->operationKey(),
                     $execution->executionId, $input->billingRateId, $bound, source: $input->source, execution: $execution, modelPolicyId: $input->modelRateId));

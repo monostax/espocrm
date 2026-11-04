@@ -51,7 +51,7 @@ final class AdmissionConfiguration
                 $query->execute([$input->tenantId, $now, $now]);
             }
             $rates = $query->fetchAll(PDO::FETCH_ASSOC);
-            if (count($rates) !== 1) throw new Conflict('Exactly one CRM agreement is required.');
+            if (count($rates) !== 1) throw Conflict::createWithBody('Exactly one CRM agreement is required.', '{"reason":"agreement_required"}');
             $rate = $rates[0];
             $max = (int) ($rate['ai_max_requests'] ?? 0);
             if (!$rate['ai_model_credit_rate_id'] || $max < 1 || $max > 100) throw new ServiceUnavailable('CRM agreement has no approved AI execution policy.');
@@ -60,14 +60,14 @@ final class AdmissionConfiguration
             $policyId = $query->fetchColumn();
             if (!is_string($policyId)) throw new ServiceUnavailable('Approved model rate is unavailable.');
             $policy = $this->catalog->resolve($policyId);
-            if ($policy->rate->provider !== $input->provider || $policy->rate->model !== $input->model) throw new Conflict('Configured model does not match this caller.');
+            if ($policy->rate->provider !== $input->provider || $policy->rate->model !== $input->model) throw Conflict::createWithBody('Configured model does not match this caller.', '{"reason":"agreement_required"}');
             $result = ['billingRateId' => $rate['id'], 'modelRateId' => $policyId, 'maxRequests' => $max];
             if ($rate['ai_native_search_model_credit_rate_id'] ?? null) {
                 $query->execute([$rate['ai_native_search_model_credit_rate_id']]);
                 $nativePolicyId = $query->fetchColumn();
                 if (!is_string($nativePolicyId)) throw new ServiceUnavailable('Native-search policy unavailable.');
                 $native = $this->catalog->resolve($nativePolicyId);
-                if (!NativeSearchDebt::permitted($native->receipt())) throw new Conflict('Invalid native-search policy.');
+                if (!NativeSearchDebt::permitted($native->receipt())) throw Conflict::createWithBody('Invalid native-search policy.', '{"reason":"agreement_required"}');
                 $result['nativeSearchPolicy'] = $native->receipt();
             }
             $pdo->commit();

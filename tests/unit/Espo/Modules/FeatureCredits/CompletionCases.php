@@ -176,6 +176,30 @@ trait CompletionCases
     }
 
     #[DataProvider('dialects')]
+    public function testTheCrmRecoveryJobFindsDueTenantsAndCompletesTheirWork(string $dialect): void
+    {
+        $this->executionDatabase($dialect, function (PDO $pdo): void {
+            [$intent, $binding, $facts] = $this->dispatchFixture($pdo);
+            $this->dispatch($pdo, 'claimIntent', ['intent' => $intent]); $this->dispatch($pdo, 'bind', ['binding' => $binding]);
+            $this->dispatch($pdo, 'enqueue', ['binding' => $binding, 'facts' => $facts, 'phase' => 0]);
+            $store = $this->dispatchStore($pdo);
+            $this->assertSame(['tenant'], $store->dueDeliveryTenants(10));
+            $this->assertSame([], $store->dueRecoveryTenants(10), 'Nothing is sealed yet.');
+            $this->dispatch($pdo, 'seal', ['scope' => $intent->scope]);
+            $this->assertSame(['tenant'], $store->dueRecoveryTenants(10));
+
+            $config = $this->createStub(\Espo\Core\Utils\Config::class); $config->method('get')->willReturn(null);
+            (new \Espo\Modules\FeatureCredits\Jobs\RecoverCreditOperations($store, $config, $this->createStub(\Espo\Core\Utils\Log::class)))->run();
+
+            $this->assertSame([], $store->dueRecoveryTenants(10));
+            $this->assertSame([], $store->dueDeliveryTenants(10));
+            $this->assertNotNull($pdo->query('SELECT completion_finished_at FROM credit_execution_route')->fetchColumn());
+            $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM credit_transaction WHERE type='debit'")->fetchColumn());
+            $this->assertSame('9.9998', $pdo->query('SELECT balance FROM tenant_credit_balance')->fetchColumn());
+        });
+    }
+
+    #[DataProvider('dialects')]
     public function testCompletionReleasesOnlyAnEmptySealedOperation(string $dialect): void
     {
         $this->executionDatabase($dialect, function (PDO $pdo): void {

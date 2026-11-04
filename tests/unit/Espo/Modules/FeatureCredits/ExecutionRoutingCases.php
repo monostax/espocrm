@@ -156,7 +156,7 @@ trait ExecutionRoutingCases
             new \Espo\Modules\FeatureCredits\Accounting\Reservations($lock, $funding),
             $catalog,
             new \Espo\Modules\FeatureCredits\Accounting\Requests($lock, $funding),
-            new \Espo\Modules\FeatureCredits\Accounting\AdmissionConfiguration($manager, $clock, $catalog));
+            new \Espo\Modules\FeatureCredits\Accounting\AdmissionConfiguration($manager, $clock, $catalog), $manager);
         $raw = json_encode($input, JSON_THROW_ON_ERROR);
         $timestamp = (string) time();
         $request = $this->createStub(\Espo\Core\Api\Request::class);

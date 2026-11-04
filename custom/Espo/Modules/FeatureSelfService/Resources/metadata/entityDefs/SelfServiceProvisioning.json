@@ -28,6 +28,7 @@
             "options": [
                 "tenant",
                 "aiAllowance",
+                "creditWallet",
                 "owner",
                 "chatwootAccount",
                 "ownerMembership",

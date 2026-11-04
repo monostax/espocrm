@@ -107,6 +107,35 @@ final class DispatchStore
         });
     }
 
+    /** Tenants with a sealed operation due for completion, oldest due first. */
+    public function dueRecoveryTenants(int $limit): array
+    {
+        return $this->recoveryTenants('completion', $limit);
+    }
+
+    /** Tenants with a queued outcome due for delivery, oldest due first. */
+    public function dueDeliveryTenants(int $limit): array
+    {
+        $query = $this->entityManager->getPDO()->prepare('SELECT d.tenant_id, MIN(d.due_at) AS due_at
+            FROM credit_outcome_delivery d JOIN tenant t ON t.id=d.tenant_id AND t.deleted=FALSE
+            WHERE d.deleted=FALSE AND d.state=? AND d.due_at<=?
+            GROUP BY d.tenant_id ORDER BY due_at,d.tenant_id LIMIT ' . max(1, min(100, $limit)));
+        $query->execute(['pending', $this->clock->now()]);
+        return $query->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /** One due sealed operation of a tenant (see recoverOne). */
+    public function recoverNext(string $tenantId, int $leaseMs, int $retryMs): string
+    {
+        return $this->recoverOne($tenantId, $leaseMs, $retryMs);
+    }
+
+    /** One due queued outcome of a tenant (see deliver). */
+    public function deliverNext(string $tenantId, int $leaseMs, int $retryMs): string
+    {
+        return $this->deliver($tenantId, $leaseMs, $retryMs);
+    }
+
     /** Service-authenticated, read-only discovery for instance-wide rollout.
      * Newly admitted unified operations become eligible automatically. No tenant
      * list, balance threshold, grant validity or provider-age waiver is involved.
@@ -267,7 +296,9 @@ final class DispatchStore
         if ($deliveryFailed) return ['state' => 'pending', 'reason' => 'outcome_delivery'];
         if ($meteringPending) {
             $policy = $this->config->get('featureCreditsSdkCancellationRecovery');
-            if (!is_array($policy) || !in_array($scope->tenantId, $policy['tenantIds'] ?? [], true)) {
+            // Instance-wide (`allEligibleTenants: true`) or an explicit tenant list.
+            if (!is_array($policy) || (($policy['allEligibleTenants'] ?? false) !== true &&
+                !in_array($scope->tenantId, $policy['tenantIds'] ?? [], true))) {
                 return ['state' => 'pending', 'reason' => 'metering'];
             }
             $this->reconciliation->reviewSdkCancellation($scope->tenantId, $scope->usageId, $scope->executionId,

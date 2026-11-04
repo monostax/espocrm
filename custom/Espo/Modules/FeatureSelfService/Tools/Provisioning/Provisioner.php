@@ -19,6 +19,7 @@ use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ChatwootAccountMembershipOrchestrator;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
+use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceWallet;
 use Espo\Modules\Global\Tools\Tenant\TenantAdminTeamProvisioner;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -27,7 +28,8 @@ use Throwable;
 
 /**
  * Creates a self-service workspace: Tenant (with its base and admin teams,
- * on an Advanced trial waiting for its first WhatsApp channel), the trial AI cap, the owner's tenant membership and admin team, the
+ * on an Advanced trial waiting for its first WhatsApp channel), the trial AI cap,
+ * its credit wallet (agreement and cutover, when `selfServiceCreditWallet` is configured), the owner's tenant membership and admin team, the
  * ChatwootAccount, and the owner's Chatwoot administrator membership.
  *
  * Progress lives in one SelfServiceProvisioning record:
@@ -55,7 +57,8 @@ class Provisioner
 
     private const STEP_NEXT = [
         'tenant' => 'aiAllowance',
-        'aiAllowance' => 'owner',
+        'aiAllowance' => 'creditWallet',
+        'creditWallet' => 'owner',
         'owner' => 'chatwootAccount',
         'chatwootAccount' => 'ownerMembership',
         'ownerMembership' => 'done',
@@ -84,6 +87,7 @@ class Provisioner
         private ChatwootAccountMembershipOrchestrator $memberships,
         private Config $config,
         private Log $log,
+        private WorkspaceWallet $wallet,
     ) {}
 
     /**
@@ -207,6 +211,7 @@ class Provisioner
             match ($step) {
                 'tenant' => $this->ensureTenant($record, $lease),
                 'aiAllowance' => $this->ensureAiAllowance($record),
+                'creditWallet' => $this->wallet->ensure((string) $record->get('tenantId'), (string) $record->get('createdAt'), (string) $record->getId()),
                 'owner' => $this->ensureOwner($record),
                 'chatwootAccount' => $this->ensureChatwootAccount($record),
                 'ownerMembership' => $this->ensureOwnerMembership($record),
