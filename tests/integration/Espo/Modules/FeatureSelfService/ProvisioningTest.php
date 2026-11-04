@@ -85,6 +85,11 @@ class ProvisioningTest extends TestCase
         self::assertFalse($owner->isAdmin());
         self::assertTrue($this->em->getRDBRepository('Tenant')->getRelation($tenant, 'users')->isRelatedById($owner->getId()));
 
+        $rate = $this->em->getRDBRepository('TenantAiBillingRate')->where(['tenantId' => $tenant->getId()])->findOne();
+        self::assertSame('block', $rate->get('overagePolicy'), 'New workspaces must not get unmetered AI.');
+        self::assertSame('credit', $rate->get('billingModel'));
+        self::assertSame(250, $rate->get('planIncludedCredits'));
+
         $account = $this->em->getEntityById('ChatwootAccount', $done->get('chatwootAccountId'));
         self::assertGreaterThan(0, (int) $account->get('chatwootAccountId'));
         self::assertNotEmpty($account->get('apiKey'));
@@ -96,6 +101,7 @@ class ProvisioningTest extends TestCase
         // Running a completed provisioning again changes nothing.
         self::assertSame('completed', $this->provisioner()->run($record->getId())->get('status'));
         self::assertSame(1, $this->callCount('POST /platform/api/v1/accounts'));
+        self::assertSame(1, $this->em->getRDBRepository('TenantAiBillingRate')->where(['tenantId' => $tenant->getId()])->count());
     }
 
     public function testSameNamedWorkspacesGetSeparateTenantsAndTeams(): void

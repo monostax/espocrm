@@ -26,8 +26,8 @@ use Throwable;
 
 /**
  * Creates a self-service workspace: Tenant (with its base and admin teams),
- * the owner's tenant membership and admin team, the ChatwootAccount, and the
- * owner's Chatwoot administrator membership.
+ * the trial AI cap, the owner's tenant membership and admin team, the
+ * ChatwootAccount, and the owner's Chatwoot administrator membership.
  *
  * Progress lives in one SelfServiceProvisioning record:
  *
@@ -53,11 +53,19 @@ class Provisioner
     public const STATUS_FAILED = 'failed';
 
     private const STEP_NEXT = [
-        'tenant' => 'owner',
+        'tenant' => 'aiAllowance',
+        'aiAllowance' => 'owner',
         'owner' => 'chatwootAccount',
         'chatwootAccount' => 'ownerMembership',
         'ownerMembership' => 'done',
     ];
+
+    /**
+     * The trial's AI: 500 credits, about 100 AI conversations. The legacy
+     * budget (Chatwoot AiBudget) counts AI runs, and a conversation takes
+     * 2-3 of them. Override with config `selfServiceTrialAiRuns`.
+     */
+    private const TRIAL_AI_RUNS = 250;
 
     private const LEASE_SECONDS = 600;
     private const MAX_ATTEMPTS = 8;
@@ -195,6 +203,7 @@ class Provisioner
 
             match ($step) {
                 'tenant' => $this->ensureTenant($record, $lease),
+                'aiAllowance' => $this->ensureAiAllowance($record),
                 'owner' => $this->ensureOwner($record),
                 'chatwootAccount' => $this->ensureChatwootAccount($record),
                 'ownerMembership' => $this->ensureOwnerMembership($record),
@@ -265,6 +274,30 @@ class Provisioner
         if ($this->adminTeams->ensureForTenant($tenant) === null) {
             throw new RuntimeException("Tenant {$tenantId} has no admin team. Has the `tenant-admin` Role been seeded?");
         }
+    }
+
+    /**
+     * Without a billing rate AiBudget lets a tenant's AI run unmetered
+     * (overage `allow`). A new workspace starts capped at the trial allowance
+     * and blocked beyond it.
+     */
+    private function ensureAiAllowance(Entity $record): void
+    {
+        $tenantId = (string) $record->get('tenantId');
+
+        if ($this->entityManager->getRDBRepository('TenantAiBillingRate')->where(['tenantId' => $tenantId])->findOne()) {
+            return;
+        }
+
+        $this->entityManager->createEntity('TenantAiBillingRate', [
+            'name' => 'Self-service trial',
+            'tenantId' => $tenantId,
+            // Yesterday in UTC, so the rate already covers "today" in any time zone.
+            'effectiveFrom' => gmdate('Y-m-d', time() - 86400),
+            'billingModel' => 'credit',
+            'overagePolicy' => 'block',
+            'planIncludedCredits' => (int) ($this->config->get('selfServiceTrialAiRuns') ?? self::TRIAL_AI_RUNS),
+        ]);
     }
 
     private function ensureOwner(Entity $record): void
