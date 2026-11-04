@@ -88,7 +88,7 @@ class ProvisioningTest extends TestCase
         $rate = $this->em->getRDBRepository('TenantAiBillingRate')->where(['tenantId' => $tenant->getId()])->findOne();
         self::assertSame('block', $rate->get('overagePolicy'), 'New workspaces must not get unmetered AI.');
         self::assertSame('credit', $rate->get('billingModel'));
-        self::assertSame(250, $rate->get('planIncludedCredits'));
+        self::assertSame(80, $rate->get('planIncludedCredits'));
 
         $account = $this->em->getEntityById('ChatwootAccount', $done->get('chatwootAccountId'));
         self::assertGreaterThan(0, (int) $account->get('chatwootAccountId'));

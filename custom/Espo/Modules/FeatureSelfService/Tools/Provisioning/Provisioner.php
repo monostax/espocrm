@@ -62,11 +62,13 @@ class Provisioner
     ];
 
     /**
-     * The trial's AI: 500 credits, about 100 AI conversations. The legacy
-     * budget (Chatwoot AiBudget) counts AI runs, and a conversation takes
-     * 2-3 of them. Override with config `selfServiceTrialAiRuns`.
+     * The trial's AI: 100 credits, about 15 AI conversations (measured in prod,
+     * Oct 2026: ~6.5 credits per conversation, ~1.26 per run). Until
+     * self-service workspaces start on the credit wallet, the legacy budget
+     * (Chatwoot AiBudget) counts runs instead: 100 credits ≈ 80 runs.
+     * Override with config `selfServiceTrialAiRuns`.
      */
-    private const TRIAL_AI_RUNS = 250;
+    private const TRIAL_AI_RUNS = 80;
 
     private const LEASE_SECONDS = 600;
     private const MAX_ATTEMPTS = 8;
