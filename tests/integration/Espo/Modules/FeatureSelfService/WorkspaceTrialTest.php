@@ -21,7 +21,7 @@ use Espo\ORM\EntityManager;
 use PHPUnit\Framework\TestCase;
 
 /**
- * A self-service workspace waits on "connect WhatsApp" and its 14 days start
+ * A self-service workspace waits on "connect WhatsApp" and its 7 days start
  * with the first connected WhatsApp channel. Same isolated runtime as
  * ProvisioningTest.
  */
@@ -72,7 +72,7 @@ class WorkspaceTrialTest extends TestCase
         $tenant = $this->reload($tenant);
         self::assertSame(WorkspaceTrial::STEP_DONE, $tenant->get('onboardingStep'));
         self::assertSame(
-            14 * 86400,
+            7 * 86400,
             strtotime($tenant->get('trialEndsAt') . ' UTC') - strtotime($tenant->get('trialStartsAt') . ' UTC')
         );
 

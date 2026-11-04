@@ -18,13 +18,13 @@ use Espo\ORM\EntityManager;
  * The self-service trial of a workspace (a Tenant).
  *
  * Provisioning sets `plan` advanced, `subscriptionStatus` trial and
- * `onboardingStep` connectWhatsapp. The 14 days start when the first WhatsApp
+ * `onboardingStep` connectWhatsapp. The 7 days start when the first WhatsApp
  * channel is connected (an ACTIVE inbox integration). Tenants with no plan are
  * not managed by self-service: no onboarding gate, no trial.
  */
 class WorkspaceTrial
 {
-    public const TRIAL_DAYS = 14;
+    public const TRIAL_DAYS = 7;
 
     public const STEP_CONNECT_WHATSAPP = 'connectWhatsapp';
     public const STEP_DONE = 'done';

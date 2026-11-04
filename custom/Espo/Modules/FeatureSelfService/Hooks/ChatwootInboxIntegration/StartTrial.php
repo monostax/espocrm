@@ -19,7 +19,7 @@ use Throwable;
 
 /**
  * A self-service workspace's first WhatsApp channel became ACTIVE: finish
- * onboarding and start its 14-day trial. Covers Meta coexistence activation
+ * onboarding and start its 7-day trial. Covers Meta coexistence activation
  * and QR inboxes adopted from Chatwoot.
  */
 class StartTrial
