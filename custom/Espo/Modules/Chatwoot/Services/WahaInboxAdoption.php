@@ -135,12 +135,17 @@ class WahaInboxAdoption
             return null;
         }
 
-        // Refuse to create a second live channel for a number that already has
-        // one. Two channels on one WhatsApp number means a campaign can pick
-        // either inbox and the same contact can be messaged twice, so the safe
-        // default is to leave the newer inbox unadopted and make the conflict
-        // loud rather than silently double the send surface.
-        $conflict = $this->findConflictingLiveChannel($session['sessionName'], $session['phoneNumber']);
+        // Refuse a second live channel for a number that already has one in this
+        // workspace. Two channels on one WhatsApp number in one account means a
+        // campaign can pick either inbox and the same contact can be messaged
+        // twice, so the safe default is to leave the newer inbox unadopted and
+        // make the conflict loud. Another workspace on the same number is
+        // allowed: its contacts and campaigns are its own.
+        $conflict = $this->findConflictingLiveChannel(
+            (string) $account->getId(),
+            $session['sessionName'],
+            $session['phoneNumber']
+        );
 
         if ($conflict !== null) {
             $this->log->warning(sprintf(
@@ -181,7 +186,6 @@ class WahaInboxAdoption
                 'chatwootAccountId' => $account->getId(),
                 'channelType' => ChatwootInboxIntegration::CHANNEL_TYPE_WHATSAPP_QRCODE,
                 'status!=' => ChatwootInboxIntegration::STATUS_ACTIVE,
-                'chatwootInboxId!=' => null,
                 'wahaSessionName!=' => null,
             ])
             ->find();
@@ -189,10 +193,13 @@ class WahaInboxAdoption
         $changed = 0;
 
         foreach ($channels as $channel) {
-            $session = $this->resolveSession($externalAccountId, (int) $channel->get('chatwootInboxId'));
+            $session = $this->findAccountSession(
+                $externalAccountId,
+                (string) $channel->get('wahaPlatformId'),
+                (string) $channel->get('wahaSessionName')
+            );
 
-            if (!$session || $session['sessionName'] !== $channel->get('wahaSessionName') ||
-                $session['status'] === $channel->get('status')) {
+            if (!$session || $session['status'] === $channel->get('status')) {
                 continue;
             }
 
@@ -211,7 +218,8 @@ class WahaInboxAdoption
     }
 
     /**
-     * Find a live channel that already owns this phone number.
+     * Find a live channel of this workspace (ChatwootAccount) that already owns
+     * this phone number. Channels of other workspaces never conflict.
      *
      * Two independent lookups, because neither alone is sufficient:
      *
@@ -223,7 +231,11 @@ class WahaInboxAdoption
      *     because coexistence companions have no Chatwoot app and therefore
      *     never appear in the session map, yet do populate `phoneNumber`.
      */
-    private function findConflictingLiveChannel(string $candidateSessionName, ?string $phoneNumber): ?Entity
+    private function findConflictingLiveChannel(
+        string $espoAccountId,
+        string $candidateSessionName,
+        ?string $phoneNumber
+    ): ?Entity
     {
         $digits = self::normalizePhoneNumber($phoneNumber);
 
@@ -239,32 +251,33 @@ class WahaInboxAdoption
                 continue;
             }
 
-            $owner = $this->findLiveIntegrationBySession($otherSessionName);
+            $owner = $this->findLiveIntegrationBySession($espoAccountId, $otherSessionName);
 
             if ($owner !== null) {
                 return $owner;
             }
         }
 
-        return $this->findLiveIntegrationByPhoneNumber($digits);
+        return $this->findLiveIntegrationByPhoneNumber($espoAccountId, $digits);
     }
 
-    private function findLiveIntegrationBySession(string $sessionName): ?Entity
+    private function findLiveIntegrationBySession(string $espoAccountId, string $sessionName): ?Entity
     {
         return $this->entityManager
             ->getRDBRepository(ChatwootInboxIntegration::ENTITY_TYPE)
-            ->where(['wahaSessionName' => $sessionName])
+            ->where(['chatwootAccountId' => $espoAccountId, 'wahaSessionName' => $sessionName])
             ->findOne();
     }
 
     /**
      * @param string $digits Normalized (digits-only) phone number.
      */
-    private function findLiveIntegrationByPhoneNumber(string $digits): ?Entity
+    private function findLiveIntegrationByPhoneNumber(string $espoAccountId, string $digits): ?Entity
     {
         $candidates = $this->entityManager
             ->getRDBRepository(ChatwootInboxIntegration::ENTITY_TYPE)
             ->where([
+                'chatwootAccountId' => $espoAccountId,
                 'channelType' => WhatsAppChannel::WAHA_BACKED,
                 'phoneNumber!=' => null,
             ])
@@ -406,6 +419,27 @@ class WahaInboxAdoption
         $map = $this->getSessionMap();
 
         return $map[$externalAccountId . ':' . $externalInboxId] ?? null;
+    }
+
+    /**
+     * The session, by platform and name, whose `chatwoot` app targets this
+     * Chatwoot account. Matched by name because the channel's `chatwootInboxId`
+     * is the local ChatwootInbox id (a hash), not the Chatwoot inbox number the
+     * session map is keyed by.
+     *
+     * @return array{platformId: string, sessionName: string, status: string, phoneNumber: ?string}|null
+     */
+    private function findAccountSession(int $externalAccountId, string $platformId, string $sessionName): ?array
+    {
+        foreach ($this->getSessionMap() as $key => $session) {
+            if (str_starts_with($key, $externalAccountId . ':') &&
+                $session['platformId'] === $platformId &&
+                $session['sessionName'] === $sessionName) {
+                return $session;
+            }
+        }
+
+        return null;
     }
 
     /**
