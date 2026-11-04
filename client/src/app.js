@@ -1275,6 +1275,14 @@ class App {
      * @param {boolean} [replace]
      */
     redirectToChatwoot(chatRedirect, fallback, replace = false) {
+        // Chatwoot sends anyone without a session back here with chat_redirect.
+        // If its SSO keeps failing after a valid URL, stop instead of bouncing.
+        if (this.recentChatwootRedirects().length >= 3) {
+            this.showChatwootUnavailable();
+
+            return;
+        }
+
         Ajax.getRequest('ChatwootSso/freshUrl')
             .then(response => {
                 const ssoUrl = response?.ssoUrl;
@@ -1283,6 +1291,7 @@ class App {
                     const url = new URL(ssoUrl);
 
                     url.searchParams.set('redirect_to', chatRedirect);
+                    this.recordChatwootRedirect();
 
                     if (replace) {
                         window.location.replace(url.toString());
@@ -1324,10 +1333,81 @@ class App {
                 `?navbar=${encodeURIComponent(navbar)}#${crmRoute}`;
         }
 
-        // A missing Chatwoot account or failed SSO must never open the standalone CRM.
-        this.redirectToChatwoot(chatRedirect, () => window.location.replace(frontendUrl), true);
+        // A missing Chatwoot account or failed SSO must never open the standalone CRM,
+        // nor go to Chatwoot without a session: it sends the browser straight back
+        // here, and the two redirect to each other forever.
+        this.redirectToChatwoot(chatRedirect, () => this.showChatwootUnavailable(), true);
 
         return true;
+    }
+
+    /**
+     * @private
+     * @return {number[]} Times of SSO redirects to Chatwoot in the last two minutes.
+     */
+    recentChatwootRedirects() {
+        try {
+            const times = JSON.parse(sessionStorage.getItem('chatwootSsoRedirects') || '[]');
+
+            return Array.isArray(times) ? times.filter(time => Date.now() - time < 120000) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    /**
+     * @private
+     */
+    recordChatwootRedirect() {
+        try {
+            sessionStorage.setItem(
+                'chatwootSsoRedirects',
+                JSON.stringify([...this.recentChatwootRedirects(), Date.now()])
+            );
+        } catch (e) {}
+    }
+
+    /**
+     * A signed-in user Chatwoot can't be opened for: no linked workspace, or its
+     * sign-in kept failing. Ends on this page so nothing redirects again.
+     *
+     * @private
+     */
+    showChatwootUnavailable() {
+        const text = (key, fallback) => {
+            const translated = this.language?.translate?.(key, 'messages', 'Global');
+
+            return translated && translated !== key ? translated : fallback;
+        };
+
+        const container = document.createElement('div');
+
+        container.className = 'chatwoot-unavailable';
+        container.style.cssText = 'max-width: 440px; margin: 15vh auto 0; padding: 16px;';
+        container.innerHTML =
+            '<h4></h4><p class="text-muted"></p>' +
+            '<div style="display: flex; gap: 8px; justify-content: flex-end;">' +
+            '<button type="button" class="btn btn-default" data-action="retry"></button>' +
+            '<button type="button" class="btn btn-primary" data-action="logout"></button></div>';
+
+        container.querySelector('h4').textContent =
+            text('chatwootUnavailableTitle', "Couldn't open your workspace");
+        container.querySelector('p').textContent = text('chatwootUnavailableMessage',
+            "Your user isn't linked to an active workspace, or signing in to it failed. " +
+            'Try again, or ask an administrator of your workspace to add you.');
+        container.querySelector('[data-action="retry"]').textContent = text('chatwootUnavailableRetry', 'Try again');
+        container.querySelector('[data-action="logout"]').textContent = text('chatwootUnavailableLogout', 'Sign out');
+
+        container.querySelector('[data-action="retry"]').addEventListener('click', () => {
+            sessionStorage.removeItem('chatwootSsoRedirects');
+            window.location.replace('./');
+        });
+        container.querySelector('[data-action="logout"]').addEventListener('click', () => {
+            sessionStorage.removeItem('chatwootSsoRedirects');
+            this.logout();
+        });
+
+        document.body.replaceChildren(container);
     }
 
     /**

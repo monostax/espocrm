@@ -67,5 +67,11 @@
     },
     "listViewModes": {
         "inbox": "Inbox"
+    },
+    "messages": {
+        "chatwootUnavailableTitle": "Couldn't open your workspace",
+        "chatwootUnavailableMessage": "Your user isn't linked to an active workspace, or signing in to it failed. Try again, or ask an administrator of your workspace to add you.",
+        "chatwootUnavailableRetry": "Try again",
+        "chatwootUnavailableLogout": "Sign out"
     }
 }

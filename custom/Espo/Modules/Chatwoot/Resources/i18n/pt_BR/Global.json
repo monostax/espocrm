@@ -88,5 +88,11 @@
     },
     "listViewModes": {
         "inbox": "Canal"
+    },
+    "messages": {
+        "chatwootUnavailableTitle": "Não foi possível abrir seu workspace",
+        "chatwootUnavailableMessage": "Seu usuário não está vinculado a um workspace ativo, ou o acesso a ele falhou. Tente novamente ou peça a um administrador do seu workspace para adicionar você.",
+        "chatwootUnavailableRetry": "Tentar novamente",
+        "chatwootUnavailableLogout": "Sair"
     }
 }
