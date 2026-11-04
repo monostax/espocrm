@@ -164,7 +164,7 @@ class WorkspaceAccessTest extends TestCase
         ]);
 
         $tenant = $this->em->getEntityById('Tenant', $done->get('tenantId'));
-        self::assertSame(WorkspaceTrial::STEP_DONE, $tenant->get('onboardingStep'));
+        self::assertSame(WorkspaceTrial::STEP_IMPORT_HISTORY, $tenant->get('onboardingStep'));
 
         return [$tenant, $account];
     }

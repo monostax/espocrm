@@ -70,7 +70,7 @@ class WorkspaceTrialTest extends TestCase
         $this->em->saveEntity($integration);
 
         $tenant = $this->reload($tenant);
-        self::assertSame(WorkspaceTrial::STEP_DONE, $tenant->get('onboardingStep'));
+        self::assertSame(WorkspaceTrial::STEP_IMPORT_HISTORY, $tenant->get('onboardingStep'), 'Its history comes next.');
         self::assertSame(
             7 * 86400,
             strtotime($tenant->get('trialEndsAt') . ' UTC') - strtotime($tenant->get('trialStartsAt') . ' UTC')
@@ -79,6 +79,40 @@ class WorkspaceTrialTest extends TestCase
         $endsAt = $tenant->get('trialEndsAt');
         $this->integration($account, 'whatsappQrcode', 'ACTIVE');
         self::assertSame($endsAt, $this->reload($tenant)->get('trialEndsAt'), 'A second number does not restart the trial.');
+    }
+
+    public function testACloudApiNumberOpensTheWorkspaceAtOnce(): void
+    {
+        [$tenant, $account] = $this->workspace();
+
+        $this->integration($account, 'whatsappCloudApi', 'ACTIVE');
+
+        $tenant = $this->reload($tenant);
+        self::assertSame(WorkspaceTrial::STEP_DONE, $tenant->get('onboardingStep'));
+        self::assertNotEmpty($tenant->get('trialStartsAt'));
+    }
+
+    public function testOnboardingWaitsForTheNewestHistoryWindow(): void
+    {
+        [$tenant, $account] = $this->workspace();
+        $integration = $this->integration($account, 'whatsappQrcode', 'ACTIVE');
+        $tenant = $this->reload($tenant);
+        $minuteLater = strtotime($tenant->get('channelConnectedAt') . ' UTC') + 60;
+
+        self::assertSame(WorkspaceTrial::STEP_IMPORT_HISTORY, $tenant->get('onboardingStep'));
+        self::assertFalse($this->trial()->finishImportIfSettled($tenant, $minuteLater), 'Nothing reported yet.');
+
+        $inbox = $this->em->createEntity('ChatwootInbox', [
+            'name' => 'QR', 'chatwootAccountId' => $account->getId(), 'chatwootInboxId' => random_int(100000, 999999),
+            'chatwootInboxIntegrationId' => $integration->getId(),
+            'historyImportStatus' => 'importing', 'historyImportPhase' => 0,
+        ], ['skipHooks' => true]);
+        self::assertFalse($this->trial()->finishImportIfSettled($tenant, $minuteLater), 'Last 3 days still coming.');
+
+        $inbox->set('historyImportPhase', 1);
+        $this->em->saveEntity($inbox, ['skipHooks' => true]);
+        self::assertTrue($this->trial()->finishImportIfSettled($tenant, $minuteLater));
+        self::assertSame(WorkspaceTrial::STEP_DONE, $this->reload($tenant)->get('onboardingStep'));
     }
 
     public function testInstagramDoesNotStartTheTrial(): void

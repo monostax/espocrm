@@ -28,6 +28,7 @@
         "onboardingStep": {
             "": "—",
             "connectWhatsapp": "Connect WhatsApp",
+            "importHistory": "Import history",
             "done": "Done"
         }
     },

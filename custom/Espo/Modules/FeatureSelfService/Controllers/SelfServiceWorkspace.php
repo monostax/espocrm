@@ -41,8 +41,10 @@ use Espo\ORM\EntityManager;
  *   POST /SelfService/workspace/refresh {accountId}
  *        While onboarding, picks up a WhatsApp inbox connected in Chatwoot at
  *        once (instead of the minute sync), brings adopted QR channels up to
- *        their WAHA status and starts the trial. Afterwards, applies a payment
- *        the billing engine already recorded without waiting for the job.
+ *        their WAHA status and starts the trial; then, while the number's
+ *        history comes in, reads its import progress and opens the workspace
+ *        once the newest window is in. Afterwards, applies a payment the
+ *        billing engine already recorded without waiting for the job.
  *   GET  /SelfService/plans?accountId=
  *        Plans, monthly AI packs and what the checkout preselects.
  *   POST /SelfService/checkout {accountId, plan, seats, pack, payer: {name, cpfCnpj, email}}
@@ -76,6 +78,10 @@ class SelfServiceWorkspace
     {
         [$account, $tenant] = $this->resolve($request->getParsedBody()->accountId ?? null);
 
+        if ($this->trial->isImportingHistory($tenant)) {
+            return (object) $this->trial->state($this->settleImport($account, $tenant));
+        }
+
         if (!$this->trial->isConnecting($tenant)) {
             $access = $this->injectableFactory->create(WorkspaceAccess::class);
             $access->applyBilling((string) $tenant->getId());
@@ -105,9 +111,23 @@ class SelfServiceWorkspace
                 }
             }
             $tenant = $this->entityManager->getEntityById('Tenant', (string) $tenant->getId()) ?? $tenant;
+            // A number without history to bring (Cloud API) opens at once.
+            $this->trial->finishImportIfSettled($tenant);
         }
 
         return (object) $this->trial->state($tenant);
+    }
+
+    /**
+     * The inboxes' import progress straight from Chatwoot, then the step.
+     */
+    private function settleImport(Entity $account, Entity $tenant): Entity
+    {
+        $this->injectableFactory->create(SyncInboxesFromChatwoot::class)->syncAccountInboxes($account);
+        $tenant = $this->entityManager->getEntityById('Tenant', (string) $tenant->getId()) ?? $tenant;
+        $this->trial->finishImportIfSettled($tenant);
+
+        return $tenant;
     }
 
     public function getActionPlans(Request $request): object

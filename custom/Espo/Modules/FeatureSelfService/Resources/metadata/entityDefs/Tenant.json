@@ -20,7 +20,7 @@
         },
         "onboardingStep": {
             "type": "enum",
-            "options": ["", "connectWhatsapp", "done"],
+            "options": ["", "connectWhatsapp", "importHistory", "done"],
             "default": "",
             "readOnly": true,
             "massUpdateDisabled": true,
