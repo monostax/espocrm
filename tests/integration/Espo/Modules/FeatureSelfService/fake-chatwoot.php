@@ -9,6 +9,7 @@
  * Every call is logged. Tests read the log and queue failures through:
  *
  *     GET  /__calls                    the call log
+ *     GET  /__users                    the users, with their `confirmed` flag
  *     POST /__fault {"call": "POST /platform/api/v1/users", "times": 1, "status": 500}
  *     POST /__reset
  */
@@ -108,8 +109,22 @@ if (preg_match('#^/platform/api/v1/users$#', $path) && $method === 'POST') {
         'email' => $body['email'] ?? '',
         'access_token' => 'token-' . $userId,
         'custom_attributes' => $body['custom_attributes'] ?? [],
+        'confirmed' => !empty($body['email_verified']),
     ];
     $finish(200, $state['users'][$userId] + ['created' => true]);
+}
+
+if (preg_match('#^/platform/api/v1/users/(\d+)/confirm$#', $path, $m) && $method === 'POST') {
+    $user = $state['users'][$m[1]] ?? null;
+    if (!$user || strcasecmp($user['email'], (string) ($body['email'] ?? '')) !== 0) {
+        $finish(422, ['error' => 'Email mismatch']);
+    }
+    $state['users'][$m[1]]['confirmed'] = true;
+    $finish(200, ['id' => (int) $m[1], 'confirmed' => true]);
+}
+
+if ($path === '/__users') {
+    $reply(200, $state['users']);
 }
 
 if (preg_match('#^/platform/api/v1/users/(\d+)$#', $path, $m)) {

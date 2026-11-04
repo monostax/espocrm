@@ -96,7 +96,8 @@ class ChatwootAccountMembershipOrchestrator
     public function ensureUserMembership(
         Entity $account,
         Entity $user,
-        ?string $role = 'agent'
+        ?string $role = 'agent',
+        bool $emailVerified = false
     ): Entity {
         $this->assertUserBelongsToAccountTeam($account, $user);
 
@@ -178,6 +179,8 @@ class ChatwootAccountMembershipOrchestrator
                     'email' => $email,
                     'password' => $generatedPassword,
                     'custom_attributes' => [],
+                    // Skips Chatwoot's confirmation email: we already proved the address.
+                    ...($emailVerified ? ['email_verified' => true] : []),
                 ], true);
 
                 if (!isset($userResponse['id'])) {
@@ -251,6 +254,13 @@ class ChatwootAccountMembershipOrchestrator
 
             if (!$externalUserId) {
                 throw new Error('Resolved ChatwootUser is missing external chatwootUserId.');
+            }
+
+            // Chatwoot only lets confirmed users in. Only a caller that proved
+            // the person owns this address (a self-service signup) passes
+            // $emailVerified; it also covers a Chatwoot user that already existed.
+            if ($emailVerified) {
+                $this->apiClient->confirmUser($platformUrl, $accessToken, $externalUserId, $email);
             }
 
             $membership = $this->entityManager

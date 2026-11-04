@@ -96,6 +96,8 @@ class ProvisioningTest extends TestCase
         self::assertSame($tenant->getId(), $account->get('tenantId'));
         self::assertSame([$baseTeamId], $account->getLinkMultipleIdList('teams'));
         self::assertSame('administrator', $this->ownerRole($account, $owner));
+        // An operator-provisioned owner never proved the email: Chatwoot still confirms it by email.
+        self::assertSame(0, $this->callCount('POST /platform/api/v1/users/:id/confirm'));
         self::assertSame(1, $this->callCount('POST /platform/api/v1/accounts'));
 
         // Running a completed provisioning again changes nothing.

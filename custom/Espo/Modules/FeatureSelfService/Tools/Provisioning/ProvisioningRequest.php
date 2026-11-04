@@ -27,13 +27,19 @@ final class ProvisioningRequest
     public readonly string $workspaceName;
     public readonly string $language;
     public readonly string $timeZone;
+    public readonly bool $ownerEmailVerified;
 
+    /**
+     * @param bool $ownerEmailVerified The owner proved their email (signup code
+     *     or a provider-verified sign-in), so their Chatwoot user is confirmed.
+     */
     public function __construct(
         string $dedupeKey,
         string $ownerUserId,
         string $workspaceName,
         string $language = 'pt_BR',
         string $timeZone = 'America/Sao_Paulo',
+        bool $ownerEmailVerified = false,
     ) {
         if (!preg_match('/^[a-z0-9][a-z0-9._:\/-]{0,127}$/', $dedupeKey)) {
             throw new InvalidArgumentException('The dedupe key must be 1-128 lowercase letters, digits or ._:/-.');
@@ -63,10 +69,11 @@ final class ProvisioningRequest
         $this->workspaceName = $workspaceName;
         $this->language = $language;
         $this->timeZone = $timeZone;
+        $this->ownerEmailVerified = $ownerEmailVerified;
     }
 
     /**
-     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string}
+     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified: bool}
      */
     public function toArray(): array
     {
@@ -75,6 +82,7 @@ final class ProvisioningRequest
             'workspaceName' => $this->workspaceName,
             'language' => $this->language,
             'timeZone' => $this->timeZone,
+            'ownerEmailVerified' => $this->ownerEmailVerified,
         ];
     }
 

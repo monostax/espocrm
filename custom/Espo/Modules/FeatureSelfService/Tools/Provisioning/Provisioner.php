@@ -366,7 +366,12 @@ class Provisioner
         $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId)
             ?? throw new RuntimeException("ChatwootAccount {$accountId} not found.");
 
-        $this->memberships->ensureUserMembership($account, $this->owner($record), 'administrator');
+        $this->memberships->ensureUserMembership(
+            $account,
+            $this->owner($record),
+            'administrator',
+            ($this->input($record)['ownerEmailVerified'] ?? false) === true,
+        );
     }
 
     private function tenant(Entity $record): Entity
@@ -418,11 +423,11 @@ class Provisioner
     }
 
     /**
-     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string}
+     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified?: bool}
      */
     private function input(Entity $record): array
     {
-        /** @var array{ownerUserId: string, workspaceName: string, language: string, timeZone: string} */
+        /** @var array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified?: bool} */
         return (array) $record->get('input');
     }
 

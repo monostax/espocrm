@@ -80,6 +80,11 @@ class SignupTest extends TestCase
         self::assertSame($user->getId(), $provisioning->get('ownerId'));
         self::assertSame('Clínica Signup', $this->em->getEntityById('Tenant', $provisioning->get('tenantId'))->get('name'));
 
+        // The owner proved the email, so Chatwoot must let them straight in.
+        $chatwootUser = $this->em->getRDBRepository('ChatwootUser')->where(['assignedUserId' => $user->getId()])->findOne();
+        $remote = json_decode((string) file_get_contents(rtrim((string) getenv('FAKE_CHATWOOT_URL'), '/') . '/__users'), true);
+        self::assertTrue($remote[(string) $chatwootUser->get('chatwootUserId')]['confirmed']);
+
         $login = $this->app->getInjectableFactory()->createWith(TicketLogin::class, ['isPortal' => false]);
         $first = $login->login(new Data(TicketLogin::USERNAME, $result['ticket']), new RequestNull());
         self::assertTrue($first->isSuccess());

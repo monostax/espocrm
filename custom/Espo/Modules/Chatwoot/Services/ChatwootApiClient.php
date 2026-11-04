@@ -738,6 +738,27 @@ class ChatwootApiClient
     }
 
     /**
+     * Confirm a platform user's email. Only call after the person proved they
+     * own it; Chatwoot checks it is still the user's current email.
+     *
+     * @throws Error
+     */
+    public function confirmUser(string $platformUrl, string $accessToken, int $userId, string $email): void
+    {
+        $url = rtrim($platformUrl, '/') . '/platform/api/v1/users/' . $userId . '/confirm';
+        $payload = (string) json_encode(['email' => $email]);
+        $response = $this->executeRequest($url, 'POST', $payload, [
+            'api_access_token: ' . $accessToken,
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($payload),
+        ]);
+
+        if ($response['code'] < 200 || $response['code'] >= 300 || ($response['body']['confirmed'] ?? false) !== true) {
+            throw new Error('Failed to confirm user in Chatwoot: HTTP ' . $response['code']);
+        }
+    }
+
+    /**
      * Get SSO login URL for a Chatwoot user.
      *
      * @param string $platformUrl

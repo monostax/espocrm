@@ -213,11 +213,13 @@ class Signups
         ]);
         $this->entityManager->saveEntity($signup, ['silent' => true]);
 
+        // Both paths here proved the email: the code, or a provider-verified sign-in.
         $provisioning = $this->provisioner->start(new ProvisioningRequest(
             'signup:' . strtolower((string) $signup->getId()),
             (string) $user->getId(),
             (string) $signup->get('company'),
             (string) $signup->get('language'),
+            ownerEmailVerified: true,
         ));
 
         $signup->set('provisioningId', $provisioning->getId());
