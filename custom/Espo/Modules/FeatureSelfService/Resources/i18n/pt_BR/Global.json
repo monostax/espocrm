@@ -64,7 +64,7 @@
         "RESEND_TOO_SOON": "Espere um minuto para pedir outro código.",
         "INVALID_CODE": "Código incorreto.",
         "CODE_EXPIRED": "O código expirou. Peça um novo.",
-        "TOO_MANY_ATTEMPTS": "Muitas tentativas com este código. Peça um novo.",
+        "TOO_MANY_ATTEMPTS": "Muitas tentativas com código errado. Comece o cadastro de novo.",
         "SIGNUP_NOT_FOUND": "Seu cadastro expirou. Comece de novo.",
         "EMAIL_NOT_SENT": "Não conseguimos enviar o código agora. Tente de novo em alguns minutos.",
         "SOCIAL_FAILED": "Não conseguimos entrar com essa conta. Tente de novo.",

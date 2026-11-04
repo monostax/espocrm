@@ -12,6 +12,7 @@
 namespace Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
@@ -190,6 +191,13 @@ class ChatwootAccountMembershipOrchestrator
                 $remoteUserId = (int) $userResponse['id'];
                 $existingRemoteUser = ($userResponse['existing'] ?? false) === true;
 
+                // A verified signup only confirms a Chatwoot user it creates
+                // itself. Adopting one that already existed (e.g. left behind
+                // by a deleted CRM user) would hand over its other accounts.
+                if ($existingRemoteUser && $emailVerified) {
+                    throw new Conflict('chatwootUserAlreadyExists');
+                }
+
                 if (!$existingRemoteUser && ($userResponse['created'] ?? null) !== true) {
                     throw new Error('Chatwoot did not confirm creation of a new user.');
                 }
@@ -258,7 +266,8 @@ class ChatwootAccountMembershipOrchestrator
 
             // Chatwoot only lets confirmed users in. Only a caller that proved
             // the person owns this address (a self-service signup) passes
-            // $emailVerified; it also covers a Chatwoot user that already existed.
+            // $emailVerified, and then the user was created in this flow: a new
+            // one above, or one an earlier attempt for this CRM user linked.
             if ($emailVerified) {
                 $this->apiClient->confirmUser($platformUrl, $accessToken, $externalUserId, $email);
             }
@@ -370,7 +379,7 @@ class ChatwootAccountMembershipOrchestrator
                 }
             }
 
-            if ($e instanceof BadRequest || $e instanceof Forbidden || $e instanceof NotFound) {
+            if ($e instanceof BadRequest || $e instanceof Conflict || $e instanceof Forbidden || $e instanceof NotFound) {
                 throw $e;
             }
 

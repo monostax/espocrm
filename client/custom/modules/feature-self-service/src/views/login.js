@@ -482,8 +482,10 @@ export default class extends LoginView {
             .catch(xhr => {
                 button.disabled = false;
                 this.selfServiceError(xhr, reason => {
-                    if (reason === 'TOO_MANY_ATTEMPTS' || reason === 'CODE_EXPIRED') {
-                        this.selfServiceStartResendCountdown(form.querySelector('[data-action="resend"]'));
+                    // A new code doesn't give new guesses: start the signup over.
+                    if (reason === 'TOO_MANY_ATTEMPTS') {
+                        sessionStorage.removeItem(STORAGE_KEY);
+                        this.selfServiceShowForm({email: state.email});
                     }
                 });
             });

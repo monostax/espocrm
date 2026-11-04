@@ -118,6 +118,57 @@ class SignupTest extends TestCase
         self::assertNull($this->em->getRDBRepository(User::ENTITY_TYPE)->where(['userName' => $email])->findOne());
     }
 
+    /**
+     * A 6-digit code must not be ground down: a resend gives no new guesses,
+     * and an email gets at most 10 guesses a day across all its signups.
+     */
+    public function testGuessesSurviveResendsAndTheEmailLocksForTheDay(): void
+    {
+        $email = $this->email();
+        $first = $this->signups()->begin($this->request($email), $this->ip());
+
+        for ($i = 0; $i < 4; $i++) {
+            $this->assertRejected(SignupRejected::INVALID_CODE, fn () => $this->verifyWrong($first, $email));
+        }
+
+        $this->expireResendCooldown($first['signupId']);
+        $this->signups()->resend($first['signupId'], $first['token']);
+        $this->assertRejected(SignupRejected::INVALID_CODE, fn () => $this->verifyWrong($first, $email));
+        $this->assertRejected(SignupRejected::TOO_MANY_ATTEMPTS,
+            fn () => $this->signups()->verify($first['signupId'], $first['token'], $this->codes[$email]));
+
+        $second = $this->signups()->begin($this->request($email), $this->ip());
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->assertRejected(SignupRejected::INVALID_CODE, fn () => $this->verifyWrong($second, $email));
+        }
+
+        $this->assertRejected(SignupRejected::RATE_LIMITED,
+            fn () => $this->signups()->begin($this->request($email), $this->ip()));
+    }
+
+    /**
+     * A Chatwoot user already holding the email (e.g. left by a deleted CRM
+     * user) is never adopted or confirmed by a signup.
+     */
+    public function testAVerifiedSignupDoesNotAdoptAnExistingChatwootUser(): void
+    {
+        $email = $this->email();
+        $existing = $this->fake('POST', '/platform/api/v1/users', ['name' => 'Orphan', 'email' => $email, 'password' => 'x']);
+        $started = $this->signups()->begin($this->request($email), $this->ip());
+
+        $result = $this->signups()->verify($started['signupId'], $started['token'], $this->codes[$email]);
+
+        self::assertSame('failed', $result['status']);
+        self::assertArrayNotHasKey('ticket', $result);
+        self::assertFalse($this->fake('GET', '/__users')[(string) $existing['id']]['confirmed']);
+
+        $signup = $this->em->getEntityById('SelfServiceSignup', $started['signupId']);
+        $provisioning = $this->em->getEntityById('SelfServiceProvisioning', $signup->get('provisioningId'));
+        self::assertNull($provisioning->get('nextAttemptAt'), 'Retrying cannot fix it.');
+        self::assertStringContainsString('not adopted', (string) $provisioning->get('lastError'));
+    }
+
     public function testTheSignupTokenIsRequired(): void
     {
         $email = $this->email();
@@ -180,6 +231,43 @@ class SignupTest extends TestCase
     private function ip(): string
     {
         return '203.0.113.' . random_int(1, 254) . '-' . bin2hex(random_bytes(2));
+    }
+
+    /**
+     * @param array{signupId: string, token: string} $signup
+     */
+    private function verifyWrong(array $signup, string $email): array
+    {
+        return $this->signups()->verify($signup['signupId'], $signup['token'], $this->codes[$email] === '000000' ? '111111' : '000000');
+    }
+
+    private function expireResendCooldown(string $signupId): void
+    {
+        $this->em->getQueryExecutor()->execute(
+            $this->em->getQueryBuilder()->update()->in('SelfServiceSignup')
+                ->set(['codeSentAt' => gmdate('Y-m-d H:i:s', time() - 120)])
+                ->where(['id' => $signupId])
+                ->build()
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @return array<mixed>
+     */
+    private function fake(string $method, string $path, array $body = []): array
+    {
+        $curl = curl_init(rtrim((string) getenv('FAKE_CHATWOOT_URL'), '/') . $path);
+        curl_setopt_array($curl, [
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS => $method === 'GET' ? null : json_encode($body),
+        ]);
+        $response = (string) curl_exec($curl);
+        curl_close($curl);
+
+        return json_decode($response, true) ?: [];
     }
 
     private function assertRejected(string $reason, callable $action): void

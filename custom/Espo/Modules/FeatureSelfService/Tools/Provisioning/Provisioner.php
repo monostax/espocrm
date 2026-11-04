@@ -366,12 +366,21 @@ class Provisioner
         $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId)
             ?? throw new RuntimeException("ChatwootAccount {$accountId} not found.");
 
-        $this->memberships->ensureUserMembership(
-            $account,
-            $this->owner($record),
-            'administrator',
-            ($this->input($record)['ownerEmailVerified'] ?? false) === true,
-        );
+        try {
+            $this->memberships->ensureUserMembership(
+                $account,
+                $this->owner($record),
+                'administrator',
+                ($this->input($record)['ownerEmailVerified'] ?? false) === true,
+            );
+        } catch (Conflict $e) {
+            if ($e->getMessage() !== 'chatwootUserAlreadyExists') {
+                throw $e;
+            }
+
+            // Retrying can't help: an operator must remove or link that user.
+            throw new ProvisioningFailure("Chatwoot already has a user with the owner's email; it is not adopted.");
+        }
     }
 
     private function tenant(Entity $record): Entity

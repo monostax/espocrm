@@ -64,7 +64,7 @@
         "RESEND_TOO_SOON": "Wait a minute before asking for another code.",
         "INVALID_CODE": "Wrong code.",
         "CODE_EXPIRED": "The code expired. Ask for a new one.",
-        "TOO_MANY_ATTEMPTS": "Too many attempts with this code. Ask for a new one.",
+        "TOO_MANY_ATTEMPTS": "Too many wrong codes. Start the signup again.",
         "SIGNUP_NOT_FOUND": "Your signup expired. Start again.",
         "EMAIL_NOT_SENT": "We could not send the code right now. Try again in a few minutes.",
         "SOCIAL_FAILED": "We could not sign you in with that account. Try again.",

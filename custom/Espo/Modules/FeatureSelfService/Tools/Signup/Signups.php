@@ -39,7 +39,10 @@ class Signups
     private const CODE_TTL_SECONDS = 900;
     private const RESEND_COOLDOWN_SECONDS = 60;
     private const MAX_CODE_SENDS = 5;
+    /** Per signup, across resends: a new code doesn't give new guesses. */
     private const MAX_CODE_ATTEMPTS = 5;
+    /** Per email across all its signups, so a 6-digit code can't be ground down. */
+    private const MAX_CODE_ATTEMPTS_PER_EMAIL_PER_DAY = 10;
     private const SIGNUPS_PER_IP_PER_HOUR = 10;
     private const SIGNUPS_PER_EMAIL_PER_HOUR = 5;
     private const LOGIN_WINDOW_SECONDS = 3600;
@@ -64,6 +67,10 @@ class Signups
         $this->assertEmailAvailable($request->email);
         $this->assertBelowLimit('ipAddress', $ipAddress, self::SIGNUPS_PER_IP_PER_HOUR);
         $this->assertBelowLimit('email', $request->email, self::SIGNUPS_PER_EMAIL_PER_HOUR);
+
+        if ($this->codeAttemptsToday($request->email) >= self::MAX_CODE_ATTEMPTS_PER_EMAIL_PER_DAY) {
+            throw new SignupRejected(SignupRejected::RATE_LIMITED);
+        }
 
         $token = bin2hex(random_bytes(32));
         $code = $this->newCode();
@@ -117,7 +124,6 @@ class Signups
         $signup->set([
             'codeSentAt' => $this->at($now),
             'codeSends' => (int) $signup->get('codeSends') + 1,
-            'codeAttempts' => 0,
         ]);
         $this->setCode($signup, $code, $now);
         $this->sendCode($signup, $code);
@@ -139,7 +145,8 @@ class Signups
             return $this->progress($signup);
         }
 
-        if ((int) $signup->get('codeAttempts') >= self::MAX_CODE_ATTEMPTS) {
+        if ((int) $signup->get('codeAttempts') >= self::MAX_CODE_ATTEMPTS ||
+            $this->codeAttemptsToday((string) $signup->get('email')) >= self::MAX_CODE_ATTEMPTS_PER_EMAIL_PER_DAY) {
             throw new SignupRejected(SignupRejected::TOO_MANY_ATTEMPTS);
         }
 
@@ -330,6 +337,27 @@ class Signups
         if ($count >= $limit) {
             throw new SignupRejected(SignupRejected::RATE_LIMITED);
         }
+    }
+
+    /**
+     * Code guesses for this email in the last 24 hours, over all its signups
+     * (at most ~120 rows given the hourly signup limit).
+     */
+    private function codeAttemptsToday(string $email): int
+    {
+        $total = 0;
+
+        $signups = $this->entityManager
+            ->getRDBRepository(self::ENTITY_TYPE)
+            ->select(['codeAttempts'])
+            ->where(['email' => $email, 'createdAt>' => $this->at(time() - 86400)])
+            ->find();
+
+        foreach ($signups as $signup) {
+            $total += (int) $signup->get('codeAttempts');
+        }
+
+        return $total;
     }
 
     /**
