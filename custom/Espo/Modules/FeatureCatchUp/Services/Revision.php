@@ -14,8 +14,8 @@ use Espo\ORM\Entity;
  */
 final class Revision
 {
-    /** Keep in step with the backend's CATCH_UP_PROMPT_VERSION. */
-    public const PROMPT_VERSION = '3';
+    /** Keep in step with the backend's CATCH_UP_PROMPT_VERSION; bumping it has every deal judged again. */
+    public const PROMPT_VERSION = '4';
 
     private const QUIET_STEPS = [1, 2, 4, 7, 14, 30, 60];
 
