@@ -1,8 +1,49 @@
 # FeatureSelfService
 
-Self-service workspace provisioning. This module has no public HTTP surface
-yet; signup, email verification and social sign-in come next and call
-`Provisioner`. Plan: `theworkspace/work/01 __ this-week/Self-Service PLG/`.
+Self-service signup and workspace provisioning on the CRM login page. Plan:
+`theworkspace/work/01 __ this-week/Self-Service PLG/`.
+
+## Signup and sign-in
+
+The login view is replaced through `clientDefs.App.loginView`
+(`client/custom/modules/feature-self-service/src/views/login.js`, a subclass
+of the stock view). While the policy reports `enabled`, it adds:
+- "Criar conta grátis", which can be opened directly with `?signup`;
+- "Continuar com Google / Microsoft" for the providers that are configured.
+
+The public, no-auth API is `/api/v1/SelfService/...`. Errors are `{"code": ...}`.
+
+| Route | Does |
+| --- | --- |
+| `GET config` | `{state, providers}` for the login page. |
+| `POST signup` | Validates the form, emails a 6-digit code, returns `{signupId, token}`. |
+| `POST signup/:id/resend` | New code. 60 s cooldown, at most 5 per signup. |
+| `POST signup/:id/verify` | Right code: creates the owner (regular user, login = email), starts and runs provisioning. Returns `{status}` and, when ready, a `ticket`. |
+| `POST signup/:id/status` | Progress while provisioning finishes. Returns a fresh ticket when ready, for one hour after verification. |
+| `POST oauth/start` | Provider authorization URL with a signed `state` bound to the browser's nonce. |
+| `POST oauth/finish` | Exchanges the code. An existing regular user gets a `ticket`; a new email gets a signed `identity`. |
+| `POST oauth/complete` | `identity` + WhatsApp + company + terms: the signup, without an email code. |
+
+Rules:
+- **What is stored:** only hashes of the signup token, the code and the password. No CRM user exists until the email is proven.
+- **Limits:**
+  - 10 signups per IP per hour (`CF-Connecting-IP`, else `REMOTE_ADDR`) and 5 per email;
+  - 5 code attempts, and a code expires after 15 min.
+- **Emails already in use:** refused (`EMAIL_IN_USE`), as are reserved machine-identity addresses.
+- **Code email:** goes through the system SMTP account (Cloudflare in production, set up by the container's `apply-runtime-smtp-account.php`). A failure returns `EMAIL_NOT_SENT`.
+- **Login tickets** (`LoginTickets`): single use, valid for 5 minutes, regular users only.
+  - `Classes/Authentication/TicketLogin` replaces the `Espo` login method. It accepts username `**self-service` with the ticket as password, the way Espo's OIDC sends its code.
+  - Everything else goes to Chatwoot's `AgentEmailLogin`.
+  - The SPA then runs its normal login, including the Chatwoot redirect. Two-factor still applies.
+- **Social sign-in** (`SocialSignIn`, `SocialIdentity`):
+  - It reuses the `google-gmail` and `microsoft-365` OAuthProviders and their registered redirect URI, `<siteUrl>/oauth/callback/`, asking only for `openid email profile`.
+  - Google needs `email_verified`.
+  - Microsoft is trusted for personal accounts, or for work accounts whose token carries `xms_edov` (domain verified). Without that, work account emails can be spoofed by any tenant admin.
+  - Instance admins and API users can't sign in this way.
+
+Setup that only the provider consoles can confirm:
+- **Google:** the OAuth consent screen must be published (not in "Testing") for unknown users to sign in.
+- **Microsoft:** to accept work accounts, add the optional ID-token claim `xms_edov` to the app registration (Token configuration). Until then only personal Microsoft accounts work.
 
 ## Switch and pause
 
@@ -77,30 +118,28 @@ php command.php self-service run --id=<provisioningId>
 
 ## Tests
 
-Unit: `tests/unit/Espo/Modules/FeatureSelfService`, plus
+Unit: `tests/unit/Espo/Modules/FeatureSelfService` (policy, slugs, provisioning
+requests, signup form and phones, ID-token rules), plus
 `Chatwoot/Hooks/ChatwootAccount/SyncWithChatwootResumeTest` and
 `Global/Tools/Tenant/TenantAdminTeamProvisionerTest`.
 
-Integration: `tests/integration/Espo/Modules/FeatureSelfService` runs the
-real hooks and schema against a disposable database and
-`fake-chatwoot.php`, a fake Chatwoot Platform API with fault injection. In an
-isolated install (MariaDB on a private Docker network, CRM installed from this
-checkout with `bin/command config:populate`, the `database.*` config and
-`rebuild`):
+Integration: `tests/integration/Espo/Modules/FeatureSelfService` runs against a
+disposable database. `fake-chatwoot.php` stands in for the Chatwoot Platform
+API (with fault injection) and for an OAuth provider (`/oauth/authorize`,
+`/oauth/token`, claims set via `/__idtoken`). In an isolated install (MariaDB on
+a private Docker network, CRM installed from this checkout with
+`bin/command config:populate`, the `database.*` config and `rebuild`):
 
 ```sh
 FAKE_CHATWOOT_STATE=/tmp/fake.json php -S 0.0.0.0:8080 tests/integration/Espo/Modules/FeatureSelfService/fake-chatwoot.php
 SELF_SERVICE_TEST_DATABASE=<db> FAKE_CHATWOOT_URL=http://<fake>:8080 \
-    php phpunit.phar tests/integration/Espo/Modules/FeatureSelfService/ProvisioningTest.php
+    php phpunit.phar tests/integration/Espo/Modules/FeatureSelfService
 ```
 
-It covers:
-- the full workspace, and a rerun that changes nothing;
-- same-named tenants getting separate teams;
-- dedupe conflicts;
-- resuming after a concierge failure, and after a lost reply;
-- pause and resume, and the switch turned off;
-- refusing an instance-admin owner;
-- leaving another worker's lease alone;
-- replacing a deleted team under its key;
-- the scheduled job.
+- `ProvisioningTest`: the workspace, rerun no-op, same-named tenants,
+  dedupe conflicts, concierge failure and lost reply, pause/resume, switch
+  off, instance-admin owner, live leases, deleted team keys, the job.
+- `SignupTest`: code signup to a one-time login, wrong-code lockout, token
+  required, email in use, IP limit, switch off.
+- `SocialSignInTest`: new Google user without a code, existing user ticket,
+  foreign or tampered state, unverified email, instance admin, scopes.

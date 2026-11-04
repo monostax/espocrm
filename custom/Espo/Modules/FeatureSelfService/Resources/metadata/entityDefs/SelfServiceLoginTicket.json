@@ -1,0 +1,15 @@
+{
+    "fields": {
+        "tokenHash": { "type": "varchar", "maxLength": 64 },
+        "user": { "type": "link" },
+        "expiresAt": { "type": "datetime" },
+        "usedAt": { "type": "datetime" },
+        "createdAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "user": { "type": "belongsTo", "entity": "User" }
+    },
+    "indexes": {
+        "tokenHash": { "columns": ["tokenHash"], "unique": true }
+    }
+}

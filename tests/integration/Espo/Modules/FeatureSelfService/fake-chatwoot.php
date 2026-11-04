@@ -121,5 +121,29 @@ if (preg_match('#^/platform/api/v1/users/(\d+)/login$#', $path, $m)) {
     $finish(200, ['url' => 'http://chatwoot.test/app/login?sso=' . $m[1]]);
 }
 
+// A stand-in OAuth token endpoint for social sign-in. POST /__idtoken
+// {"claims": {...}} chooses the ID token claims it answers with.
+if ($path === '/__idtoken') {
+    $state['idTokenClaims'] = $body['claims'] ?? null;
+    $reply(200, []);
+}
+
+// The provider's consent screen, approved at once: back to redirect_uri.
+if ($path === '/oauth/authorize') {
+    file_put_contents($stateFile, json_encode($state));
+    flock($lock, LOCK_UN);
+    header('Location: ' . $_GET['redirect_uri'] . '?' . http_build_query(['code' => 'fake-code', 'state' => $_GET['state']]));
+    http_response_code(302);
+    exit;
+}
+
+if ($path === '/oauth/token' && $method === 'POST') {
+    $claims = $state['idTokenClaims'] ?? null;
+    $encode = fn (array $data) => rtrim(strtr(base64_encode((string) json_encode($data)), '+/', '-_'), '=');
+    $claims
+        ? $finish(200, ['access_token' => 'access', 'id_token' => $encode(['alg' => 'RS256']) . '.' . $encode($claims) . '.signature'])
+        : $finish(400, ['error' => 'invalid_grant']);
+}
+
 // Account API calls made after the account exists (webhooks, profile, ...).
 $finish(200, ['payload' => []]);

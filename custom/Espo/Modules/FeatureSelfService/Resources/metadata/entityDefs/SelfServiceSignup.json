@@ -1,0 +1,103 @@
+{
+    "fields": {
+        "email": {
+            "type": "varchar",
+            "maxLength": 254
+        },
+        "name": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "phone": {
+            "type": "varchar",
+            "maxLength": 20
+        },
+        "company": {
+            "type": "varchar",
+            "maxLength": 100
+        },
+        "language": {
+            "type": "varchar",
+            "maxLength": 5
+        },
+        "passwordHash": {
+            "type": "varchar",
+            "maxLength": 150
+        },
+        "tokenHash": {
+            "type": "varchar",
+            "maxLength": 64
+        },
+        "codeHash": {
+            "type": "varchar",
+            "maxLength": 64
+        },
+        "codeExpiresAt": {
+            "type": "datetime"
+        },
+        "codeSentAt": {
+            "type": "datetime"
+        },
+        "codeSends": {
+            "type": "int",
+            "default": 0
+        },
+        "codeAttempts": {
+            "type": "int",
+            "default": 0
+        },
+        "ipAddress": {
+            "type": "varchar",
+            "maxLength": 45
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "pending",
+                "verified"
+            ],
+            "default": "pending"
+        },
+        "termsAcceptedAt": {
+            "type": "datetime"
+        },
+        "verifiedAt": {
+            "type": "datetime"
+        },
+        "user": {
+            "type": "link"
+        },
+        "provisioningId": {
+            "type": "varchar",
+            "maxLength": 36
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "user": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "indexes": {
+        "email": {
+            "columns": [
+                "email",
+                "createdAt"
+            ]
+        },
+        "ipAddress": {
+            "columns": [
+                "ipAddress",
+                "createdAt"
+            ]
+        }
+    }
+}
