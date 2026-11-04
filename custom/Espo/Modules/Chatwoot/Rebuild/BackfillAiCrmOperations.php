@@ -25,7 +25,7 @@ class BackfillAiCrmOperations implements RebuildAction
             'UPDATE chatwoot_account_user_membership SET ai_crm_operations = :operations ' .
             'WHERE ai_crm_operations IS NULL AND deleted = false'
         );
-        $statement->execute(['operations' => '["read","create","update"]']);
+        $statement->execute(['operations' => '["read","create","update","delete"]']);
         $this->entityManager->getPDO()->exec(
             'UPDATE chatwoot_account_user_membership ' .
             'SET ai_can_execute = COALESCE(ai_can_execute, true), ai_can_send = COALESCE(ai_can_send, true) ' .

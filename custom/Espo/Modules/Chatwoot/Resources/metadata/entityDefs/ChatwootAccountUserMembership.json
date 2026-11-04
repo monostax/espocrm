@@ -78,7 +78,7 @@
         "aiCrmOperations": {
             "type": "multiEnum",
             "options": ["read", "create", "update", "delete"],
-            "default": ["read", "create", "update"],
+            "default": ["read", "create", "update", "delete"],
             "tooltip": true,
             "audited": true
         },
