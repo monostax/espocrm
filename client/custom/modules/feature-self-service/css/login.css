@@ -1,0 +1,463 @@
+/*
+ * Login and self-service signup (feature-self-service:login), after Bueno's
+ * design language (components/bueno/ui/DESIGN.md): one opaque card on the
+ * base tone, neutral fills, hairline fields, one primary action per step.
+ * Colors come from the Espo theme's Monostax palette (--n-*); the fallbacks
+ * keep other themes legible.
+ */
+#login.login-card {
+    --login-surface: var(--n-card, #fff);
+    --login-field: var(--n-solid-1, #fff);
+    --login-rim: var(--n-weak, #eaeaea);
+    --login-field-border: var(--n-strong, #e2e3e7);
+    --login-field-border-hover: var(--n-slate-7, #cdced6);
+    --login-ring: var(--n-slate-10, #80838d);
+    --login-fg: var(--n-slate-12, #1c2024);
+    --login-muted: var(--n-slate-11, #60646c);
+    --login-placeholder: var(--n-slate-9, #8b8d98);
+    --login-hover: var(--n-slate-3, #f0f0f3);
+    --login-pressed: var(--n-slate-4, #e8e8ec);
+    --login-primary: var(--n-brand, #191919);
+    --login-primary-hover: var(--n-brand-hover, #333);
+    --login-primary-fg: var(--n-brand-foreground, #fff);
+    --login-danger: var(--n-ruby-11, #ca244d);
+    --login-danger-surface: var(--n-ruby-3, #feeaed);
+    --login-font: var(--font-size-base, 14px);
+    --login-small: calc(var(--login-font) * 13 / 14);
+    --login-control-height: 34px;
+    --login-radius: 6px;
+
+    position: static;
+    top: auto;
+    width: 400px;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 28px 28px 24px;
+    color: var(--login-fg);
+    font-size: var(--login-font);
+    background: var(--login-surface);
+    border: 1px solid var(--login-rim);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(28, 32, 36, .06), 0 2px 6px rgba(28, 32, 36, .04);
+}
+
+/* Anchor near the top, so switching between login and signup grows the card
+   downward and never moves the logo or the first field. */
+.container-centering:has(> #login.login-card) {
+    top: 0;
+    height: auto;
+    min-height: calc(100vh - var(--100px, 100px));
+    padding: max(48px, 12vh) 16px 48px;
+}
+
+#login.login-card .login-logo {
+    display: flex;
+    justify-content: center;
+    height: 28px;
+    margin-bottom: 24px;
+}
+
+#login.login-card .login-logo img {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+#login.login-card .panel-body {
+    padding: 0;
+}
+
+/* Steps */
+
+#login.login-card .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0;
+}
+
+#login.login-card .login-header {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 4px;
+    text-align: center;
+}
+
+#login.login-card .login-title {
+    margin: 0;
+    color: var(--login-fg);
+    font-size: calc(var(--login-font) * 8 / 7);
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+#login.login-card .login-description {
+    margin: 0;
+    color: var(--login-muted);
+    line-height: 1.5;
+}
+
+#login.login-card .login-description strong {
+    color: var(--login-fg);
+    font-weight: 500;
+}
+
+/* Fields */
+
+#login.login-card .form-group {
+    margin: 0;
+}
+
+#login.login-card .login-field {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+#login.login-card .login-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#login.login-card .login-label {
+    margin: 0;
+    color: var(--login-muted);
+    font-size: var(--login-small);
+    font-weight: 400;
+    user-select: none;
+}
+
+#login.login-card .login-hint {
+    margin: 0;
+    color: var(--login-muted);
+    font-size: var(--login-small);
+    line-height: 1.4;
+}
+
+#login.login-card .form-control {
+    height: var(--login-control-height);
+    padding: 0 10px;
+    color: var(--login-fg);
+    font-size: var(--login-font);
+    background: var(--login-field);
+    border: 1px solid var(--login-field-border);
+    border-radius: var(--login-radius);
+    box-shadow: none;
+    transition: border-color 120ms ease-out;
+}
+
+#login.login-card .form-control::placeholder {
+    color: var(--login-placeholder);
+}
+
+#login.login-card .form-control:hover {
+    border-color: var(--login-field-border-hover);
+}
+
+#login.login-card .form-control:focus {
+    border-color: var(--login-ring);
+    outline: none;
+    box-shadow: none;
+}
+
+#login.login-card .has-error .form-control {
+    border-color: var(--login-danger);
+}
+
+#login.login-card .login-password {
+    position: relative;
+}
+
+#login.login-card .login-password .form-control {
+    padding-right: var(--login-control-height);
+}
+
+#login.login-card .login-password-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--login-control-height);
+    height: var(--login-control-height);
+    color: var(--login-muted);
+    cursor: pointer;
+}
+
+#login.login-card .login-password-toggle:hover {
+    color: var(--login-fg);
+}
+
+#login.login-card .login-code {
+    height: 44px;
+    font-size: calc(var(--login-font) * 10 / 7);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .4em;
+    text-align: center;
+}
+
+#login.login-card .login-another-user {
+    font-weight: 500;
+}
+
+#login.login-card .login-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    color: var(--login-muted);
+    font-size: var(--login-small);
+    font-weight: 400;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+#login.login-card .login-checkbox input {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    margin: 2px 0 0;
+    accent-color: var(--login-primary);
+}
+
+#login.login-card .login-checkbox a,
+#login.login-card .login-switch a {
+    color: var(--login-fg);
+    font-weight: 500;
+}
+
+/* Buttons */
+
+#login.login-card .login-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: var(--login-control-height);
+    padding: 0 12px;
+    color: var(--login-fg);
+    font-size: var(--login-font);
+    font-weight: 500;
+    line-height: 1;
+    background: var(--login-field);
+    border: 1px solid var(--login-field-border);
+    border-radius: var(--login-radius);
+    box-shadow: none;
+    cursor: pointer;
+    transition: background-color 120ms ease-out;
+}
+
+#login.login-card .login-button:hover:enabled {
+    background: var(--login-hover);
+}
+
+#login.login-card .login-button:active:enabled {
+    background: var(--login-pressed);
+}
+
+#login.login-card .login-button > svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+}
+
+#login.login-card .login-button-primary {
+    color: var(--login-primary-fg);
+    background: var(--login-primary);
+    border-color: var(--login-primary);
+}
+
+#login.login-card .login-button-primary:hover:enabled,
+#login.login-card .login-button-primary:active:enabled {
+    background: var(--login-primary-hover);
+    border-color: var(--login-primary-hover);
+}
+
+#login.login-card .login-button:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+#login.login-card .login-text-link {
+    padding: 0;
+    color: var(--login-muted);
+    font-size: var(--login-small);
+    font-weight: 400;
+    text-decoration: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+#login.login-card .login-text-link:hover:not(:disabled) {
+    color: var(--login-fg);
+}
+
+#login.login-card .login-text-link:disabled {
+    cursor: default;
+    font-variant-numeric: tabular-nums;
+}
+
+#login.login-card .login-text-strong {
+    color: var(--login-fg);
+    font-size: inherit;
+    font-weight: 500;
+}
+
+#login.login-card .login-text-strong:hover,
+#login.login-card .login-checkbox a:hover,
+#login.login-card .login-switch a:hover {
+    text-decoration: underline;
+}
+
+#login.login-card .login-sign-in {
+    display: flex;
+    gap: 8px;
+}
+
+#login.login-card .login-icon-button {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--login-control-height);
+    height: var(--login-control-height);
+    color: var(--login-muted);
+    border-radius: var(--login-radius);
+    cursor: pointer;
+}
+
+#login.login-card .login-icon-button:hover {
+    color: var(--login-fg);
+    background: var(--login-hover);
+}
+
+/* Keyboard focus only, as a neutral ring. */
+#login.login-card :is(.login-button, .login-text-link, .login-icon-button, .login-password-toggle, a):focus {
+    outline: none;
+}
+
+#login.login-card :is(.login-button, .login-icon-button, .login-password-toggle):focus-visible {
+    outline: 1px solid var(--login-ring);
+    outline-offset: 2px;
+}
+
+#login.login-card :is(.login-text-link, .login-checkbox a, .login-switch a):focus-visible {
+    border-radius: 2px;
+    outline: 1px solid var(--login-ring);
+    outline-offset: 2px;
+}
+
+#login.login-card .login-checkbox input:focus-visible {
+    outline: 1px solid var(--login-ring);
+    outline-offset: 2px;
+}
+
+/* Alternatives: "or" divider, providers, switching between login and signup. */
+
+#login.login-card .login-social {
+    display: grid;
+    gap: 8px;
+}
+
+#login.login-card .login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--login-muted);
+    font-size: var(--login-small);
+}
+
+#login.login-card [data-role="self-service-social"] .login-divider {
+    margin: 14px 0;
+}
+
+#login.login-card .login-divider::before,
+#login.login-card .login-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--login-rim);
+}
+
+#login.login-card .login-switch {
+    margin: 20px 0 0;
+    color: var(--login-muted);
+    font-size: var(--login-small);
+    text-align: center;
+}
+
+#login.login-card .login-links {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* Status */
+
+#login.login-card .login-error {
+    margin: 0;
+    padding: 6px 10px;
+    color: var(--login-danger);
+    font-size: var(--login-small);
+    line-height: 1.5;
+    background: var(--login-danger-surface);
+    border-radius: 4px;
+    overflow-wrap: anywhere;
+}
+
+#login.login-card .login-error[hidden] {
+    display: none;
+}
+
+#login.login-card .login-status {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--login-muted);
+    line-height: 1.5;
+    text-align: center;
+}
+
+#login.login-card .login-spinner {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    margin-top: calc((1.5em - 14px) / 2);
+    border: 2px solid var(--login-field-border);
+    border-top-color: var(--login-fg);
+    border-radius: 50%;
+    animation: login-spin 800ms linear infinite;
+}
+
+@keyframes login-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #login.login-card .login-spinner {
+        animation-duration: 2400ms;
+    }
+
+    #login.login-card .form-control,
+    #login.login-card .login-button {
+        transition: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .container-centering:has(> #login.login-card) {
+        padding: 24px 12px;
+    }
+
+    #login.login-card {
+        padding: 24px 20px 20px;
+    }
+}

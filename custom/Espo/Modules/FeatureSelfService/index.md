@@ -7,9 +7,19 @@ Self-service signup and workspace provisioning on the CRM login page. Plan:
 
 The login view is replaced through `clientDefs.App.loginView`
 (`client/custom/modules/feature-self-service/src/views/login.js`, a subclass
-of the stock view). While the policy reports `enabled`, it adds:
-- "Criar conta grátis", which can be opened directly with `?signup`;
+of the stock view). Its template (`res/templates/login.tpl`) and styles
+(`css/login.css`, added through `app/client.json` `cssList`) restyle the page
+for every deployment after Bueno's design language
+(`components/bueno/ui/DESIGN.md`). The template keeps the ids and actions the
+stock view uses. While the policy reports `enabled`, the view adds:
+- "Testar grátis por 7 dias", which can be opened directly with `?signup`;
 - "Continuar com Google / Microsoft" for the providers that are configured.
+  Their brand marks are inline SVG, since the theme has no Font Awesome brand
+  glyphs.
+
+Failures in a signup step show in the step's error line under its button and
+clear on the next edit; failures elsewhere, such as a provider sign-in from
+the login page, show as a notice.
 
 The public, no-auth API is `/api/v1/SelfService/...`. Errors are `{"code": ...}`.
 

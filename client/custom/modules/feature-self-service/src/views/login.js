@@ -16,6 +16,10 @@
  * Shown only while the server reports self-service as enabled. Open it
  * directly with `?signup` or `#signup`.
  *
+ * The template (feature-self-service:login) keeps every id and data-action
+ * the parent view uses and adds places for the signup link and providers.
+ * Styles: client/custom/modules/feature-self-service/css/login.css.
+ *
  * The parent view declares `events` as a class field, so listeners here are
  * bound in afterRender instead.
  */
@@ -28,6 +32,22 @@ const RESEND_SECONDS = 60;
 const TERMS_URL = 'https://monostax.com.br/termos';
 const PRIVACY_URL = 'https://monostax.com.br/privacidade';
 
+const PROVIDER_LABELS = {google: 'continueWithGoogle', microsoft: 'continueWithMicrosoft'};
+
+// Brand marks inline: the theme ships no Font Awesome brand glyphs.
+const PROVIDER_ICONS = {
+    google: '<svg viewBox="0 0 18 18" aria-hidden="true">' +
+        '<path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>' +
+        '<path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.83.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>' +
+        '<path fill="#FBBC05" d="M3.97 10.72A5.41 5.41 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.05l3.01-2.33z"/>' +
+        '<path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>' +
+        '</svg>',
+    microsoft: '<svg viewBox="0 0 21 21" aria-hidden="true">' +
+        '<rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>' +
+        '<rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/>' +
+        '</svg>',
+};
+
 const escape = value => String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -37,21 +57,17 @@ const escape = value => String(value ?? '')
 
 export default class extends LoginView {
 
+    template = 'feature-self-service:login'
+
     afterRender() {
         super.afterRender();
 
         this.selfServicePollTimer = null;
+        this.selfServiceContainer = this.element.querySelector('[data-role="self-service"]');
 
-        const panelBody = this.element.querySelector('.panel-body > div');
-
-        if (!panelBody) {
+        if (!this.selfServiceContainer) {
             return;
         }
-
-        this.selfServiceContainer = document.createElement('div');
-        this.selfServiceContainer.dataset.role = 'self-service';
-        this.selfServiceContainer.classList.add('hidden');
-        panelBody.appendChild(this.selfServiceContainer);
 
         Espo.Ajax.getRequest('SelfService/config')
             .then(config => {
@@ -60,7 +76,7 @@ export default class extends LoginView {
                 }
 
                 this.selfServiceProviders = config.providers || [];
-                this.selfServiceAddLink(panelBody);
+                this.selfServiceAddLink();
 
                 if (this.selfServiceRestore()) {
                     return;
@@ -88,40 +104,46 @@ export default class extends LoginView {
         return this.translate(key, 'selfService', 'Global');
     }
 
-    selfServiceAddLink(panelBody) {
-        const cta = document.createElement('div');
-        cta.className = 'margin-top-2x text-center';
-        cta.dataset.role = 'self-service-cta';
-        cta.innerHTML =
-            `<span class="text-muted">${escape(this.selfServiceText('newHere'))}</span> ` +
-            `<a role="button" tabindex="5" data-action="selfServiceSignup">${escape(this.selfServiceText('createAccount'))}</a>`;
+    /**
+     * The providers under the login form and "New here? Create a free account".
+     */
+    selfServiceAddLink() {
+        const social = this.element.querySelector('[data-role="self-service-social"]');
+        const cta = this.element.querySelector('[data-role="self-service-cta"]');
 
-        cta.innerHTML += this.selfServiceSocialButtons();
+        if (social && this.selfServiceProviders.length) {
+            social.innerHTML = this.selfServiceSocialButtons('after');
+            social.classList.remove('hidden');
+            this.selfServiceBindSocial(social);
+        }
 
-        panelBody.querySelector('#login-form')?.after(cta);
+        if (!cta) {
+            return;
+        }
 
+        cta.innerHTML = this.selfServiceSwitch('newHere', 'selfServiceSignup', this.selfServiceText('createAccount'));
+        cta.classList.remove('hidden');
         cta.querySelector('[data-action="selfServiceSignup"]').addEventListener('click', () => this.selfServiceShowForm());
-        this.selfServiceBindSocial(cta);
     }
 
     /**
-     * "Continue with Google / Microsoft" for the providers the server has.
+     * "Continue with Google / Microsoft" for the providers the server has,
+     * with the "or" divider on the side of the form they sit next to.
+     *
+     * @param {'before'|'after'} placement Where the buttons sit relative to the form.
      */
-    selfServiceSocialButtons() {
+    selfServiceSocialButtons(placement) {
         if (!this.selfServiceProviders?.length) {
             return '';
         }
 
-        const labels = {google: 'continueWithGoogle', microsoft: 'continueWithMicrosoft'};
-        const icons = {google: 'fab fa-google', microsoft: 'fab fa-microsoft'};
+        const divider = `<div class="login-divider" role="separator"><span>${escape(this.selfServiceText('or'))}</span></div>`;
+        const buttons = `<div class="login-social">${this.selfServiceProviders.map(provider =>
+            `<button type="button" class="login-button" data-provider="${escape(provider)}">
+                ${PROVIDER_ICONS[provider] || ''}<span>${escape(this.selfServiceText(PROVIDER_LABELS[provider] || provider))}</span>
+            </button>`).join('')}</div>`;
 
-        return `<div data-role="self-service-social" class="margin-top-2x">
-            <div class="text-muted small margin-bottom-sm">${escape(this.selfServiceText('or'))}</div>
-            ${this.selfServiceProviders.map(provider =>
-                `<button type="button" class="btn btn-default btn-block margin-bottom-sm" data-provider="${escape(provider)}">
-                    <span class="${icons[provider] || ''}"></span> ${escape(this.selfServiceText(labels[provider] || provider))}
-                </button>`).join('')}
-        </div>`;
+        return placement === 'before' ? buttons + divider : divider + buttons;
     }
 
     selfServiceBindSocial(container) {
@@ -162,8 +184,9 @@ export default class extends LoginView {
                 }
 
                 // null: the visitor closed the popup or the provider refused.
+                // A notice, since the form's error line is not next to these buttons.
                 if (xhr) {
-                    this.selfServiceError(xhr);
+                    this.selfServiceError(xhr, null, false);
                 }
             });
     }
@@ -216,31 +239,20 @@ export default class extends LoginView {
      */
     selfServiceShowDetails(result) {
         this.selfServiceRender(
-            `<form data-role="self-service-details" novalidate>
-                <h4 class="margin-bottom">${escape(this.selfServiceText('detailsTitle'))}</h4>
-                <p class="text-muted">${escape(this.selfServiceText('detailsSignedInAs').replace('{email}', result.email))}</p>
-                <div class="form-group cell">
-                    <label for="self-service-phone">${escape(this.selfServiceText('phone'))}</label>
-                    <input type="tel" id="self-service-phone" name="phone" class="form-control"
-                        autocomplete="tel" maxlength="20" placeholder="(11) 91234-5678">
-                </div>
-                <div class="form-group cell">
-                    <label for="self-service-company">${escape(this.selfServiceText('company'))}</label>
-                    <input type="text" id="self-service-company" name="company" class="form-control"
-                        autocomplete="organization" maxlength="100">
-                </div>
+            `<form data-role="self-service-details" class="login-form" novalidate>
+                ${this.selfServiceHeader('detailsTitle', this.selfServiceEmphasis('detailsSignedInAs', '{email}', result.email))}
+                ${this.selfServiceField('phone', 'tel', 'tel', 'maxlength="20" placeholder="(11) 91234-5678"')}
+                ${this.selfServiceField('company', 'text', 'organization', 'maxlength="100"')}
                 ${this.selfServiceTermsCheckbox(false)}
-                <div class="margin-top-2x cell">
-                    <button type="submit" class="btn btn-primary btn-s-wide">${escape(this.selfServiceText('submit'))}</button>
-                    <a role="button" class="btn btn-link btn-text btn-sm pull-right margin-top-sm"
-                        data-action="showLogin">${escape(this.selfServiceText('back'))}</a>
-                </div>
-            </form>`
+                ${this.selfServiceActions('submit')}
+            </form>
+            ${this.selfServiceSwitch(null, 'showLogin', this.selfServiceText('back'))}`
         );
 
         const form = this.selfServiceContainer.querySelector('form');
 
-        form.querySelector('[data-action="showLogin"]').addEventListener('click', () => this.selfServiceShowLogin());
+        this.selfServiceContainer.querySelector('[data-action="showLogin"]')
+            .addEventListener('click', () => this.selfServiceShowLogin());
         form.addEventListener('submit', event => {
             event.preventDefault();
 
@@ -275,20 +287,72 @@ export default class extends LoginView {
     }
 
     selfServiceTermsCheckbox(checked) {
-        return `<div class="checkbox">
-            <label>
-                <input type="checkbox" name="acceptTerms" ${checked ? 'checked' : ''}>
+        return `<label class="login-checkbox">
+            <input type="checkbox" name="acceptTerms" ${checked ? 'checked' : ''}>
+            <span>
                 ${escape(this.selfServiceText('acceptTermsPrefix'))}
                 <a href="${TERMS_URL}" target="_blank" rel="noopener">${escape(this.selfServiceText('terms'))}</a>
                 ${escape(this.selfServiceText('and'))}
                 <a href="${PRIVACY_URL}" target="_blank" rel="noopener">${escape(this.selfServiceText('privacy'))}</a>
-            </label>
+            </span>
+        </label>`;
+    }
+
+    /**
+     * A step's title and an optional description, given as HTML.
+     */
+    selfServiceHeader(titleKey, descriptionHtml) {
+        return `<header class="login-header">
+            <h1 class="login-title">${escape(this.selfServiceText(titleKey))}</h1>
+            ${descriptionHtml ? `<p class="login-description">${descriptionHtml}</p>` : ''}
+        </header>`;
+    }
+
+    /**
+     * A text with one value in bold, such as the email a code went to.
+     */
+    selfServiceEmphasis(key, placeholder, value) {
+        return escape(this.selfServiceText(key)).replace(placeholder, () => `<strong>${escape(value)}</strong>`);
+    }
+
+    /**
+     * A labeled input; the hint, when there is one, sits under it.
+     */
+    selfServiceField(name, type, autocomplete, attributes, value, hintKey) {
+        const id = `self-service-${name}`;
+        const hint = hintKey ?
+            `<p class="login-hint" id="${id}-hint">${escape(this.selfServiceText(hintKey))}</p>` : '';
+
+        return `<div class="login-field">
+            <label for="${id}" class="login-label">${escape(this.selfServiceText(name))}</label>
+            <input type="${type}" id="${id}" name="${name}" class="form-control"
+                autocomplete="${autocomplete}" value="${escape(value)}"
+                ${hintKey ? `aria-describedby="${id}-hint"` : ''} ${attributes || ''}>
+            ${hint}
         </div>`;
     }
 
+    /**
+     * The step's one primary action, with the error line under it so a
+     * failure never moves the button that was just pressed.
+     */
+    selfServiceActions(labelKey) {
+        return `<button type="submit" class="login-button login-button-primary">${escape(this.selfServiceText(labelKey))}</button>
+            <p class="login-error" role="alert" hidden></p>`;
+    }
+
+    /**
+     * The line under the card's content that leads to the other path.
+     */
+    selfServiceSwitch(promptKey, action, label) {
+        const prompt = promptKey ? `<span>${escape(this.selfServiceText(promptKey))}</span> ` : '';
+
+        return `<p class="login-switch">${prompt}<button type="button" class="login-text-link login-text-strong"
+            data-action="${action}">${escape(label)}</button></p>`;
+    }
+
     selfServiceToggle(signupVisible) {
-        this.element.querySelector('#login-form')?.classList.toggle('hidden', signupVisible);
-        this.element.querySelector('[data-role="self-service-cta"]')?.classList.toggle('hidden', signupVisible);
+        this.element.querySelector('[data-role="login-main"]')?.classList.toggle('hidden', signupVisible);
         this.selfServiceContainer.classList.toggle('hidden', !signupVisible);
     }
 
@@ -307,42 +371,47 @@ export default class extends LoginView {
     selfServiceRender(html) {
         this.selfServiceToggle(true);
         this.selfServiceContainer.innerHTML = html;
+
+        const form = this.selfServiceContainer.querySelector('form');
+
+        // An error stays until the values that caused it change.
+        form?.addEventListener('input', () => {
+            const line = form.querySelector('.login-error');
+
+            if (line && !line.hidden) {
+                line.hidden = true;
+                line.textContent = '';
+            }
+        });
     }
 
     selfServiceShowForm(values) {
         values = values || {};
 
-        const field = (name, type, autocomplete, extra) =>
-            `<div class="form-group cell">
-                <label for="self-service-${name}">${escape(this.selfServiceText(name))}</label>
-                <input type="${type}" id="self-service-${name}" name="${name}" class="form-control"
-                    autocomplete="${autocomplete}" value="${escape(values[name])}" ${extra || ''}>
-            </div>`;
+        const field = (name, type, autocomplete, attributes, hintKey) =>
+            this.selfServiceField(name, type, autocomplete, attributes, values[name], hintKey);
 
         this.selfServiceRender(
-            `<form data-role="self-service-form" novalidate>
-                <h4 class="margin-bottom">${escape(this.selfServiceText('title'))}</h4>
-                <p class="text-muted">${escape(this.selfServiceText('subtitle'))}</p>
+            `<form data-role="self-service-form" class="login-form" novalidate>
+                ${this.selfServiceHeader('title', escape(this.selfServiceText('subtitle')))}
+                ${this.selfServiceSocialButtons('before')}
                 ${field('name', 'text', 'name', 'maxlength="100"')}
                 ${field('email', 'email', 'email', 'maxlength="254" autocapitalize="off" spellcheck="false"')}
                 ${field('phone', 'tel', 'tel', 'maxlength="20" placeholder="(11) 91234-5678"')}
                 ${field('company', 'text', 'organization', 'maxlength="100"')}
-                ${field('password', 'password', 'new-password', 'maxlength="128" minlength="8"')}
+                ${field('password', 'password', 'new-password', 'maxlength="128" minlength="8"', 'passwordHint')}
                 ${this.selfServiceTermsCheckbox(values.acceptTerms)}
-                <div class="margin-top-2x cell">
-                    <button type="submit" class="btn btn-primary btn-s-wide">${escape(this.selfServiceText('submit'))}</button>
-                    <a role="button" class="btn btn-link btn-text btn-sm pull-right margin-top-sm"
-                        data-action="showLogin">${escape(this.selfServiceText('haveAccount'))}</a>
-                </div>
-                ${this.selfServiceSocialButtons()}
-            </form>`
+                ${this.selfServiceActions('submit')}
+            </form>
+            ${this.selfServiceSwitch('haveAccount', 'showLogin', this.logInText)}`
         );
 
         const form = this.selfServiceContainer.querySelector('form');
 
         this.selfServiceBindSocial(form);
 
-        form.querySelector('[data-action="showLogin"]').addEventListener('click', () => this.selfServiceShowLogin());
+        this.selfServiceContainer.querySelector('[data-action="showLogin"]')
+            .addEventListener('click', () => this.selfServiceShowLogin());
         form.addEventListener('submit', event => {
             event.preventDefault();
             this.selfServiceSubmit(form);
@@ -387,21 +456,17 @@ export default class extends LoginView {
         const state = this.selfServiceState();
 
         this.selfServiceRender(
-            `<form data-role="self-service-code" novalidate>
-                <h4 class="margin-bottom">${escape(this.selfServiceText('codeTitle'))}</h4>
-                <p class="text-muted">${escape(this.selfServiceText('codeSent').replace('{email}', state.email))}</p>
-                <div class="form-group cell">
-                    <label for="self-service-code">${escape(this.selfServiceText('code'))}</label>
-                    <input type="text" id="self-service-code" name="code" class="form-control"
+            `<form data-role="self-service-code" class="login-form" novalidate>
+                ${this.selfServiceHeader('codeTitle', this.selfServiceEmphasis('codeSent', '{email}', state.email))}
+                <div class="login-field">
+                    <label for="self-service-code" class="login-label">${escape(this.selfServiceText('code'))}</label>
+                    <input type="text" id="self-service-code" name="code" class="form-control login-code"
                         inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\\d{6}">
                 </div>
-                <div class="margin-top-2x cell">
-                    <button type="submit" class="btn btn-primary btn-s-wide">${escape(this.selfServiceText('confirm'))}</button>
-                    <a role="button" class="btn btn-link btn-text btn-sm pull-right margin-top-sm"
-                        data-action="resend"></a>
-                </div>
-                <div class="margin-top">
-                    <a role="button" class="btn btn-link btn-text btn-sm" data-action="restart">${escape(this.selfServiceText('changeEmail'))}</a>
+                ${this.selfServiceActions('confirm')}
+                <div class="login-links">
+                    <button type="button" class="login-text-link" data-action="restart">${escape(this.selfServiceText('changeEmail'))}</button>
+                    <button type="button" class="login-text-link" data-action="resend"></button>
                 </div>
             </form>`
         );
@@ -433,13 +498,13 @@ export default class extends LoginView {
             if (remaining <= 0) {
                 clearInterval(this.selfServiceResendTimer);
                 link.textContent = this.selfServiceText('resend');
-                link.classList.remove('disabled');
+                link.disabled = false;
 
                 return;
             }
 
             link.textContent = this.selfServiceText('resendIn').replace('{seconds}', String(remaining));
-            link.classList.add('disabled');
+            link.disabled = true;
             remaining--;
         };
 
@@ -448,7 +513,7 @@ export default class extends LoginView {
     }
 
     selfServiceResend(link) {
-        if (link.classList.contains('disabled')) {
+        if (link.disabled) {
             return;
         }
 
@@ -499,10 +564,14 @@ export default class extends LoginView {
         }
 
         if (result.status === 'ready' || result.status === 'failed') {
+            const failed = result.status === 'failed';
+
             this.selfServiceRender(
-                `<h4 class="margin-bottom">${escape(this.selfServiceText(result.status === 'failed' ? 'failedTitle' : 'readyTitle'))}</h4>
-                <p class="text-muted">${escape(this.selfServiceText(result.status === 'failed' ? 'failed' : 'readyLogin'))}</p>
-                <button type="button" class="btn btn-primary btn-s-wide" data-action="showLogin">${escape(this.selfServiceText('goToLogin'))}</button>`
+                `<div class="login-form">
+                    ${this.selfServiceHeader(failed ? 'failedTitle' : 'readyTitle', escape(this.selfServiceText(failed ? 'failed' : 'readyLogin')))}
+                    <button type="button" class="login-button login-button-primary"
+                        data-action="showLogin">${escape(this.selfServiceText('goToLogin'))}</button>
+                </div>`
             );
             this.selfServiceContainer.querySelector('[data-action="showLogin"]')
                 .addEventListener('click', () => this.selfServiceShowLogin(this.selfServiceState().email));
@@ -512,9 +581,13 @@ export default class extends LoginView {
 
         if (polls === 0) {
             this.selfServiceRender(
-                `<h4 class="margin-bottom">${escape(this.selfServiceText('creating'))}</h4>
-                <p class="text-muted" data-role="creating-hint">${escape(this.selfServiceText('creatingHint'))}</p>
-                <div class="text-center margin-top-2x"><span class="fas fa-spinner fa-spin fa-2x text-muted"></span></div>`
+                `<div class="login-form">
+                    ${this.selfServiceHeader('creating')}
+                    <p class="login-status" aria-live="polite">
+                        <span class="login-spinner" aria-hidden="true"></span>
+                        <span data-role="creating-hint">${escape(this.selfServiceText('creatingHint'))}</span>
+                    </p>
+                </div>`
             );
         }
 
@@ -553,7 +626,10 @@ export default class extends LoginView {
         }, null);
     }
 
-    selfServiceError(xhr, onCode) {
+    /**
+     * @param {boolean} [inline=true] Use the error line of the step on screen.
+     */
+    selfServiceError(xhr, onCode, inline = true) {
         if (!xhr) {
             return;
         }
@@ -562,9 +638,8 @@ export default class extends LoginView {
         Espo.Ui.notify(false);
 
         const code = (xhr.responseJSON || {}).code || 'GENERIC';
-        const message = this.translate(code, 'selfServiceErrors', 'Global');
-
-        Espo.Ui.error(message === code ? this.translate('GENERIC', 'selfServiceErrors', 'Global') : message);
+        const translated = this.translate(code, 'selfServiceErrors', 'Global');
+        const message = translated === code ? this.translate('GENERIC', 'selfServiceErrors', 'Global') : translated;
 
         if (code === 'SIGNUP_NOT_FOUND') {
             sessionStorage.removeItem(STORAGE_KEY);
@@ -574,6 +649,20 @@ export default class extends LoginView {
         if (onCode) {
             onCode(code);
         }
+
+        // In the step on screen when it has an error line; otherwise (the
+        // login page) as a notice.
+        const line = !inline || this.selfServiceContainer.classList.contains('hidden') ?
+            null : this.selfServiceContainer.querySelector('.login-error');
+
+        if (!line) {
+            Espo.Ui.error(message);
+
+            return;
+        }
+
+        line.textContent = message;
+        line.hidden = false;
     }
 
     selfServiceSave(state) {
