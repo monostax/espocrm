@@ -11,7 +11,6 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Entities\User;
-use Espo\Modules\Chatwoot\Tools\Activities\Access;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Select;
@@ -20,10 +19,10 @@ use Espo\ORM\Query\SelectBuilder;
 /** "Adiar" hides a card from this user's Em dia only. The record itself is never changed. */
 class Snoozes
 {
-    public const TYPES = ['Opportunity', 'Task'];
+    public const TYPES = ['Opportunity'];
     private const MAX_DAYS = 30;
 
-    public function __construct(private EntityManager $em, private Acl $acl, private User $user, private Access $access) {}
+    public function __construct(private EntityManager $em, private Acl $acl, private User $user) {}
 
     /** IDs this user has deferred and that are still hidden. */
     public function active(string $type): Select
@@ -47,9 +46,9 @@ class Snoozes
         }
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         if ($time <= $now || $time > $now->modify('+' . self::MAX_DAYS . ' days')) throw new BadRequest('Invalid snooze time.');
-        $record = $type === 'Task' ? $this->access->record('Task', $id, $tenant) : $this->em->getEntityById($type, $id);
+        $record = $this->em->getEntityById($type, $id);
         if (!$record) throw new NotFound();
-        if (!$this->acl->checkEntityRead($record) || ($type === 'Opportunity' && $record->get('tenantId') !== $tenant->getId())) {
+        if (!$this->acl->checkEntityRead($record) || $record->get('tenantId') !== $tenant->getId()) {
             throw new Forbidden();
         }
         $value = $time->format('Y-m-d H:i:s');

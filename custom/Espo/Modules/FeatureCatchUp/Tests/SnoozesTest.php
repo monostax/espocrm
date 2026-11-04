@@ -8,7 +8,6 @@ use Espo\Core\Acl;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Entities\User;
-use Espo\Modules\Chatwoot\Tools\Activities\Access;
 use Espo\Modules\FeatureCatchUp\Services\Snoozes;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -24,11 +23,9 @@ class SnoozesTest extends TestCase
         $record->method('get')->willReturnCallback(fn ($field) => $field === 'tenantId' ? $recordTenant : null);
         $em = $this->createMock(EntityManager::class);
         $em->method('getEntityById')->willReturn($record);
-        $access = $this->createMock(Access::class);
-        $access->method('record')->willReturn($record);
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn('user-a');
-        return [new Snoozes($em, $acl, $user, $access), $em];
+        return [new Snoozes($em, $acl, $user), $em];
     }
 
     private function tenant(): Entity
@@ -54,15 +51,17 @@ class SnoozesTest extends TestCase
     public function testOnlySupportedReadableCardsCanBeSnoozed(): void
     {
         [$service] = $this->service();
-        try {
-            $service->snooze($this->tenant(), 'User', 'someone', gmdate(DATE_ATOM, strtotime('+1 day')));
-            self::fail('Accepted an unsupported type');
-        } catch (BadRequest) {
+        foreach (['User', 'Task'] as $type) {
+            try {
+                $service->snooze($this->tenant(), $type, 'someone', gmdate(DATE_ATOM, strtotime('+1 day')));
+                self::fail("Accepted $type: Em dia v2 cards are deals only");
+            } catch (BadRequest) {
+            }
         }
         [$service, $em] = $this->service(false);
         $em->expects(self::never())->method('getTransactionManager');
         $this->expectException(Forbidden::class);
-        $service->snooze($this->tenant(), 'Task', 'task', gmdate(DATE_ATOM, strtotime('+1 day')));
+        $service->snooze($this->tenant(), 'Opportunity', 'deal', gmdate(DATE_ATOM, strtotime('+1 day')));
     }
 
     public function testAnotherWorkspacesDealCannotBeSnoozed(): void

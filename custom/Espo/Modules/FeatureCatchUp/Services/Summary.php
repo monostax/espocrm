@@ -9,9 +9,30 @@ use Espo\Entities\User;
 
 class Summary
 {
-    public function __construct(private User $user) {}
+    public function __construct(private User $user, private Verdicts $verdicts) {}
 
-    /** The backend enqueues/polls Hatchet. All evidence has just passed Feed's or TaskFeed's ACL checks. */
+    /**
+     * A deal's verdict: the stored one when this revision and evidence were already judged, otherwise the
+     * backend's analysis, stored once it completes. An answer that isn't a valid verdict counts as `none`:
+     * it was paid for, and the same state is not analysed again.
+     */
+    public function analyse(array $snapshot, string $locale, ?string $requestId = null): array
+    {
+        $key = [$snapshot['id'], $snapshot['revision'], $locale, $snapshot['evidenceScope']];
+        $stored = $this->verdicts->find(...$key);
+        if ($stored) return ['status' => 'completed', 'cached' => true, ...$stored];
+        $result = $this->request($snapshot, $locale, $requestId);
+        if ($result['status'] !== 'completed') return [...$result, 'cached' => false, 'verdict' => null, 'reason' => null, 'card' => null];
+        $card = is_array($result['card'] ?? null) ? $result['card'] : null;
+        $verdict = in_array($card['verdict'] ?? null, Verdicts::VERDICTS, true) ? $card['verdict'] : 'none';
+        $reason = is_string($card['reason'] ?? null) ? $card['reason'] : 'The analysis could not be read.';
+        $card = $verdict === 'none' ? null : array_diff_key($card, ['verdict' => true, 'reason' => true]);
+        $this->verdicts->store((string) $snapshot['tenantId'], ...[...$key, $verdict, $reason, $card]);
+        return ['status' => 'completed', 'requestId' => $result['requestId'] ?? null, 'cached' => false,
+            'verdict' => $verdict, 'reason' => $reason, 'card' => $card];
+    }
+
+    /** The backend enqueues/polls Hatchet. All evidence has just passed Feed's ACL checks. */
     public function request(array $snapshot, string $locale, ?string $requestId = null): array
     {
         $secret = getenv('CATCH_UP_BACKEND_SECRET');

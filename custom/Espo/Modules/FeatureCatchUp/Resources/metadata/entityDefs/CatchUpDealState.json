@@ -1,0 +1,14 @@
+{
+    "fields": {
+        "tenantId": { "type": "varchar", "maxLength": 36 },
+        "staffUserId": { "type": "varchar", "maxLength": 36 },
+        "staffWroteAt": { "type": "datetime" },
+        "lastCustomerAt": { "type": "datetime" },
+        "lastBusinessAt": { "type": "datetime" },
+        "lastMessageAt": { "type": "datetime" },
+        "messageCount": { "type": "int", "default": 0 }
+    },
+    "indexes": {
+        "tenantStaff": { "columns": ["tenantId", "staffUserId"] }
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "fields": {
+        "opportunityId": { "type": "varchar", "maxLength": 36, "required": true },
+        "tenantId": { "type": "varchar", "maxLength": 36, "required": true },
+        "revision": { "type": "varchar", "maxLength": 64, "required": true },
+        "locale": { "type": "varchar", "maxLength": 8, "required": true },
+        "evidenceScope": { "type": "varchar", "maxLength": 64, "required": true },
+        "verdict": { "type": "varchar", "maxLength": 32, "required": true },
+        "reason": { "type": "varchar", "maxLength": 255 },
+        "card": { "type": "jsonObject" },
+        "resolvedAt": { "type": "datetime" },
+        "createdAt": { "type": "datetime", "readOnly": true }
+    },
+    "indexes": {
+        "dealRevision": { "columns": ["opportunityId", "revision", "locale", "evidenceScope"], "unique": true },
+        "tenantOpen": { "columns": ["tenantId", "resolvedAt", "createdAt"] }
+    }
+}
