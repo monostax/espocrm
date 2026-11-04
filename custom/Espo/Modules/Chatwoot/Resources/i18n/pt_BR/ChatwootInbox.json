@@ -8,7 +8,10 @@
         "remoteChannelType": "Tipo de Canal Remoto",
         "inboundEmail": "Conta de E-mail em Grupo",
         "emailAccount": "Conta de E-mail Pessoal",
-        "emailFetchOwner": "Dono do Fetch de E-mail"
+        "emailFetchOwner": "Dono do Fetch de E-mail",
+        "historyImportStatus": "Importação do histórico",
+        "historyImportPhase": "Fase da importação",
+        "historyImportProgress": "Progresso da importação (%)"
     },
     "links": {
         "accountUserMemberships": "Chat / Conta / Caixa de Entrada / Agentes",
@@ -41,6 +44,14 @@
             "": "—",
             "chatwoot": "Chatwoot",
             "crm": "CRM"
+        },
+        "historyImportStatus": {
+            "": "—",
+            "waiting": "Aguardando o WhatsApp",
+            "importing": "Importando",
+            "completed": "Concluída",
+            "declined": "Recusada pelo dono",
+            "failed": "Falhou"
         }
     },
     "tooltips": {

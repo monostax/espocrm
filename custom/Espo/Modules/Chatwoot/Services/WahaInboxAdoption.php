@@ -161,6 +161,56 @@ class WahaInboxAdoption
     }
 
     /**
+     * Bring adopted QR channels of an account up to their WAHA session status.
+     * Adoption copies the status once, so a channel adopted before its code was
+     * scanned would otherwise stay PENDING_QR/CONNECTING. Saves with hooks, so
+     * a channel becoming ACTIVE is seen like any other activation. Returns how
+     * many channels changed.
+     */
+    public function refreshAdoptedStatuses(Entity $account): int
+    {
+        $externalAccountId = (int) ($account->get('chatwootAccountId') ?? 0);
+
+        if ($externalAccountId <= 0) {
+            return 0;
+        }
+
+        $channels = $this->entityManager
+            ->getRDBRepository(ChatwootInboxIntegration::ENTITY_TYPE)
+            ->where([
+                'chatwootAccountId' => $account->getId(),
+                'channelType' => ChatwootInboxIntegration::CHANNEL_TYPE_WHATSAPP_QRCODE,
+                'status!=' => ChatwootInboxIntegration::STATUS_ACTIVE,
+                'chatwootInboxId!=' => null,
+                'wahaSessionName!=' => null,
+            ])
+            ->find();
+
+        $changed = 0;
+
+        foreach ($channels as $channel) {
+            $session = $this->resolveSession($externalAccountId, (int) $channel->get('chatwootInboxId'));
+
+            if (!$session || $session['sessionName'] !== $channel->get('wahaSessionName') ||
+                $session['status'] === $channel->get('status')) {
+                continue;
+            }
+
+            $channel->set('status', $session['status']);
+
+            if ($session['status'] === ChatwootInboxIntegration::STATUS_ACTIVE) {
+                $channel->set('connectedAt', date('Y-m-d H:i:s'));
+                $channel->set('phoneNumber', $channel->get('phoneNumber') ?: $session['phoneNumber']);
+            }
+
+            $this->entityManager->saveEntity($channel, ['silent' => true]);
+            $changed++;
+        }
+
+        return $changed;
+    }
+
+    /**
      * Find a live channel that already owns this phone number.
      *
      * Two independent lookups, because neither alone is sufficient:

@@ -18,6 +18,7 @@ use Espo\Core\Utils\Log;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ChatwootAccountMembershipOrchestrator;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
+use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
 use Espo\Modules\Global\Tools\Tenant\TenantAdminTeamProvisioner;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -25,8 +26,8 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Creates a self-service workspace: Tenant (with its base and admin teams),
- * the trial AI cap, the owner's tenant membership and admin team, the
+ * Creates a self-service workspace: Tenant (with its base and admin teams,
+ * on an Advanced trial waiting for its first WhatsApp channel), the trial AI cap, the owner's tenant membership and admin team, the
  * ChatwootAccount, and the owner's Chatwoot administrator membership.
  *
  * Progress lives in one SelfServiceProvisioning record:
@@ -246,6 +247,7 @@ class Provisioner
                     'slug' => $slug,
                     'language' => $input['language'],
                     'timeZone' => $input['timeZone'],
+                    ...WorkspaceTrial::initialValues(),
                 ]);
             } catch (Throwable $e) {
                 // Inserted before a hook failed: continue with it. Not inserted:
@@ -259,6 +261,12 @@ class Provisioner
                     throw $e;
                 }
             }
+        }
+
+        // A tenant created before the trial fields existed gets them now.
+        if (!$tenant->get('plan')) {
+            $tenant->set(WorkspaceTrial::initialValues());
+            $this->entityManager->saveEntity($tenant, ['silent' => true]);
         }
 
         if (!$tenant->get('baseUserTeamId')) {

@@ -4,7 +4,8 @@
         "apiKey": "API Key",
         "conciergeUser": "Chat / User (Concierge)",
         "teams": "Chat / Account / Teams",
-        "tenant": "Tenant"
+        "tenant": "Tenant",
+        "conversationBackfillPage": "Conversation backfill page"
     },
     "links": {
         "conciergeUser": "Chat / User (Concierge)",
@@ -27,7 +28,8 @@
     "tooltips": {
         "apiKey": "Account-level API token from Chat. Automatically populated when a concierge user is created. Required for contact synchronization. Can be manually set from: Chat → Profile Settings → Access Token.",
         "conciergeUser": "The chat user entity representing the concierge user for this account. Used for API operations.",
-        "tenant": "Tenant that owns this account. Auto-resolved from the account's team when its team is the tenant's base team. Set explicitly to override."
+        "tenant": "Tenant that owns this account. Auto-resolved from the account's team when its team is the tenant's base team. Set explicitly to override.",
+        "conversationBackfillPage": "Set when a WhatsApp history import delivers older chats: the next Chatwoot page the conversation sync reads to bring every conversation into the CRM. Empty when nothing is pending."
     },
     "messages": {
         "typeToConfirmValueInstruction": "Type {value} to confirm deletion.",

@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "plan": "Plan",
+        "subscriptionStatus": "Subscription status",
+        "onboardingStep": "Onboarding step",
+        "channelConnectedAt": "First channel connected at",
+        "trialStartsAt": "Trial starts at",
+        "trialEndsAt": "Trial ends at",
+        "frozenAt": "Frozen at"
+    },
+    "options": {
+        "plan": {
+            "": "—",
+            "basic": "Basic",
+            "advanced": "Advanced",
+            "professional": "Professional"
+        },
+        "subscriptionStatus": {
+            "": "—",
+            "trial": "Trial",
+            "active": "Active",
+            "pastDue": "Past due",
+            "frozen": "Frozen"
+        },
+        "onboardingStep": {
+            "": "—",
+            "connectWhatsapp": "Connect WhatsApp",
+            "done": "Done"
+        }
+    }
+}

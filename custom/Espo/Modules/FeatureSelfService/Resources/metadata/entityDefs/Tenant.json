@@ -1,0 +1,35 @@
+{
+    "fields": {
+        "plan": {
+            "type": "enum",
+            "options": ["", "basic", "advanced", "professional"],
+            "default": "",
+            "readOnly": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true
+        },
+        "subscriptionStatus": {
+            "type": "enum",
+            "options": ["", "trial", "active", "pastDue", "frozen"],
+            "default": "",
+            "readOnly": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true
+        },
+        "onboardingStep": {
+            "type": "enum",
+            "options": ["", "connectWhatsapp", "done"],
+            "default": "",
+            "readOnly": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true
+        },
+        "channelConnectedAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
+        "trialStartsAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
+        "trialEndsAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true },
+        "frozenAt": { "type": "datetime", "readOnly": true, "customizationDisabled": true }
+    }
+}

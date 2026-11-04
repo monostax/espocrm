@@ -20,6 +20,7 @@ use Espo\Modules\Chatwoot\Tools\ContactReconciler;
 class SyncConversationsFromChatwoot implements JobDataLess
 {
     private const MAX_PAGES_PER_RUN = 50;
+    private const MAX_BACKFILL_PAGES_PER_RUN = 20;
     private const PAGE_SIZE = 25; // Chatwoot conversations API page size
 
     /**
@@ -142,6 +143,11 @@ class SyncConversationsFromChatwoot implements JobDataLess
             if ($result['newCursor'] !== null) {
                 $account->set('conversationSyncCursor', $result['newCursor']);
             }
+            // A first sync that ran out of pages: the cursor now points at the
+            // newest thread, so the older pages go to the backfill.
+            if ($cursor === null && $result['hasMore'] && !(int) $account->get('conversationBackfillPage')) {
+                $account->set('conversationBackfillPage', $result['nextPage']);
+            }
             $this->entityManager->saveEntity($account, ['silent' => true]);
 
             $this->log->debug(
@@ -161,11 +167,66 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 );
             }
 
+            $this->backfillConversations($account, $platformUrl, $apiKey, $chatwootAccountId, $teamId, $tenantId, $teamsIds);
+
         } catch (\Exception $e) {
             $this->log->error(
                 "Chatwoot conversation sync failed for account {$accountName}: " . $e->getMessage()
             );
         }
+    }
+
+    /**
+     * Read every conversation of the account, a few pages per run, when a
+     * WhatsApp history import asked for it (see SyncInboxesFromChatwoot). The
+     * incremental cursor is left alone. Pages are ordered by last activity, so
+     * live traffic only shifts threads to later pages: some are read twice,
+     * none are skipped.
+     *
+     * @param array<string> $teamsIds
+     */
+    private function backfillConversations(
+        Entity $account,
+        string $platformUrl,
+        string $apiKey,
+        int $chatwootAccountId,
+        ?string $teamId,
+        ?string $tenantId,
+        array $teamsIds
+    ): void {
+        $page = (int) $account->get('conversationBackfillPage');
+
+        if ($page <= 0) {
+            return;
+        }
+
+        $result = $this->syncConversations(
+            $platformUrl,
+            $apiKey,
+            $chatwootAccountId,
+            $account->getId(),
+            null,
+            $teamId,
+            $tenantId,
+            $teamsIds,
+            $page,
+            self::MAX_BACKFILL_PAGES_PER_RUN
+        );
+
+        // Compare-and-set: a new request (page 1) made meanwhile wins.
+        $this->entityManager->getQueryExecutor()->execute(
+            $this->entityManager->getQueryBuilder()
+                ->update()
+                ->in('ChatwootAccount')
+                ->set(['conversationBackfillPage' => $result['hasMore'] ? $result['nextPage'] : null])
+                ->where(['id' => $account->getId(), 'conversationBackfillPage' => $page])
+                ->build()
+        );
+
+        $this->log->info(
+            "SyncConversationsFromChatwoot: backfill of account {$account->get('name')} from page {$page} - " .
+            "{$result['synced']} synced" . ($result['hasMore'] ? ", continues at page {$result['nextPage']}" : ', done')
+        );
     }
 
     /**
@@ -177,7 +238,8 @@ class SyncConversationsFromChatwoot implements JobDataLess
      * @param string $espoAccountId
      * @param int|null $cursor Unix timestamp of last synced conversation's last_activity_at
      * @param string|null $teamId Team ID to assign to synced entities
-     * @return array{synced: int, skipped: int, errors: int, newCursor: int|null, hasMore: bool}
+     * @param int $startPage First page to read (backfill resumes mid-way)
+     * @return array{synced: int, skipped: int, errors: int, newCursor: int|null, hasMore: bool, nextPage: int|null}
      */
     private function syncConversations(
         string $platformUrl,
@@ -187,10 +249,12 @@ class SyncConversationsFromChatwoot implements JobDataLess
         ?int $cursor = null,
         ?string $teamId = null,
         ?string $tenantId = null,
-        array $teamsIds = []
+        array $teamsIds = [],
+        int $startPage = 1,
+        int $maxPages = self::MAX_PAGES_PER_RUN
     ): array {
-        $stats = ['synced' => 0, 'skipped' => 0, 'errors' => 0, 'newCursor' => $cursor, 'hasMore' => false];
-        $page = 1;
+        $stats = ['synced' => 0, 'skipped' => 0, 'errors' => 0, 'newCursor' => $cursor, 'hasMore' => false, 'nextPage' => null];
+        $page = max(1, $startPage);
         $pagesProcessed = 0;
         $maxLastActivityAt = $cursor;
 
@@ -268,8 +332,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $hasMorePages = $page <= $totalPages;
 
             // Stop if we've processed enough pages this run (prevent timeout)
-            if ($pagesProcessed >= self::MAX_PAGES_PER_RUN) {
+            if ($pagesProcessed >= $maxPages) {
                 $stats['hasMore'] = $hasMorePages;
+                $stats['nextPage'] = $hasMorePages ? $page : null;
                 break;
             }
 

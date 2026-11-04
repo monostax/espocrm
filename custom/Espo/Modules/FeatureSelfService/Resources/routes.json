@@ -6,5 +6,7 @@
     {"route": "/SelfService/signup/:id/status", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "status"}},
     {"route": "/SelfService/oauth/start", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "oauthStart"}},
     {"route": "/SelfService/oauth/finish", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "oauthFinish"}},
-    {"route": "/SelfService/oauth/complete", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "oauthComplete"}}
+    {"route": "/SelfService/oauth/complete", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "oauthComplete"}},
+    {"route": "/SelfService/workspace", "method": "get", "params": {"controller": "SelfServiceWorkspace", "action": "state"}},
+    {"route": "/SelfService/workspace/refresh", "method": "post", "params": {"controller": "SelfServiceWorkspace", "action": "refresh"}}
 ]

@@ -9,7 +9,10 @@
         "remoteChannelType": "Remote Channel Type",
         "inboundEmail": "Group Email Account",
         "emailAccount": "Personal Email Account",
-        "emailFetchOwner": "Email Fetch Owner"
+        "emailFetchOwner": "Email Fetch Owner",
+        "historyImportStatus": "History import",
+        "historyImportPhase": "History import phase",
+        "historyImportProgress": "History import progress (%)"
     },
     "links": {
         "accountUserMemberships": "Chat / Inbox / Agents",
@@ -23,6 +26,14 @@
             "": "—",
             "chatwoot": "Chatwoot",
             "crm": "CRM"
+        },
+        "historyImportStatus": {
+            "": "—",
+            "waiting": "Waiting for WhatsApp",
+            "importing": "Importing",
+            "completed": "Completed",
+            "declined": "Declined by the owner",
+            "failed": "Failed"
         }
     },
     "labels": {

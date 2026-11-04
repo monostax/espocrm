@@ -23,7 +23,8 @@ $lock = fopen($stateFile . '.lock', 'c');
 flock($lock, LOCK_EX);
 
 $state = is_file($stateFile) ? json_decode((string) file_get_contents($stateFile), true) : null;
-$state ??= ['nextId' => 100, 'accounts' => [], 'users' => [], 'accountUsers' => [], 'calls' => [], 'faults' => []];
+$fresh = ['nextId' => 100, 'accounts' => [], 'users' => [], 'accountUsers' => [], 'calls' => [], 'faults' => []];
+$state ??= $fresh;
 
 $reply = function (int $status, array $payload) use (&$state, $stateFile, $lock): never {
     file_put_contents($stateFile, json_encode($state));
@@ -39,11 +40,19 @@ if ($path === '/__calls') {
 }
 
 if ($path === '/__reset') {
-    $state = null;
-    @unlink($stateFile);
-    flock($lock, LOCK_UN);
-    echo '{}';
-    exit;
+    // Ids keep counting: records from earlier tests still point at them.
+    $state = ['nextId' => $state['nextId']] + $fresh;
+    $reply(200, []);
+}
+
+// Seeds an account's inboxes and conversations: {accountId, inboxes?, conversations?}.
+if ($path === '/__seed') {
+    foreach (['inboxes', 'conversations'] as $kind) {
+        if (isset($body[$kind])) {
+            $state[$kind][(string) $body['accountId']] = $body[$kind];
+        }
+    }
+    $reply(200, []);
 }
 
 if ($path === '/__fault') {
@@ -158,6 +167,27 @@ if ($path === '/oauth/token' && $method === 'POST') {
     $claims
         ? $finish(200, ['access_token' => 'access', 'id_token' => $encode(['alg' => 'RS256']) . '.' . $encode($claims) . '.signature'])
         : $finish(400, ['error' => 'invalid_grant']);
+}
+
+if (preg_match('#^/api/v1/accounts/(\d+)/inboxes$#', $path, $m) && $method === 'GET') {
+    $finish(200, ['payload' => $state['inboxes'][$m[1]] ?? []]);
+}
+
+// Like Chatwoot: newest activity first, 25 a page, optional last_activity_at filter.
+if (preg_match('#^/api/v1/accounts/(\d+)/conversations/filter$#', $path, $m) && $method === 'POST') {
+    $conversations = $state['conversations'][$m[1]] ?? [];
+    foreach ($body['payload'] ?? [] as $filter) {
+        if (($filter['attribute_key'] ?? '') === 'last_activity_at') {
+            $after = strtotime((string) $filter['values'][0] . ' UTC');
+            $conversations = array_values(array_filter($conversations, fn ($c) => $c['last_activity_at'] > $after));
+        }
+    }
+    usort($conversations, fn ($a, $b) => $b['last_activity_at'] <=> $a['last_activity_at']);
+    $page = max(1, (int) ($_GET['page'] ?? 1));
+    $finish(200, [
+        'meta' => ['all_count' => count($conversations)],
+        'payload' => array_slice($conversations, ($page - 1) * 25, 25),
+    ]);
 }
 
 // Account API calls made after the account exists (webhooks, profile, ...).

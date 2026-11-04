@@ -1,0 +1,31 @@
+{
+    "fields": {
+        "plan": "Plano",
+        "subscriptionStatus": "Situação da assinatura",
+        "onboardingStep": "Etapa de onboarding",
+        "channelConnectedAt": "Primeiro canal conectado em",
+        "trialStartsAt": "Teste começa em",
+        "trialEndsAt": "Teste termina em",
+        "frozenAt": "Congelado em"
+    },
+    "options": {
+        "plan": {
+            "": "—",
+            "basic": "Basic",
+            "advanced": "Advanced",
+            "professional": "Professional"
+        },
+        "subscriptionStatus": {
+            "": "—",
+            "trial": "Teste",
+            "active": "Ativa",
+            "pastDue": "Em atraso",
+            "frozen": "Congelada"
+        },
+        "onboardingStep": {
+            "": "—",
+            "connectWhatsapp": "Conectar WhatsApp",
+            "done": "Concluída"
+        }
+    }
+}

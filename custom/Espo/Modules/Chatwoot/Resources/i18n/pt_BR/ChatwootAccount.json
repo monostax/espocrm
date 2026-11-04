@@ -14,7 +14,8 @@
         "lastConversationSyncAt": "Último Sync de Conversas",
         "conciergeUser": "Usuário (Concierge)",
         "apiKey": "Chave API da Conta",
-        "tenant": "Ambiente"
+        "tenant": "Ambiente",
+        "conversationBackfillPage": "Página de recuperação de conversas"
     },
     "links": {
         "conciergeUser": "Usuário (Concierge)",
@@ -77,7 +78,8 @@
         "chatwootAccountId": "ID da conta criada no Chat. Este campo é preenchido automaticamente após a criação.",
         "conciergeUser": "O usuário da plataforma de chat que representa o usuário concierge para esta conta. Usado para operações de API.",
         "apiKey": "Token de API da conta do Chat. Preenchido automaticamente quando um usuário concierge é criado. Necessário para sincronização de contatos. Pode ser definido manualmente em: Chat → Configurações de Perfil → Token de Acesso.",
-        "tenant": "Ambiente dono desta conta. Resolvido automaticamente a partir do time da conta quando este é o time base do ambiente. Defina manualmente para sobrescrever."
+        "tenant": "Ambiente dono desta conta. Resolvido automaticamente a partir do time da conta quando este é o time base do ambiente. Defina manualmente para sobrescrever.",
+        "conversationBackfillPage": "Definida quando a importação do histórico do WhatsApp entrega conversas antigas: a próxima página do Chatwoot que a sincronização lê para trazer todas as conversas ao CRM. Vazia quando não há nada pendente."
     },
     "messages": {
         "typeToConfirmValueInstruction": "Digite {value} para confirmar a exclusao.",

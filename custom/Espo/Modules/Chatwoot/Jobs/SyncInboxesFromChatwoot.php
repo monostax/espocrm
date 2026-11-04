@@ -68,9 +68,11 @@ class SyncInboxesFromChatwoot implements JobDataLess
     }
 
     /**
-     * Sync inboxes for a single ChatwootAccount.
+     * Sync inboxes for a single ChatwootAccount. Also run by self-service
+     * onboarding to adopt a just-connected WhatsApp inbox without waiting for
+     * the next minute.
      */
-    private function syncAccountInboxes(Entity $account): void
+    public function syncAccountInboxes(Entity $account): void
     {
         $accountName = $account->get('name');
 
@@ -413,6 +415,7 @@ class SyncInboxesFromChatwoot implements JobDataLess
         $inbox->set('avatarUrl', $chatwootInbox['avatar_url'] ?? null);
         $inbox->set('inboxIdentifier', $chatwootInbox['inbox_identifier'] ?? null);
         $inbox->set('lastSyncedAt', date('Y-m-d H:i:s'));
+        $this->trackHistoryImport($inbox, $chatwootInbox);
 
         // Auto-link to ChatwootInboxIntegration when the inbox has no usable
         // channel. A dangling link counts as unlinked: the referenced channel
@@ -432,6 +435,51 @@ class SyncInboxesFromChatwoot implements JobDataLess
         }
 
         $this->entityManager->saveEntity($inbox, ['silent' => true]);
+    }
+
+    /**
+     * Mirror the WhatsApp history import (Meta coexistence) and, when a new
+     * phase lands or it completes, ask the conversation sync for a backfill:
+     * Meta sends older chats later, with past activity dates the incremental
+     * sync skips.
+     */
+    private function trackHistoryImport(Entity $inbox, array $chatwootInbox): void
+    {
+        $state = $chatwootInbox['history_import'] ?? null;
+
+        if (!is_array($state) || empty($state['status'])) {
+            return;
+        }
+
+        $status = (string) $state['status'];
+        $phase = (int) ($state['phase'] ?? 0);
+        $landed = in_array($status, ['importing', 'completed'], true) && (
+            $inbox->get('historyImportStatus') !== $status ||
+            (int) $inbox->get('historyImportPhase') !== $phase
+        );
+
+        $inbox->set([
+            'historyImportStatus' => $status,
+            'historyImportPhase' => $phase,
+            'historyImportProgress' => (int) ($state['progress'] ?? 0),
+        ]);
+
+        if ($landed && $inbox->get('chatwootAccountId')) {
+            // A plain update: the conversation sync advances this page with a
+            // compare-and-set, and account hooks have nothing to do here.
+            $this->entityManager->getQueryExecutor()->execute(
+                $this->entityManager->getQueryBuilder()
+                    ->update()
+                    ->in('ChatwootAccount')
+                    ->set(['conversationBackfillPage' => 1])
+                    ->where(['id' => $inbox->get('chatwootAccountId')])
+                    ->build()
+            );
+            $this->log->info(
+                "SyncInboxesFromChatwoot: history import of inbox {$inbox->get('chatwootInboxId')} is {$status} " .
+                "(phase {$phase}); conversation backfill requested."
+            );
+        }
     }
 
     /**
@@ -469,8 +517,12 @@ class SyncInboxesFromChatwoot implements JobDataLess
             $data['teamsIds'] = $teamsIds;
         }
 
-        /** @var Entity */
-        return $this->entityManager->createEntity('ChatwootInbox', $data, ['silent' => true]);
+        $inbox = $this->entityManager->getNewEntity('ChatwootInbox');
+        $inbox->set($data);
+        $this->trackHistoryImport($inbox, $chatwootInbox);
+        $this->entityManager->saveEntity($inbox, ['silent' => true]);
+
+        return $inbox;
     }
 
     /**

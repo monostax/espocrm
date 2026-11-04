@@ -85,6 +85,20 @@
             "maxLength": 255,
             "tooltip": true
         },
+        "historyImportStatus": {
+            "type": "enum",
+            "options": ["", "waiting", "importing", "completed", "declined", "failed"],
+            "default": "",
+            "readOnly": true
+        },
+        "historyImportPhase": {
+            "type": "int",
+            "readOnly": true
+        },
+        "historyImportProgress": {
+            "type": "int",
+            "readOnly": true
+        },
         "lastSyncedAt": {
             "type": "datetime",
             "readOnly": true

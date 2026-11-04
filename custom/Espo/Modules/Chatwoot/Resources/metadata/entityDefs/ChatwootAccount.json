@@ -72,6 +72,11 @@
             "readOnly": true,
             "tooltip": true
         },
+        "conversationBackfillPage": {
+            "type": "int",
+            "readOnly": true,
+            "tooltip": true
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true
