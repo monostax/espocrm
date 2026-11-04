@@ -6,7 +6,8 @@
         "whatsappNumber3": "Número de WhatsApp 3",
         "whatsappNumber4": "Número de WhatsApp 4",
         "instagramHandle": "Usuário do Instagram",
-        "callOptedOut": "Não Perturbe (Opt-out de Ligações)"
+        "callOptedOut": "Não Perturbe (Opt-out de Ligações)",
+        "hasLinkedin": "Tem LinkedIn"
     },
     "messages": {
         "channelIdentityConflict": "A identidade de {channelType} \"{sourceId}\" já pertence a outro contato.",

@@ -20,6 +20,7 @@ class AccountInbox extends ContactInbox
         'billingAddressStreet', 'billingAddressCity', 'billingAddressState', 'billingAddressCountry', 'billingAddressPostalCode',
         'shippingAddressStreet', 'shippingAddressCity', 'shippingAddressState', 'shippingAddressCountry', 'shippingAddressPostalCode',
         'description', 'customFields', 'crmTags', 'createdAt', 'modifiedAt', 'createdBy',
+        'sociosEnrichedAt', 'sociosEnrichmentResult',
     ];
     protected const EDIT_FIELDS = [
         'cnpj',

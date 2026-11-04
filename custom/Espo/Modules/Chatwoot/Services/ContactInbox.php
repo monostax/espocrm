@@ -39,7 +39,8 @@ class ContactInbox
     protected const FIELDS = [
         'name', 'firstName', 'lastName', 'title', 'jobLevel', 'account', 'assignedUser', 'teams', 'tags', 'crmTags', 'source',
         'emailAddress', 'phoneNumber', 'cpf', 'dateOfBirth', 'dataNascimento', 'channelIdentitiesData', 'description', 'customFields',
-        'createdAt', 'modifiedAt', 'createdBy',
+        'createdAt', 'modifiedAt', 'createdBy', 'hasLinkedin',
+        'emailEnrichedAt', 'emailEnrichmentResult', 'phoneEnrichedAt', 'phoneEnrichmentResult',
     ];
 
     public function __construct(
@@ -229,7 +230,7 @@ class ContactInbox
         $fields = [];
         foreach (static::FIELDS as $name) {
             if (in_array($name, ['cpf', 'cnpj'], true) && $billing?->get('billingCountry') !== 'BR') continue;
-            if ($name === 'channelIdentitiesData' && !$this->acl->checkScope('ContactChannelIdentity', 'read')) continue;
+            if (in_array($name, ['channelIdentitiesData', 'hasLinkedin'], true) && !$this->acl->checkScope('ContactChannelIdentity', 'read')) continue;
             if (!$this->acl->checkField(static::ENTITY_TYPE, $name)) continue;
             $def = $this->metadata->get(['entityDefs', static::ENTITY_TYPE, 'fields', $name]);
             if (!$def) continue;

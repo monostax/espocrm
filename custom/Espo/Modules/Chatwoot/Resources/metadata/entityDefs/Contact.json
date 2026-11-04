@@ -92,6 +92,19 @@
             "layoutFiltersDisabled": true,
             "dynamicLogicDisabled": true,
             "tooltip": "Write-only helper for CSV import and API. Creates/updates an Instagram channel identity for the contact. The @ prefix is stripped."
+        },
+        "hasLinkedin": {
+            "type": "bool",
+            "notStorable": true,
+            "readOnly": true,
+            "orderDisabled": true,
+            "importDisabled": true,
+            "notExportable": true,
+            "layoutListDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutDefaultSidePanelDisabled": true,
+            "customizationDisabled": true
         }
     },
     "links": {
@@ -145,4 +158,3 @@
         ]
     }
 }
-

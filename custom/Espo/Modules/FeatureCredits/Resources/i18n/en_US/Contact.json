@@ -1,5 +1,19 @@
 {
     "fields": {
-        "dateOfBirth": "Date of Birth"
+        "dateOfBirth": "Date of Birth",
+        "emailEnrichedAt": "Email enriched at",
+        "emailEnrichmentResult": "Email enrichment result",
+        "phoneEnrichedAt": "Phone enriched at",
+        "phoneEnrichmentResult": "Phone enrichment result"
+    },
+    "options": {
+        "emailEnrichmentResult": {
+            "found": "Found",
+            "not_found": "Nothing found"
+        },
+        "phoneEnrichmentResult": {
+            "found": "Found",
+            "not_found": "Nothing found"
+        }
     }
 }
