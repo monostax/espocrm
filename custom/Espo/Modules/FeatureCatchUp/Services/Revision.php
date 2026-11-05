@@ -19,7 +19,8 @@ final class Revision
     /** Where the conversation is read from; bumping it has every deal judged again. 2: Chatwoot, not the CRM copy that lost messages. */
     public const EVIDENCE_VERSION = '2';
 
-    private const QUIET_STEPS = [1, 2, 4, 7, 14, 30, 60];
+    /** Silence re-judges a deal at these days; 30 is the last check (decided 2026-11-05: older history rarely matters). */
+    private const QUIET_STEPS = [1, 2, 4, 7, 14, 30];
 
     /**
      * @param ?array<string, mixed> $state CatchUpDealState row

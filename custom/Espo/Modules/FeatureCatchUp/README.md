@@ -20,7 +20,7 @@ The last staff writer and who spoke last live in `CatchUpDealState` (one row per
 
 ## How the deck loads
 
-1. `GET /CatchUp` returns candidates: open deals with a linked conversation in the reader's deck, not snoozed, quiet for at least 30 minutes (`Feed::SETTLE_MINUTES`; a conversation still moving is analysed once it settles), ordered without scanning messages (customer waiting first, then quiet past 2 days, then moving, then quiet 30+ and 60+ days). Deals already judged `none` at their current revision are dropped, so a page can be short.
+1. `GET /CatchUp` returns candidates: open deals with a linked conversation in the reader's deck, not snoozed, quiet for at least 30 minutes (`Feed::SETTLE_MINUTES`; a conversation still moving is analysed once it settles), ordered without scanning messages (customer waiting first, then quiet past 2 days, then moving, then quiet 30+ days). A deal quiet for over 45 days (`Feed::DORMANT_DAYS`) has had its last check and is left out until a message moves it. Deals already judged `none` at their current revision are dropped, so a page can be short.
 2. `GET /CatchUp/:id` builds the snapshot: both directions of every linked conversation, read from Chatwoot's messages API by `Transcript` (each labeled customer, ai, staff, outside or internal), plus the deal's Posts, the facts, the revision and the review token. Times are in the reader's time zone, with the offset. The CRM's `ChatwootMessage` copy is not used for evidence: its sync stores only each conversation's last message at every poll, so it misses messages. A conversation is read only when the reader passes the `ChatwootMessage` ACL for it, and a conversation Chatwoot can't return fails the analysis instead of being skipped.
 **Atendimento (`ServiceFeed`, step 2 of gtm/05 §12).** Conversations of the deck's Chatwoot account with no open deal, one card per conversation, under `/CatchUpService` (list, read, summary, review, resolved, label). The access rules:
 - Candidates pass the `ChatwootConversation` strict access filter (inbox membership).
@@ -35,7 +35,7 @@ Verdicts live in `CatchUpVerdict` with `conversationId` instead of `opportunityI
 
 3. `POST /CatchUp/:id/summary` returns the stored verdict for the same revision, locale and evidence, or starts or polls the backend analysis and stores the verdict when it completes. An answer that isn't a valid verdict is stored as `none`.
 
-A **revision** (`Revision::of`) hashes the prompt and evidence versions, the stage, amount, owner, follow-up status, next step, the deal state, the newest Post and the quiet-time step (1, 2, 4, 7, 14, 30, 60 days). A verdict is reused until the revision changes. Verdicts live in `CatchUpVerdict`, shared by readers who see the same evidence.
+A **revision** (`Revision::of`) hashes the prompt and evidence versions, the stage, amount, owner, follow-up status, next step, the deal state, the newest Post and the quiet-time step (1, 2, 4, 7, 14, 30 days; 30 is the last check). A verdict is reused until the revision changes. Verdicts live in `CatchUpVerdict`, shared by readers who see the same evidence.
 
 ## Endpoints
 

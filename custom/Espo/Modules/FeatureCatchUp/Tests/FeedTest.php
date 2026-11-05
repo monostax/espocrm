@@ -129,6 +129,8 @@ class FeedTest extends TestCase
         self::assertSame([], $feed->list($this->request())['items']);
         self::assertStringContainsString('s.last_message_at <= UTC_TIMESTAMP() - INTERVAL 30 MINUTE', $queries[0],
             'a deal whose conversation had a message in the last 30 minutes is not a candidate yet');
+        self::assertStringContainsString('s.last_message_at >= UTC_TIMESTAMP() - INTERVAL 45 DAY', $queries[0],
+            'a deal quiet for over 45 days has had its last check and leaves the deck');
     }
 
     public function testReviewWithoutTheShownCardConflictsAndResolvesNothing(): void
@@ -168,6 +170,10 @@ class FeedTest extends TestCase
             'day 8 and day 13 of silence are the same step');
         self::assertNotSame($quiet('2026-10-20 10:00:00', '2026-10-21 09:00:00'), $quiet('2026-10-20 10:00:00', '2026-10-21 11:00:00'),
             'the first full day of silence is a new step');
+        self::assertNotSame($quiet('2026-10-01 10:00:00', '2026-10-30 11:00:00'), $quiet('2026-10-01 10:00:00', '2026-10-31 11:00:00'),
+            'day 30 of silence is the last check');
+        self::assertSame($quiet('2026-09-01 10:00:00', '2026-10-01 11:00:00'), $quiet('2026-09-01 10:00:00', '2026-11-01 11:00:00'),
+            'after 30 days silence no longer brings a deal back');
         self::assertSame(1, Revision::quietDays('2026-11-03 11:00:00', $now));
         self::assertNull(Revision::quietDays(null, $now));
     }

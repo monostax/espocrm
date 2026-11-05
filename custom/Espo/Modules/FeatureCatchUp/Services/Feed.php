@@ -36,6 +36,11 @@ class Feed
      * showed "customer waiting" cards for chats the team was answering.
      */
     public const SETTLE_MINUTES = 30;
+    /**
+     * A deal quiet this long has had its last check (the 30-day quiet step) and leaves the deck: 30 days plus
+     * time for a deck to reach it. It comes back when a message moves it.
+     */
+    public const DORMANT_DAYS = 45;
 
     public function __construct(
         private EntityManager $em,
@@ -150,9 +155,9 @@ class Feed
 
     /**
      * Open deals with a conversation in the reader's deck whose conversation has settled (quiet for
-     * SETTLE_MINUTES), ordered without scanning messages: the customer waiting on us first (freshest first),
-     * then gone quiet past the follow-up threshold, then still moving, then quiet for a month, then for two
-     * months or with no messages known yet.
+     * SETTLE_MINUTES) and isn't dormant (DORMANT_DAYS), ordered without scanning messages: the customer
+     * waiting on us first (freshest first), then gone quiet past the follow-up threshold, then still moving,
+     * then quiet for a month (their last check), then with no messages known yet.
      *
      * @return list<string>
      */
@@ -167,8 +172,8 @@ class Feed
             . 'AND o.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '
             . "AND z.target_type = 'Opportunity' AND z.snoozed_until > UTC_TIMESTAMP()) "
             . 'AND (s.last_message_at IS NULL OR s.last_message_at <= UTC_TIMESTAMP() - INTERVAL ' . self::SETTLE_MINUTES . ' MINUTE)' . $owner . ' '
+            . 'AND (s.last_message_at IS NULL OR s.last_message_at >= UTC_TIMESTAMP() - INTERVAL ' . self::DORMANT_DAYS . ' DAY) '
             . 'ORDER BY CASE WHEN s.last_message_at IS NULL THEN 5 '
-            . 'WHEN s.last_message_at < UTC_TIMESTAMP() - INTERVAL 60 DAY THEN 4 '
             . "WHEN $waiting AND s.last_customer_at >= UTC_TIMESTAMP() - INTERVAL 30 DAY THEN 0 "
             . 'WHEN s.last_message_at < UTC_TIMESTAMP() - INTERVAL 30 DAY THEN 3 '
             . 'WHEN s.last_message_at < UTC_TIMESTAMP() - INTERVAL ' . self::FOLLOW_UP_AFTER_DAYS . ' DAY THEN 1 ELSE 2 END, '
