@@ -55,6 +55,7 @@ class OpportunityStreamQueriesTest extends TestCase
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->pdo->sqliteCreateFunction('CONCAT', fn (...$parts) => implode('', $parts));
+        $this->pdo->sqliteCreateFunction('GREATEST', fn (...$values) => in_array(null, $values, true) ? null : max($values));
         $defs = [];
         $tables = [
             'Note' => ['id', 'parentId', 'parentType', 'type', 'relatedType', 'relatedId', 'createdById',
@@ -65,6 +66,9 @@ class OpportunityStreamQueriesTest extends TestCase
                 'isParticipant', 'isMarkedUnread', 'deleted'],
             'OpportunityThreadReadState' => ['id', 'rootNoteId', 'opportunityId', 'userId', 'lastSeenNumber', 'deleted'],
             'User' => ['id', 'firstName', 'lastName', 'deleted'],
+            'ChatwootConversationOpportunity' => ['id', 'opportunityId', 'chatwootConversationId', 'deleted'],
+            'ChatwootConversation' => ['id', 'chatwootAccountId', 'lastMessageSentAt', 'lastMessageReceivedAt', 'deleted'],
+            'ChatwootAccount' => ['id', 'tenantId', 'deleted'],
         ];
         foreach ($tables as $type => $fields) {
             $columns = [];
@@ -285,6 +289,48 @@ class OpportunityStreamQueriesTest extends TestCase
                     self::assertSame([$id], array_column($this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC), 'id'), $sql);
                 }
             }
+        }
+    }
+
+    public function testActivitySortCountsMessagesEitherWayOnlyInReadableSameTenantConversations(): void
+    {
+        $this->pdo->exec("INSERT INTO opportunity (id, tenant_id, created_at, modified_at) VALUES
+            ('replied', 'tenant', '2026-09-01 10:00:00', '2026-09-01 10:00:00'),
+            ('posted', 'tenant', '2026-09-01 10:00:00', '2026-09-01 10:00:00'),
+            ('hidden', 'tenant', '2026-09-01 10:00:00', '2026-09-01 10:00:00'),
+            ('foreign', 'tenant', '2026-09-01 10:00:00', '2026-09-01 10:00:00')");
+        $this->pdo->exec("INSERT INTO note (id, parent_id, parent_type, type, created_at, number) VALUES
+            ('replied-post', 'replied', 'Opportunity', 'Post', '2026-09-16 09:00:00', 50000),
+            ('posted-post', 'posted', 'Opportunity', 'Post', '2026-09-16 11:00:00', 50001)");
+        $this->pdo->exec("INSERT INTO chatwoot_account (id, tenant_id) VALUES ('account', 'tenant'), ('other-account', 'tenant-b')");
+        $this->pdo->exec("INSERT INTO chatwoot_conversation
+            (id, chatwoot_account_id, last_message_sent_at, last_message_received_at) VALUES
+            ('visible-conversation', 'account', '2026-09-16 12:00:00', '2026-09-16 08:00:00'),
+            ('hidden-conversation', 'account', '2026-09-16 13:00:00', NULL),
+            ('foreign-conversation', 'other-account', NULL, '2026-09-16 14:00:00')");
+        $this->pdo->exec("INSERT INTO chatwoot_conversation_opportunity (id, opportunity_id, chatwoot_conversation_id) VALUES
+            ('l1', 'replied', 'visible-conversation'),
+            ('l2', 'hidden', 'hidden-conversation'),
+            ('l3', 'foreign', 'foreign-conversation')");
+        $this->access->method('conversations')->willReturn(SelectBuilder::create()->from('ChatwootConversation')
+            ->select('id')->where(['id' => ['visible-conversation', 'foreign-conversation']])->build());
+        $applier = new StreamActivity(new LatestOpportunityEntry($this->user, $this->access));
+
+        foreach ([$this->composer, $this->pgComposer] as $composer) {
+            $builder = SelectBuilder::create()->from('Opportunity')
+                ->where(['id' => ['replied', 'posted', 'hidden', 'foreign']]);
+            $applier->apply($builder, SearchParams::fromRaw(['orderBy' => 'chatwootStreamUpdatedAt', 'order' => 'desc']));
+            $sql = $composer->composeSelect($builder->build());
+            $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+            self::assertSame(['replied', 'posted', 'foreign', 'hidden'], array_column($rows, 'id'), $sql);
+            self::assertSame([
+                'replied' => '2026-09-16 12:00:00',
+                'posted' => '2026-09-16 11:00:00',
+                'foreign' => '2026-09-01 10:00:00',
+                'hidden' => '2026-09-01 10:00:00',
+            ], array_column($rows, 'chatwootStreamUpdatedAt', 'id'));
+            self::assertSame('2026-09-16 12:00:00', $rows[0]['chatwootLastMessageAt']);
+            self::assertNull($rows[1]['chatwootLastMessageAt']);
         }
     }
 

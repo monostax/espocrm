@@ -10,7 +10,10 @@ use Espo\Modules\Chatwoot\Classes\Select\Note\LatestOpportunityEntry;
 use Espo\ORM\Query\SelectBuilder;
 use Espo\ORM\Query\Part\Expression as Expr;
 
-/** Rank by the same accessible entry as the card preview, before pagination. */
+/**
+ * Rank by the latest accessible mural entry or conversation message, before
+ * pagination. chatwootLastMessageAt lets the client re-rank as previews change.
+ */
 class StreamActivity implements AdditionalApplier
 {
     public function __construct(private LatestOpportunityEntry $latestEntry) {}
@@ -32,14 +35,29 @@ class StreamActivity implements AdditionalApplier
             Expr::equal(Expr::column('chatwootLatestEntry.deleted'), false),
         ));
 
+        $latest = Expr::column('chatwootLatestEntry.createdAt');
+        $message = Expr::value(null);
+        $messages = $this->latestEntry->latestMessages();
+        if ($messages) {
+            // The tenant match keeps a cross-tenant link from ever setting the date.
+            $queryBuilder->leftJoin($messages, 'chatwootLatestMessage', Expr::and(
+                Expr::equal(Expr::alias('chatwootLatestMessage.opportunityId'), Expr::column('id')),
+                Expr::equal(Expr::alias('chatwootLatestMessage.tenantId'), Expr::column('tenantId')),
+            ));
+            $message = Expr::alias('chatwootLatestMessage.lastMessageAt');
+            $latest = Expr::greatest(Expr::coalesce($latest, $message), Expr::coalesce($message, $latest));
+        }
+
         // Preserve the normal record projection when no explicit select was requested.
         if (!$queryBuilder->build()->getSelect()) {
             $queryBuilder->select('*');
         }
-        $date = 'COALESCE:(chatwootLatestEntry.createdAt,modifiedAt,createdAt)';
-        $queryBuilder->select($date, 'chatwootStreamUpdatedAt')->order([
-            [$date, $searchParams->getOrder() ?? 'DESC'],
-            ['id', 'ASC'],
-        ]);
+        $date = Expr::coalesce($latest, Expr::column('modifiedAt'), Expr::column('createdAt'));
+        $queryBuilder->select($date, 'chatwootStreamUpdatedAt')
+            ->select($message, 'chatwootLastMessageAt')
+            ->order([
+                [$date->getValue(), $searchParams->getOrder() ?? 'DESC'],
+                ['id', 'ASC'],
+            ]);
     }
 }

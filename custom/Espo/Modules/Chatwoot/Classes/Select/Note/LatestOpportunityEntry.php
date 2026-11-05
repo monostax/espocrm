@@ -39,4 +39,33 @@ class LatestOpportunityEntry implements Filter
         }
         return $query->build();
     }
+
+    /**
+     * Latest message either way (private notes included, system activity excluded)
+     * in each opportunity's conversations the user can read; null when none.
+     */
+    public function latestMessages(): ?Select
+    {
+        $conversations = $this->access->conversations($this->user);
+        if (!$conversations) {
+            return null;
+        }
+        $sent = Expr::column('latestConversation.lastMessageSentAt');
+        $received = Expr::column('latestConversation.lastMessageReceivedAt');
+        return SelectBuilder::create()->from('ChatwootConversationOpportunity', 'latestLink')
+            ->join('ChatwootConversation', 'latestConversation', Expr::and(
+                Expr::equal(Expr::column('latestConversation.id'), Expr::column('latestLink.chatwootConversationId')),
+                Expr::equal(Expr::column('latestConversation.deleted'), false),
+            ))
+            ->join('ChatwootAccount', 'latestAccount', Expr::and(
+                Expr::equal(Expr::column('latestAccount.id'), Expr::column('latestConversation.chatwootAccountId')),
+                Expr::equal(Expr::column('latestAccount.deleted'), false),
+            ))
+            ->select('latestLink.opportunityId', 'opportunityId')
+            ->select('latestAccount.tenantId', 'tenantId')
+            ->select(Expr::max(Expr::greatest(Expr::coalesce($sent, $received), Expr::coalesce($received, $sent))), 'lastMessageAt')
+            ->where(['latestLink.chatwootConversationId=s' => $conversations])
+            ->group(['latestLink.opportunityId', 'latestAccount.tenantId'])
+            ->build();
+    }
 }
