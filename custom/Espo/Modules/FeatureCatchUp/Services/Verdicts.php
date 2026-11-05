@@ -7,13 +7,16 @@ namespace Espo\Modules\FeatureCatchUp\Services;
 use Espo\ORM\EntityManager;
 
 /**
- * Stored analyses, one per deal revision, locale and evidence scope. Shared by every reader who can see the
- * same evidence, so a deal's owner and its admins pay for one analysis. `none` verdicts keep a quiet deal
- * out of the deck until its revision changes.
+ * Stored analyses, one per subject revision, locale and evidence scope. A subject is a deal (Negócios) or a
+ * conversation without one (Atendimento). Shared by every reader who can see the same evidence, so an owner
+ * and the admins pay for one analysis. `none` verdicts keep a quiet subject out of the deck until its
+ * revision changes.
  */
 class Verdicts
 {
-    public const VERDICTS = ['customer_waiting', 'follow_up_due', 'decided', 'next_step_missing', 'none'];
+    public const VERDICTS = ['customer_waiting', 'follow_up_due', 'decided', 'next_step_missing', 'new_deal', 'none'];
+    /** Subject type => the column holding its id. */
+    public const SUBJECTS = ['Opportunity' => 'opportunity_id', 'ChatwootConversation' => 'conversation_id'];
 
     /** A card nobody acted on stops counting for the badge after this long. */
     private const BADGE_HOURS = 24;
@@ -21,13 +24,14 @@ class Verdicts
     public function __construct(private EntityManager $em) {}
 
     /** @return ?array{verdict: string, reason: ?string, card: ?array<string, mixed>} */
-    public function find(string $opportunityId, string $revision, string $locale, string $evidenceScope): ?array
+    public function find(string $type, string $id, string $revision, string $locale, string $evidenceScope): ?array
     {
+        $column = self::column($type);
         $query = $this->em->getPDO()->prepare(
-            'SELECT verdict, reason, card FROM catch_up_verdict WHERE deleted = 0 AND opportunity_id = :id AND revision = :revision '
+            "SELECT verdict, reason, card FROM catch_up_verdict WHERE deleted = 0 AND $column = :id AND revision = :revision "
             . 'AND locale = :locale AND evidence_scope = :scope LIMIT 1'
         );
-        $query->execute(['id' => $opportunityId, 'revision' => $revision, 'locale' => $locale, 'scope' => $evidenceScope]);
+        $query->execute(['id' => $id, 'revision' => $revision, 'locale' => $locale, 'scope' => $evidenceScope]);
         $row = $query->fetch(\PDO::FETCH_ASSOC);
         if (!$row) return null;
         $card = $row['card'] ? json_decode((string) $row['card'], true) : null;
@@ -35,34 +39,37 @@ class Verdicts
     }
 
     /**
-     * Deals among $revisions (id => revision) already judged `none` at that revision, by any reader.
+     * Subjects among $revisions (id => revision) already judged `none` at that revision, by any reader.
      *
      * @param array<string, string> $revisions
      * @return array<string, true>
      */
-    public function quiet(array $revisions): array
+    public function quiet(string $type, array $revisions): array
     {
         if (!$revisions) return [];
-        $pairs = implode(' OR ', array_fill(0, count($revisions), '(opportunity_id = ? AND revision = ?)'));
+        $column = self::column($type);
+        $pairs = implode(' OR ', array_fill(0, count($revisions), "($column = ? AND revision = ?)"));
         $values = [];
         foreach ($revisions as $id => $revision) array_push($values, $id, $revision);
-        $query = $this->em->getPDO()->prepare("SELECT DISTINCT opportunity_id FROM catch_up_verdict WHERE deleted = 0 AND verdict = 'none' AND ($pairs)");
+        $query = $this->em->getPDO()->prepare("SELECT DISTINCT $column FROM catch_up_verdict WHERE deleted = 0 AND verdict = 'none' AND ($pairs)");
         $query->execute($values);
         return array_fill_keys($query->fetchAll(\PDO::FETCH_COLUMN), true);
     }
 
     /** @param ?array<string, mixed> $card */
-    public function store(string $tenantId, string $opportunityId, string $revision, string $locale, string $evidenceScope,
+    public function store(string $tenantId, string $type, string $id, string $revision, string $locale, string $evidenceScope,
         string $verdict, ?string $reason, ?array $card): void
     {
-        // Only the newest analysis of a deal for this locale and scope is ever read again.
+        $column = self::column($type);
+        // Only the newest analysis of a subject for this locale and scope is ever read again.
         $this->em->getPDO()->prepare(
-            'DELETE FROM catch_up_verdict WHERE opportunity_id = :id AND locale = :locale AND evidence_scope = :scope AND revision <> :revision'
-        )->execute(['id' => $opportunityId, 'locale' => $locale, 'scope' => $evidenceScope, 'revision' => $revision]);
-        if ($this->find($opportunityId, $revision, $locale, $evidenceScope)) return;
+            "DELETE FROM catch_up_verdict WHERE $column = :id AND locale = :locale AND evidence_scope = :scope AND revision <> :revision"
+        )->execute(['id' => $id, 'locale' => $locale, 'scope' => $evidenceScope, 'revision' => $revision]);
+        if ($this->find($type, $id, $revision, $locale, $evidenceScope)) return;
         try {
             $this->em->createEntity('CatchUpVerdict', [
-                'opportunityId' => $opportunityId, 'tenantId' => $tenantId, 'revision' => $revision, 'locale' => $locale,
+                $type === 'Opportunity' ? 'opportunityId' : 'conversationId' => $id,
+                'tenantId' => $tenantId, 'revision' => $revision, 'locale' => $locale,
                 'evidenceScope' => $evidenceScope, 'verdict' => $verdict, 'reason' => $reason !== null ? mb_substr($reason, 0, 255) : null,
                 'card' => $card !== null ? (object) $card : null,
             ]);
@@ -72,11 +79,38 @@ class Verdicts
         }
     }
 
-    /** Someone acted on the deal's card: it leaves the badge. */
-    public function resolve(string $opportunityId): void
+    /** Someone acted on the subject's card: it leaves the badge. */
+    public function resolve(string $type, string $id): void
     {
-        $this->em->getPDO()->prepare('UPDATE catch_up_verdict SET resolved_at = UTC_TIMESTAMP() WHERE opportunity_id = :id AND resolved_at IS NULL')
-            ->execute(['id' => $opportunityId]);
+        $column = self::column($type);
+        $this->em->getPDO()->prepare("UPDATE catch_up_verdict SET resolved_at = UTC_TIMESTAMP() WHERE $column = :id AND resolved_at IS NULL")
+            ->execute(['id' => $id]);
+    }
+
+    /**
+     * Atendimento cards from the last day nobody acted on, for conversations of this account still without an
+     * open deal, in the reader's deck and not overtaken by a message. Returns a number only.
+     */
+    public function countConversations(string $tenantId, string $accountId, string $ownerSql, array $ownerParams, string $userId): int
+    {
+        $query = $this->em->getPDO()->prepare(
+            'SELECT COUNT(DISTINCT v.conversation_id) FROM catch_up_verdict v '
+            . 'JOIN chatwoot_conversation c ON c.id = v.conversation_id AND c.deleted = 0 AND c.chatwoot_account_id = :account '
+            . 'JOIN chatwoot_account a ON a.id = c.chatwoot_account_id '
+            . "WHERE v.deleted = 0 AND v.tenant_id = :tenant AND v.verdict <> 'none' AND v.resolved_at IS NULL "
+            . 'AND v.created_at >= UTC_TIMESTAMP() - INTERVAL ' . self::BADGE_HOURS . ' HOUR '
+            . 'AND (c.last_activity_at IS NULL OR c.last_activity_at <= v.created_at) '
+            . 'AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
+            . "AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user "
+            . "AND z.target_type = 'ChatwootConversation' AND z.snoozed_until > UTC_TIMESTAMP())" . $ownerSql
+        );
+        $query->execute(['tenant' => $tenantId, 'account' => $accountId, 'user' => $userId, ...$ownerParams]);
+        return (int) $query->fetchColumn();
+    }
+
+    private static function column(string $type): string
+    {
+        return self::SUBJECTS[$type] ?? throw new \InvalidArgumentException("Unsupported Em dia subject: $type");
     }
 
     /**

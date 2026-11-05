@@ -15,7 +15,7 @@ use Espo\ORM\Entity;
 final class Revision
 {
     /** Keep in step with the backend's CATCH_UP_PROMPT_VERSION; bumping it has every deal judged again. */
-    public const PROMPT_VERSION = '6';
+    public const PROMPT_VERSION = '7';
     /** Where the conversation is read from; bumping it has every deal judged again. 2: Chatwoot, not the CRM copy that lost messages. */
     public const EVIDENCE_VERSION = '2';
 
@@ -34,6 +34,20 @@ final class Revision
             $state ? [$state['last_message_at'], (int) $state['message_count'], $state['staff_user_id']] : null,
             $lastPostAt,
             self::quietStep(self::quietDays($state['last_message_at'] ?? null, $now)),
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * A conversation without a deal (Atendimento): its activity, who spoke last, its message count and
+     * assignee, and the same quiet-time steps as a deal.
+     */
+    public static function ofConversation(Entity $conversation, DateTimeImmutable $now): string
+    {
+        return hash('sha256', json_encode([
+            self::PROMPT_VERSION, self::EVIDENCE_VERSION, 'conversation',
+            $conversation->get('lastActivityAt'), $conversation->get('lastMessageReceivedAt'), $conversation->get('lastMessageSentAt'),
+            (int) $conversation->get('messagesCount'), $conversation->get('assigneeId'),
+            self::quietStep(self::quietDays($conversation->get('lastActivityAt'), $now)),
         ], JSON_THROW_ON_ERROR));
     }
 

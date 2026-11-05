@@ -1,0 +1,12 @@
+{
+    "fields": {
+        "tenantId": { "type": "varchar", "maxLength": 36, "required": true },
+        "chatwootAccountId": { "type": "varchar", "maxLength": 36, "required": true },
+        "chatwootContactId": { "type": "int", "required": true },
+        "partyClass": { "type": "varchar", "maxLength": 16 },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "indexes": {
+        "accountContact": { "columns": ["chatwootAccountId", "chatwootContactId"], "unique": true }
+    }
+}

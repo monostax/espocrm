@@ -1,6 +1,7 @@
 {
     "fields": {
-        "opportunityId": { "type": "varchar", "maxLength": 36, "required": true },
+        "opportunityId": { "type": "varchar", "maxLength": 36 },
+        "conversationId": { "type": "varchar", "maxLength": 36 },
         "tenantId": { "type": "varchar", "maxLength": 36, "required": true },
         "revision": { "type": "varchar", "maxLength": 64, "required": true },
         "locale": { "type": "varchar", "maxLength": 8, "required": true },
@@ -13,6 +14,7 @@
     },
     "indexes": {
         "dealRevision": { "columns": ["opportunityId", "revision", "locale", "evidenceScope"], "unique": true },
+        "conversationRevision": { "columns": ["conversationId", "revision", "locale", "evidenceScope"], "unique": true },
         "tenantOpen": { "columns": ["tenantId", "resolvedAt", "createdAt"] }
     }
 }

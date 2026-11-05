@@ -9,6 +9,9 @@ use Espo\Entities\User;
 
 class Summary
 {
+    private const DEAL_VERDICTS = ['customer_waiting', 'follow_up_due', 'decided', 'next_step_missing', 'none'];
+    private const CONVERSATION_VERDICTS = ['customer_waiting', 'follow_up_due', 'new_deal', 'none'];
+
     public function __construct(private User $user, private Verdicts $verdicts, private Parties $parties) {}
 
     /**
@@ -20,20 +23,32 @@ class Summary
      */
     public function analyse(array $snapshot, string $locale, ?string $requestId = null): array
     {
-        $key = [$snapshot['id'], $snapshot['revision'], $locale, $snapshot['evidenceScope']];
+        $conversation = ($snapshot['type'] ?? 'opportunity') === 'conversation';
+        $key = [$conversation ? 'ChatwootConversation' : 'Opportunity', $snapshot['id'], $snapshot['revision'], $locale, $snapshot['evidenceScope']];
         $stored = $this->verdicts->find(...$key);
         if ($stored) return ['status' => 'completed', 'cached' => true, ...$stored];
         $result = $this->request($snapshot, $locale, $requestId);
         if ($result['status'] !== 'completed') return [...$result, 'cached' => false, 'verdict' => null, 'reason' => null, 'card' => null];
         $card = is_array($result['card'] ?? null) ? $result['card'] : null;
         $classes = $this->parties->store($snapshot['participants'] ?? [], is_array($card['participants'] ?? null) ? $card['participants'] : []);
-        if ($classes) $key[3] = Feed::evidenceScope(Transcript::relabel($snapshot['evidence'], $classes));
-        $verdict = in_array($card['verdict'] ?? null, Verdicts::VERDICTS, true) ? $card['verdict'] : 'none';
+        if ($classes) $key[4] = Feed::evidenceScope(Transcript::relabel($snapshot['evidence'], $classes));
+        $verdict = in_array($card['verdict'] ?? null, $conversation ? self::CONVERSATION_VERDICTS : self::DEAL_VERDICTS, true) ? $card['verdict'] : 'none';
+        // Atendimento follows customers and partners only: a chat whose own contact is personal, automated or team gets no card.
+        if ($conversation && in_array(self::ownClass($snapshot['participants'] ?? [], $classes), ['personal', 'automated', 'team'], true)) $verdict = 'none';
         $reason = is_string($card['reason'] ?? null) ? $card['reason'] : 'The analysis could not be read.';
         $card = $verdict === 'none' ? null : array_diff_key($card, ['verdict' => true, 'reason' => true, 'participants' => true]);
         $this->verdicts->store((string) $snapshot['tenantId'], ...[...$key, $verdict, $reason, $card]);
         return ['status' => 'completed', 'requestId' => $result['requestId'] ?? null, 'cached' => false,
             'verdict' => $verdict, 'reason' => $reason, 'card' => $card];
+    }
+
+    /** The class of the conversation's own contact or group, as labeled before or classified by this analysis. */
+    private static function ownClass(array $participants, array $classes): ?string
+    {
+        foreach ($participants as $participant) {
+            if (!empty($participant['own'])) return $classes[$participant['id']] ?? $participant['label'] ?? null;
+        }
+        return null;
     }
 
     /** The backend enqueues/polls Hatchet. All evidence has just passed Feed's ACL checks. */

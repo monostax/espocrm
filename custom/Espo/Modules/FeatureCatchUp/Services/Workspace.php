@@ -45,7 +45,7 @@ class Workspace
         }
         $tenant = $this->em->getEntityById('Tenant', (string) $tenantId);
         if (!$tenant) throw new Forbidden();
-        return ['tenant' => $tenant, 'policy' => $policy];
+        return ['tenant' => $tenant, 'policy' => $policy, 'account' => reset($accounts)];
     }
 
     public static function now(Request $request): DateTimeImmutable

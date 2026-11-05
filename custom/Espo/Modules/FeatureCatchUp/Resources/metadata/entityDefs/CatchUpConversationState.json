@@ -1,0 +1,9 @@
+{
+    "fields": {
+        "staffUserId": { "type": "varchar", "maxLength": 36 },
+        "staffWroteAt": { "type": "datetime" }
+    },
+    "indexes": {
+        "staff": { "columns": ["staffUserId"] }
+    }
+}

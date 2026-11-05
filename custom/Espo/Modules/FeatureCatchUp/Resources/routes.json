@@ -6,5 +6,11 @@
     {"route": "/CatchUp/:id/summary", "method": "post", "params": {"controller": "CatchUp", "action": "summary", "id": ":id"}},
     {"route": "/CatchUp/:id/close", "method": "post", "params": {"controller": "CatchUp", "action": "close", "id": ":id"}},
     {"route": "/CatchUp/:id/resolvedElsewhere", "method": "post", "params": {"controller": "CatchUp", "action": "resolvedElsewhere", "id": ":id"}},
-    {"route": "/CatchUpSnooze", "method": "post", "params": {"controller": "CatchUp", "action": "snooze"}}
+    {"route": "/CatchUpSnooze", "method": "post", "params": {"controller": "CatchUp", "action": "snooze"}},
+    {"route": "/CatchUpService", "method": "get", "params": {"controller": "CatchUp", "action": "serviceList"}},
+    {"route": "/CatchUpService/:id", "method": "get", "params": {"controller": "CatchUp", "action": "serviceRead", "id": ":id"}},
+    {"route": "/CatchUpService/:id/summary", "method": "post", "params": {"controller": "CatchUp", "action": "serviceSummary", "id": ":id"}},
+    {"route": "/CatchUpService/:id/review", "method": "post", "params": {"controller": "CatchUp", "action": "serviceReview", "id": ":id"}},
+    {"route": "/CatchUpService/:id/resolved", "method": "post", "params": {"controller": "CatchUp", "action": "serviceResolved", "id": ":id"}},
+    {"route": "/CatchUpService/:id/label", "method": "post", "params": {"controller": "CatchUp", "action": "serviceLabel", "id": ":id"}}
 ]

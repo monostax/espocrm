@@ -40,14 +40,15 @@ class Transcript
      *
      * Participants are the groups among those conversations and the people writing in them, with the class
      * on their Chatwoot contact (Parties). A person labeled team writes for the business, so their messages
-     * count as staff. Unlabeled groups and group members are marked for the analysis to classify; a deal's
-     * own contact in a direct chat never is (a deal proves the customer).
+     * count as staff. Unlabeled groups and group members are marked for the analysis to classify. A deal's
+     * own contact in a direct chat never is (a deal proves the customer); with $direct, for a conversation
+     * without a deal (Atendimento), it is. The conversation's own contact or group is marked `own`.
      *
      * @param array<string, Entity> $conversations
      * @return array{evidence: list<array<string, mixed>>, participants: list<array<string, mixed>>}
      *   evidence entries carry `ts`, the Unix time, for ordering
      */
-    public function read(array $conversations, DateTimeImmutable $now): array
+    public function read(array $conversations, DateTimeImmutable $now, bool $direct = false): array
     {
         if (!$conversations || !$this->acl->checkScope('ChatwootMessage', 'read') || !$this->acl->checkField('ChatwootMessage', 'content')) {
             return ['evidence' => [], 'participants' => []];
@@ -68,7 +69,9 @@ class Transcript
             ['contact' => $contact, 'messages' => $messages] = $this->fetch($conversation, $account, $platform);
             $accountId = (int) $account->get('chatwootAccountId');
             $group = str_ends_with((string) ($contact['identifier'] ?? ''), '@g.us');
-            if ($group && isset($contact['id'])) $participants[$accountId . ':' . $contact['id']] ??= self::participant($contact, $account, true);
+            if (($group || $direct) && isset($contact['id'])) {
+                $participants[$accountId . ':' . $contact['id']] = [...self::participant($contact, $account, $group), 'own' => true];
+            }
             foreach ($messages as $message) {
                 $sender = is_array($message['sender'] ?? null) ? $message['sender'] : [];
                 if ($group && (int) $message['message_type'] === 0 && ($sender['type'] ?? null) === 'contact' && isset($sender['id'])) {

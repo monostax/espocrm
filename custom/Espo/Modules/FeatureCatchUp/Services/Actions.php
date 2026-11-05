@@ -41,11 +41,11 @@ class Actions
         ])->order('order')->findOne();
         if (!$deal->get('funnelId') || !$stage) throw new BadRequest('This funnel has no stage for that outcome.');
         $this->records->get('Opportunity')->update($id, (object) ['opportunityStageId' => $stage->getId()], UpdateParams::create());
-        $this->verdicts->resolve($id);
+        $this->verdicts->resolve('Opportunity', $id);
         return ['success' => true, 'status' => $status];
     }
 
-    /** "Já resolvi por fora": the work Monostax couldn't see becomes a note the next analysis reads. */
+    /** "Já resolvi": the work Monostax couldn't see becomes a note the next analysis reads. */
     public function resolvedElsewhere(Request $request, string $id): array
     {
         $text = trim((string) ($request->getParsedBody()->text ?? ''));
@@ -55,7 +55,7 @@ class Actions
         $this->records->get('Note')->create((object) [
             'type' => 'Post', 'parentType' => 'Opportunity', 'parentId' => $id, 'post' => "$prefix: $text",
         ], CreateParams::create());
-        $this->verdicts->resolve($id);
+        $this->verdicts->resolve('Opportunity', $id);
         return ['success' => true];
     }
 }

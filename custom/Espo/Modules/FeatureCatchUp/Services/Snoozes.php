@@ -19,7 +19,7 @@ use Espo\ORM\Query\SelectBuilder;
 /** "Adiar" hides a card from this user's Em dia only. The record itself is never changed. */
 class Snoozes
 {
-    public const TYPES = ['Opportunity'];
+    public const TYPES = ['Opportunity', 'ChatwootConversation'];
     private const MAX_DAYS = 30;
 
     public function __construct(private EntityManager $em, private Acl $acl, private User $user) {}
@@ -48,7 +48,11 @@ class Snoozes
         if ($time <= $now || $time > $now->modify('+' . self::MAX_DAYS . ' days')) throw new BadRequest('Invalid snooze time.');
         $record = $this->em->getEntityById($type, $id);
         if (!$record) throw new NotFound();
-        if (!$this->acl->checkEntityRead($record) || $record->get('tenantId') !== $tenant->getId()) {
+        // A conversation has no tenant of its own; its Chatwoot account's tenant owns it.
+        $owner = $type === 'ChatwootConversation'
+            ? $this->em->getEntityById('ChatwootAccount', (string) $record->get('chatwootAccountId'))?->get('tenantId')
+            : $record->get('tenantId');
+        if (!$this->acl->checkEntityRead($record) || $owner !== $tenant->getId()) {
             throw new Forbidden();
         }
         $value = $time->format('Y-m-d H:i:s');

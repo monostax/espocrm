@@ -1,6 +1,7 @@
 {
     "actionClassNameList": [
         "__APPEND__",
-        "Espo\\Modules\\FeatureCatchUp\\Rebuild\\BackfillDealState"
+        "Espo\\Modules\\FeatureCatchUp\\Rebuild\\BackfillDealState",
+        "Espo\\Modules\\FeatureCatchUp\\Rebuild\\BackfillConversationState"
     ]
 }

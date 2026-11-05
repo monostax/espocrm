@@ -213,7 +213,7 @@ class FeedTest extends TestCase
             $summary->method('request')->willReturn(['status' => 'completed', 'requestId' => str_repeat('a', 64), 'card' => $card]);
             $result = $summary->analyse($this->snapshot(), 'pt-BR');
             self::assertSame($expected, $result['verdict']);
-            self::assertSame(['tenant', 'deal', 'rev', 'pt-BR', 'scope', $expected], array_slice($stored, 0, 6));
+            self::assertSame(['tenant', 'Opportunity', 'deal', 'rev', 'pt-BR', 'scope', $expected], array_slice($stored, 0, 7));
             if ($expected === 'none') {
                 self::assertNull($result['card']);
             } else {
@@ -254,8 +254,34 @@ class FeedTest extends TestCase
             'verdict' => 'none', 'reason' => 'A doutora respondeu', 'participants' => $answers]]);
         $summary->analyse([...$this->snapshot(), 'evidence' => $evidence, 'participants' => $participants], 'pt-BR');
         $next = Feed::evidenceScope([$evidence[0], ['sentBy' => 'staff'] + $evidence[1]]);
-        self::assertSame($next, $stored[4], 'the next read labels the doctor as staff and finds this verdict');
-        self::assertNotSame(Feed::evidenceScope($evidence), $stored[4]);
+        self::assertSame($next, $stored[5], 'the next read labels the doctor as staff and finds this verdict');
+        self::assertNotSame(Feed::evidenceScope($evidence), $stored[5]);
+    }
+
+    public function testAConversationKeepsOnlyServiceVerdictsAndDropsNonCustomers(): void
+    {
+        foreach ([
+            [['verdict' => 'new_deal', 'reason' => 'Quer agendar', 'headline' => 'H', 'proposedDeal' => ['name' => 'Ana', 'amount' => null]], null, [], 'new_deal'],
+            [['verdict' => 'decided', 'reason' => 'Pagou'], null, [], 'none'],
+            [['verdict' => 'customer_waiting', 'reason' => 'Perguntou'], 'personal', [], 'none'],
+            [['verdict' => 'customer_waiting', 'reason' => 'Perguntou', 'participants' => [['id' => '7', 'class' => 'automated']]], null, ['7' => 'automated'], 'none'],
+            [['verdict' => 'customer_waiting', 'reason' => 'Perguntou'], 'customer', [], 'customer_waiting'],
+        ] as [$card, $label, $classes, $expected]) {
+            $parties = $this->createMock(Parties::class);
+            $parties->method('store')->willReturn($classes);
+            $verdicts = $this->createMock(Verdicts::class);
+            $verdicts->method('find')->willReturn(null);
+            $stored = null;
+            $verdicts->method('store')->willReturnCallback(function (...$args) use (&$stored): void { $stored = $args; });
+            $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $parties])
+                ->onlyMethods(['request'])->getMock();
+            $summary->method('request')->willReturn(['status' => 'completed', 'card' => $card]);
+            $snapshot = [...$this->snapshot(), 'type' => 'conversation',
+                'participants' => [['id' => '7', 'own' => true, 'label' => $label, 'classify' => $label === null]]];
+            $result = $summary->analyse($snapshot, 'pt-BR');
+            self::assertSame($expected, $result['verdict'], json_encode($card));
+            self::assertSame(['ChatwootConversation', 'deal'], [$stored[1], $stored[2]], 'stored as a conversation verdict');
+        }
     }
 
     private function snapshot(): array

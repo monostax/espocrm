@@ -20,6 +20,15 @@ class Ownership
         . 'JOIN chatwoot_user cu ON cu.id = m.chatwoot_user_id AND cu.deleted = 0 '
         . 'WHERE m.deleted = 0 AND m.is_a_i = 1 AND cu.assigned_user_id IS NOT NULL';
 
+    /**
+     * The CRM user whose deck a conversation without a deal (`c`, with its account `a`) belongs in: its
+     * Chatwoot assignee when that is a person, otherwise the last staff member who wrote in it from the app
+     * (CatchUpConversationState, kept by ConversationStates).
+     */
+    public const CONVERSATION_OWNER_SQL = '(COALESCE((SELECT cu.assigned_user_id FROM chatwoot_user cu WHERE cu.chatwoot_user_id = c.assignee_id '
+        . 'AND cu.platform_id = a.platform_id AND cu.deleted = 0 AND cu.assigned_user_id NOT IN (' . self::AI_USERS_SQL . ') LIMIT 1), '
+        . '(SELECT cs.staff_user_id FROM catch_up_conversation_state cs WHERE cs.id = c.id AND cs.deleted = 0)))';
+
     /** @var ?list<string> */
     private ?array $aiUserIds = null;
 
@@ -42,6 +51,18 @@ class Ownership
     {
         if ($assignedUserId && !in_array($assignedUserId, $this->aiUserIds(), true)) return $assignedUserId;
         return $staffUserId ?: null;
+    }
+
+    /**
+     * SQL restricting `c` (chatwoot_conversation) and `a` (chatwoot_account) to the reader's Atendimento deck.
+     * Admins see every conversation; Chatwoot inbox access still applies to everything anyone gets.
+     *
+     * @return array{string, array<string, string>}
+     */
+    public function conversationClause(): array
+    {
+        if ($this->seesAll()) return ['', []];
+        return [' AND ' . self::CONVERSATION_OWNER_SQL . ' = :deckOwner', ['deckOwner' => $this->user->getId()]];
     }
 
     /**

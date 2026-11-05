@@ -8,6 +8,7 @@ use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Modules\FeatureCatchUp\Services\Actions;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
+use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
 use Espo\Modules\FeatureCatchUp\Services\Snoozes;
 use Espo\Modules\FeatureCatchUp\Services\Summary;
 use Espo\Modules\FeatureCatchUp\Services\Workspace;
@@ -21,6 +22,7 @@ class CatchUp
         private Actions $actions,
         private Snoozes $snoozes,
         private Workspace $workspace,
+        private ServiceFeed $service,
     ) {}
 
     public function getActionList(Request $request): object
@@ -28,9 +30,48 @@ class CatchUp
         return (object) $this->feed->list($request);
     }
 
+    /** Cards in the reader's deck nobody acted on: deals (Negócios) plus conversations without one (Atendimento). */
     public function getActionCount(Request $request): object
     {
-        return (object) $this->feed->count($request);
+        $deals = (int) $this->feed->count($request)['count'];
+        ['tenant' => $tenant, 'account' => $account] = $this->workspace->resolve($request);
+        $service = $this->service->count($tenant->getId(), $account);
+        return (object) ['count' => $deals + $service, 'deals' => $deals, 'service' => $service];
+    }
+
+    public function getActionServiceList(Request $request): object
+    {
+        return (object) $this->service->list($request);
+    }
+
+    public function getActionServiceRead(Request $request): object
+    {
+        return (object) $this->service->snapshot($this->id($request), $request);
+    }
+
+    public function postActionServiceSummary(Request $request): object
+    {
+        $snapshot = $this->service->snapshot($this->id($request), $request);
+        return (object) [...$this->summary->analyse($snapshot, ...$this->summaryArguments($request)), 'snapshot' => $snapshot];
+    }
+
+    public function postActionServiceReview(Request $request): object
+    {
+        $this->service->review($this->id($request), (string) ($request->getParsedBody()->snapshot ?? ''), $request);
+        return (object) ['success' => true];
+    }
+
+    public function postActionServiceResolved(Request $request): object
+    {
+        $this->service->resolved($this->id($request), $request);
+        return (object) ['success' => true];
+    }
+
+    public function postActionServiceLabel(Request $request): object
+    {
+        $body = $request->getParsedBody();
+        return (object) $this->service->label($this->id($request), (string) ($body->contactId ?? ''), (string) ($body->class ?? ''),
+            (string) ($body->snapshot ?? ''), $request);
     }
 
     public function getActionRead(Request $request): object
@@ -46,17 +87,21 @@ class CatchUp
 
     public function postActionSummary(Request $request): object
     {
+        $arguments = $this->summaryArguments($request);
+        $snapshot = $this->feed->snapshot($this->id($request), $request);
+        return (object) [...$this->summary->analyse($snapshot, ...$arguments), 'snapshot' => $snapshot];
+    }
+
+    /** @return array{string, ?string} the analysis locale and the request id being polled */
+    private function summaryArguments(Request $request): array
+    {
         $body = $request->getParsedBody();
         $locale = $body->locale ?? 'en';
         $requestId = $body->requestId ?? null;
         if ($requestId !== null && (!is_string($requestId) || !preg_match('/^[a-f0-9]{64}$/D', $requestId))) {
             throw new BadRequest('Invalid summary request ID.');
         }
-        $snapshot = $this->feed->snapshot($this->id($request), $request);
-        return (object) [
-            ...$this->summary->analyse($snapshot, $locale === 'pt_BR' || $locale === 'pt' ? 'pt-BR' : 'en', $requestId),
-            'snapshot' => $snapshot,
-        ];
+        return [$locale === 'pt_BR' || $locale === 'pt' ? 'pt-BR' : 'en', $requestId];
     }
 
     public function postActionClose(Request $request): object

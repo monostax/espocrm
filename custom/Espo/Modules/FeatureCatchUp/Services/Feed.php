@@ -64,7 +64,7 @@ class Feed
         $ids = $this->candidateIds($tenantId, $offset, $limit);
         $deals = $this->readable($ids);
         $context = $this->context($deals, $now);
-        $quiet = $this->verdicts->quiet(array_map(fn ($entry) => $entry['revision'], $context));
+        $quiet = $this->verdicts->quiet('Opportunity', array_map(fn ($entry) => $entry['revision'], $context));
         $items = [];
         foreach ($deals as $id => $deal) {
             if (isset($quiet[$id])) continue;
@@ -124,7 +124,7 @@ class Feed
         if ($this->context([$id => $deal], $now)[$id]['revision'] !== $snapshot['revision']) {
             throw new Conflict('This deal changed since the card was shown.');
         }
-        $this->verdicts->resolve($id);
+        $this->verdicts->resolve('Opportunity', $id);
     }
 
     /**
