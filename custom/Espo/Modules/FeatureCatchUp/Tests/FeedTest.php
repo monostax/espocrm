@@ -56,7 +56,7 @@ class FeedTest extends TestCase
     }
 
     /** @return array{Feed, DataCache, Verdicts, Entity} */
-    private function feed(bool $regular = true, bool $readable = true, string $dealTenant = 'tenant'): array
+    private function feed(bool $regular = true, bool $readable = true, string $dealTenant = 'tenant', ?\PDO $pdo = null): array
     {
         $user = $this->createMock(User::class);
         $user->method('isRegular')->willReturn($regular);
@@ -68,7 +68,7 @@ class FeedTest extends TestCase
         $deal = $this->deal(['tenantId' => $dealTenant]);
         $em = $this->createMock(EntityManager::class);
         $em->method('getEntityById')->willReturn($deal);
-        $em->method('getPDO')->willReturn($this->pdo());
+        $em->method('getPDO')->willReturn($pdo ?? $this->pdo());
         $tenant = $this->createMock(Entity::class);
         $tenant->method('getId')->willReturn('tenant');
         $workspace = $this->createMock(Workspace::class);
@@ -77,8 +77,10 @@ class FeedTest extends TestCase
         $states->method('load')->willReturn(['deal' => $this->state()]);
         $cache = $this->createMock(DataCache::class);
         $verdicts = $this->createMock(Verdicts::class);
+        $owners = $this->createMock(Ownership::class);
+        $owners->method('clause')->willReturn(['', []]);
         $feed = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user, $workspace,
-            $this->createMock(Rollout::class), $this->createMock(Ownership::class), $states, $verdicts, $cache, $this->createMock(Metadata::class),
+            $this->createMock(Rollout::class), $owners, $states, $verdicts, $cache, $this->createMock(Metadata::class),
             $this->createMock(Transcript::class));
         return [$feed, $cache, $verdicts, $deal];
     }
@@ -109,6 +111,23 @@ class FeedTest extends TestCase
             }
             self::assertTrue($refused, "Returned a deal the reader may not see (readable: $readable, tenant: $tenant)");
         }
+    }
+
+    public function testDeckWaitsUntilTheConversationSettles(): void
+    {
+        $queries = [];
+        $statement = $this->createMock(\PDOStatement::class);
+        $statement->method('execute')->willReturn(true);
+        $statement->method('fetchAll')->willReturn([]);
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->method('prepare')->willReturnCallback(function (string $sql) use (&$queries, $statement) {
+            $queries[] = $sql;
+            return $statement;
+        });
+        [$feed] = $this->feed(pdo: $pdo);
+        self::assertSame([], $feed->list($this->request())['items']);
+        self::assertStringContainsString('s.last_message_at <= UTC_TIMESTAMP() - INTERVAL 30 MINUTE', $queries[0],
+            'a deal whose conversation had a message in the last 30 minutes is not a candidate yet');
     }
 
     public function testReviewWithoutTheShownCardConflictsAndResolvesNothing(): void

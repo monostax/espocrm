@@ -30,6 +30,12 @@ class Feed
     private const POST_LIMIT = 10;
     /** A quiet customer is worth chasing after this many days. Shadow data should tune it per stage. */
     public const FOLLOW_UP_AFTER_DAYS = 2;
+    /**
+     * A deal is analysed only once its conversation has been quiet this long. At Ferraz Veloso (2026-11-05) a
+     * third of the analyses ran mid-conversation, were overtaken by the next message within two hours and
+     * showed "customer waiting" cards for chats the team was answering.
+     */
+    public const SETTLE_MINUTES = 30;
 
     public function __construct(
         private EntityManager $em,
@@ -131,9 +137,10 @@ class Feed
     }
 
     /**
-     * Open deals with a conversation in the reader's deck, ordered without scanning messages: the customer
-     * waiting on us first (freshest first), then gone quiet past the follow-up threshold, then still moving,
-     * then quiet for a month, then for two months or with no messages known yet.
+     * Open deals with a conversation in the reader's deck whose conversation has settled (quiet for
+     * SETTLE_MINUTES), ordered without scanning messages: the customer waiting on us first (freshest first),
+     * then gone quiet past the follow-up threshold, then still moving, then quiet for a month, then for two
+     * months or with no messages known yet.
      *
      * @return list<string>
      */
@@ -146,7 +153,8 @@ class Feed
             . "WHERE o.deleted = 0 AND o.tenant_id = :tenant AND o.status NOT IN ('Won','Lost') "
             . 'AND EXISTS (SELECT 1 FROM chatwoot_conversation_opportunity r WHERE r.opportunity_id = o.id AND r.deleted = 0) '
             . 'AND o.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '
-            . "AND z.target_type = 'Opportunity' AND z.snoozed_until > UTC_TIMESTAMP())" . $owner . ' '
+            . "AND z.target_type = 'Opportunity' AND z.snoozed_until > UTC_TIMESTAMP()) "
+            . 'AND (s.last_message_at IS NULL OR s.last_message_at <= UTC_TIMESTAMP() - INTERVAL ' . self::SETTLE_MINUTES . ' MINUTE)' . $owner . ' '
             . 'ORDER BY CASE WHEN s.last_message_at IS NULL THEN 5 '
             . 'WHEN s.last_message_at < UTC_TIMESTAMP() - INTERVAL 60 DAY THEN 4 '
             . "WHEN $waiting AND s.last_customer_at >= UTC_TIMESTAMP() - INTERVAL 30 DAY THEN 0 "

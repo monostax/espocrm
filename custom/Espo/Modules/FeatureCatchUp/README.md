@@ -20,7 +20,7 @@ The last staff writer and who spoke last live in `CatchUpDealState` (one row per
 
 ## How the deck loads
 
-1. `GET /CatchUp` returns candidates: open deals with a linked conversation in the reader's deck, not snoozed, ordered without scanning messages (customer waiting first, then quiet past 2 days, then moving, then quiet 30+ and 60+ days). Deals already judged `none` at their current revision are dropped, so a page can be short.
+1. `GET /CatchUp` returns candidates: open deals with a linked conversation in the reader's deck, not snoozed, quiet for at least 30 minutes (`Feed::SETTLE_MINUTES`; a conversation still moving is analysed once it settles), ordered without scanning messages (customer waiting first, then quiet past 2 days, then moving, then quiet 30+ and 60+ days). Deals already judged `none` at their current revision are dropped, so a page can be short.
 2. `GET /CatchUp/:id` builds the snapshot: both directions of every linked conversation, read from Chatwoot's messages API by `Transcript` (each labeled customer, ai, staff, outside or internal), plus the deal's Posts, the facts, the revision and the review token. Times are in the reader's time zone, with the offset. The CRM's `ChatwootMessage` copy is not used for evidence: its sync stores only each conversation's last message at every poll, so it misses messages. A conversation is read only when the reader passes the `ChatwootMessage` ACL for it, and a conversation Chatwoot can't return fails the analysis instead of being skipped.
 3. `POST /CatchUp/:id/summary` returns the stored verdict for the same revision, locale and evidence, or starts or polls the backend analysis and stores the verdict when it completes. An answer that isn't a valid verdict is stored as `none`.
 
