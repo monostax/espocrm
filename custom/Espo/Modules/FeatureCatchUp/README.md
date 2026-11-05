@@ -8,7 +8,7 @@ Em dia is a personal decision deck in Chatwoot (`/app/accounts/:accountId/catch-
 
 - Each analysis is charged to the tenant's AI credits on the Opportunity (`unified-prepaid-v1`). A stored verdict is reused for free.
 - Account limit: 300 analyses per UTC day by default (0–2000), shared by all users. Installation ceiling: `CATCH_UP_INSTALLATION_DAILY_LIMIT` on the Hatchet workers (default 20000).
-- At most 50 evidence entries (40 messages, 10 deal notes) and 32 KB reach the model.
+- At most 50 evidence entries (40 messages, 10 deal notes) and 32 KB reach the model. Images and documents in those messages go along as media: the newest 8, 20 MB and 20,000 input tokens in total, chosen by the backend. Voice notes go as their transcripts (as audio only when there is none); video and other kinds stay text markers.
 
 ## Who sees a deal
 
@@ -21,10 +21,10 @@ The last staff writer and who spoke last live in `CatchUpDealState` (one row per
 ## How the deck loads
 
 1. `GET /CatchUp` returns candidates: open deals with a linked conversation in the reader's deck, not snoozed, ordered without scanning messages (customer waiting first, then quiet past 2 days, then moving, then quiet 30+ and 60+ days). Deals already judged `none` at their current revision are dropped, so a page can be short.
-2. `GET /CatchUp/:id` builds the snapshot: both directions of every linked conversation from `ChatwootMessage` (each labeled customer, ai, staff, outside or internal) plus the deal's Posts, the facts, the revision and the review token.
+2. `GET /CatchUp/:id` builds the snapshot: both directions of every linked conversation, read from Chatwoot's messages API by `Transcript` (each labeled customer, ai, staff, outside or internal), plus the deal's Posts, the facts, the revision and the review token. Times are in the reader's time zone, with the offset. The CRM's `ChatwootMessage` copy is not used for evidence: its sync stores only each conversation's last message at every poll, so it misses messages. A conversation is read only when the reader passes the `ChatwootMessage` ACL for it, and a conversation Chatwoot can't return fails the analysis instead of being skipped.
 3. `POST /CatchUp/:id/summary` returns the stored verdict for the same revision, locale and evidence, or starts or polls the backend analysis and stores the verdict when it completes. An answer that isn't a valid verdict is stored as `none`.
 
-A **revision** (`Revision::of`) hashes the stage, amount, owner, follow-up status, next step, the deal state, the newest Post and the quiet-time step (1, 2, 4, 7, 14, 30, 60 days). A verdict is reused until the revision changes. Verdicts live in `CatchUpVerdict`, shared by readers who see the same evidence.
+A **revision** (`Revision::of`) hashes the prompt and evidence versions, the stage, amount, owner, follow-up status, next step, the deal state, the newest Post and the quiet-time step (1, 2, 4, 7, 14, 30, 60 days). A verdict is reused until the revision changes. Verdicts live in `CatchUpVerdict`, shared by readers who see the same evidence.
 
 ## Endpoints
 

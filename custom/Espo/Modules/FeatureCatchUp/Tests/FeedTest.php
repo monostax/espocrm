@@ -20,6 +20,7 @@ use Espo\Modules\FeatureCatchUp\Services\Ownership;
 use Espo\Modules\FeatureCatchUp\Services\Revision;
 use Espo\Modules\FeatureCatchUp\Services\Rollout;
 use Espo\Modules\FeatureCatchUp\Services\Summary;
+use Espo\Modules\FeatureCatchUp\Services\Transcript;
 use Espo\Modules\FeatureCatchUp\Services\Verdicts;
 use Espo\Modules\FeatureCatchUp\Services\Workspace;
 use Espo\ORM\Entity;
@@ -77,7 +78,8 @@ class FeedTest extends TestCase
         $cache = $this->createMock(DataCache::class);
         $verdicts = $this->createMock(Verdicts::class);
         $feed = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user, $workspace,
-            $this->createMock(Rollout::class), $this->createMock(Ownership::class), $states, $verdicts, $cache, $this->createMock(Metadata::class));
+            $this->createMock(Rollout::class), $this->createMock(Ownership::class), $states, $verdicts, $cache, $this->createMock(Metadata::class),
+            $this->createMock(Transcript::class));
         return [$feed, $cache, $verdicts, $deal];
     }
 

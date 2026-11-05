@@ -15,7 +15,9 @@ use Espo\ORM\Entity;
 final class Revision
 {
     /** Keep in step with the backend's CATCH_UP_PROMPT_VERSION; bumping it has every deal judged again. */
-    public const PROMPT_VERSION = '4';
+    public const PROMPT_VERSION = '5';
+    /** Where the conversation is read from; bumping it has every deal judged again. 2: Chatwoot, not the CRM copy that lost messages. */
+    public const EVIDENCE_VERSION = '2';
 
     private const QUIET_STEPS = [1, 2, 4, 7, 14, 30, 60];
 
@@ -26,7 +28,7 @@ final class Revision
     public static function of(Entity $deal, ?array $state, ?array $nextAction, ?string $lastPostAt, DateTimeImmutable $now): string
     {
         return hash('sha256', json_encode([
-            self::PROMPT_VERSION,
+            self::PROMPT_VERSION, self::EVIDENCE_VERSION,
             $deal->get('opportunityStageId'), $deal->get('amount'), $deal->get('assignedUserId'), $deal->get('followupStatus'),
             $nextAction ? [$nextAction['id'], $nextAction['status'] ?? null, $nextAction['dateEnd'] ?? null, $nextAction['dateEndDate'] ?? null] : null,
             $state ? [$state['last_message_at'], (int) $state['message_count'], $state['staff_user_id']] : null,

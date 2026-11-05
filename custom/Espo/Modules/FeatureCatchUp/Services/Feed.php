@@ -26,8 +26,7 @@ use Espo\ORM\EntityManager;
 class Feed
 {
     private const PAGE_SIZE = 20;
-    /** Newest public messages and deal notes sent to the analysis; the backend accepts at most 50 entries. */
-    private const MESSAGE_LIMIT = 40;
+    /** Newest deal notes sent to the analysis, beside Transcript::LIMIT messages; the backend accepts at most 50 entries. */
     private const POST_LIMIT = 10;
     /** A quiet customer is worth chasing after this many days. Shadow data should tune it per stage. */
     public const FOLLOW_UP_AFTER_DAYS = 2;
@@ -44,6 +43,7 @@ class Feed
         private Verdicts $verdicts,
         private DataCache $cache,
         private Metadata $metadata,
+        private Transcript $transcript,
     ) {}
 
     public function list(Request $request): array
@@ -84,8 +84,9 @@ class Feed
         if (!$this->states->load([$id])) $this->states->refresh([$id]);
         $context = $this->context([$id => $deal], $now)[$id];
         $conversations = $this->conversations($deal);
-        $evidence = [...$this->messages(array_keys($conversations)), ...$this->posts($id)];
-        usort($evidence, fn ($a, $b) => [$a['at'], $a['id']] <=> [$b['at'], $b['id']]);
+        $evidence = [...$this->transcript->read($conversations, $now), ...$this->posts($id, $now)];
+        usort($evidence, fn ($a, $b) => [$a['ts'], $a['id']] <=> [$b['ts'], $b['id']]);
+        $evidence = array_map(fn ($entry) => array_diff_key($entry, ['ts' => true]), $evidence);
         $scope = hash('sha256', json_encode(array_map(fn ($entry) => $entry['id'], $evidence), JSON_THROW_ON_ERROR));
         $result = [
             ...$this->candidate($deal, $context, $now),
@@ -282,48 +283,7 @@ class Feed
         ];
     }
 
-    /** @param list<string> $conversationIds */
-    private function messages(array $conversationIds): array
-    {
-        if (!$conversationIds || !$this->acl->checkScope('ChatwootMessage', 'read') || !$this->acl->checkField('ChatwootMessage', 'content')) return [];
-        $messages = $this->em->getRDBRepository('ChatwootMessage')->where([
-            'conversationId' => $conversationIds, 'messageType' => ['incoming', 'outgoing', 'template'],
-        ])->order('chatwootCreatedAt', 'DESC')->limit(0, self::MESSAGE_LIMIT)->find();
-        $ai = $this->aiSenders();
-        $accounts = [];
-        $conversations = [];
-        $evidence = [];
-        foreach ($messages as $message) {
-            if (!$this->acl->checkEntityRead($message)) continue;
-            $type = $message->get('messageType');
-            $private = (bool) $message->get('isPrivate');
-            $sender = $message->get('senderType') === 'User' ? $message->get('senderId') : null;
-            $sentBy = match (true) {
-                $private => 'internal',
-                $type === 'incoming' => 'customer',
-                $sender !== null && isset($ai[(int) $sender]) => 'ai',
-                $sender !== null => 'staff',
-                !in_array($message->get('senderType'), [null, 'Contact', 'User'], true) => 'ai',
-                default => 'outside',
-            };
-            $conversationId = $message->get('conversationId');
-            $conversations[$conversationId] ??= $this->em->getEntityById('ChatwootConversation', $conversationId);
-            $accountId = $conversations[$conversationId]?->get('chatwootAccountId');
-            $accounts[$accountId] ??= $accountId ? $this->em->getEntityById('ChatwootAccount', $accountId) : null;
-            $evidence[] = [
-                'id' => $message->getId(), 'text' => mb_substr(strip_tags((string) $message->get('content')), 0, 4000),
-                'at' => $message->get('chatwootCreatedAt'), 'kind' => $private ? 'note' : $type,
-                'author' => in_array($sentBy, ['ai', 'staff', 'internal'], true) ? $message->get('senderName') : null,
-                'sentBy' => $sentBy, 'context' => false,
-                'conversationId' => $conversations[$conversationId]?->get('chatwootConversationId'),
-                'accountId' => $accounts[$accountId]?->get('chatwootAccountId'),
-                'messageId' => $message->get('chatwootMessageId'),
-            ];
-        }
-        return $evidence;
-    }
-
-    private function posts(string $id): array
+    private function posts(string $id, DateTimeImmutable $now): array
     {
         if (!$this->acl->checkScope('Opportunity', 'stream')) return [];
         $notes = $this->em->getRDBRepository('Note')->where(['parentType' => 'Opportunity', 'parentId' => $id, 'type' => 'Post'])
@@ -331,23 +291,14 @@ class Feed
         $evidence = [];
         foreach ($notes as $note) {
             if (!$this->acl->checkEntityRead($note)) continue;
+            $timestamp = (new DateTimeImmutable((string) $note->get('createdAt'), new DateTimeZone('UTC')))->getTimestamp();
             $evidence[] = [
                 'id' => $note->getId(), 'text' => mb_substr(strip_tags((string) $note->get('post')), 0, 4000),
-                'at' => $note->get('createdAt'), 'kind' => 'post', 'author' => $note->get('createdByName'),
+                'at' => Transcript::at($timestamp, $now), 'ts' => $timestamp, 'kind' => 'post', 'author' => $note->get('createdByName'),
                 'sentBy' => 'internal', 'context' => false, 'conversationId' => null, 'accountId' => null, 'messageId' => null,
             ];
         }
         return $evidence;
-    }
-
-    /** Chatwoot user ids of AI agents, so their messages are labeled as the AI's. @return array<int, true> */
-    private function aiSenders(): array
-    {
-        $ids = $this->em->getPDO()->query(
-            'SELECT DISTINCT cu.chatwoot_user_id FROM chatwoot_account_user_membership m '
-            . 'JOIN chatwoot_user cu ON cu.id = m.chatwoot_user_id AND cu.deleted = 0 WHERE m.deleted = 0 AND m.is_a_i = 1'
-        )->fetchAll(\PDO::FETCH_COLUMN);
-        return array_fill_keys(array_map('intval', $ids), true);
     }
 
     /** @param list<string> $ids @return array<string, string> newest Post time per deal */
