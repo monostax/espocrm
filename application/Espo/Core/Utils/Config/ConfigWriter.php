@@ -229,10 +229,9 @@ class ConfigWriter
 
         $reloadedData = $this->fileManager->getPhpContents($path);
 
-        if (
-            is_array($reloadedData) &&
-            $microtime === ($reloadedData[$timeParam] ?? null)
-        ) {
+        // A whole, readable file means the save took; a different time means another process saved after
+        // this one. Writing again in place would race that process and could splice the two files.
+        if (is_array($reloadedData) && isset($reloadedData[$timeParam])) {
             return;
         }
 

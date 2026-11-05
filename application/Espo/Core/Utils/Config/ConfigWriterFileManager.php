@@ -56,12 +56,12 @@ class ConfigWriterFileManager
             $defaultPermissionsToSet = $config->get('defaultPermissions');
         }
 
-        $this->fileManager = new FileManager($defaultPermissionsToSet);
+        $this->fileManager = new ConfigTempFileManager($defaultPermissionsToSet);
     }
 
     public function setConfig(Config $config): void
     {
-        $this->fileManager = new FileManager(
+        $this->fileManager = new ConfigTempFileManager(
             $config->get('defaultPermissions')
         );
     }
