@@ -14,10 +14,9 @@ namespace Espo\Modules\Chatwoot\Hooks\ChatwootInboxIntegration;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Core\Utils\Log;
-use Espo\Modules\Chatwoot\Services\WahaApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Services\ChatwootInboxIdResolver;
-use Espo\Modules\Chatwoot\Tools\WhatsAppChannel;
+use Espo\Modules\Chatwoot\Tools\WahaSessionTeardown;
 
 /**
  * Hook to clean up external WAHA session and Chatwoot inbox resources
@@ -33,7 +32,7 @@ class CleanupOnRemove
 
     public function __construct(
         private EntityManager $entityManager,
-        private WahaApiClient $wahaApiClient,
+        private WahaSessionTeardown $wahaSessionTeardown,
         private ChatwootApiClient $chatwootApiClient,
         private ChatwootInboxIdResolver $chatwootInboxIdResolver,
         private Log $log
@@ -77,9 +76,7 @@ class CleanupOnRemove
         // `wahaSessionName` (Coexistence provisions a send-only companion via
         // provisionWahaSendOnlySession()). Cloud API is the only sendable
         // channel with no WAHA session.
-        if (WhatsAppChannel::usesWahaSession($channelType)) {
-            $this->cleanupWahaSession($entity);
-        }
+        $this->cleanupWahaSession($entity);
 
         // Clean up Chatwoot Inbox (works for both channel types)
         if (!$skipChatwootInboxCleanup) {
@@ -88,71 +85,14 @@ class CleanupOnRemove
     }
 
     /**
-     * Clean up WAHA session via external API.
-     *
-     * @param Entity $entity
+     * End the WAHA session. A failure is logged and does not block the delete.
      */
     private function cleanupWahaSession(Entity $entity): void
     {
-        $sessionName = $entity->get('wahaSessionName');
-        $wahaPlatformId = $entity->get('wahaPlatformId');
-
-        if (!$sessionName || !$wahaPlatformId) {
-            $this->log->info("ChatwootInboxIntegration cleanup: No WAHA session to clean up for channel {$entity->getId()}");
-            return;
-        }
-
         try {
-            $wahaPlatform = $this->entityManager->getEntityById('WahaPlatform', $wahaPlatformId);
-
-            if (!$wahaPlatform) {
-                $this->log->warning("ChatwootInboxIntegration cleanup: WahaPlatform {$wahaPlatformId} not found");
-                return;
-            }
-
-            $wahaUrl = $wahaPlatform->get('backendUrl');
-            $wahaApiKey = $wahaPlatform->get('apiKey');
-
-            if (!$wahaUrl || !$wahaApiKey) {
-                $this->log->warning("ChatwootInboxIntegration cleanup: WahaPlatform missing backendUrl or API key");
-                return;
-            }
-
-            // First, delete the WAHA App if it exists
-            $wahaAppId = $entity->get('wahaAppId');
-            if ($wahaAppId) {
-                try {
-                    $this->log->info("ChatwootInboxIntegration cleanup: Deleting WAHA app {$wahaAppId}");
-                    $this->wahaApiClient->deleteApp($wahaUrl, $wahaApiKey, $wahaAppId);
-                    $this->log->info("ChatwootInboxIntegration cleanup: WAHA app {$wahaAppId} deleted successfully");
-                } catch (\Exception $e) {
-                    $this->log->warning("ChatwootInboxIntegration cleanup: Failed to delete WAHA app {$wahaAppId}: " . $e->getMessage());
-                }
-            }
-
-            // Stop the session before deleting it. A WORKING session can refuse
-            // deletion while the WhatsApp socket is still connected, which is how
-            // live sessions used to survive channel deletion. Mirrors the proven
-            // sequence in ChatwootInboxIntegration::provisionWahaSendOnlySession().
-            try {
-                $this->wahaApiClient->stopSession($wahaUrl, $wahaApiKey, $sessionName);
-            } catch (\Exception $e) {
-                // Already stopped or unknown to WAHA — deletion below still applies.
-                $this->log->debug(
-                    "ChatwootInboxIntegration cleanup: stopSession({$sessionName}) failed, " .
-                    "continuing to delete: " . $e->getMessage()
-                );
-            }
-
-            // Then, delete the WAHA Session
-            // Note: This also cleans up the label webhook since webhooks are part of session config
-            $this->log->info("ChatwootInboxIntegration cleanup: Deleting WAHA session {$sessionName}");
-            $this->wahaApiClient->deleteSession($wahaUrl, $wahaApiKey, $sessionName);
-            $this->log->info("ChatwootInboxIntegration cleanup: WAHA session {$sessionName} deleted successfully");
-
+            $this->wahaSessionTeardown->tearDown($entity);
         } catch (\Exception $e) {
-            // Log the error but don't prevent the entity from being deleted
-            $this->log->error("ChatwootInboxIntegration cleanup: Failed to delete WAHA session {$sessionName}: " . $e->getMessage());
+            $this->log->error("ChatwootInboxIntegration cleanup: Failed to delete WAHA session {$entity->get('wahaSessionName')}: " . $e->getMessage());
         }
     }
 
