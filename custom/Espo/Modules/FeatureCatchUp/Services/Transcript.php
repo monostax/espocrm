@@ -27,6 +27,8 @@ class Transcript
     private const KINDS = [0 => 'incoming', 1 => 'outgoing', 3 => 'template'];
     /** Attachments read per message; the backend accepts at most 10. */
     private const ATTACHMENTS = 10;
+    /** People and groups sent to the analysis; the backend accepts at most 40. */
+    private const PARTICIPANTS = 20;
 
     public function __construct(private EntityManager $em, private Acl $acl, private ChatwootApiClient $chatwoot) {}
 
@@ -36,14 +38,23 @@ class Transcript
      * conversation's team and inbox access). A conversation that can't be read fails the analysis, since
      * judging the deal without it is what this class exists to avoid.
      *
+     * Participants are the groups among those conversations and the people writing in them, with the class
+     * on their Chatwoot contact (Parties). A person labeled team writes for the business, so their messages
+     * count as staff. Unlabeled groups and group members are marked for the analysis to classify; a deal's
+     * own contact in a direct chat never is (a deal proves the customer).
+     *
      * @param array<string, Entity> $conversations
-     * @return list<array<string, mixed>> entries carry `ts`, the Unix time, for ordering
+     * @return array{evidence: list<array<string, mixed>>, participants: list<array<string, mixed>>}
+     *   evidence entries carry `ts`, the Unix time, for ordering
      */
     public function read(array $conversations, DateTimeImmutable $now): array
     {
-        if (!$conversations || !$this->acl->checkScope('ChatwootMessage', 'read') || !$this->acl->checkField('ChatwootMessage', 'content')) return [];
+        if (!$conversations || !$this->acl->checkScope('ChatwootMessage', 'read') || !$this->acl->checkField('ChatwootMessage', 'content')) {
+            return ['evidence' => [], 'participants' => []];
+        }
         $ai = null;
         $evidence = [];
+        $participants = [];
         foreach ($conversations as $conversation) {
             $probe = $this->em->getNewEntity('ChatwootMessage');
             $probe->set(['conversationId' => $conversation->getId(), 'teamsIds' => $conversation->getLinkMultipleIdList('teams')]);
@@ -54,13 +65,49 @@ class Transcript
                 throw new ServiceUnavailable('This conversation cannot be read from Chatwoot.');
             }
             $ai ??= $this->aiSenders();
-            foreach ($this->fetch($conversation, $account, $platform) as $message) {
-                $evidence[] = [...$this->entry($message, $ai, $now),
-                    'conversationId' => (int) $conversation->get('chatwootConversationId'), 'accountId' => (int) $account->get('chatwootAccountId')];
+            ['contact' => $contact, 'messages' => $messages] = $this->fetch($conversation, $account, $platform);
+            $accountId = (int) $account->get('chatwootAccountId');
+            $group = str_ends_with((string) ($contact['identifier'] ?? ''), '@g.us');
+            if ($group && isset($contact['id'])) $participants[$accountId . ':' . $contact['id']] ??= self::participant($contact, $account, true);
+            foreach ($messages as $message) {
+                $sender = is_array($message['sender'] ?? null) ? $message['sender'] : [];
+                if ($group && (int) $message['message_type'] === 0 && ($sender['type'] ?? null) === 'contact' && isset($sender['id'])) {
+                    $participants[$accountId . ':' . $sender['id']] ??= self::participant($sender, $account, false);
+                }
+                $evidence[] = [...$this->entry($message, $ai, $now, $group),
+                    'conversationId' => (int) $conversation->get('chatwootConversationId'), 'accountId' => $accountId];
             }
         }
         usort($evidence, fn ($a, $b) => [$b['ts'], $b['messageId']] <=> [$a['ts'], $a['messageId']]);
-        return array_slice($evidence, 0, self::LIMIT);
+        return ['evidence' => array_slice($evidence, 0, self::LIMIT), 'participants' => array_slice(array_values($participants), 0, self::PARTICIPANTS)];
+    }
+
+    /**
+     * Evidence as the next read will label it once these classes are on the contacts, so a verdict is stored
+     * under the evidence scope its later reads compute.
+     *
+     * @param list<array<string, mixed>> $evidence
+     * @param array<string, string> $classes contact id => class
+     * @return list<array<string, mixed>>
+     */
+    public static function relabel(array $evidence, array $classes): array
+    {
+        return array_map(function (array $entry) use ($classes): array {
+            $id = $entry['participantId'] ?? null;
+            if ($id === null || !isset($classes[$id]) || !in_array($entry['sentBy'] ?? null, ['customer', 'staff'], true)) return $entry;
+            return ['sentBy' => $classes[$id] === 'team' ? 'staff' : 'customer'] + $entry;
+        }, $evidence);
+    }
+
+    /** A group or a person in one, keyed by its account: the same WhatsApp group is a different contact in each account. */
+    private static function participant(array $contact, Entity $account, bool $group): array
+    {
+        $label = Parties::classOf($contact);
+        return [
+            'id' => (string) $contact['id'], 'name' => mb_substr((string) ($contact['name'] ?? ''), 0, 120) ?: null, 'group' => $group,
+            'label' => $label, 'classify' => $label === null && empty($contact['custom_attributes'][Parties::KEY]),
+            'account' => $account->getId(), 'accountId' => (int) $account->get('chatwootAccountId'),
+        ];
     }
 
     /** An instant in the reader's time zone with its offset, so the analysis quotes the times people saw. */
@@ -69,36 +116,42 @@ class Transcript
         return (new DateTimeImmutable('@' . $timestamp))->setTimezone($now->getTimezone())->format('Y-m-d\TH:i:sP');
     }
 
-    /** @return list<array<string, mixed>> the conversation's newest messages of the read kinds, oldest first */
+    /** @return array{contact: ?array<string, mixed>, messages: list<array<string, mixed>>} the conversation's contact and newest messages of the read kinds, oldest first */
     private function fetch(Entity $conversation, Entity $account, Entity $platform): array
     {
         $kept = [];
+        $contact = null;
         $before = null;
         for ($page = 0; $page < self::PAGES && count($kept) < self::LIMIT; $page++) {
             try {
-                $messages = $this->chatwoot->getConversationMessages((string) $platform->get('backendUrl'), (string) $account->get('apiKey'),
+                $result = $this->chatwoot->getConversationMessagesPage((string) $platform->get('backendUrl'), (string) $account->get('apiKey'),
                     (int) $account->get('chatwootAccountId'), (int) $conversation->get('chatwootConversationId'), $before);
             } catch (\Throwable) {
                 throw new ServiceUnavailable('Chatwoot is temporarily unavailable.');
             }
+            $contact ??= $result['contact'];
+            $messages = $result['messages'];
             $read = array_filter($messages, fn ($message) => array_key_exists((int) ($message['message_type'] ?? -1), self::KINDS));
             $kept = [...array_values($read), ...$kept];
             if (count($messages) < self::PAGE_SIZE) break;
             // Pages come oldest first; the next one ends before this one's oldest message.
             $before = (int) $messages[0]['id'];
         }
-        return $kept;
+        return ['contact' => $contact, 'messages' => $kept];
     }
 
     /** @param array<string, mixed> $message @param array<int, true> $ai */
-    private function entry(array $message, array $ai, DateTimeImmutable $now): array
+    private function entry(array $message, array $ai, DateTimeImmutable $now, bool $group): array
     {
         $type = (int) $message['message_type'];
         $private = (bool) ($message['private'] ?? false);
         $sender = is_array($message['sender'] ?? null) ? $message['sender'] : [];
         $senderType = $sender['type'] ?? null;
+        $fromContact = $type === 0 && $senderType === 'contact' && isset($sender['id']);
         $sentBy = match (true) {
             $private => 'internal',
+            // Someone who works for the business writing from their own number, e.g. the doctor in a patient's group.
+            $fromContact && Parties::classOf($sender) === 'team' => 'staff',
             $type === 0 => 'customer',
             $senderType === 'user' => isset($ai[(int) ($sender['id'] ?? 0)]) ? 'ai' : 'staff',
             $senderType !== null && $senderType !== 'contact' => 'ai',
@@ -112,7 +165,9 @@ class Transcript
         return [
             'id' => (string) $message['id'], 'text' => mb_substr(trim($text . ' ' . $markers), 0, 4000), 'at' => self::at($timestamp, $now), 'ts' => $timestamp,
             'kind' => $private ? 'note' : self::KINDS[$type],
-            'author' => in_array($sentBy, ['ai', 'staff', 'internal'], true) && is_string($name) ? mb_substr($name, 0, 120) : null,
+            // In a group several people write, so the customer's side is named too.
+            'author' => (in_array($sentBy, ['ai', 'staff', 'internal'], true) || ($group && $fromContact)) && is_string($name) ? mb_substr($name, 0, 120) : null,
+            'participantId' => $fromContact ? (string) $sender['id'] : null,
             'sentBy' => $sentBy, 'context' => false, 'messageId' => (int) $message['id'],
         ] + ($files ? ['attachments' => $files] : []);
     }

@@ -9,12 +9,14 @@ use Espo\Entities\User;
 
 class Summary
 {
-    public function __construct(private User $user, private Verdicts $verdicts) {}
+    public function __construct(private User $user, private Verdicts $verdicts, private Parties $parties) {}
 
     /**
      * A deal's verdict: the stored one when this revision and evidence were already judged, otherwise the
      * backend's analysis, stored once it completes. An answer that isn't a valid verdict counts as `none`:
-     * it was paid for, and the same state is not analysed again.
+     * it was paid for, and the same state is not analysed again. The same call classifies the conversation's
+     * unlabeled groups and group members; their labels go onto the Chatwoot contacts, and the verdict is
+     * stored under the evidence scope the next read, with those labels, will compute.
      */
     public function analyse(array $snapshot, string $locale, ?string $requestId = null): array
     {
@@ -24,9 +26,11 @@ class Summary
         $result = $this->request($snapshot, $locale, $requestId);
         if ($result['status'] !== 'completed') return [...$result, 'cached' => false, 'verdict' => null, 'reason' => null, 'card' => null];
         $card = is_array($result['card'] ?? null) ? $result['card'] : null;
+        $classes = $this->parties->store($snapshot['participants'] ?? [], is_array($card['participants'] ?? null) ? $card['participants'] : []);
+        if ($classes) $key[3] = Feed::evidenceScope(Transcript::relabel($snapshot['evidence'], $classes));
         $verdict = in_array($card['verdict'] ?? null, Verdicts::VERDICTS, true) ? $card['verdict'] : 'none';
         $reason = is_string($card['reason'] ?? null) ? $card['reason'] : 'The analysis could not be read.';
-        $card = $verdict === 'none' ? null : array_diff_key($card, ['verdict' => true, 'reason' => true]);
+        $card = $verdict === 'none' ? null : array_diff_key($card, ['verdict' => true, 'reason' => true, 'participants' => true]);
         $this->verdicts->store((string) $snapshot['tenantId'], ...[...$key, $verdict, $reason, $card]);
         return ['status' => 'completed', 'requestId' => $result['requestId'] ?? null, 'cached' => false,
             'verdict' => $verdict, 'reason' => $reason, 'card' => $card];
@@ -45,6 +49,9 @@ class Summary
                 'userId' => $this->user->getId(), 'recordId' => $snapshot['id'],
             ],
             'facts' => (object) $snapshot['facts'], 'evidence' => $snapshot['evidence'], 'locale' => $locale,
+            // The account fields stay in the CRM; the backend gets who each participant is, nothing more.
+            'participants' => array_map(fn ($participant) => array_intersect_key($participant, array_flip(['id', 'name', 'group', 'label', 'classify'])),
+                $snapshot['participants'] ?? []),
             'policy' => $snapshot['catchUpPolicy'],
         ];
         if ($requestId !== null) $payload['requestId'] = $requestId;

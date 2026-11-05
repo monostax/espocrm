@@ -90,14 +90,15 @@ class Feed
         if (!$this->states->load([$id])) $this->states->refresh([$id]);
         $context = $this->context([$id => $deal], $now)[$id];
         $conversations = $this->conversations($deal);
-        $evidence = [...$this->transcript->read($conversations, $now), ...$this->posts($id, $now)];
+        ['evidence' => $messages, 'participants' => $participants] = $this->transcript->read($conversations, $now);
+        $evidence = [...$messages, ...$this->posts($id, $now)];
         usort($evidence, fn ($a, $b) => [$a['ts'], $a['id']] <=> [$b['ts'], $b['id']]);
         $evidence = array_map(fn ($entry) => array_diff_key($entry, ['ts' => true]), $evidence);
-        $scope = hash('sha256', json_encode(array_map(fn ($entry) => $entry['id'], $evidence), JSON_THROW_ON_ERROR));
+        $scope = self::evidenceScope($evidence);
         $result = [
             ...$this->candidate($deal, $context, $now),
             'tenantId' => $tenant->getId(), 'catchUpPolicy' => $policy,
-            'revision' => $context['revision'], 'evidenceScope' => $scope, 'evidence' => $evidence,
+            'revision' => $context['revision'], 'evidenceScope' => $scope, 'evidence' => $evidence, 'participants' => $participants,
             'facts' => $this->facts($deal, $context, $now), 'nextAction' => $context['nextAction'],
             'conversation' => $this->target($conversations), 'closable' => $this->closable($deal),
         ];
@@ -124,6 +125,17 @@ class Feed
             throw new Conflict('This deal changed since the card was shown.');
         }
         $this->verdicts->resolve($id);
+    }
+
+    /**
+     * What a reader's evidence is, for sharing stored verdicts: the entries and who each counts as sent by. A
+     * label someone corrects on a contact changes it, so the deal is judged again.
+     *
+     * @param list<array<string, mixed>> $evidence
+     */
+    public static function evidenceScope(array $evidence): string
+    {
+        return hash('sha256', json_encode(array_map(fn ($entry) => [$entry['id'], $entry['sentBy'] ?? null], $evidence), JSON_THROW_ON_ERROR));
     }
 
     /** An open deal of this tenant the reader may read. */

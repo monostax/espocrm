@@ -60,6 +60,11 @@ class TranscriptTest extends TestCase
         return new DateTimeImmutable('2026-11-05 15:00:00', new DateTimeZone('America/Sao_Paulo'));
     }
 
+    private static function page(array $messages, ?array $contact = null): array
+    {
+        return ['contact' => $contact, 'messages' => $messages];
+    }
+
     private static function message(int $id, int $type, ?array $sender, string $content = 'text', array $extra = []): array
     {
         return $extra + ['id' => $id, 'message_type' => $type, 'content' => $content, 'private' => false, 'sender' => $sender,
@@ -70,7 +75,7 @@ class TranscriptTest extends TestCase
     {
         $staff = ['type' => 'user', 'id' => 95, 'name' => 'Erivânia Menezes'];
         $api = $this->createMock(ChatwootApiClient::class);
-        $api->expects(self::once())->method('getConversationMessages')->with('http://chatwoot', 'key', 12, 2775, null)->willReturn([
+        $api->expects(self::once())->method('getConversationMessagesPage')->with('http://chatwoot', 'key', 12, 2775, null)->willReturn(self::page([
             self::message(1, 0, ['type' => 'contact', 'id' => 7, 'name' => 'Samuel'], 'E qual o valor da consulta?'),
             self::message(2, 2, null, 'Atribuído a IA'),
             self::message(3, 1, $staff, 'O valor da consulta hoje é R$ 800,00.'),
@@ -79,11 +84,11 @@ class TranscriptTest extends TestCase
             self::message(6, 1, $staff, 'Cliente VIP', ['private' => true]),
             self::message(7, 1, ['type' => 'agent_bot', 'id' => 1, 'name' => 'Bot'], 'Olá'),
             self::message(8, 0, ['type' => 'contact', 'id' => 7, 'name' => 'Samuel'], '', ['attachments' => [self::file(81, 'image')]]),
-        ]);
+        ], ['id' => 7, 'name' => 'Samuel', 'identifier' => null]));
         [$transcript, $probe] = $this->transcript($api);
         $probe->expects(self::once())->method('set')->with(['conversationId' => 'conv', 'teamsIds' => ['team']]);
 
-        $evidence = $transcript->read($this->conversations(), $this->now());
+        $evidence = $transcript->read($this->conversations(), $this->now())['evidence'];
 
         self::assertSame([8, 7, 6, 5, 4, 3, 1], array_column($evidence, 'messageId'), 'newest first, activity left out');
         $by = array_column($evidence, null, 'messageId');
@@ -108,14 +113,14 @@ class TranscriptTest extends TestCase
     {
         $staff = ['type' => 'user', 'id' => 95, 'name' => 'Erivânia Menezes'];
         $api = $this->createMock(ChatwootApiClient::class);
-        $api->method('getConversationMessages')->willReturn([
+        $api->method('getConversationMessagesPage')->willReturn(self::page([
             self::message(1, 0, null, 'Segue o comprovante', ['attachments' => [self::file(11, 'file'), self::file(12, 'video')]]),
             self::message(2, 1, $staff, '', ['attachments' => [self::file(21, 'audio', ['transcribed_text' => 'Pode ser dia 11?'])]]),
             self::message(3, 0, null, 'Quero marcar para sexta', ['attachments' => [self::file(31, 'audio')]]),
             self::message(4, 1, null, '', ['attachments' => [self::file(41, 'audio'), self::file(42, 'image', ['data_url' => ''])]]),
-        ]);
+        ]));
         [$transcript] = $this->transcript($api);
-        $by = array_column($transcript->read($this->conversations(), $this->now()), null, 'messageId');
+        $by = array_column($transcript->read($this->conversations(), $this->now())['evidence'], null, 'messageId');
 
         self::assertSame('Segue o comprovante [attachment 11: file] [attachment 12: video]', $by[1]['text']);
         self::assertSame(['11'], array_column($by[1]['attachments'], 'id'), 'video stays a marker');
@@ -129,20 +134,20 @@ class TranscriptTest extends TestCase
     {
         $page = fn (int $from, int $count) => array_map(fn ($id) => self::message($id, 0, null), range($from, $from + $count - 1));
         $api = $this->createMock(ChatwootApiClient::class);
-        $api->expects(self::exactly(2))->method('getConversationMessages')
-            ->willReturnCallback(fn ($url, $key, $account, $conversation, $before) => $before === null ? $page(21, 20) : $page(16, 5));
+        $api->expects(self::exactly(2))->method('getConversationMessagesPage')
+            ->willReturnCallback(fn ($url, $key, $account, $conversation, $before) => self::page($before === null ? $page(21, 20) : $page(16, 5)));
         [$transcript] = $this->transcript($api);
-        $evidence = $transcript->read($this->conversations(), $this->now());
+        $evidence = $transcript->read($this->conversations(), $this->now())['evidence'];
         self::assertSame(range(40, 16), array_column($evidence, 'messageId'));
 
         $befores = [];
         $api = $this->createMock(ChatwootApiClient::class);
-        $api->method('getConversationMessages')->willReturnCallback(function ($url, $key, $account, $conversation, $before) use (&$befores, $page) {
+        $api->method('getConversationMessagesPage')->willReturnCallback(function ($url, $key, $account, $conversation, $before) use (&$befores, $page) {
             $befores[] = $before;
-            return $page(($before ?? 1000) - 20, 20);
+            return self::page($page(($before ?? 1000) - 20, 20));
         });
         [$transcript] = $this->transcript($api);
-        $evidence = $transcript->read($this->conversations(), $this->now());
+        $evidence = $transcript->read($this->conversations(), $this->now())['evidence'];
         self::assertSame([null, 980], $befores, 'each page ends before the previous page\'s oldest message');
         self::assertCount(Transcript::LIMIT, $evidence);
         self::assertSame(999, $evidence[0]['messageId']);
@@ -151,17 +156,66 @@ class TranscriptTest extends TestCase
     public function testConversationWhoseMessagesTheReaderMayNotReadIsNotFetched(): void
     {
         $api = $this->createMock(ChatwootApiClient::class);
-        $api->expects(self::never())->method('getConversationMessages');
+        $api->expects(self::never())->method('getConversationMessagesPage');
         [$transcript] = $this->transcript($api, false);
-        self::assertSame([], $transcript->read($this->conversations(), $this->now()));
+        self::assertSame(['evidence' => [], 'participants' => []], $transcript->read($this->conversations(), $this->now()));
     }
 
     public function testChatwootFailureFailsTheAnalysisInsteadOfJudgingWithoutTheConversation(): void
     {
         $api = $this->createMock(ChatwootApiClient::class);
-        $api->method('getConversationMessages')->willThrowException(new Error('Failed to get conversation messages from Chatwoot: HTTP 502'));
+        $api->method('getConversationMessagesPage')->willThrowException(new Error('Failed to get conversation messages from Chatwoot: HTTP 502'));
         [$transcript] = $this->transcript($api);
         $this->expectException(ServiceUnavailable::class);
-        $transcript->read($this->conversations(), $this->now());
+        $transcript->read($this->conversations(), $this->now())['evidence'];
+    }
+
+    public function testInAGroupTheTeamWritesForTheBusinessAndUnlabeledPeopleAreAskedAbout(): void
+    {
+        $doctor = ['type' => 'contact', 'id' => 20094, 'name' => 'Drª Michele', 'custom_attributes' => ['em_dia_tipo' => 'Equipe']];
+        $patient = ['type' => 'contact', 'id' => 20289, 'name' => 'Jessyka Souza', 'custom_attributes' => []];
+        $nutri = ['type' => 'contact', 'id' => 20110, 'name' => 'Nutricionista Sabrina', 'custom_attributes' => ['em_dia_tipo' => 'Algo que alguém escreveu']];
+        $api = $this->createMock(ChatwootApiClient::class);
+        $api->method('getConversationMessagesPage')->willReturn(self::page([
+            self::message(1, 0, $patient, 'Posso tomar antes do treino?'),
+            self::message(2, 0, $doctor, 'Pode sim, Jessyka.'),
+            self::message(3, 0, $nutri, 'Mande foto do prato'),
+            self::message(4, 1, null, 'Combinado'),
+        ], ['id' => 1984, 'name' => 'Jessyka Levitar 3+ (Grupo)', 'identifier' => '120363429480885746@g.us', 'custom_attributes' => []]));
+        [$transcript] = $this->transcript($api);
+        ['evidence' => $evidence, 'participants' => $participants] = $transcript->read($this->conversations(), $this->now());
+        $by = array_column($evidence, null, 'messageId');
+
+        self::assertSame(['customer', 'staff', 'customer', 'outside'], [$by[1]['sentBy'], $by[2]['sentBy'], $by[3]['sentBy'], $by[4]['sentBy']],
+            'the doctor labeled Equipe answers for the business');
+        self::assertSame(['Jessyka Souza', 'Drª Michele', '20289'], [$by[1]['author'], $by[2]['author'], $by[1]['participantId']]);
+        self::assertSame([['1984', true, null, true], ['20289', false, null, true], ['20094', false, 'team', false], ['20110', false, null, false]],
+            array_map(fn ($p) => [$p['id'], $p['group'], $p['label'], $p['classify']], $participants),
+            'the group and unlabeled members are asked about; a value a person typed is never replaced');
+        self::assertSame([12], array_values(array_unique(array_column($participants, 'accountId'))));
+    }
+
+    public function testADirectChatHasNoParticipantsToClassify(): void
+    {
+        $api = $this->createMock(ChatwootApiClient::class);
+        $api->method('getConversationMessagesPage')->willReturn(self::page([
+            self::message(1, 0, ['type' => 'contact', 'id' => 7, 'name' => 'Samuel', 'custom_attributes' => []], 'Oi'),
+        ], ['id' => 7, 'name' => 'Samuel', 'identifier' => null, 'custom_attributes' => []]));
+        [$transcript] = $this->transcript($api);
+        ['evidence' => $evidence, 'participants' => $participants] = $transcript->read($this->conversations(), $this->now());
+        self::assertSame([], $participants, 'a deal proves its own contact is the customer');
+        self::assertSame([null, 'customer'], [$evidence[0]['author'], $evidence[0]['sentBy']]);
+    }
+
+    public function testRelabelAppliesNewClassesOnlyToPeopleWritingToUs(): void
+    {
+        $evidence = [
+            ['id' => '1', 'sentBy' => 'customer', 'participantId' => '20094'],
+            ['id' => '2', 'sentBy' => 'customer', 'participantId' => '20289'],
+            ['id' => '3', 'sentBy' => 'internal', 'participantId' => null],
+            ['id' => 'post', 'sentBy' => 'internal'],
+        ];
+        $relabeled = Transcript::relabel($evidence, ['20094' => 'team', '20289' => 'customer']);
+        self::assertSame(['staff', 'customer', 'internal', 'internal'], array_column($relabeled, 'sentBy'));
     }
 }

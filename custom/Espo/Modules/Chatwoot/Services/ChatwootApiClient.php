@@ -3142,6 +3142,62 @@ public function deleteConversation(
         return $response['body']['payload'] ?? $response['body'] ?? [];
     }
 
+    /**
+     * One page of a conversation's messages (oldest first, 20 at most) with the conversation's contact, which
+     * for a WhatsApp group is the group itself.
+     *
+     * @return array{contact: ?array<string, mixed>, messages: list<array<string, mixed>>}
+     * @throws Error
+     */
+    public function getConversationMessagesPage(
+        string $platformUrl,
+        string $accountApiKey,
+        int $accountId,
+        int $conversationId,
+        ?int $before = null,
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/conversations/' . $conversationId . '/messages'
+            . ($before !== null ? '?before=' . $before : '');
+        $response = $this->executeRequest($url, 'GET', null, ['api_access_token: ' . $accountApiKey, 'Content-Type: application/json']);
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Failed to get conversation messages from Chatwoot: HTTP ' . $response['code']);
+        }
+        $contact = $response['body']['meta']['contact'] ?? null;
+        return ['contact' => is_array($contact) ? $contact : null, 'messages' => array_values($response['body']['payload'] ?? [])];
+    }
+
+    /**
+     * The account's custom attribute definitions for one model (`contact_attribute` or `conversation_attribute`).
+     *
+     * @return list<array<string, mixed>>
+     * @throws Error
+     */
+    public function listCustomAttributeDefinitions(string $platformUrl, string $accountApiKey, int $accountId, string $model): array
+    {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/custom_attribute_definitions?attribute_model=' . rawurlencode($model);
+        $response = $this->executeRequest($url, 'GET', null, ['api_access_token: ' . $accountApiKey, 'Content-Type: application/json']);
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Failed to list custom attribute definitions: HTTP ' . $response['code']);
+        }
+        return array_values(is_array($response['body']) ? $response['body'] : []);
+    }
+
+    /**
+     * Create a custom attribute definition; needs an administrator's token.
+     *
+     * @param array<string, mixed> $definition
+     * @throws Error
+     */
+    public function createCustomAttributeDefinition(string $platformUrl, string $accountApiKey, int $accountId, array $definition): void
+    {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId . '/custom_attribute_definitions';
+        $payload = json_encode(['custom_attribute_definition' => $definition], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+        $response = $this->executeRequest($url, 'POST', $payload, ['api_access_token: ' . $accountApiKey, 'Content-Type: application/json']);
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Failed to create custom attribute definition: HTTP ' . $response['code']);
+        }
+    }
+
     /** Episode changes are retained by Chatwoot until the matching revision is acknowledged. */
     public function episodeRequest(
         string $platformUrl,

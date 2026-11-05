@@ -17,6 +17,7 @@ use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Services\DealStates;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\Ownership;
+use Espo\Modules\FeatureCatchUp\Services\Parties;
 use Espo\Modules\FeatureCatchUp\Services\Revision;
 use Espo\Modules\FeatureCatchUp\Services\Rollout;
 use Espo\Modules\FeatureCatchUp\Services\Summary;
@@ -187,7 +188,7 @@ class FeedTest extends TestCase
         $verdicts = $this->createMock(Verdicts::class);
         $verdicts->method('find')->willReturn(['verdict' => 'none', 'reason' => 'Automated code', 'card' => null]);
         $verdicts->expects(self::never())->method('store');
-        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts])
+        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class)])
             ->onlyMethods(['request'])->getMock();
         $summary->expects(self::never())->method('request');
         $result = $summary->analyse($this->snapshot(), 'pt-BR');
@@ -207,7 +208,7 @@ class FeedTest extends TestCase
             $verdicts->expects(self::once())->method('store')->willReturnCallback(function (...$args) use (&$stored): void {
                 $stored = $args;
             });
-            $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts])
+            $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class)])
                 ->onlyMethods(['request'])->getMock();
             $summary->method('request')->willReturn(['status' => 'completed', 'requestId' => str_repeat('a', 64), 'card' => $card]);
             $result = $summary->analyse($this->snapshot(), 'pt-BR');
@@ -226,11 +227,35 @@ class FeedTest extends TestCase
         $verdicts = $this->createMock(Verdicts::class);
         $verdicts->method('find')->willReturn(null);
         $verdicts->expects(self::never())->method('store');
-        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts])
+        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class)])
             ->onlyMethods(['request'])->getMock();
         $summary->method('request')->willReturn(['status' => 'limited', 'requestId' => str_repeat('b', 64)]);
         $result = $summary->analyse($this->snapshot(), 'en');
         self::assertSame(['limited', false, null], [$result['status'], $result['cached'], $result['verdict']]);
+    }
+
+    public function testClassesFromTheAnalysisGoOnTheContactsAndTheVerdictUnderTheScopeTheNextReadComputes(): void
+    {
+        $evidence = [
+            ['id' => '1', 'sentBy' => 'customer', 'participantId' => '20289'],
+            ['id' => '2', 'sentBy' => 'customer', 'participantId' => '20094'],
+        ];
+        $participants = [['id' => '20094', 'classify' => true, 'account' => 'crm-account', 'accountId' => 12, 'name' => 'Drª Michele', 'group' => false, 'label' => null]];
+        $answers = [['id' => '20094', 'class' => 'team'], ['id' => '20289', 'class' => 'customer']];
+        $parties = $this->createMock(Parties::class);
+        $parties->expects(self::once())->method('store')->with($participants, $answers)->willReturn(['20094' => 'team']);
+        $verdicts = $this->createMock(Verdicts::class);
+        $verdicts->method('find')->willReturn(null);
+        $stored = null;
+        $verdicts->expects(self::once())->method('store')->willReturnCallback(function (...$args) use (&$stored): void { $stored = $args; });
+        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $parties])
+            ->onlyMethods(['request'])->getMock();
+        $summary->method('request')->willReturn(['status' => 'completed', 'card' => [
+            'verdict' => 'none', 'reason' => 'A doutora respondeu', 'participants' => $answers]]);
+        $summary->analyse([...$this->snapshot(), 'evidence' => $evidence, 'participants' => $participants], 'pt-BR');
+        $next = Feed::evidenceScope([$evidence[0], ['sentBy' => 'staff'] + $evidence[1]]);
+        self::assertSame($next, $stored[4], 'the next read labels the doctor as staff and finds this verdict');
+        self::assertNotSame(Feed::evidenceScope($evidence), $stored[4]);
     }
 
     private function snapshot(): array
