@@ -1,0 +1,16 @@
+{
+    "fields": {
+        "tenantId": { "type": "varchar", "maxLength": 36, "required": true },
+        "subjectType": { "type": "varchar", "maxLength": 32, "required": true },
+        "subjectId": { "type": "varchar", "maxLength": 36, "required": true },
+        "sourceScope": { "type": "varchar", "maxLength": 64, "required": true },
+        "state": { "type": "jsonObject" },
+        "coveredAt": { "type": "varchar", "maxLength": 40 },
+        "dueTs": { "type": "int" },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "indexes": {
+        "subjectScope": { "columns": ["subjectType", "subjectId", "sourceScope"], "unique": true },
+        "subjectDue": { "columns": ["subjectType", "subjectId", "dueTs"] }
+    }
+}

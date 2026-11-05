@@ -13,6 +13,7 @@ use Espo\Core\Utils\DataCache;
 use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Services\Ownership;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
+use Espo\Modules\FeatureCatchUp\Services\Records;
 use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
 use Espo\Modules\FeatureCatchUp\Services\Transcript;
 use Espo\Modules\FeatureCatchUp\Services\Verdicts;
@@ -56,7 +57,7 @@ class ServiceFeedTest extends TestCase
         $parties = $this->createMock(Parties::class);
         $cache = $this->createMock(DataCache::class);
         $feed = new ServiceFeed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user, $workspace, $owners, $verdicts,
-            $this->createMock(Transcript::class), $parties, $cache);
+            $this->createMock(Transcript::class), $parties, $cache, $this->createMock(Records::class));
         return [$feed, $verdicts, $parties, $cache];
     }
 
@@ -165,7 +166,8 @@ class ServiceFeedTest extends TestCase
         $owners->method('conversationClause')->willReturn(['', []]);
         $request = $this->createMock(Request::class);
         $feed = new ServiceFeed($em, $factory, $acl, $user, $workspace, $owners, $this->createMock(Verdicts::class),
-            $this->createMock(Transcript::class), $this->createMock(Parties::class), $this->createMock(DataCache::class));
+            $this->createMock(Transcript::class), $this->createMock(Parties::class), $this->createMock(DataCache::class),
+            $this->createMock(Records::class));
 
         self::assertSame(['copy-a', 'direct'], array_column($feed->list($request)['items'], 'id'));
     }

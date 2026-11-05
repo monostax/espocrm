@@ -1,0 +1,127 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Espo\Modules\FeatureCatchUp\Services;
+
+use DateTimeImmutable;
+use Espo\ORM\EntityManager;
+
+/**
+ * Each subject's running record (gtm/05 §12 step 3): what's agreed now and who promised what, by when, every
+ * item citing the message behind it. It is updated on demand, in the same analysis as the verdict, from the
+ * previous record plus the messages after it. A record is built from the conversations its reader may open
+ * and stored per subject and that set (`sourceScope`, gtm/05 §13), so nobody reads a record built from a
+ * conversation they can't see.
+ */
+class Records
+{
+    /** Messages before the record's edge sent again, so the analysis sees the turn it ended on. */
+    private const OVERLAP = 3;
+
+    public function __construct(private EntityManager $em) {}
+
+    /** @param list<string> $conversationIds the CRM conversations the reader may open */
+    public static function scope(array $conversationIds): string
+    {
+        $ids = array_values(array_unique(array_map('strval', $conversationIds)));
+        sort($ids);
+        return hash('sha256', json_encode($ids, JSON_THROW_ON_ERROR));
+    }
+
+    /** @return ?array{agreed: list<array<string, mixed>>, promises: list<array<string, mixed>>, coveredAt: ?string} */
+    public function load(string $type, string $id, string $scope): ?array
+    {
+        $query = $this->em->getPDO()->prepare('SELECT state, covered_at FROM catch_up_record WHERE deleted = 0 '
+            . 'AND subject_type = :type AND subject_id = :id AND source_scope = :scope LIMIT 1');
+        $query->execute(['type' => $type, 'id' => $id, 'scope' => $scope]);
+        $row = $query->fetch(\PDO::FETCH_ASSOC);
+        if (!$row) return null;
+        $state = json_decode((string) $row['state'], true);
+        if (!is_array($state)) return null;
+        return ['agreed' => array_values($state['agreed'] ?? []), 'promises' => array_values($state['promises'] ?? []), 'coveredAt' => $row['covered_at']];
+    }
+
+    /**
+     * The earliest due time of an open promise per subject, over every record of it. Only a time leaves here:
+     * it decides when a subject is judged again, never what anyone reads.
+     *
+     * @param list<string> $ids
+     * @return array<string, int> subject id => Unix time
+     */
+    public function dues(string $type, array $ids): array
+    {
+        if (!$ids) return [];
+        $marks = implode(',', array_fill(0, count($ids), '?'));
+        $query = $this->em->getPDO()->prepare("SELECT subject_id, MIN(due_ts) FROM catch_up_record WHERE deleted = 0 AND subject_type = ? "
+            . "AND subject_id IN ($marks) AND due_ts IS NOT NULL GROUP BY subject_id");
+        $query->execute([$type, ...array_values($ids)]);
+        return array_map('intval', $query->fetchAll(\PDO::FETCH_KEY_PAIR));
+    }
+
+    /** @param array<string, mixed> $record the analysis's record */
+    public function store(string $tenantId, string $type, string $id, string $scope, array $record, ?string $coveredAt): void
+    {
+        $state = ['agreed' => array_values($record['agreed'] ?? []), 'promises' => array_values($record['promises'] ?? [])];
+        $this->em->getPDO()->prepare(
+            'INSERT INTO catch_up_record (id, deleted, tenant_id, subject_type, subject_id, source_scope, state, covered_at, due_ts, modified_at) '
+            . 'VALUES (:rid, 0, :tenant, :type, :id, :scope, :state, :covered, :due, UTC_TIMESTAMP()) '
+            . 'ON DUPLICATE KEY UPDATE deleted = 0, state = VALUES(state), covered_at = VALUES(covered_at), due_ts = VALUES(due_ts), '
+            . 'modified_at = VALUES(modified_at)'
+        )->execute([
+            'rid' => substr(hash('sha256', "$type:$id:$scope"), 0, 17), 'tenant' => $tenantId, 'type' => $type, 'id' => $id, 'scope' => $scope,
+            'state' => json_encode($state, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), 'covered' => $coveredAt, 'due' => self::due($state),
+        ]);
+    }
+
+    /** The earliest due time of an open promise, as a Unix time; code only compares times (the model sets them). */
+    public static function due(?array $record): ?int
+    {
+        $due = null;
+        foreach ($record['promises'] ?? [] as $promise) {
+            if (($promise['status'] ?? 'open') !== 'open' || empty($promise['dueAt'])) continue;
+            try {
+                $time = (new DateTimeImmutable((string) $promise['dueAt']))->getTimestamp();
+            } catch (\Exception) {
+                continue;
+            }
+            $due = $due === null ? $time : min($due, $time);
+        }
+        return $due;
+    }
+
+    /**
+     * What the analysis reads: everything when there is no record yet, otherwise the entries after the
+     * record's edge plus a few before it.
+     *
+     * @param list<array<string, mixed>> $evidence oldest first
+     * @return list<array<string, mixed>>
+     */
+    public static function trim(array $evidence, ?array $record): array
+    {
+        if (!$record || empty($record['coveredAt'])) return $evidence;
+        $edge = strtotime((string) $record['coveredAt']);
+        if ($edge === false) return $evidence;
+        $first = count($evidence);
+        foreach ($evidence as $index => $entry) {
+            $at = strtotime((string) ($entry['at'] ?? ''));
+            if ($at !== false && $at > $edge) {
+                $first = $index;
+                break;
+            }
+        }
+        return array_slice($evidence, max(0, $first - self::OVERLAP));
+    }
+
+    /** The newest entry's time: where the next record update starts. @param list<array<string, mixed>> $evidence */
+    public static function edge(array $evidence): ?string
+    {
+        $edge = null;
+        $edgeTs = null;
+        foreach ($evidence as $entry) {
+            $at = strtotime((string) ($entry['at'] ?? ''));
+            if ($at !== false && ($edgeTs === null || $at > $edgeTs)) [$edge, $edgeTs] = [(string) $entry['at'], $at];
+        }
+        return $edge;
+    }
+}

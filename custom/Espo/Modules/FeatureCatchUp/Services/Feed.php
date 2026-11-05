@@ -55,6 +55,7 @@ class Feed
         private DataCache $cache,
         private Metadata $metadata,
         private Transcript $transcript,
+        private Records $records,
     ) {}
 
     public function list(Request $request): array
@@ -100,8 +101,11 @@ class Feed
         usort($evidence, fn ($a, $b) => [$a['ts'], $a['id']] <=> [$b['ts'], $b['id']]);
         $evidence = array_map(fn ($entry) => array_diff_key($entry, ['ts' => true]), $evidence);
         $scope = self::evidenceScope($evidence);
+        $sourceScope = Records::scope(array_keys($conversations));
         $result = [
             ...$this->candidate($deal, $context, $now),
+            'sourceScope' => $sourceScope, 'record' => $this->records->load('Opportunity', $id, $sourceScope),
+            'revisions' => $context['revisions'],
             'tenantId' => $tenant->getId(), 'catchUpPolicy' => $policy,
             'revision' => $context['revision'], 'evidenceScope' => $scope, 'evidence' => $evidence, 'participants' => $participants,
             'facts' => $this->facts($deal, $context, $now), 'nextAction' => $context['nextAction'],
@@ -110,6 +114,7 @@ class Feed
         $result['snapshot'] = hash('sha256', json_encode([$id, $this->user->getId(), $context['revision'], $scope], JSON_THROW_ON_ERROR));
         $this->cache->store($this->snapshotKey($id), [
             'token' => $result['snapshot'], 'revision' => $context['revision'], 'expires' => time() + 86400,
+            'alternates' => array_values($context['revisions']),
         ]);
         return $result;
     }
@@ -126,7 +131,8 @@ class Feed
         }
         $deal = $this->deal($id, $tenantId);
         $now = Workspace::now($request);
-        if ($this->context([$id => $deal], $now)[$id]['revision'] !== $snapshot['revision']) {
+        // The analysis may have stored a record that moves the revision across a due promise; that is not a change.
+        if (!in_array($this->context([$id => $deal], $now)[$id]['revision'], [$snapshot['revision'], ...($snapshot['alternates'] ?? [])], true)) {
             throw new Conflict('This deal changed since the card was shown.');
         }
         $this->verdicts->resolve('Opportunity', $id);
@@ -220,13 +226,19 @@ class Feed
         $ids = array_keys($deals);
         $states = $this->states->load($ids);
         $posts = $this->lastPosts($ids);
+        $dues = $this->records->dues('Opportunity', $ids);
         $context = [];
         foreach ($deals as $id => $deal) {
             $state = $states[$id] ?? null;
             $nextAction = $this->nextAction($deal);
             $context[$id] = [
                 'state' => $state, 'nextAction' => $nextAction,
-                'revision' => Revision::of($deal, $state, $nextAction, $posts[$id] ?? null, $now),
+                'revision' => Revision::of($deal, $state, $nextAction, $posts[$id] ?? null, $now, $dues[$id] ?? null),
+                // The revision once a stored record has, or no longer has, a promise past due.
+                'revisions' => [
+                    'due' => Revision::of($deal, $state, $nextAction, $posts[$id] ?? null, $now, $now->getTimestamp()),
+                    'notDue' => Revision::of($deal, $state, $nextAction, $posts[$id] ?? null, $now, null),
+                ],
                 'ownerId' => $this->owners->deckOwnerId($deal->get('assignedUserId'), $state['staff_user_id'] ?? null),
             ];
         }

@@ -45,6 +45,7 @@ class ServiceFeed
         private Transcript $transcript,
         private Parties $parties,
         private DataCache $cache,
+        private Records $records,
     ) {}
 
     public function list(Request $request): array
@@ -58,7 +59,9 @@ class ServiceFeed
         $limit = Workspace::limit($request, self::PAGE_SIZE);
         $rows = $this->candidates($account->getId(), $offset, $limit);
         $conversations = $this->readable(array_keys($rows));
-        $quiet = $this->verdicts->quiet('ChatwootConversation', array_map(fn ($c) => Revision::ofConversation($c, $now), $conversations));
+        $dues = $this->records->dues('ChatwootConversation', array_keys($conversations));
+        $quiet = $this->verdicts->quiet('ChatwootConversation',
+            array_map(fn ($c) => Revision::ofConversation($c, $now, $dues[$c->getId()] ?? null), $conversations));
         $names = $this->userNames(array_filter(array_column($rows, 'owner')));
         $items = [];
         $groups = [];
@@ -94,12 +97,15 @@ class ServiceFeed
         $own = array_values(array_filter($participants, fn ($p) => !empty($p['own'])))[0] ?? null;
         $owner = $this->owner($id);
         $candidate = $this->candidate($conversation, $owner ? ($this->userNames([$owner])[$owner] ?? null) : null, (bool) ($own['group'] ?? false), $now);
-        $revision = Revision::ofConversation($conversation, $now);
+        $revision = Revision::ofConversation($conversation, $now, $this->records->dues('ChatwootConversation', [$id])[$id] ?? null);
+        $revisions = ['due' => Revision::ofConversation($conversation, $now, $now->getTimestamp()), 'notDue' => Revision::ofConversation($conversation, $now)];
         $scope = Feed::evidenceScope($evidence);
+        $sourceScope = Records::scope([$id]);
         $result = [
             ...$candidate,
             'tenantId' => $tenant->getId(), 'catchUpPolicy' => $policy,
-            'revision' => $revision, 'evidenceScope' => $scope, 'evidence' => $evidence, 'participants' => $participants,
+            'revision' => $revision, 'revisions' => $revisions, 'evidenceScope' => $scope, 'evidence' => $evidence, 'participants' => $participants,
+            'sourceScope' => $sourceScope, 'record' => $this->records->load('ChatwootConversation', $id, $sourceScope),
             'facts' => $this->facts($candidate, $now), 'nextAction' => null, 'closable' => ['won' => false, 'lost' => false],
             'conversation' => [
                 'conversationId' => (int) $conversation->get('chatwootConversationId'),
@@ -110,6 +116,7 @@ class ServiceFeed
         $result['snapshot'] = hash('sha256', json_encode([$id, $this->user->getId(), $revision, $scope], JSON_THROW_ON_ERROR));
         $this->cache->store($this->snapshotKey($id), [
             'token' => $result['snapshot'], 'revision' => $revision, 'expires' => time() + 86400, 'participants' => $participants,
+            'alternates' => array_values($revisions),
         ]);
         return $result;
     }
@@ -120,7 +127,9 @@ class ServiceFeed
         $this->authorize();
         $conversation = $this->conversation($id, $this->workspace->resolve($request)['account']);
         $snapshot = $this->shown($id, $token);
-        if (Revision::ofConversation($conversation, Workspace::now($request)) !== $snapshot['revision']) {
+        $now = Workspace::now($request);
+        $current = Revision::ofConversation($conversation, $now, $this->records->dues('ChatwootConversation', [$id])[$id] ?? null);
+        if (!in_array($current, [$snapshot['revision'], ...($snapshot['alternates'] ?? [])], true)) {
             throw new Conflict('This conversation changed since the card was shown.');
         }
         $this->verdicts->resolve('ChatwootConversation', $id);

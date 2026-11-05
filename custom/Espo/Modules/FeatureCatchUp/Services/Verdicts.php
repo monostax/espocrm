@@ -14,7 +14,7 @@ use Espo\ORM\EntityManager;
  */
 class Verdicts
 {
-    public const VERDICTS = ['customer_waiting', 'follow_up_due', 'decided', 'next_step_missing', 'new_deal', 'none'];
+    public const VERDICTS = ['customer_waiting', 'follow_up_due', 'promise_due', 'decided', 'next_step_missing', 'new_deal', 'none'];
     /** Subject type => the column holding its id. */
     public const SUBJECTS = ['Opportunity' => 'opportunity_id', 'ChatwootConversation' => 'conversation_id'];
 

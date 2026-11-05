@@ -15,7 +15,7 @@ use Espo\ORM\Entity;
 final class Revision
 {
     /** Keep in step with the backend's CATCH_UP_PROMPT_VERSION; bumping it has every deal judged again. */
-    public const PROMPT_VERSION = '8';
+    public const PROMPT_VERSION = '9';
     /** Where the conversation is read from; bumping it has every deal judged again. 2: Chatwoot, not the CRM copy that lost messages. */
     public const EVIDENCE_VERSION = '2';
 
@@ -26,10 +26,10 @@ final class Revision
      * @param ?array<string, mixed> $state CatchUpDealState row
      * @param ?array<string, mixed> $nextAction
      */
-    public static function of(Entity $deal, ?array $state, ?array $nextAction, ?string $lastPostAt, DateTimeImmutable $now): string
+    public static function of(Entity $deal, ?array $state, ?array $nextAction, ?string $lastPostAt, DateTimeImmutable $now, ?int $dueTs = null): string
     {
         return hash('sha256', json_encode([
-            self::PROMPT_VERSION, self::EVIDENCE_VERSION,
+            self::PROMPT_VERSION, self::EVIDENCE_VERSION, self::due($dueTs, $now),
             $deal->get('opportunityStageId'), $deal->get('amount'), $deal->get('assignedUserId'), $deal->get('followupStatus'),
             $nextAction ? [$nextAction['id'], $nextAction['status'] ?? null, $nextAction['dateEnd'] ?? null, $nextAction['dateEndDate'] ?? null] : null,
             $state ? [$state['last_message_at'], (int) $state['message_count'], $state['staff_user_id']] : null,
@@ -42,14 +42,20 @@ final class Revision
      * A conversation without a deal (Atendimento): its activity, who spoke last, its message count and
      * assignee, and the same quiet-time steps as a deal.
      */
-    public static function ofConversation(Entity $conversation, DateTimeImmutable $now): string
+    public static function ofConversation(Entity $conversation, DateTimeImmutable $now, ?int $dueTs = null): string
     {
         return hash('sha256', json_encode([
-            self::PROMPT_VERSION, self::EVIDENCE_VERSION, 'conversation',
+            self::PROMPT_VERSION, self::EVIDENCE_VERSION, 'conversation', self::due($dueTs, $now),
             $conversation->get('lastActivityAt'), $conversation->get('lastMessageReceivedAt'), $conversation->get('lastMessageSentAt'),
             (int) $conversation->get('messagesCount'), $conversation->get('assigneeId'),
             self::quietStep(self::quietDays($conversation->get('lastActivityAt'), $now)),
         ], JSON_THROW_ON_ERROR));
+    }
+
+    /** Whether a promise in the subject's record is past due: it is judged again once it passes. */
+    public static function due(?int $dueTs, DateTimeImmutable $now): bool
+    {
+        return $dueTs !== null && $dueTs <= $now->getTimestamp();
     }
 
     public static function quietDays(?string $lastMessageAt, DateTimeImmutable $now): ?int
