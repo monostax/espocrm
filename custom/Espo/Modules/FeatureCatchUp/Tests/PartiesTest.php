@@ -31,7 +31,11 @@ class PartiesTest extends TestCase
         $cache = $this->createMock(DataCache::class);
         $kept = $definitionCached ? ['catchUp/partyDefinition/12' => true] : [];
         $cache->method('has')->willReturnCallback(function ($key) use (&$kept) { return isset($kept[$key]); });
-        $cache->method('store')->willReturnCallback(function ($key, $value) use (&$kept): void { $kept[$key] = $value; });
+        $cache->method('store')->willReturnCallback(function ($key, $value) use (&$kept): void {
+            // Like DataCache: only arrays and objects can be stored (a `true` broke every label on 2026-11-05).
+            if (!is_array($value) && !is_object($value)) throw new \InvalidArgumentException('Bad cache data type.');
+            $kept[$key] = $value;
+        });
         return new Parties($em, $api, $cache, $this->createMock(Log::class));
     }
 

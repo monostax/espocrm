@@ -153,7 +153,7 @@ class Parties
         if ($this->cache->has($cacheKey)) return;
         foreach ($this->chatwoot->listCustomAttributeDefinitions($url, $key, $accountId, 'contact_attribute') as $definition) {
             if (($definition['attribute_key'] ?? null) === self::KEY) {
-                $this->cache->store($cacheKey, true);
+                $this->cache->store($cacheKey, ['exists' => true]);
                 return;
             }
         }
@@ -165,6 +165,6 @@ class Parties
             'attribute_values' => array_values(self::LABELS),
             'attribute_description' => 'Quem é este contato para a empresa. A IA preenche quando o Em dia analisa uma conversa; corrija se estiver errado.',
         ]);
-        $this->cache->store($cacheKey, true);
+        $this->cache->store($cacheKey, ['exists' => true]);
     }
 }

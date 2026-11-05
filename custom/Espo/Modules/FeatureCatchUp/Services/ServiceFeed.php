@@ -61,7 +61,13 @@ class ServiceFeed
         $quiet = $this->verdicts->quiet('ChatwootConversation', array_map(fn ($c) => Revision::ofConversation($c, $now), $conversations));
         $names = $this->userNames(array_filter(array_column($rows, 'owner')));
         $items = [];
+        $groups = [];
         foreach ($conversations as $id => $conversation) {
+            // A WhatsApp group is mirrored once per member number; the reader gets the first copy they may open.
+            if ($rows[$id]['grp']) {
+                if (isset($groups[$rows[$id]['contact']])) continue;
+                $groups[$rows[$id]['contact']] = true;
+            }
             if (isset($quiet[$id])) continue;
             $items[] = $this->candidate($conversation, $names[$rows[$id]['owner'] ?? ''] ?? null, (bool) $rows[$id]['grp'], $now);
         }
@@ -152,13 +158,14 @@ class ServiceFeed
      * snoozed, not labeled personal, automated or team, in the reader's deck. Customers waiting on us come
      * first (freshest first), then chats quiet for over two days, then the rest by latest activity.
      *
-     * @return array<string, array{owner: ?string, grp: int}> keyed by conversation id, in order
+     * @return array<string, array{owner: ?string, grp: int, contact: ?string}> keyed by conversation id, in order
      */
     private function candidates(string $accountId, int $offset, int $limit): array
     {
         [$owner, $params] = $this->owners->conversationClause();
         $query = $this->em->getPDO()->prepare(
-            'SELECT c.id, ' . Ownership::CONVERSATION_OWNER_SQL . ' AS owner, (COALESCE(ct.identifier, \'\') LIKE \'%@g.us\') AS grp '
+            'SELECT c.id, c.chatwoot_contact_id AS contact, ' . Ownership::CONVERSATION_OWNER_SQL . ' AS owner, '
+            . '(COALESCE(ct.identifier, \'\') LIKE \'%@g.us\') AS grp '
             . 'FROM chatwoot_conversation c JOIN chatwoot_account a ON a.id = c.chatwoot_account_id '
             . 'LEFT JOIN chatwoot_contact ct ON ct.id = c.chatwoot_contact_id AND ct.deleted = 0 '
             . 'LEFT JOIN catch_up_party p ON p.chatwoot_account_id = c.chatwoot_account_id AND p.chatwoot_contact_id = ct.chatwoot_contact_id AND p.deleted = 0 '
@@ -180,7 +187,9 @@ class ServiceFeed
         $query->bindValue('offset', $offset, \PDO::PARAM_INT);
         $query->execute();
         $rows = [];
-        foreach ($query->fetchAll(\PDO::FETCH_ASSOC) as $row) $rows[(string) $row['id']] = ['owner' => $row['owner'], 'grp' => (int) $row['grp']];
+        foreach ($query->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $rows[(string) $row['id']] = ['owner' => $row['owner'], 'grp' => (int) $row['grp'], 'contact' => $row['contact']];
+        }
         return $rows;
     }
 

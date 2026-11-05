@@ -121,4 +121,52 @@ class ServiceFeedTest extends TestCase
         $this->expectException(BadRequest::class);
         $feed->label('conv', '999', 'team', 'token', $this->request());
     }
+
+    public function testAGroupMirroredOnSeveralNumbersIsOneCard(): void
+    {
+        $rows = [
+            ['id' => 'copy-a', 'contact' => 'group-contact', 'owner' => null, 'grp' => 1],
+            ['id' => 'copy-b', 'contact' => 'group-contact', 'owner' => null, 'grp' => 1],
+            ['id' => 'direct', 'contact' => 'person', 'owner' => null, 'grp' => 0],
+        ];
+        $statement = $this->createMock(\PDOStatement::class);
+        $statement->method('execute')->willReturn(true);
+        $statement->method('fetchAll')->willReturn($rows);
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->method('prepare')->willReturn($statement);
+        $conversations = array_map(fn ($row) => $this->entity(['chatwootAccountId' => 'crm-account', 'contactDisplayName' => $row['id']], $row['id']), $rows);
+
+        $builder = $this->getMockBuilder(\Espo\Core\Select\SelectBuilder::class)->disableOriginalConstructor()->getMock();
+        $builder->method('from')->willReturnSelf();
+        $builder->method('withStrictAccessControl')->willReturnSelf();
+        $query = $this->getMockBuilder(\Espo\ORM\Query\SelectBuilder::class)->disableOriginalConstructor()->getMock();
+        $query->method('where')->willReturnSelf();
+        $query->method('build')->willReturn($this->getMockBuilder(\Espo\ORM\Query\Select::class)->disableOriginalConstructor()->getMock());
+        $builder->method('buildQueryBuilder')->willReturn($query);
+        $factory = $this->createMock(SelectBuilderFactory::class);
+        $factory->method('create')->willReturn($builder);
+        $select = $this->getMockBuilder(\Espo\ORM\Repository\RDBSelectBuilder::class)->disableOriginalConstructor()->getMock();
+        $select->method('find')->willReturn(new \Espo\ORM\EntityCollection($conversations));
+        $repository = $this->getMockBuilder(\Espo\ORM\Repository\RDBRepository::class)->disableOriginalConstructor()->getMock();
+        $repository->method('clone')->willReturn($select);
+        $users = $this->getMockBuilder(\Espo\ORM\Repository\RDBRepository::class)->disableOriginalConstructor()->getMock();
+
+        $user = $this->createMock(User::class);
+        $user->method('isRegular')->willReturn(true);
+        $user->method('getId')->willReturn('erivania');
+        $acl = $this->createMock(Acl::class);
+        $acl->method('checkScope')->willReturn(true);
+        $em = $this->createMock(EntityManager::class);
+        $em->method('getPDO')->willReturn($pdo);
+        $em->method('getRDBRepository')->willReturnCallback(fn ($type) => $type === 'User' ? $users : $repository);
+        $workspace = $this->createMock(Workspace::class);
+        $workspace->method('resolve')->willReturn(['tenant' => $this->entity([], 'tenant'), 'policy' => [], 'account' => $this->entity([], 'crm-account')]);
+        $owners = $this->createMock(Ownership::class);
+        $owners->method('conversationClause')->willReturn(['', []]);
+        $request = $this->createMock(Request::class);
+        $feed = new ServiceFeed($em, $factory, $acl, $user, $workspace, $owners, $this->createMock(Verdicts::class),
+            $this->createMock(Transcript::class), $this->createMock(Parties::class), $this->createMock(DataCache::class));
+
+        self::assertSame(['copy-a', 'direct'], array_column($feed->list($request)['items'], 'id'));
+    }
 }
