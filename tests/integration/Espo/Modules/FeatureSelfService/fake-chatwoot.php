@@ -2,7 +2,9 @@
 
 /**
  * A stand-in for the Chatwoot Platform and account APIs that the CRM calls
- * while provisioning a workspace. Run it with PHP's built-in server:
+ * while provisioning and offboarding a workspace, and for the WAHA session
+ * API (any call not matched below answers 200, so WAHA stop and delete
+ * succeed and show in the log). Run it with PHP's built-in server:
  *
  *     FAKE_CHATWOOT_STATE=/tmp/fake-chatwoot.json php -S 0.0.0.0:8080 fake-chatwoot.php
  *
@@ -99,6 +101,15 @@ if (preg_match('#^/platform/api/v1/accounts/(\d+)$#', $path, $m) && $method === 
     $merged = array_merge($state['accounts'][$m[1]]['custom_attributes'] ?? [], $body['custom_attributes'] ?? []);
     $state['accounts'][$m[1]]['custom_attributes'] = array_filter($merged, fn ($value) => $value !== null);
     $finish(200, $state['accounts'][$m[1]]);
+}
+
+// Like Chatwoot: deleting an account or user answers 200, and 404 once it's gone.
+if (preg_match('#^/platform/api/v1/(accounts|users)/(\d+)$#', $path, $m) && $method === 'DELETE') {
+    if (!isset($state[$m[1]][$m[2]])) {
+        $finish(404, ['error' => 'not found']);
+    }
+    unset($state[$m[1]][$m[2]]);
+    $finish(200, []);
 }
 
 if (preg_match('#^/platform/api/v1/accounts/(\d+)$#', $path, $m)) {

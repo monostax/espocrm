@@ -14,7 +14,11 @@ namespace Espo\Modules\FeatureSelfService\Classes\ConsoleCommands;
 use Espo\Core\Console\Command;
 use Espo\Core\Console\Command\Params;
 use Espo\Core\Console\IO;
+use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Conflict;
+use Espo\Core\Exceptions\NotFound;
+use Espo\Core\Utils\SystemUser;
+use Espo\Modules\FeatureSelfService\Tools\Offboarding\Offboarder;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServiceUnavailable;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Provisioner;
@@ -40,6 +44,12 @@ use InvalidArgumentException;
  *   php command.php self-service workspace --tenant=<tenantId> [--status=trial|active|frozen] [--end-trial]
  *       Show a workspace's plan, status and trial dates; set its status, or end its trial
  *       now (frozen on the next access run). Chatwoot is updated right away.
+ *   php command.php self-service offboard --tenant=<tenantId> --confirm=<slug>
+ *       Offboard a tenant: end its WhatsApp sessions and Chatwoot accounts and remove
+ *       its records, teams and own users (billing history stays). Runs for up to a few
+ *       minutes; the job continues it. Run again to retry a failed one.
+ *   php command.php self-service offboarding --tenant=<tenantId>
+ *       Show a tenant's offboarding.
  */
 class SelfService implements Command
 {
@@ -48,6 +58,8 @@ class SelfService implements Command
         private Provisioner $provisioner,
         private EntityManager $entityManager,
         private WorkspaceAccess $access,
+        private Offboarder $offboarder,
+        private SystemUser $systemUser,
     ) {}
 
     public function run(Params $params, IO $io): void
@@ -60,12 +72,18 @@ class SelfService implements Command
                 'provision' => $this->provision($params, $io),
                 'run' => $this->runOne($params, $io),
                 'workspace' => $this->workspace($params, $io),
-                default => $this->fail($io, 'Unknown action. Use status, pause, resume, provision, run or workspace.'),
+                'offboard' => $this->offboard($params, $io),
+                'offboarding' => $this->offboarding($params, $io),
+                default => $this->fail($io, 'Unknown action. Use status, pause, resume, provision, run, workspace, offboard or offboarding.'),
             };
         } catch (SelfServiceUnavailable $e) {
             $this->fail($io, $e->getMessage() . ' Set CRM_SELF_SERVICE_ENABLED=true and resume to provision.');
-        } catch (InvalidArgumentException | Conflict $e) {
-            $this->fail($io, $e->getMessage());
+        } catch (InvalidArgumentException | Conflict | BadRequest | NotFound $e) {
+            $this->fail($io, match ($e->getMessage()) {
+                'SLUG_MISMATCH' => 'Give the tenant slug as --confirm.',
+                'OPEN_SUBSCRIPTION' => 'The tenant has an open subscription. Cancel it before offboarding.',
+                default => $e->getMessage(),
+            });
         }
     }
 
@@ -91,6 +109,11 @@ class SelfService implements Command
                 ->count();
 
             $io->writeLine("Provisionings {$status}: {$count}");
+        }
+
+        foreach ([Offboarder::STATUS_PENDING, Offboarder::STATUS_RUNNING, Offboarder::STATUS_FAILED, Offboarder::STATUS_COMPLETED] as $status) {
+            $count = $this->entityManager->getRDBRepository(Offboarder::ENTITY_TYPE)->where(['status' => $status])->count();
+            $io->writeLine("Offboardings {$status}: {$count}");
         }
     }
 
@@ -185,6 +208,58 @@ class SelfService implements Command
             $tenant->get('trialEndsAt') ?? '-',
             $tenant->get('chatwootAccess') ?: '-',
         ));
+    }
+
+    private function offboard(Params $params, IO $io): void
+    {
+        $record = $this->offboarder->start(
+            (string) $params->getOption('tenant'),
+            (string) $params->getOption('confirm'),
+            $this->systemUser->getId(),
+        );
+
+        $this->reportOffboarding($io, $this->offboarder->run((string) $record->getId()) ?? $record);
+    }
+
+    private function offboarding(Params $params, IO $io): void
+    {
+        $record = $this->offboarder->findByTenant((string) $params->getOption('tenant'));
+
+        if (!$record) {
+            $this->fail($io, 'No offboarding for that tenant.');
+
+            return;
+        }
+
+        $this->reportOffboarding($io, $record);
+    }
+
+    private function reportOffboarding(IO $io, Entity $record): void
+    {
+        $io->writeLine(sprintf(
+            'Offboarding %s of %s (%s): %s at step %s.',
+            $record->getId(),
+            $record->get('tenantName'),
+            $record->get('tenantSlug'),
+            $record->get('status'),
+            $record->get('step'),
+        ));
+
+        $state = json_decode((string) json_encode($record->get('state')), true) ?: [];
+
+        foreach (['removed' => 'Removed', 'kept' => 'Kept'] as $key => $label) {
+            $counts = $state[$key] ?? [];
+            ksort($counts);
+
+            if ($counts) {
+                $io->writeLine($label . ': ' . implode(', ', array_map(fn ($type, $n) => "{$type} {$n}", array_keys($counts), $counts)));
+            }
+        }
+
+        if ($record->get('status') === Offboarder::STATUS_FAILED) {
+            $io->writeLine('Last error: ' . $record->get('lastError'));
+            $io->setExitStatus(1);
+        }
     }
 
     private function report(IO $io, Entity $record): void

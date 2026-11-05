@@ -1,0 +1,3 @@
+{
+    "deletedRestorerClassName": "Espo\\Modules\\FeatureSelfService\\Classes\\Record\\Deleted\\TenantRestorer"
+}

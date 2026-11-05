@@ -61,7 +61,13 @@ class DeleteFromChatwootLegacy
         
         $this->log->info('LEGACY DELETE HOOK CALLED for ChatwootAccount: ' . $entity->getId());
         error_log('LEGACY DELETE HOOK CALLED for ChatwootAccount: ' . $entity->getId());
-        
+
+        // The caller already deleted the Chatwoot account (tenant offboarding
+        // deletes it first, then removes the local mirror in batches).
+        if (!empty($options['skipChatwootDelete'])) {
+            return;
+        }
+
         $chatwootAccountId = $entity->get('chatwootAccountId');
         
         // If there's no chatwootAccountId, this account was never synced to Chatwoot

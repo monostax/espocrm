@@ -1,0 +1,13 @@
+[
+    {
+        "rows": [
+            [{"name": "tenantName"}, {"name": "tenantSlug"}],
+            [{"name": "status"}, {"name": "step"}],
+            [{"name": "requestedBy"}, {"name": "createdAt"}],
+            [{"name": "attempts"}, {"name": "nextAttemptAt"}],
+            [{"name": "completedAt"}, false],
+            [{"name": "lastError", "fullWidth": true}],
+            [{"name": "state", "fullWidth": true}]
+        ]
+    }
+]

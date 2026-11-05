@@ -1,0 +1,10 @@
+{
+    "controller": "controllers/record",
+    "iconClass": "ti ti-building-off",
+    "createDisabled": true,
+    "editDisabled": true,
+    "removeDisabled": true,
+    "mergeDisabled": true,
+    "massUpdateDisabled": true,
+    "massRemoveDisabled": true
+}

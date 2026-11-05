@@ -1,0 +1,8 @@
+[
+    {"name": "name", "link": true},
+    {"name": "status", "width": 12},
+    {"name": "step", "width": 14},
+    {"name": "requestedBy", "width": 16},
+    {"name": "createdAt", "width": 16},
+    {"name": "completedAt", "width": 16}
+]

@@ -1,0 +1,41 @@
+{
+    "fields": {
+        "name": "Name",
+        "tenant": "Workspace",
+        "tenantName": "Workspace",
+        "tenantSlug": "Slug",
+        "requestedBy": "Requested by",
+        "status": "Status",
+        "step": "Step",
+        "state": "Progress",
+        "attempts": "Failed attempts",
+        "lastError": "Last error",
+        "nextAttemptAt": "Next attempt at",
+        "completedAt": "Completed at",
+        "createdAt": "Started at",
+        "modifiedAt": "Modified at"
+    },
+    "options": {
+        "status": {
+            "pending": "Pending",
+            "running": "Running",
+            "completed": "Completed",
+            "failed": "Failed"
+        },
+        "step": {
+            "access": "Revoke access",
+            "channels": "End WhatsApp sessions",
+            "chatwootRemote": "Delete Chatwoot accounts",
+            "chatwootLocal": "Remove chat data",
+            "records": "Remove workspace records",
+            "sharedRecords": "Remove team-only records",
+            "teams": "Remove teams",
+            "users": "Remove users",
+            "tenant": "Remove workspace",
+            "done": "Done"
+        }
+    },
+    "tooltips": {
+        "state": "What was removed (removed) and kept because it must be retained (kept), by record type."
+    }
+}

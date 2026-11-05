@@ -1,0 +1,133 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 200,
+            "readOnly": true
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true
+        },
+        "tenantName": {
+            "type": "varchar",
+            "maxLength": 100,
+            "readOnly": true
+        },
+        "tenantSlug": {
+            "type": "varchar",
+            "maxLength": 60,
+            "readOnly": true
+        },
+        "requestedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user"
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "pending",
+                "running",
+                "completed",
+                "failed"
+            ],
+            "default": "pending",
+            "readOnly": true,
+            "style": {
+                "running": "primary",
+                "completed": "success",
+                "failed": "danger"
+            }
+        },
+        "step": {
+            "type": "enum",
+            "options": [
+                "access",
+                "channels",
+                "chatwootRemote",
+                "chatwootLocal",
+                "records",
+                "sharedRecords",
+                "teams",
+                "users",
+                "tenant",
+                "done"
+            ],
+            "default": "access",
+            "readOnly": true
+        },
+        "state": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "tooltip": true
+        },
+        "revision": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "attempts": {
+            "type": "int",
+            "default": 0,
+            "readOnly": true
+        },
+        "lastError": {
+            "type": "text",
+            "readOnly": true
+        },
+        "nextAttemptAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "leaseToken": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true
+        },
+        "leaseUntil": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "completedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        }
+    },
+    "links": {
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant"
+        },
+        "requestedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "createdAt",
+        "order": "desc"
+    },
+    "indexes": {
+        "tenant": {
+            "columns": [
+                "tenantId"
+            ],
+            "unique": true
+        },
+        "due": {
+            "columns": [
+                "status",
+                "nextAttemptAt"
+            ]
+        }
+    }
+}

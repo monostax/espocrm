@@ -1,0 +1,16 @@
+{
+    "menu": {
+        "detail": {
+            "dropdown": [
+                "__APPEND__",
+                {
+                    "name": "offboard",
+                    "labelTranslation": "Tenant.labels.Offboard workspace",
+                    "handler": "feature-self-service:handlers/tenant/offboard",
+                    "actionFunction": "offboard",
+                    "checkVisibilityFunction": "isOffboardVisible"
+                }
+            ]
+        }
+    }
+}

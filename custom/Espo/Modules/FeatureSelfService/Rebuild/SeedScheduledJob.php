@@ -20,6 +20,7 @@ class SeedScheduledJob implements RebuildAction
     private const JOBS = [
         'RunSelfServiceProvisionings' => ['Run Self-Service Provisionings', '* * * * *'],
         'ApplySelfServiceWorkspaceAccess' => ['Apply Self-Service Workspace Access', '*/5 * * * *'],
+        'RunSelfServiceOffboardings' => ['Run Self-Service Offboardings', '* * * * *'],
     ];
 
     public function __construct(private EntityManager $entityManager) {}

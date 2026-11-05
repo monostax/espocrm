@@ -34,5 +34,17 @@
     },
     "tooltips": {
         "chatwootAccess": "O que o Chatwoot recebeu por último: ativo, ou congelado (sem envio e sem IA)."
+    },
+    "labels": {
+        "Offboard workspace": "Remover workspace",
+        "Offboard": "Remover"
+    },
+    "messages": {
+        "removeByOffboarding": "Um workspace é removido pela ação Remover workspace, não excluindo o registro.",
+        "offboardIntro": "Isto remove de forma permanente o workspace {name}: as sessões do WhatsApp e as contas do Chatwoot, as conversas, os contatos e os demais registros, as equipes e os usuários que pertencem só a ele. Usuários que também pertencem a outros workspaces apenas perdem o acesso a este. O histórico de cobrança e de uso é mantido. Não é possível desfazer.",
+        "offboardTypeSlug": "Digite o slug do workspace ({slug}) para confirmar.",
+        "offboardStarted": "Remoção iniciada. Ela continua em segundo plano.",
+        "offboardSlugMismatch": "O slug não confere.",
+        "offboardOpenSubscription": "Este workspace tem uma assinatura em aberto. Cancele-a antes de remover o workspace, para que o pagador não seja cobrado."
     }
 }

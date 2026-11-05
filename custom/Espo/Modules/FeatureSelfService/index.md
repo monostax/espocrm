@@ -113,6 +113,57 @@ Contracts:
 
 Not here yet: starter pipeline, trial state, entitlements.
 
+## Offboarding
+
+`Tools/Offboarding/Offboarder` removes a workspace and what it owns, inside
+and outside the CRM. It is the only way to remove a Tenant:
+`Hooks/Tenant/RequireOffboarding` refuses any other removal (detail, mass
+delete, API), and `Classes/Record/Deleted/TenantRestorer` refuses to restore
+an offboarded one. Before, deleting a Tenant soft-deleted that one row and left
+its Chatwoot accounts, WhatsApp sessions, users, teams and records running.
+
+An instance admin starts it from the Tenant's menu ("Offboard workspace",
+typing the slug) or the console. The `RunSelfServiceOffboardings` job runs it
+every minute, whatever the self-service switch says. One
+`SelfServiceOffboarding` record per tenant holds the step, progress and
+counts; it uses the same lease, revision and backoff as provisioning, and each
+run works for up to 4 minutes before leaving the rest to the next.
+
+| Step | Does |
+| --- | --- |
+| `access` | Users who belong only to this tenant are deactivated (removed in `users`). Everyone else, instance admins included, loses the tenant and its teams. Managed AI agent users are retired with their identity. |
+| `channels` | Ends every WAHA session of the tenant's Chatwoot accounts, also those of accounts removed earlier. |
+| `chatwootRemote` | Suspends each ChatwootAccount locally (sync jobs skip it), then deletes the Chatwoot account. |
+| `chatwootLocal` | Removes the local mirror in batches of 100, conversations first, without remote calls, then the ChatwootAccount row. |
+| `records` | Every tenant-scoped record (`TenantDataMap`: any entity with a belongsTo Tenant link), children before parents, in batches. |
+| `sharedRecords` | Records with no tenant link whose only teams are this tenant's (tasks, meetings, emails, ...). |
+| `teams` | The tenant's teams, unless another tenant uses them. |
+| `users` | The users from `access`, and their Chatwoot users (and the concierge) when no other account has them. Their emails can sign up again. |
+| `tenant` | The Tenant. Its native `cascadeRemoval` links (contacts, accounts, leads, opportunities, funnels, tags, custom fields) sweep anything added since. |
+
+Rules:
+- **Kept:** billing and usage history: the FeatureCredits module, AI billing
+  rates, usage reservations, AI runs, reporting events, and retired AI
+  identities (`ChatwootMachineIdentity`), so their emails are never reissued.
+  Their rows keep the removed tenant's id.
+- **Refusals:** a record whose remove hook refuses it (Forbidden, Conflict,
+  BadRequest), such as a rejected contact identity kept for outreach
+  suppression or a managed campaign summary, is kept and counted under
+  `state.kept`. Other errors retry with backoff.
+- **Open subscription:** starting refuses (`OPEN_SUBSCRIPTION`) while the
+  tenant has a billing obligation in `accepted`, `creating`, `unknown`,
+  `pending` or `active`. Cancel it first.
+- **Already deleted:** a tenant soft-deleted before offboarding existed can be
+  offboarded too: its leftovers go the same way.
+- **Not covered:** virtual entities (AgentMode, AgentSkill: OpenCode files),
+  records with neither a tenant link nor a team (personal emails of removed
+  users), and Meta/Google/Cal.com subscriptions on the customer's side.
+
+Removing a ChatwootAccount directly now also ends its WAHA sessions
+(`Chatwoot/Hooks/ChatwootAccount/TearDownWahaSessions`): its channels are
+removed as cascade children, which skip their own WAHA cleanup, so those
+WhatsApp numbers used to stay logged in.
+
 ## Operating
 
 ```sh
@@ -122,14 +173,17 @@ php command.php self-service resume
 php command.php self-service provision --key=<key> --owner=<userId> --name="Acme" \
     [--language=pt_BR] [--time-zone=America/Sao_Paulo]
 php command.php self-service run --id=<provisioningId>
+php command.php self-service offboard --tenant=<tenantId> --confirm=<slug>   # start or retry, run now
+php command.php self-service offboarding --tenant=<tenantId>                 # status and counts
 ```
 
-`provision` and `run` also need the switch on and no pause.
+`provision` and `run` also need the switch on and no pause. `offboard` does not.
 
 ## Tests
 
 Unit: `tests/unit/Espo/Modules/FeatureSelfService` (policy, slugs, provisioning
-requests, signup form and phones, ID-token rules), plus
+requests, signup form and phones, ID-token rules, offboarding order and kept
+types), plus
 `Chatwoot/Hooks/ChatwootAccount/SyncWithChatwootResumeTest` and
 `Global/Tools/Tenant/TenantAdminTeamProvisionerTest`.
 
@@ -153,3 +207,8 @@ SELF_SERVICE_TEST_DATABASE=<db> FAKE_CHATWOOT_URL=http://<fake>:8080 \
   required, email in use, IP limit, switch off.
 - `SocialSignInTest`: new Google user without a code, existing user ticket,
   foreign or tampered state, unverified email, instance admin, scopes.
+- `OffboardingTest`: direct Tenant removal refused, slug and open
+  subscription checks, a full offboarding (WAHA session ended, Chatwoot
+  account and users deleted, data and teams removed, users of other
+  workspaces and billing kept, no restore), retry after a failed remote
+  delete without repeating done steps, and the ChatwootAccount WAHA teardown.

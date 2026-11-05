@@ -100,7 +100,7 @@
         }
     },
     "links": {
-        "crmTags": { "type": "hasMany", "entity": "CrmTag", "foreign": "tenant" },
+        "crmTags": { "type": "hasMany", "entity": "CrmTag", "foreign": "tenant", "cascadeRemoval": true },
         "baseUserTeam": {
             "type": "belongsTo",
             "entity": "Team",
@@ -129,37 +129,44 @@
         "contacts": {
             "type": "hasMany",
             "entity": "Contact",
-            "foreign": "tenant"
+            "foreign": "tenant",
+            "cascadeRemoval": true
         },
         "accounts": {
             "type": "hasMany",
             "entity": "Account",
-            "foreign": "tenant"
+            "foreign": "tenant",
+            "cascadeRemoval": true
         },
         "leads": {
             "type": "hasMany",
             "entity": "Lead",
-            "foreign": "tenant"
+            "foreign": "tenant",
+            "cascadeRemoval": true
         },
         "opportunities": {
             "type": "hasMany",
             "entity": "Opportunity",
-            "foreign": "tenant"
+            "foreign": "tenant",
+            "cascadeRemoval": true
         },
         "funnels": {
             "type": "hasMany",
             "entity": "Funnel",
-            "foreign": "tenant"
+            "foreign": "tenant",
+            "cascadeRemoval": true
         },
         "customFieldGroups": {
             "type": "hasMany",
             "entity": "CustomFieldGroup",
-            "foreign": "tenant"
+            "foreign": "tenant",
+            "cascadeRemoval": true
         },
         "customFieldDefs": {
             "type": "hasMany",
             "entity": "CustomFieldDef",
-            "foreign": "tenant"
+            "foreign": "tenant",
+            "cascadeRemoval": true
         },
         "createdBy": {
             "type": "belongsTo",

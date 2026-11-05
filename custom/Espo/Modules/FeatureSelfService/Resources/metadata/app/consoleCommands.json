@@ -11,7 +11,8 @@
             "timeZone",
             "id",
             "tenant",
-            "status"
+            "status",
+            "confirm"
         ]
     }
 }

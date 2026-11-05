@@ -34,5 +34,17 @@
     },
     "tooltips": {
         "chatwootAccess": "What Chatwoot was last told: active, or frozen (no sending, no AI)."
+    },
+    "labels": {
+        "Offboard workspace": "Offboard workspace",
+        "Offboard": "Offboard"
+    },
+    "messages": {
+        "removeByOffboarding": "A workspace is removed by offboarding it (Offboard workspace), not by deleting it.",
+        "offboardIntro": "This permanently removes the workspace {name}: its WhatsApp sessions and Chatwoot accounts, conversations, contacts and other records, its teams, and the users who belong only to it. Users who also belong to other workspaces only lose access to this one. Billing and usage history is kept. This cannot be undone.",
+        "offboardTypeSlug": "Type the workspace slug ({slug}) to confirm.",
+        "offboardStarted": "Offboarding started. It runs in the background.",
+        "offboardSlugMismatch": "The slug does not match.",
+        "offboardOpenSubscription": "This workspace has an open subscription. Cancel it before offboarding, so the payer is not charged."
     }
 }

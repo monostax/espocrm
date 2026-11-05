@@ -3,13 +3,15 @@
         "SelfServiceProvisioning": "Self-Service Provisioning",
         "SelfServiceControl": "Self-Service Control",
         "SelfServiceSignup": "Self-Service Signup",
-        "SelfServiceLoginTicket": "Self-Service Login Ticket"
+        "SelfServiceLoginTicket": "Self-Service Login Ticket",
+        "SelfServiceOffboarding": "Workspace Offboarding"
     },
     "scopeNamesPlural": {
         "SelfServiceProvisioning": "Self-Service Provisionings",
         "SelfServiceControl": "Self-Service Controls",
         "SelfServiceSignup": "Self-Service Signups",
-        "SelfServiceLoginTicket": "Self-Service Login Tickets"
+        "SelfServiceLoginTicket": "Self-Service Login Tickets",
+        "SelfServiceOffboarding": "Workspace Offboardings"
     },
     "selfService": {
         "logInTitle": "Log in to your account",

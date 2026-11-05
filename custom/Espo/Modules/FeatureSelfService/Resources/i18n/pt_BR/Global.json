@@ -3,13 +3,15 @@
         "SelfServiceProvisioning": "Provisionamento self-service",
         "SelfServiceControl": "Controle do self-service",
         "SelfServiceSignup": "Cadastro self-service",
-        "SelfServiceLoginTicket": "Ticket de login self-service"
+        "SelfServiceLoginTicket": "Ticket de login self-service",
+        "SelfServiceOffboarding": "Remoção de workspace"
     },
     "scopeNamesPlural": {
         "SelfServiceProvisioning": "Provisionamentos self-service",
         "SelfServiceControl": "Controles do self-service",
         "SelfServiceSignup": "Cadastros self-service",
-        "SelfServiceLoginTicket": "Tickets de login self-service"
+        "SelfServiceLoginTicket": "Tickets de login self-service",
+        "SelfServiceOffboarding": "Remoções de workspace"
     },
     "selfService": {
         "logInTitle": "Entre na sua conta",
