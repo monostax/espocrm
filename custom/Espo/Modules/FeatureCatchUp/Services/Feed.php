@@ -42,6 +42,13 @@ class Feed
      */
     public const DORMANT_DAYS = 45;
     /**
+     * Customers waiting on us for up to this many days come first, longest wait first (decided 2026-11-10: an
+     * older wait is more urgent). Older waits follow, most recent first: at Grupo Mousa 55 of 96 waiting deals
+     * had waited 7 to 30 days, many already lost, answered by phone or missed by the CRM's message copy, and
+     * oldest-first across 30 days would spend a deck's 15 reviews on them before today's.
+     */
+    public const WAITING_FIRST_DAYS = 7;
+    /**
      * Older deals of the same conversations named in the facts. At Grupo Mousa (2026-11-10) 461 of 2,472 open
      * deals shared their conversation with an earlier deal, nearly all won or lost about a month before: a
      * returning customer whose last cycle's price and Pix receipt sit among the messages the analysis reads.
@@ -169,8 +176,9 @@ class Feed
     /**
      * Open deals with a conversation in the reader's deck whose conversation has settled (quiet for
      * SETTLE_MINUTES) and isn't dormant (DORMANT_DAYS), ordered without scanning messages: the customer
-     * waiting on us first (freshest first), then gone quiet past the follow-up threshold, then still moving,
-     * then quiet for a month (their last check), then with no messages known yet.
+     * waiting on us for up to WAITING_FIRST_DAYS first (longest wait first), then older waits (most recent
+     * first), then gone quiet past the follow-up threshold, then still moving, then quiet for a month (their
+     * last check), then with no messages known yet.
      *
      * @return list<string>
      */
@@ -178,6 +186,7 @@ class Feed
     {
         [$owner, $params] = $this->owners->clause();
         $waiting = 's.last_customer_at IS NOT NULL AND (s.last_business_at IS NULL OR s.last_customer_at > s.last_business_at)';
+        $recent = "$waiting AND s.last_customer_at >= UTC_TIMESTAMP() - INTERVAL " . self::WAITING_FIRST_DAYS . ' DAY';
         $query = $this->em->getPDO()->prepare(
             'SELECT o.id FROM opportunity o LEFT JOIN catch_up_deal_state s ON s.id = o.id AND s.deleted = 0 '
             . "WHERE o.deleted = 0 AND o.tenant_id = :tenant AND o.status NOT IN ('Won','Lost') "
@@ -186,10 +195,12 @@ class Feed
             . "AND z.target_type = 'Opportunity' AND z.snoozed_until > UTC_TIMESTAMP()) "
             . 'AND (s.last_message_at IS NULL OR s.last_message_at <= UTC_TIMESTAMP() - INTERVAL ' . self::SETTLE_MINUTES . ' MINUTE)' . $owner . ' '
             . 'AND (s.last_message_at IS NULL OR s.last_message_at >= UTC_TIMESTAMP() - INTERVAL ' . self::DORMANT_DAYS . ' DAY) '
-            . 'ORDER BY CASE WHEN s.last_message_at IS NULL THEN 5 '
-            . "WHEN $waiting AND s.last_customer_at >= UTC_TIMESTAMP() - INTERVAL 30 DAY THEN 0 "
-            . 'WHEN s.last_message_at < UTC_TIMESTAMP() - INTERVAL 30 DAY THEN 3 '
-            . 'WHEN s.last_message_at < UTC_TIMESTAMP() - INTERVAL ' . self::FOLLOW_UP_AFTER_DAYS . ' DAY THEN 1 ELSE 2 END, '
+            . 'ORDER BY CASE WHEN s.last_message_at IS NULL THEN 6 '
+            . "WHEN $recent THEN 0 "
+            . "WHEN $waiting AND s.last_customer_at >= UTC_TIMESTAMP() - INTERVAL 30 DAY THEN 1 "
+            . 'WHEN s.last_message_at < UTC_TIMESTAMP() - INTERVAL 30 DAY THEN 4 '
+            . 'WHEN s.last_message_at < UTC_TIMESTAMP() - INTERVAL ' . self::FOLLOW_UP_AFTER_DAYS . ' DAY THEN 2 ELSE 3 END, '
+            . "CASE WHEN $recent THEN s.last_customer_at END ASC, "
             . "CASE WHEN $waiting THEN s.last_customer_at END DESC, o.amount DESC, s.last_message_at DESC, o.id "
             . 'LIMIT :limit OFFSET :offset'
         );

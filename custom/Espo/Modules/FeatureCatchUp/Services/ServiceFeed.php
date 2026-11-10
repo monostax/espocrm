@@ -33,6 +33,8 @@ class ServiceFeed
     public const OPEN_DEAL_SQL = 'SELECT 1 FROM chatwoot_conversation_opportunity r JOIN opportunity o ON o.id = r.opportunity_id '
         . "AND o.deleted = 0 AND o.status NOT IN ('Won','Lost') WHERE r.chatwoot_conversation_id = c.id AND r.deleted = 0";
     private const WAITING = 'c.last_message_received_at IS NOT NULL AND (c.last_message_sent_at IS NULL OR c.last_message_received_at > c.last_message_sent_at)';
+    /** Waiting on us for up to Feed::WAITING_FIRST_DAYS: these come first, longest wait first. */
+    private const RECENT_WAIT = self::WAITING . ' AND c.last_message_received_at >= UTC_TIMESTAMP() - INTERVAL ' . Feed::WAITING_FIRST_DAYS . ' DAY';
 
     public function __construct(
         private EntityManager $em,
@@ -186,8 +188,10 @@ class ServiceFeed
             . 'AND NOT EXISTS (' . self::OPEN_DEAL_SQL . ') '
             . 'AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '
             . "AND z.target_type = 'ChatwootConversation' AND z.snoozed_until > UTC_TIMESTAMP())" . $owner . ' '
-            . 'ORDER BY CASE WHEN ' . self::WAITING . ' THEN 0 WHEN c.last_activity_at < UTC_TIMESTAMP() - INTERVAL '
-            . Feed::FOLLOW_UP_AFTER_DAYS . ' DAY THEN 1 ELSE 2 END, '
+            // Recent waits first, longest first; older waits next, most recent first; then quiet, then the rest.
+            . 'ORDER BY CASE WHEN ' . self::RECENT_WAIT . ' THEN 0 WHEN ' . self::WAITING . ' THEN 1 '
+            . 'WHEN c.last_activity_at < UTC_TIMESTAMP() - INTERVAL ' . Feed::FOLLOW_UP_AFTER_DAYS . ' DAY THEN 2 ELSE 3 END, '
+            . 'CASE WHEN ' . self::RECENT_WAIT . ' THEN c.last_message_received_at END ASC, '
             . 'CASE WHEN ' . self::WAITING . ' THEN c.last_message_received_at END DESC, c.last_activity_at DESC, c.id '
             . 'LIMIT :limit OFFSET :offset'
         );

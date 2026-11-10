@@ -169,6 +169,12 @@ class FeedTest extends TestCase
             'a deal whose conversation had a message in the last 30 minutes is not a candidate yet');
         self::assertStringContainsString('s.last_message_at >= UTC_TIMESTAMP() - INTERVAL 45 DAY', $queries[0],
             'a deal quiet for over 45 days has had its last check and leaves the deck');
+        $recent = 's.last_customer_at > s.last_business_at) AND s.last_customer_at >= UTC_TIMESTAMP() - INTERVAL 7 DAY';
+        self::assertStringContainsString("WHEN s.last_message_at IS NULL THEN 6 WHEN s.last_customer_at IS NOT NULL AND (s.last_business_at IS NULL OR $recent THEN 0 ",
+            $queries[0], 'customers waiting up to 7 days come first');
+        self::assertStringContainsString("$recent THEN s.last_customer_at END ASC, ", $queries[0], 'longest recent wait first');
+        self::assertStringContainsString('s.last_customer_at > s.last_business_at) THEN s.last_customer_at END DESC, o.amount DESC', $queries[0],
+            'older waits next, most recent first');
     }
 
     public function testReviewWithoutTheShownCardConflictsAndResolvesNothing(): void

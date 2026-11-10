@@ -105,6 +105,9 @@ class ServiceFeedTest extends TestCase
             "p.party_class IN ('customer', 'partner')", 'NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ')',
             "z.target_type = 'ChatwootConversation'", ' AND OWNER = :deckOwner',
         ] as $part) self::assertStringContainsString($part, $sql);
+        self::assertStringContainsString('c.last_message_received_at >= UTC_TIMESTAMP() - INTERVAL 7 DAY THEN 0 WHEN c.last_message_received_at IS NOT NULL',
+            $sql, 'conversations waiting up to 7 days come first, then older waits');
+        self::assertStringContainsString('INTERVAL 7 DAY THEN c.last_message_received_at END ASC, CASE WHEN', $sql, 'longest recent wait first');
         self::assertSame(['crm-account', 'erivania', 'erivania'], [$bound['account'], $bound['user'], $bound['deckOwner']]);
     }
 
