@@ -29,6 +29,12 @@ class Transcript
     private const ATTACHMENTS = 10;
     /** People and groups sent to the analysis; the backend accepts at most 40. */
     private const PARTICIPANTS = 20;
+    /** Reactions read per message; the backend accepts at most 10. */
+    private const REACTIONS = 10;
+    /** A quoted message older than the entries sent is quoted in this many characters. */
+    private const QUOTE = 300;
+    /** Quoted messages looked up in Chatwoot per read when they are older than every page fetched. */
+    private const QUOTE_LOOKUPS = 3;
 
     public function __construct(private EntityManager $em, private Acl $acl, private ChatwootApiClient $chatwoot) {}
 
@@ -56,17 +62,19 @@ class Transcript
         $ai = null;
         $evidence = [];
         $participants = [];
+        $quotes = [];
+        $sources = [];
         foreach ($conversations as $conversation) {
-            $probe = $this->em->getNewEntity('ChatwootMessage');
-            $probe->set(['conversationId' => $conversation->getId(), 'teamsIds' => $conversation->getLinkMultipleIdList('teams')]);
-            if (!$this->acl->checkEntityRead($probe)) continue;
+            if (!$this->readable($conversation)) continue;
             $account = $this->em->getEntityById('ChatwootAccount', (string) $conversation->get('chatwootAccountId'));
             $platform = $account ? $this->em->getEntityById('ChatwootPlatform', (string) $account->get('platformId')) : null;
             if (!$account || !$platform?->get('backendUrl') || !$account->get('apiKey') || !$conversation->get('chatwootConversationId')) {
                 throw new ServiceUnavailable('This conversation cannot be read from Chatwoot.');
             }
             $ai ??= $this->aiSenders();
-            ['contact' => $contact, 'messages' => $messages] = $this->fetch($conversation, $account, $platform);
+            ['contact' => $contact, 'messages' => $messages, 'quotes' => $fetched] = $this->fetch($conversation, $account, $platform);
+            $quotes += $fetched;
+            $sources[(int) $conversation->get('chatwootConversationId')] = [$account, $platform, (int) $conversation->get('chatwootConversationId')];
             $accountId = (int) $account->get('chatwootAccountId');
             $group = str_ends_with((string) ($contact['identifier'] ?? ''), '@g.us');
             if (($group || $direct) && isset($contact['id'])) {
@@ -82,7 +90,32 @@ class Transcript
             }
         }
         usort($evidence, fn ($a, $b) => [$b['ts'], $b['messageId']] <=> [$a['ts'], $a['messageId']]);
-        return ['evidence' => array_slice($evidence, 0, self::LIMIT), 'participants' => array_slice(array_values($participants), 0, self::PARTICIPANTS)];
+        $evidence = array_slice($evidence, 0, self::LIMIT);
+        // A reply to a message older than what is sent carries that message's text, so a "pode ser" reads against its price.
+        $sent = array_flip(array_column($evidence, 'id'));
+        $lookups = 0;
+        foreach ($evidence as $index => $entry) {
+            $quoted = $entry['replyTo'] ?? null;
+            if ($quoted === null || isset($sent[$quoted])) continue;
+            if (!isset($quotes[$quoted]) && $lookups < self::QUOTE_LOOKUPS && isset($sources[$entry['conversationId']])) {
+                $lookups++;
+                $quotes += $this->quote(...[...$sources[$entry['conversationId']], (int) $quoted]);
+            }
+            if (isset($quotes[$quoted])) $evidence[$index]['replyText'] = $quotes[$quoted];
+        }
+        return ['evidence' => $evidence, 'participants' => array_slice(array_values($participants), 0, self::PARTICIPANTS)];
+    }
+
+    /**
+     * Whether the reader may read this conversation's messages: the check one of its messages in the CRM would
+     * pass (the ChatwootMessage ACL: the conversation's team and inbox access).
+     */
+    public function readable(Entity $conversation): bool
+    {
+        if (!$this->acl->checkScope('ChatwootMessage', 'read') || !$this->acl->checkField('ChatwootMessage', 'content')) return false;
+        $probe = $this->em->getNewEntity('ChatwootMessage');
+        $probe->set(['conversationId' => $conversation->getId(), 'teamsIds' => $conversation->getLinkMultipleIdList('teams')]);
+        return $this->acl->checkEntityRead($probe);
     }
 
     /**
@@ -119,10 +152,14 @@ class Transcript
         return (new DateTimeImmutable('@' . $timestamp))->setTimezone($now->getTimezone())->format('Y-m-d\TH:i:sP');
     }
 
-    /** @return array{contact: ?array<string, mixed>, messages: list<array<string, mixed>>} the conversation's contact and newest messages of the read kinds, oldest first */
+    /**
+     * @return array{contact: ?array<string, mixed>, messages: list<array<string, mixed>>, quotes: array<string, string>} the
+     *   conversation's contact, its newest messages of the read kinds, oldest first, and the text of every public message fetched
+     */
     private function fetch(Entity $conversation, Entity $account, Entity $platform): array
     {
         $kept = [];
+        $quotes = [];
         $contact = null;
         $before = null;
         for ($page = 0; $page < self::PAGES && count($kept) < self::LIMIT; $page++) {
@@ -136,11 +173,15 @@ class Transcript
             $messages = $result['messages'];
             $read = array_filter($messages, fn ($message) => array_key_exists((int) ($message['message_type'] ?? -1), self::KINDS));
             $kept = [...array_values($read), ...$kept];
+            foreach ($read as $message) {
+                $text = trim(strip_tags((string) ($message['content'] ?? '')));
+                if (isset($message['id']) && $text !== '' && empty($message['private'])) $quotes[(string) $message['id']] = mb_substr($text, 0, self::QUOTE);
+            }
             if (count($messages) < self::PAGE_SIZE) break;
             // Pages come oldest first; the next one ends before this one's oldest message.
             $before = (int) $messages[0]['id'];
         }
-        return ['contact' => $contact, 'messages' => $kept];
+        return ['contact' => $contact, 'messages' => $kept, 'quotes' => $quotes];
     }
 
     /** @param array<string, mixed> $message @param array<int, true> $ai */
@@ -172,7 +213,65 @@ class Transcript
             'author' => (in_array($sentBy, ['ai', 'staff', 'internal'], true) || ($group && $fromContact)) && is_string($name) ? mb_substr($name, 0, 120) : null,
             'participantId' => $fromContact ? (string) $sender['id'] : null,
             'sentBy' => $sentBy, 'context' => false, 'messageId' => (int) $message['id'],
-        ] + ($files ? ['attachments' => $files] : []);
+        ] + ($files ? ['attachments' => $files] : [])
+            + (($replyTo = self::replyTo($message)) !== null ? ['replyTo' => $replyTo] : [])
+            + (($reactions = self::reactions($message['reactions'] ?? [], $ai)) ? ['reactions' => $reactions] : []);
+    }
+
+    /**
+     * The text of one public message older than every page fetched: the page that ends right after it. A lookup
+     * that fails leaves the reply without its quote; it never fails the analysis.
+     *
+     * @return array<string, string>
+     */
+    private function quote(Entity $account, Entity $platform, int $conversationId, int $messageId): array
+    {
+        try {
+            $page = $this->chatwoot->getConversationMessagesPage((string) $platform->get('backendUrl'), (string) $account->get('apiKey'),
+                (int) $account->get('chatwootAccountId'), $conversationId, $messageId + 1);
+        } catch (\Throwable) {
+            return [];
+        }
+        foreach ($page['messages'] ?? [] as $message) {
+            if ((int) ($message['id'] ?? 0) !== $messageId || !empty($message['private'])) continue;
+            if (!array_key_exists((int) ($message['message_type'] ?? -1), self::KINDS)) continue;
+            $text = trim(strip_tags((string) ($message['content'] ?? '')));
+            return $text === '' ? [] : [(string) $messageId => mb_substr($text, 0, self::QUOTE)];
+        }
+        return [];
+    }
+
+    /** The message this one quotes (a WhatsApp reply), as Chatwoot keeps it in content_attributes.in_reply_to. */
+    private static function replyTo(array $message): ?string
+    {
+        $attributes = $message['content_attributes'] ?? null;
+        // The column is double-encoded in some rows: a JSON string holding the object.
+        if (is_string($attributes)) $attributes = json_decode($attributes, true);
+        $id = is_array($attributes) ? ($attributes['in_reply_to'] ?? null) : null;
+        return (is_int($id) || (is_string($id) && ctype_digit($id))) && (int) $id > 0 ? (string) (int) $id : null;
+    }
+
+    /**
+     * Emoji reactions and who sent them: the contact is the customer, the business is the AI or a person on the team.
+     *
+     * @param mixed $reactions Chatwoot's reactions payload
+     * @param array<int, true> $ai
+     * @return list<array{emoji: string, sentBy: string, author: ?string}>
+     */
+    private static function reactions(mixed $reactions, array $ai): array
+    {
+        $read = [];
+        foreach (is_array($reactions) ? $reactions : [] as $reaction) {
+            $emoji = is_array($reaction) ? trim((string) ($reaction['emoji'] ?? '')) : '';
+            if ($emoji === '' || mb_strlen($emoji) > 16) continue;
+            $byContact = ($reaction['actor_type'] ?? null) === 'contact';
+            $name = $reaction['actor_name'] ?? null;
+            $read[] = ['emoji' => $emoji,
+                'sentBy' => $byContact ? 'customer' : (isset($ai[(int) ($reaction['performed_by_id'] ?? 0)]) ? 'ai' : 'staff'),
+                'author' => is_string($name) && $name !== '' ? mb_substr($name, 0, 120) : null];
+            if (count($read) >= self::REACTIONS) break;
+        }
+        return $read;
     }
 
     /**

@@ -15,7 +15,7 @@ use Espo\ORM\Entity;
 final class Revision
 {
     /** Keep in step with the backend's CATCH_UP_PROMPT_VERSION; bumping it has every deal judged again. */
-    public const PROMPT_VERSION = '9';
+    public const PROMPT_VERSION = '10';
     /** Where the conversation is read from; bumping it has every deal judged again. 2: Chatwoot, not the CRM copy that lost messages. */
     public const EVIDENCE_VERSION = '2';
 

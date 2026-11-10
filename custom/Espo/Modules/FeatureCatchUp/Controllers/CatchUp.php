@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureCatchUp\Controllers;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Modules\FeatureCatchUp\Services\Actions;
+use Espo\Modules\FeatureCatchUp\Services\ConversationRecord;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
 use Espo\Modules\FeatureCatchUp\Services\Snoozes;
@@ -23,7 +24,14 @@ class CatchUp
         private Snoozes $snoozes,
         private Workspace $workspace,
         private ServiceFeed $service,
+        private ConversationRecord $record,
     ) {}
+
+    /** The conversation sidebar: what Em dia already concluded about one Chatwoot conversation. Never analyses. */
+    public function getActionRecord(Request $request): object
+    {
+        return (object) $this->record->read($request);
+    }
 
     public function getActionList(Request $request): object
     {

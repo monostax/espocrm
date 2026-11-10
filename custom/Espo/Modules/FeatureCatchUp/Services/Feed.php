@@ -41,6 +41,12 @@ class Feed
      * time for a deck to reach it. It comes back when a message moves it.
      */
     public const DORMANT_DAYS = 45;
+    /**
+     * Older deals of the same conversations named in the facts. At Grupo Mousa (2026-11-10) 461 of 2,472 open
+     * deals shared their conversation with an earlier deal, nearly all won or lost about a month before: a
+     * returning customer whose last cycle's price and Pix receipt sit among the messages the analysis reads.
+     */
+    private const EARLIER_DEALS = 3;
 
     public function __construct(
         private EntityManager $em,
@@ -108,7 +114,8 @@ class Feed
             'revisions' => $context['revisions'],
             'tenantId' => $tenant->getId(), 'catchUpPolicy' => $policy,
             'revision' => $context['revision'], 'evidenceScope' => $scope, 'evidence' => $evidence, 'participants' => $participants,
-            'facts' => $this->facts($deal, $context, $now), 'nextAction' => $context['nextAction'],
+            'facts' => [...$this->facts($deal, $context, $now), 'earlierDeals' => $this->earlierDeals($deal, array_keys($conversations), $now)],
+            'nextAction' => $context['nextAction'],
             'conversation' => $this->target($conversations), 'closable' => $this->closable($deal),
         ];
         $result['snapshot'] = hash('sha256', json_encode([$id, $this->user->getId(), $context['revision'], $scope], JSON_THROW_ON_ERROR));
@@ -275,6 +282,8 @@ class Feed
             'amountCurrency' => $candidate['amountCurrency'], 'contactName' => $candidate['contactName'],
             'deckOwnerName' => $candidate['ownerName'],
             'dealAgeDays' => $created ? max(0, intdiv($now->getTimestamp() - $created->getTimestamp(), 86400)) : null,
+            // When the deal opened, so messages from an earlier cycle in the same conversation read as history.
+            'dealOpenedAt' => $created ? Transcript::at($created->getTimestamp(), $now) : null,
             'quietDays' => $candidate['quietDays'], 'lastSpeaker' => $lastSpeaker,
             'followUpAfterDays' => self::FOLLOW_UP_AFTER_DAYS,
             'aiFollowupActive' => $deal->get('followupStatus') === 'FollowupActive',
@@ -286,11 +295,41 @@ class Feed
     }
 
     /**
+     * Older deals that share one of these conversations, newest first, as one line for the analysis: the
+     * customer came back, and what was agreed or paid then is not this deal's. Only deals the reader may read
+     * are named.
+     *
+     * @param list<string> $conversationIds conversations the reader may read
+     */
+    public function earlierDeals(Entity $deal, array $conversationIds, DateTimeImmutable $now): ?string
+    {
+        if (!$conversationIds || !$deal->get('createdAt')) return null;
+        $marks = implode(',', array_fill(0, count($conversationIds), '?'));
+        $query = $this->em->getPDO()->prepare('SELECT DISTINCT o.id, o.created_at FROM chatwoot_conversation_opportunity r '
+            . 'JOIN opportunity o ON o.id = r.opportunity_id AND o.deleted = 0 '
+            . "WHERE r.deleted = 0 AND r.chatwoot_conversation_id IN ($marks) AND o.id <> ? AND o.tenant_id = ? AND o.created_at < ? "
+            . 'ORDER BY o.created_at DESC LIMIT 10');
+        $query->execute([...array_values($conversationIds), $deal->getId(), (string) $deal->get('tenantId'), (string) $deal->get('createdAt')]);
+        $lines = [];
+        foreach ($query->fetchAll(\PDO::FETCH_COLUMN) as $id) {
+            $earlier = $this->em->getEntityById('Opportunity', (string) $id);
+            if (!$earlier || !$this->acl->checkEntityRead($earlier)) continue;
+            $opened = (new DateTimeImmutable((string) $earlier->get('createdAt'), new DateTimeZone('UTC')))->setTimezone($now->getTimezone());
+            $amount = $earlier->get('amount') !== null ? ' ' . trim(($earlier->get('amountCurrency') ?? '') . ' ' . $earlier->get('amount')) : '';
+            $closed = in_array($earlier->get('status'), ['Won', 'Lost'], true) && $earlier->get('closeDate') ? ', closed ' . $earlier->get('closeDate') : '';
+            $lines[] = mb_substr((string) $earlier->get('name'), 0, 80) . ' (' . ($earlier->get('status') ?: 'open') . $amount
+                . ', opened ' . $opened->format('Y-m-d') . $closed . ')';
+            if (count($lines) >= self::EARLIER_DEALS) break;
+        }
+        return $lines ? implode('; ', $lines) : null;
+    }
+
+    /**
      * Linked conversations the reader may read, keyed by CRM id.
      *
      * @return array<string, Entity>
      */
-    private function conversations(Entity $deal): array
+    public function conversations(Entity $deal): array
     {
         if (!$this->acl->checkScope('ChatwootConversation', 'read')) return [];
         $found = [];

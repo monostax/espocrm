@@ -130,6 +130,47 @@ class TranscriptTest extends TestCase
         self::assertSame(['41'], array_column($by[4]['attachments'], 'id'), 'audio nobody transcribed is offered; a file without a link is not');
     }
 
+    public function testRepliesNameTheQuotedMessageAndReactionsSayWhoReacted(): void
+    {
+        $customer = ['type' => 'contact', 'id' => 7, 'name' => 'Samuel'];
+        $staff = ['type' => 'user', 'id' => 95, 'name' => 'Erivânia Menezes'];
+        $page = fn (int $from, int $count) => array_map(fn ($id) => self::message($id, 1, $staff, "Mensagem $id"), range($from, $from + $count - 1));
+        $api = $this->createMock(ChatwootApiClient::class);
+        $api->method('getConversationMessagesPage')->willReturnCallback(fn ($url, $key, $account, $conversation, $before) => self::page(match ($before) {
+            null => [...$page(43, 18),
+                self::message(61, 0, $customer, 'pode ser', ['content_attributes' => ['in_reply_to' => 2]]),
+                self::message(62, 0, $customer, 'esse mesmo', ['content_attributes' => json_encode(['in_reply_to' => 61])]),
+            ],
+            43 => [...$page(23, 20)],
+            // The page that ends right after the quoted message, read only to quote it.
+            3 => [self::message(1, 0, $customer, 'Oi'), self::message(2, 1, $staff, 'Fica R$ 4.200 à vista no Pix')],
+            default => [],
+        }));
+        [$transcript] = $this->transcript($api);
+        $evidence = $transcript->read($this->conversations(), $this->now())['evidence'];
+        $by = array_column($evidence, null, 'messageId');
+
+        self::assertCount(Transcript::LIMIT, $evidence);
+        self::assertArrayNotHasKey(2, $by, 'the quoted price is older than the messages sent');
+        self::assertSame(['2', 'Fica R$ 4.200 à vista no Pix'], [$by[61]['replyTo'], $by[61]['replyText']], 'so its text travels with the reply');
+        self::assertSame('61', $by[62]['replyTo'], 'a double-encoded content_attributes is read too');
+        self::assertArrayNotHasKey('replyText', $by[62], 'a quoted message among those sent is not repeated');
+        self::assertArrayNotHasKey('replyTo', $by[60], 'a message that quotes nothing carries no reply field');
+
+        $older = $this->createMock(ChatwootApiClient::class);
+        $older->method('getConversationMessagesPage')->willReturn(self::page([self::message(2, 1, $staff, 'Fica R$ 4.200 à vista no Pix', [
+            'reactions' => [['emoji' => '👍', 'actor_type' => 'contact', 'actor_name' => 'Samuel'],
+                ['emoji' => '🙏', 'actor_type' => 'business', 'actor_name' => 'IA', 'performed_by_id' => self::AI_USER],
+                ['emoji' => '❤️', 'actor_type' => 'business', 'actor_name' => 'Erivânia', 'performed_by_id' => 95], ['emoji' => '']],
+        ])]));
+        [$transcript] = $this->transcript($older);
+        self::assertSame([
+            ['emoji' => '👍', 'sentBy' => 'customer', 'author' => 'Samuel'],
+            ['emoji' => '🙏', 'sentBy' => 'ai', 'author' => 'IA'],
+            ['emoji' => '❤️', 'sentBy' => 'staff', 'author' => 'Erivânia'],
+        ], $transcript->read($this->conversations(), $this->now())['evidence'][0]['reactions']);
+    }
+
     public function testOlderPagesAreReadUntilChatwootRunsOutOrTheLimitIsReached(): void
     {
         $page = fn (int $from, int $count) => array_map(fn ($id) => self::message($id, 0, null), range($from, $from + $count - 1));

@@ -94,6 +94,43 @@ class FeedTest extends TestCase
         return $request;
     }
 
+    public function testEarlierDealsOfTheConversationAreNamedOnlyWhenTheReaderMayReadThem(): void
+    {
+        $deals = [
+            'won' => ['name' => 'Ana - Hemograma', 'status' => 'Won', 'amount' => 350, 'amountCurrency' => 'BRL', 'createdAt' => '2026-10-02 13:00:00', 'closeDate' => '2026-10-05'],
+            'hidden' => ['name' => 'Segredo', 'status' => 'Lost', 'createdAt' => '2026-09-20 13:00:00'],
+            'lost' => ['name' => 'Ana - Ultrassom', 'status' => 'Lost', 'amount' => null, 'createdAt' => '2026-09-01 02:00:00', 'closeDate' => '2026-09-03'],
+            'open' => ['name' => 'Ana - Retorno', 'status' => 'Proposal', 'createdAt' => '2026-08-01 13:00:00'],
+            'old' => ['name' => 'Ana - 2025', 'status' => 'Won', 'createdAt' => '2025-08-01 13:00:00'],
+        ];
+        $entity = function (string $id, array $values) {
+            $deal = $this->createMock(Entity::class);
+            $deal->method('get')->willReturnCallback(fn ($field) => $values[$field] ?? null);
+            $deal->method('getId')->willReturn($id);
+            return $deal;
+        };
+        $acl = $this->createMock(Acl::class);
+        $acl->method('checkEntityRead')->willReturnCallback(fn (Entity $deal) => $deal->getId() !== 'hidden');
+        $statement = $this->createMock(\PDOStatement::class);
+        $statement->expects(self::once())->method('execute')->with(['conv', 'other', 'deal', 'tenant', '2026-11-01 12:00:00'])->willReturn(true);
+        $statement->method('fetchAll')->willReturn(array_keys($deals));
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->method('prepare')->willReturn($statement);
+        $em = $this->createMock(EntityManager::class);
+        $em->method('getPDO')->willReturn($pdo);
+        $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => $entity($id, $deals[$id]));
+        $feed = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $this->createMock(User::class), $this->createMock(Workspace::class),
+            $this->createMock(Rollout::class), $this->createMock(Ownership::class), $this->createMock(DealStates::class), $this->createMock(Verdicts::class),
+            $this->createMock(DataCache::class), $this->createMock(Metadata::class), $this->createMock(Transcript::class), $this->createMock(Records::class));
+        $now = new DateTimeImmutable('2026-11-10 10:00:00', new DateTimeZone('America/Sao_Paulo'));
+        $deal = $entity('deal', ['tenantId' => 'tenant', 'createdAt' => '2026-11-01 12:00:00']);
+
+        self::assertSame('Ana - Hemograma (Won BRL 350, opened 2026-10-02, closed 2026-10-05); '
+            . 'Ana - Ultrassom (Lost, opened 2026-08-31, closed 2026-09-03); Ana - Retorno (Proposal, opened 2026-08-01)',
+            $feed->earlierDeals($deal, ['conv', 'other'], $now), 'the reader\'s dates, at most three, and never a deal they may not read');
+        self::assertNull($feed->earlierDeals($deal, [], $now), 'no readable conversation, nothing to name');
+    }
+
     public function testPortalUsersGetNoDeck(): void
     {
         [$feed] = $this->feed(false);
