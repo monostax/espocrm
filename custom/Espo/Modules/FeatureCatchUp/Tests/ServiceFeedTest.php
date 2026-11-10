@@ -11,6 +11,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\DataCache;
 use Espo\Entities\User;
+use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\FeatureCatchUp\Services\Ownership;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
 use Espo\Modules\FeatureCatchUp\Services\Records;
@@ -35,7 +36,7 @@ class ServiceFeedTest extends TestCase
     /** @return array{ServiceFeed, Verdicts, Parties, DataCache} */
     private function feed(array $options = []): array
     {
-        $options += ['readable' => true, 'conversationAccount' => 'crm-account', 'pdo' => null, 'seesAll' => false];
+        $options += ['readable' => true, 'conversationAccount' => 'crm-account', 'pdo' => null, 'seesAll' => false, 'opens' => true];
         $user = $this->createMock(User::class);
         $user->method('isRegular')->willReturn(true);
         $user->method('getId')->willReturn('erivania');
@@ -57,9 +58,21 @@ class ServiceFeedTest extends TestCase
         $parties = $this->createMock(Parties::class);
         $cache = $this->createMock(DataCache::class);
         $feed = new ServiceFeed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user, $workspace, $owners, $verdicts,
-            $this->createMock(Transcript::class), $parties, $cache, $this->createMock(Records::class));
+            $this->createMock(Transcript::class), $parties, $cache, $this->createMock(Records::class), $this->chatwoot($options['opens']));
         return [$feed, $verdicts, $parties, $cache];
     }
+
+    /** Chatwoot's answer for every conversation: all open (the default) or none. */
+    private function chatwoot(bool $opens = true): ChatwootAccess
+    {
+        $access = $this->createMock(ChatwootAccess::class);
+        $access->method('filter')->willReturnCallback(fn (array $conversations) => $opens ? $conversations : []);
+        $access->method('allows')->willReturn($opens);
+        $access->method('dealsWithOpenConversation')->willReturnCallback(fn (array $ids) => $opens ? array_fill_keys($ids, true) : []);
+        $access->method('openConversations')->willReturnCallback(fn (array $ids) => $opens ? array_fill_keys($ids, true) : []);
+        return $access;
+    }
+
 
     private function request(): Request
     {
@@ -170,7 +183,7 @@ class ServiceFeedTest extends TestCase
         $request = $this->createMock(Request::class);
         $feed = new ServiceFeed($em, $factory, $acl, $user, $workspace, $owners, $this->createMock(Verdicts::class),
             $this->createMock(Transcript::class), $this->createMock(Parties::class), $this->createMock(DataCache::class),
-            $this->createMock(Records::class));
+            $this->createMock(Records::class), $this->chatwoot());
 
         self::assertSame(['copy-a', 'direct'], array_column($feed->list($request)['items'], 'id'));
     }

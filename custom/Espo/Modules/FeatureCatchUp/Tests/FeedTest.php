@@ -14,6 +14,7 @@ use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\DataCache;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
+use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\FeatureCatchUp\Services\DealStates;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\Ownership;
@@ -58,7 +59,7 @@ class FeedTest extends TestCase
     }
 
     /** @return array{Feed, DataCache, Verdicts, Entity} */
-    private function feed(bool $regular = true, bool $readable = true, string $dealTenant = 'tenant', ?\PDO $pdo = null): array
+    private function feed(bool $regular = true, bool $readable = true, string $dealTenant = 'tenant', ?\PDO $pdo = null, bool $opens = true): array
     {
         $user = $this->createMock(User::class);
         $user->method('isRegular')->willReturn($regular);
@@ -83,9 +84,21 @@ class FeedTest extends TestCase
         $owners->method('clause')->willReturn(['', []]);
         $feed = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user, $workspace,
             $this->createMock(Rollout::class), $owners, $states, $verdicts, $cache, $this->createMock(Metadata::class),
-            $this->createMock(Transcript::class), $this->createMock(Records::class));
+            $this->createMock(Transcript::class), $this->createMock(Records::class), $this->chatwoot($opens));
         return [$feed, $cache, $verdicts, $deal];
     }
+
+    /** Chatwoot's answer for every conversation: all open (the default) or none. */
+    private function chatwoot(bool $opens = true): ChatwootAccess
+    {
+        $access = $this->createMock(ChatwootAccess::class);
+        $access->method('filter')->willReturnCallback(fn (array $conversations) => $opens ? $conversations : []);
+        $access->method('allows')->willReturn($opens);
+        $access->method('dealsWithOpenConversation')->willReturnCallback(fn (array $ids) => $opens ? array_fill_keys($ids, true) : []);
+        $access->method('openConversations')->willReturnCallback(fn (array $ids) => $opens ? array_fill_keys($ids, true) : []);
+        return $access;
+    }
+
 
     private function request(): Request
     {
@@ -121,7 +134,8 @@ class FeedTest extends TestCase
         $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => $entity($id, $deals[$id]));
         $feed = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $this->createMock(User::class), $this->createMock(Workspace::class),
             $this->createMock(Rollout::class), $this->createMock(Ownership::class), $this->createMock(DealStates::class), $this->createMock(Verdicts::class),
-            $this->createMock(DataCache::class), $this->createMock(Metadata::class), $this->createMock(Transcript::class), $this->createMock(Records::class));
+            $this->createMock(DataCache::class), $this->createMock(Metadata::class), $this->createMock(Transcript::class), $this->createMock(Records::class),
+            $this->chatwoot());
         $now = new DateTimeImmutable('2026-11-10 10:00:00', new DateTimeZone('America/Sao_Paulo'));
         $deal = $entity('deal', ['tenantId' => 'tenant', 'createdAt' => '2026-11-01 12:00:00']);
 
@@ -231,6 +245,36 @@ class FeedTest extends TestCase
         self::assertSame('erivania', $owners->deckOwnerId('ai', 'erivania'), 'an AI-owned deal goes to the last staff writer');
         self::assertSame('erivania', $owners->deckOwnerId(null, 'erivania'));
         self::assertNull($owners->deckOwnerId('ai', null), 'nobody wrote: admins only');
+    }
+
+    public function testDealsOwnedByTheAiOrNobodyGoToTheWholeTeam(): void
+    {
+        $user = $this->createMock(User::class);
+        $user->method('getId')->willReturn('manuella');
+        $owners = $this->getMockBuilder(Ownership::class)->setConstructorArgs([$this->createMock(EntityManager::class), $user])
+            ->onlyMethods(['seesAll'])->getMock();
+        $owners->method('seesAll')->willReturn(false);
+        [$sql, $params] = $owners->clause();
+        self::assertTrue(Ownership::WHOLE_TEAM, 'decided 2026-11-10; set false to go back to the last staff writer');
+        self::assertStringContainsString('(o.assigned_user_id = :deckOwnerA AND o.assigned_user_id NOT IN (', $sql, 'a person\'s deal stays theirs');
+        self::assertStringContainsString(' OR (o.assigned_user_id IS NULL OR o.assigned_user_id IN (', $sql, 'the AI\'s and nobody\'s deals reach everyone');
+        self::assertStringNotContainsString('s.staff_user_id', $sql, 'not only the last staff writer');
+        self::assertSame(['deckOwnerA' => 'manuella'], $params);
+
+        [$sql, $params] = $owners->conversationClause();
+        self::assertStringContainsString("COALESCE((SELECT cu.assigned_user_id FROM chatwoot_user cu WHERE cu.chatwoot_user_id = c.assignee_id", $sql);
+        self::assertStringContainsString(", '') IN ('', :deckOwner)", $sql, 'a conversation with no person assigned reaches everyone; a person keeps theirs');
+        self::assertStringNotContainsString('catch_up_conversation_state', $sql, 'not only the last staff writer');
+        self::assertSame(['deckOwner' => 'manuella'], $params);
+    }
+
+    public function testTheBadgeCountsOnlyCardsWhoseConversationChatwootOpensForTheReader(): void
+    {
+        foreach ([true => 1, false => 0] as $opens => $expected) {
+            [$feed, , $verdicts] = $this->feed(opens: (bool) $opens);
+            $verdicts->method('cardDeals')->willReturn(['deal']);
+            self::assertSame(['count' => $expected], $feed->count($this->request()), 'not even a tenant admin counts what Chatwoot closes');
+        }
     }
 
     public function testStoredVerdictIsReusedWithoutAnotherAnalysis(): void

@@ -48,6 +48,7 @@ class ServiceFeed
         private Parties $parties,
         private DataCache $cache,
         private Records $records,
+        private ChatwootAccess $access,
     ) {}
 
     public function list(Request $request): array
@@ -60,7 +61,8 @@ class ServiceFeed
         $offset = (int) $cursor;
         $limit = Workspace::limit($request, self::PAGE_SIZE);
         $rows = $this->candidates($account->getId(), $offset, $limit);
-        $conversations = $this->readable(array_keys($rows));
+        // The CRM's inbox filter, then Chatwoot's own rules (teams, participation, custom roles, admins' own inboxes).
+        $conversations = $this->access->filter($this->readable(array_keys($rows)));
         $dues = $this->records->dues('ChatwootConversation', array_keys($conversations));
         $quiet = $this->verdicts->quiet('ChatwootConversation',
             array_map(fn ($c) => Revision::ofConversation($c, $now, $dues[$c->getId()] ?? null), $conversations));
@@ -83,7 +85,8 @@ class ServiceFeed
     public function count(string $tenantId, Entity $account): int
     {
         [$sql, $params] = $this->owners->conversationClause();
-        return $this->verdicts->countConversations($tenantId, $account->getId(), $sql, $params, $this->user->getId());
+        return count($this->access->openConversations(
+            $this->verdicts->cardConversations($tenantId, $account->getId(), $sql, $params, $this->user->getId())));
     }
 
     public function snapshot(string $id, Request $request): array
@@ -232,6 +235,7 @@ class ServiceFeed
         $conversation = $this->em->getEntityById('ChatwootConversation', $id);
         if (!$conversation) throw new NotFound();
         if ($conversation->get('chatwootAccountId') !== $account->getId() || !$this->acl->checkEntityRead($conversation)) throw new Forbidden();
+        if (!$this->access->allows($conversation)) throw new Forbidden();
         return $conversation;
     }
 

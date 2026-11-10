@@ -32,6 +32,7 @@ class ConversationRecord
         private Feed $feed,
         private Transcript $transcript,
         private Records $records,
+        private ChatwootAccess $access,
     ) {}
 
     /** @return array{records: list<array<string, mixed>>} */
@@ -42,8 +43,9 @@ class ConversationRecord
         if (!ctype_digit($display) || (int) $display < 1) throw new BadRequest('Invalid conversation.');
         ['tenant' => $tenant, 'account' => $account] = $this->workspace->account($request);
         $conversation = $this->conversation($account, (int) $display);
-        // The record is made of the conversation's messages: the reader must be able to read them.
-        if (!$conversation || !$this->acl->checkEntityRead($conversation) || !$this->transcript->readable($conversation)) return ['records' => []];
+        // The record is made of the conversation's messages: the reader must be able to read them, in the CRM and in Chatwoot.
+        if (!$conversation || !$this->acl->checkEntityRead($conversation) || !$this->transcript->readable($conversation)
+            || !$this->access->allows($conversation)) return ['records' => []];
         $records = [];
         foreach ($this->deals($conversation, $tenant->getId()) as $deal) {
             $record = $this->records->load('Opportunity', $deal->getId(), Records::scope(array_keys($this->feed->conversations($deal))));

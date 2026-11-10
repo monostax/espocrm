@@ -9,6 +9,7 @@ use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Entities\User;
+use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\FeatureCatchUp\Services\ConversationRecord;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\Records;
@@ -52,7 +53,8 @@ class ConversationRecordTest extends TestCase
      * @param array<string, ?array> $stored "type:id:scope" => record
      * @param list<string> $deals open deal ids linked to the conversation
      */
-    private function service(array $stored, array $deals = ['deal', 'hidden'], bool $messagesReadable = true, bool $regular = true): ConversationRecord
+    private function service(array $stored, array $deals = ['deal', 'hidden'], bool $messagesReadable = true, bool $regular = true,
+        bool $chatwootOpens = true): ConversationRecord
     {
         $user = $this->createMock(User::class);
         $user->method('isRegular')->willReturn($regular);
@@ -81,7 +83,9 @@ class ConversationRecordTest extends TestCase
         $transcript->method('readable')->willReturn($messagesReadable);
         $records = $this->createMock(Records::class);
         $records->method('load')->willReturnCallback(fn ($type, $id, $scope) => $stored["$type:$id:$scope"] ?? null);
-        return new ConversationRecord($em, $acl, $user, $workspace, $feed, $transcript, $records);
+        $access = $this->createMock(ChatwootAccess::class);
+        $access->method('allows')->willReturn($chatwootOpens);
+        return new ConversationRecord($em, $acl, $user, $workspace, $feed, $transcript, $records, $access);
     }
 
     public function testEachOpenDealShowsItsRecordUnderTheReadersScopeWithOnlyOpenPromises(): void
@@ -122,6 +126,13 @@ class ConversationRecordTest extends TestCase
         $scope = Records::scope(['other', 'conv']);
         $service = $this->service(["Opportunity:deal:$scope" => self::record()], ['deal'], false);
         self::assertSame(['records' => []], $service->read($this->request()));
+    }
+
+    public function testNothingIsShownWhenChatwootWontOpenTheConversationForTheReader(): void
+    {
+        $scope = Records::scope(['other', 'conv']);
+        $service = $this->service(["Opportunity:deal:$scope" => self::record()], ['deal'], chatwootOpens: false);
+        self::assertSame(['records' => []], $service->read($this->request()), 'the CRM ACL allowed it, Chatwoot did not');
     }
 
     public function testPortalUsersAndBadIdsAreRefused(): void

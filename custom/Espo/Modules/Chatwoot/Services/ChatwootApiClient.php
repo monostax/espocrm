@@ -319,6 +319,27 @@ class ChatwootApiClient
      * @return array<string, mixed>
      * @throws Error
      */
+    /**
+     * Which of these conversations (display ids) a Chatwoot user may open, decided by Chatwoot's own rules:
+     * inbox membership, team, participation, global admin and custom roles (Conversations::PermissionFilterService).
+     * The CRM's ChatwootConversation ACL mirrors inbox membership only, so anything shown from a conversation's
+     * content to one person asks here first.
+     *
+     * @param list<int> $conversationIds display ids, at most 200
+     * @return list<int> the display ids the user may open
+     */
+    public function getAccessibleConversationIds(string $platformUrl, string $accessToken, int $accountId, int $userId, array $conversationIds): array
+    {
+        $url = rtrim($platformUrl, '/') . '/platform/api/v1/accounts/' . $accountId . '/conversation_access';
+        $headers = ['api_access_token: ' . $accessToken, 'Content-Type: application/json'];
+        $payload = json_encode(['user_id' => $userId, 'conversation_ids' => array_values(array_map('intval', $conversationIds))], JSON_THROW_ON_ERROR);
+        $response = $this->executeRequest($url, 'POST', $payload, $headers);
+        if ($response['code'] < 200 || $response['code'] >= 300 || !is_array($response['body']['conversation_ids'] ?? null)) {
+            throw new Error('Failed to check conversation access in Chatwoot: HTTP ' . $response['code']);
+        }
+        return array_values(array_map('intval', $response['body']['conversation_ids']));
+    }
+
     public function getAccount(string $platformUrl, string $accessToken, int $accountId): array
     {
         $url = rtrim($platformUrl, '/') . '/platform/api/v1/accounts/' . $accountId;

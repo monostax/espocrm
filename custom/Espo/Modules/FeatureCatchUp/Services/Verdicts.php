@@ -20,6 +20,8 @@ class Verdicts
 
     /** A card nobody acted on stops counting for the badge after this long. */
     private const BADGE_HOURS = 24;
+    /** Cards checked for the badge; the rail shows 9+ anyway. */
+    private const BADGE_LIMIT = 500;
 
     public function __construct(private EntityManager $em) {}
 
@@ -91,10 +93,11 @@ class Verdicts
      * Atendimento cards from the last day nobody acted on, for conversations of this account still without an
      * open deal, in the reader's deck and not overtaken by a message. Returns a number only.
      */
-    public function countConversations(string $tenantId, string $accountId, string $ownerSql, array $ownerParams, string $userId): int
+    /** @return list<string> conversation ids; the caller checks access and counts */
+    public function cardConversations(string $tenantId, string $accountId, string $ownerSql, array $ownerParams, string $userId): array
     {
         $query = $this->em->getPDO()->prepare(
-            'SELECT COUNT(DISTINCT v.conversation_id) FROM catch_up_verdict v '
+            'SELECT DISTINCT v.conversation_id FROM catch_up_verdict v '
             . 'JOIN chatwoot_conversation c ON c.id = v.conversation_id AND c.deleted = 0 AND c.chatwoot_account_id = :account '
             . 'JOIN chatwoot_account a ON a.id = c.chatwoot_account_id '
             . "WHERE v.deleted = 0 AND v.tenant_id = :tenant AND v.verdict <> 'none' AND v.resolved_at IS NULL "
@@ -103,9 +106,10 @@ class Verdicts
             . 'AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
             . "AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user "
             . "AND z.target_type = 'ChatwootConversation' AND z.snoozed_until > UTC_TIMESTAMP())" . $ownerSql
+            . ' LIMIT ' . self::BADGE_LIMIT
         );
         $query->execute(['tenant' => $tenantId, 'account' => $accountId, 'user' => $userId, ...$ownerParams]);
-        return (int) $query->fetchColumn();
+        return array_map('strval', $query->fetchAll(\PDO::FETCH_COLUMN));
     }
 
     private static function column(string $type): string
@@ -115,12 +119,15 @@ class Verdicts
 
     /**
      * Cards from the last day nobody acted on, on open deals in the reader's deck, that no message has overtaken
-     * (a reply from the conversation itself settles a card without a review). No ACL check: it returns a number only.
+     * (a reply from the conversation itself settles a card without a review). The caller keeps only deals with a
+     * conversation the reader may open in Chatwoot and counts them.
+     *
+     * @return list<string> deal ids
      */
-    public function count(string $tenantId, string $ownerSql, array $ownerParams, string $userId): int
+    public function cardDeals(string $tenantId, string $ownerSql, array $ownerParams, string $userId): array
     {
         $query = $this->em->getPDO()->prepare(
-            'SELECT COUNT(DISTINCT v.opportunity_id) FROM catch_up_verdict v '
+            'SELECT DISTINCT v.opportunity_id FROM catch_up_verdict v '
             . 'JOIN opportunity o ON o.id = v.opportunity_id AND o.deleted = 0 AND o.tenant_id = :tenant '
             . "AND o.status NOT IN ('Won','Lost') LEFT JOIN catch_up_deal_state s ON s.id = o.id AND s.deleted = 0 "
             . "WHERE v.deleted = 0 AND v.tenant_id = :verdictTenant AND v.verdict <> 'none' AND v.resolved_at IS NULL "
@@ -128,8 +135,9 @@ class Verdicts
             . 'AND (s.last_message_at IS NULL OR s.last_message_at <= v.created_at) '
             . "AND o.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user "
             . "AND z.target_type = 'Opportunity' AND z.snoozed_until > UTC_TIMESTAMP())" . $ownerSql
+            . ' LIMIT ' . self::BADGE_LIMIT
         );
         $query->execute(['tenant' => $tenantId, 'verdictTenant' => $tenantId, 'user' => $userId, ...$ownerParams]);
-        return (int) $query->fetchColumn();
+        return array_map('strval', $query->fetchAll(\PDO::FETCH_COLUMN));
     }
 }

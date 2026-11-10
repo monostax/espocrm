@@ -13,8 +13,9 @@ Em dia is a personal decision deck in Chatwoot (`/app/accounts/:accountId/catch-
 ## Who sees a deal
 
 - A deal owned by a person goes to that person.
-- A deal owned by an AI agent (a user behind an `isAI` membership), or by nobody, goes to the **last staff member who wrote in its conversation from the app**.
-- Tenant admins (`TenantRoleAuth::hasTenantAdminRole`) see every open deal in the tenant. The Opportunity ACL applies to everyone.
+- A deal owned by an AI agent (a user behind an `isAI` membership), or by nobody, goes to the **whole team** (`Ownership::WHOLE_TEAM`, decided 2026-11-10). Until then it went to the last staff member who wrote in its conversation from the app; setting the constant to false brings that rule back, and the card still names the last staff writer as the owner.
+- Tenant admins (the Tenant Admin role, `TenantRoleAuth::hasTenantAdminRole`) see every open deal in the tenant.
+- **Chatwoot decides who may open a conversation, for everyone, tenant admins included (`ChatwootAccess`).** A deal is listed, counted on the badge or analysed only when the reader may open at least one of its conversations in Chatwoot, and only those conversations are read, scoped and quoted. The CRM's `ChatwootConversation` ACL mirrors inbox membership only, and it gives a Chatwoot global admin every inbox; Chatwoot lets a global admin open only the inboxes they belong to (on 2026-11-10 several did not belong to all of them), adds access through teams and participation, and narrows it for custom roles. So after the CRM ACL, `ChatwootAccess` asks Chatwoot (`POST /platform/api/v1/accounts/:id/conversation_access`, with the platform token and the reader's Chatwoot user), in batches of up to 200 and once per request. It fails closed: when Chatwoot can't answer, nothing from those conversations is shown. The Opportunity ACL applies on top.
 
 The last staff writer and who spoke last live in `CatchUpDealState` (one row per opportunity, id = opportunity id). The `ChatwootMessage` afterSave hook `RefreshCatchUpDealState` keeps it current; the rebuild action `BackfillDealState` fills open deals that have no row. A failing refresh is logged and never breaks message sync.
 
@@ -31,11 +32,11 @@ The last staff writer and who spoke last live in `CatchUpDealState` (one row per
 `dueTs`, the earliest open promise's due time, is code comparing the model's times. It feeds the revision, so a deal is judged again once a promise passes due. The verdict is filed under the revision the next read will compute with the new record (`revisions.due` / `revisions.notDue`), and review accepts either. `promise_due` (our open promise past due) is a card in both lanes. The card shows only the due promise (`card.promise`), never the record.
 
 **Atendimento (`ServiceFeed`, step 2 of gtm/05 §12).** Conversations of the deck's Chatwoot account with no open deal, one card per conversation, under `/CatchUpService` (list, read, summary, review, resolved, label). The access rules:
-- Candidates pass the `ChatwootConversation` strict access filter (inbox membership).
+- Candidates pass the `ChatwootConversation` strict access filter (inbox membership), then Chatwoot's own rules (`ChatwootAccess`).
 - Every action checks the conversation again and requires it to belong to the deck's account.
 - A label can only be set on a participant of the card the reader was shown.
 
-Candidates are active in the last 30 days and quiet for 30 minutes. They are not the WhatsApp control chat, not snoozed, and not labeled personal, automated or team. `catch_up_party` mirrors labels so that filter needs no Chatwoot read; it is refreshed on every read and write. The owner is the Chatwoot assignee when that's a person, otherwise the last staff writer (`CatchUpConversationState`, kept by a `ChatwootMessage` hook and filled by `BackfillConversationState` for the last 30 days). Admins see all.
+Candidates are active in the last 30 days and quiet for 30 minutes. They are not the WhatsApp control chat, not snoozed, and not labeled personal, automated or team. `catch_up_party` mirrors labels so that filter needs no Chatwoot read; it is refreshed on every read and write. A conversation assigned to a person in Chatwoot goes to that person; one with no person assigned goes to the whole team (`Ownership::WHOLE_TEAM`, 2026-11-10; before, to the last staff writer). The card names the assignee, otherwise the last staff writer (`CatchUpConversationState`, kept by a `ChatwootMessage` hook and filled by `BackfillConversationState` for the last 30 days). Tenant admins see all, always within what Chatwoot lets them open.
 
 Verdicts live in `CatchUpVerdict` with `conversationId` instead of `opportunityId`. `Summary` keeps only `customer_waiting`, `follow_up_due`, `new_deal` and `none` for a conversation, and makes it `none` when the conversation's own contact or group is personal, automated or team.
 
@@ -61,7 +62,7 @@ Next steps use the existing `POST /Opportunity/:id/nextAction`.
 
 ## Deployment
 
-Deploy the backend and Hatchet workers, then the CRM, then Chatwoot. Run `php rebuild.php`: it creates `CatchUpVerdict` and `CatchUpDealState` and backfills the deal state. Transport to the backend is unchanged (HMAC-signed `POST /internal/catch-up/summary`, `CATCH_UP_BACKEND_URL` / `CATCH_UP_BACKEND_SECRET`).
+Deploy the backend and Hatchet workers, then Chatwoot, then the CRM. The CRM's access checks call Chatwoot's `conversation_access` endpoint and fail closed, so a CRM deployed before it shows an empty deck. Run `php rebuild.php`: it creates `CatchUpVerdict` and `CatchUpDealState` and backfills the deal state. Transport to the backend is unchanged (HMAC-signed `POST /internal/catch-up/summary`, `CATCH_UP_BACKEND_URL` / `CATCH_UP_BACKEND_SECRET`).
 
 ## Automated checks
 

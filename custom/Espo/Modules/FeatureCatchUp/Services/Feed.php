@@ -69,6 +69,7 @@ class Feed
         private Metadata $metadata,
         private Transcript $transcript,
         private Records $records,
+        private ChatwootAccess $access,
     ) {}
 
     public function list(Request $request): array
@@ -82,6 +83,8 @@ class Feed
         $limit = Workspace::limit($request, self::PAGE_SIZE);
         $ids = $this->candidateIds($tenantId, $offset, $limit);
         $deals = $this->readable($ids);
+        // Only deals with a conversation the reader may open in Chatwoot (its inbox rules, not the CRM's copy of them).
+        $deals = array_intersect_key($deals, $this->access->dealsWithOpenConversation(array_keys($deals)));
         $context = $this->context($deals, $now);
         $quiet = $this->verdicts->quiet('Opportunity', array_map(fn ($entry) => $entry['revision'], $context));
         $items = [];
@@ -97,7 +100,8 @@ class Feed
         $this->authorize();
         $tenantId = $this->workspace->resolve($request)['tenant']->getId();
         [$sql, $params] = $this->owners->clause();
-        return ['count' => $this->verdicts->count($tenantId, $sql, $params, $this->user->getId())];
+        $ids = $this->verdicts->cardDeals($tenantId, $sql, $params, $this->user->getId());
+        return ['count' => count($this->access->dealsWithOpenConversation($ids))];
     }
 
     public function snapshot(string $id, Request $request): array
@@ -109,6 +113,7 @@ class Feed
         if (!$this->states->load([$id])) $this->states->refresh([$id]);
         $context = $this->context([$id => $deal], $now)[$id];
         $conversations = $this->conversations($deal);
+        if (!$conversations) throw new Forbidden('No conversation of this deal can be opened.');
         ['evidence' => $messages, 'participants' => $participants] = $this->transcript->read($conversations, $now);
         $evidence = [...$messages, ...$this->posts($id, $now)];
         usort($evidence, fn ($a, $b) => [$a['ts'], $a['id']] <=> [$b['ts'], $b['id']]);
@@ -348,7 +353,8 @@ class Feed
         foreach ($related as $conversation) {
             if ($this->acl->checkEntityRead($conversation)) $found[$conversation->getId()] = $conversation;
         }
-        return $found;
+        // Chatwoot decides, after the CRM ACL: the record, transcript and facts use only what the reader may open there.
+        return $this->access->filter($found);
     }
 
     /** Where Enviar posts: the conversation the customer last wrote in. */
