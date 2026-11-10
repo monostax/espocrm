@@ -292,7 +292,8 @@ class FeedTest extends TestCase
     public function testCompletedAnalysisIsStoredAndUnreadableAnswersCountAsNone(): void
     {
         foreach ([
-            [['verdict' => 'customer_waiting', 'reason' => 'Asked for the price', 'headline' => 'H', 'draft' => 'Oi!'], 'customer_waiting'],
+            [['verdict' => 'loops', 'reason' => 'Asked for the price', 'headline' => 'H', 'draft' => 'Oi!', 'record' => ['agreed' => [], 'promises' => [['id' => 'p', 'side' => 'ours', 'text' => 'responder o preço', 'dueAt' => null, 'status' => 'open']]]], 'customer_waiting'],
+            [['verdict' => 'customer_waiting', 'reason' => 'The model no longer picks the card', 'headline' => 'H', 'record' => ['agreed' => [], 'promises' => [['id' => 'p', 'side' => 'ours', 'text' => 'responder o preço', 'dueAt' => null, 'status' => 'open']]]], 'none'],
             [['headline' => 'No verdict'], 'none'],
             [null, 'none'],
         ] as [$card, $expected]) {
@@ -311,7 +312,8 @@ class FeedTest extends TestCase
             if ($expected === 'none') {
                 self::assertNull($result['card']);
             } else {
-                self::assertSame(['headline' => 'H', 'draft' => 'Oi!'], $result['card'], 'the card carries copy, not the verdict');
+                self::assertSame(['headline' => 'H', 'draft' => 'Oi!', 'promise' => ['side' => 'ours', 'text' => 'responder o preço', 'dueAt' => null],
+                    'whyNow' => 'Asked for the price'], $result['card'], 'the card carries copy and the loop it shows, not the verdict');
             }
         }
     }
@@ -357,9 +359,10 @@ class FeedTest extends TestCase
         foreach ([
             [['verdict' => 'new_deal', 'reason' => 'Quer agendar', 'headline' => 'H', 'proposedDeal' => ['name' => 'Ana', 'amount' => null]], null, [], 'new_deal'],
             [['verdict' => 'decided', 'reason' => 'Pagou'], null, [], 'none'],
-            [['verdict' => 'customer_waiting', 'reason' => 'Perguntou'], 'personal', [], 'none'],
-            [['verdict' => 'customer_waiting', 'reason' => 'Perguntou', 'participants' => [['id' => '7', 'class' => 'automated']]], null, ['7' => 'automated'], 'none'],
-            [['verdict' => 'customer_waiting', 'reason' => 'Perguntou'], 'customer', [], 'customer_waiting'],
+            [['verdict' => 'loops', 'reason' => 'Perguntou', 'record' => ['agreed' => [], 'promises' => [['id' => 'p', 'side' => 'ours', 'text' => 'responder o preço', 'dueAt' => null, 'status' => 'open']]]], 'personal', [], 'none'],
+            [['verdict' => 'loops', 'reason' => 'Perguntou', 'participants' => [['id' => '7', 'class' => 'automated']], 'record' => ['agreed' => [], 'promises' => [['id' => 'p', 'side' => 'ours', 'text' => 'responder o preço', 'dueAt' => null, 'status' => 'open']]]], null, ['7' => 'automated'], 'none'],
+            [['verdict' => 'loops', 'reason' => 'Perguntou', 'record' => ['agreed' => [], 'promises' => [['id' => 'p', 'side' => 'ours', 'text' => 'responder o preço', 'dueAt' => null, 'status' => 'open']]]], 'customer', [], 'customer_waiting'],
+            [['verdict' => 'next_step_missing', 'reason' => 'Parado', 'headline' => 'H', 'nextTask' => ['name' => 'Ligar', 'dueInDays' => 1]], 'customer', [], 'none'],
         ] as [$card, $label, $classes, $expected]) {
             $parties = $this->createMock(Parties::class);
             $parties->method('store')->willReturn($classes);

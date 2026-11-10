@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureCatchUp\Controllers;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Modules\FeatureCatchUp\Services\Actions;
+use Espo\Modules\FeatureCatchUp\Services\Agenda;
 use Espo\Modules\FeatureCatchUp\Services\ConversationRecord;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
@@ -25,7 +26,14 @@ class CatchUp
         private Workspace $workspace,
         private ServiceFeed $service,
         private ConversationRecord $record,
+        private Agenda $agenda,
     ) {}
+
+    /** The Agenda tab: loops not due yet, pending next steps and armed AI follow-ups, from stored data only. */
+    public function getActionAgenda(Request $request): object
+    {
+        return (object) $this->agenda->list($request);
+    }
 
     /** The conversation sidebar: what Em dia already concluded about one Chatwoot conversation. Never analyses. */
     public function getActionRecord(Request $request): object

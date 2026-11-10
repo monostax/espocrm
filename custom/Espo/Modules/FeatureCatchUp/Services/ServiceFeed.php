@@ -64,7 +64,7 @@ class ServiceFeed
         // The CRM's inbox filter, then Chatwoot's own rules (teams, participation, custom roles, admins' own inboxes).
         $conversations = $this->access->filter($this->readable(array_keys($rows)));
         $dues = $this->records->dues('ChatwootConversation', array_keys($conversations));
-        $quiet = $this->verdicts->quiet('ChatwootConversation',
+        $judged = $this->verdicts->judged('ChatwootConversation',
             array_map(fn ($c) => Revision::ofConversation($c, $now, $dues[$c->getId()] ?? null), $conversations));
         $names = $this->userNames(array_filter(array_column($rows, 'owner')));
         $items = [];
@@ -75,8 +75,9 @@ class ServiceFeed
                 if (isset($groups[$rows[$id]['contact']])) continue;
                 $groups[$rows[$id]['contact']] = true;
             }
-            if (isset($quiet[$id])) continue;
-            $items[] = $this->candidate($conversation, $names[$rows[$id]['owner'] ?? ''] ?? null, (bool) $rows[$id]['grp'], $now);
+            if (in_array($judged[$id] ?? null, Loops::QUIET, true)) continue;
+            $items[] = [...$this->candidate($conversation, $names[$rows[$id]['owner'] ?? ''] ?? null, (bool) $rows[$id]['grp'], $now),
+                'verdict' => $judged[$id] ?? null];
         }
         return ['items' => $items, 'cursor' => count($rows) === $limit ? (string) ($offset + $limit) : null];
     }
@@ -269,6 +270,7 @@ class ServiceFeed
             'inboxName' => $conversation->get('inboxName'), 'ownerName' => $ownerName,
             'customerSpokeLast' => $received !== null && ($sent === null || $received > $sent),
             'quietDays' => Revision::quietDays($conversation->get('lastActivityAt'), $now),
+            'sort' => Feed::sortKey($received, $sent, $conversation->get('lastActivityAt'), $now),
         ];
     }
 

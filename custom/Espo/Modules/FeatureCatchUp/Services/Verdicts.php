@@ -10,11 +10,12 @@ use Espo\ORM\EntityManager;
  * Stored analyses, one per subject revision, locale and evidence scope. A subject is a deal (Negócios) or a
  * conversation without one (Atendimento). Shared by every reader who can see the same evidence, so an owner
  * and the admins pay for one analysis. `none` verdicts keep a quiet subject out of the deck until its
- * revision changes.
+ * revision changes, and so do `scheduled` ones (loops open, none due yet).
  */
 class Verdicts
 {
-    public const VERDICTS = ['customer_waiting', 'follow_up_due', 'promise_due', 'decided', 'next_step_missing', 'new_deal', 'none'];
+    /** Card verdicts (Loops::BUCKETS) plus `scheduled` (open loops, none due: Agenda) and `none`. */
+    public const VERDICTS = ['customer_waiting', 'follow_up_due', 'promise_due', 'decided', 'next_step_missing', 'new_deal', 'scheduled', 'none'];
     /** Subject type => the column holding its id. */
     public const SUBJECTS = ['Opportunity' => 'opportunity_id', 'ChatwootConversation' => 'conversation_id'];
 
@@ -41,21 +42,27 @@ class Verdicts
     }
 
     /**
-     * Subjects among $revisions (id => revision) already judged `none` at that revision, by any reader.
+     * Subjects among $revisions (id => revision) already judged at that revision, by any reader, with the verdict.
+     * A subject judged `none` or `scheduled` stays out of the deck; a card verdict tells the deck which tab
+     * (Loops::BUCKETS) the subject belongs in before it is opened. A card wins over a quiet verdict another reader got.
      *
      * @param array<string, string> $revisions
-     * @return array<string, true>
+     * @return array<string, string>
      */
-    public function quiet(string $type, array $revisions): array
+    public function judged(string $type, array $revisions): array
     {
         if (!$revisions) return [];
         $column = self::column($type);
         $pairs = implode(' OR ', array_fill(0, count($revisions), "($column = ? AND revision = ?)"));
         $values = [];
         foreach ($revisions as $id => $revision) array_push($values, $id, $revision);
-        $query = $this->em->getPDO()->prepare("SELECT DISTINCT $column FROM catch_up_verdict WHERE deleted = 0 AND verdict = 'none' AND ($pairs)");
+        $query = $this->em->getPDO()->prepare("SELECT DISTINCT $column, verdict FROM catch_up_verdict WHERE deleted = 0 AND ($pairs)");
         $query->execute($values);
-        return array_fill_keys($query->fetchAll(\PDO::FETCH_COLUMN), true);
+        $judged = [];
+        foreach ($query->fetchAll(\PDO::FETCH_NUM) as [$id, $verdict]) {
+            if (!isset($judged[(string) $id]) || in_array($judged[(string) $id], Loops::QUIET, true)) $judged[(string) $id] = (string) $verdict;
+        }
+        return $judged;
     }
 
     /** @param ?array<string, mixed> $card */
@@ -100,7 +107,7 @@ class Verdicts
             'SELECT DISTINCT v.conversation_id FROM catch_up_verdict v '
             . 'JOIN chatwoot_conversation c ON c.id = v.conversation_id AND c.deleted = 0 AND c.chatwoot_account_id = :account '
             . 'JOIN chatwoot_account a ON a.id = c.chatwoot_account_id '
-            . "WHERE v.deleted = 0 AND v.tenant_id = :tenant AND v.verdict <> 'none' AND v.resolved_at IS NULL "
+            . "WHERE v.deleted = 0 AND v.tenant_id = :tenant AND v.verdict NOT IN ('none', 'scheduled') AND v.resolved_at IS NULL "
             . 'AND v.created_at >= UTC_TIMESTAMP() - INTERVAL ' . self::BADGE_HOURS . ' HOUR '
             . 'AND (c.last_activity_at IS NULL OR c.last_activity_at <= v.created_at) '
             . 'AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
@@ -130,7 +137,7 @@ class Verdicts
             'SELECT DISTINCT v.opportunity_id FROM catch_up_verdict v '
             . 'JOIN opportunity o ON o.id = v.opportunity_id AND o.deleted = 0 AND o.tenant_id = :tenant '
             . "AND o.status NOT IN ('Won','Lost') LEFT JOIN catch_up_deal_state s ON s.id = o.id AND s.deleted = 0 "
-            . "WHERE v.deleted = 0 AND v.tenant_id = :verdictTenant AND v.verdict <> 'none' AND v.resolved_at IS NULL "
+            . "WHERE v.deleted = 0 AND v.tenant_id = :verdictTenant AND v.verdict NOT IN ('none', 'scheduled') AND v.resolved_at IS NULL "
             . 'AND v.created_at >= UTC_TIMESTAMP() - INTERVAL ' . self::BADGE_HOURS . ' HOUR '
             . 'AND (s.last_message_at IS NULL OR s.last_message_at <= v.created_at) '
             . "AND o.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user "

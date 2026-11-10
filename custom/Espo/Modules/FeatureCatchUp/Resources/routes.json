@@ -8,6 +8,7 @@
     {"route": "/CatchUp/:id/resolvedElsewhere", "method": "post", "params": {"controller": "CatchUp", "action": "resolvedElsewhere", "id": ":id"}},
     {"route": "/CatchUpSnooze", "method": "post", "params": {"controller": "CatchUp", "action": "snooze"}},
     {"route": "/CatchUpRecord", "method": "get", "params": {"controller": "CatchUp", "action": "record"}},
+    {"route": "/CatchUpAgenda", "method": "get", "params": {"controller": "CatchUp", "action": "agenda"}},
     {"route": "/CatchUpService", "method": "get", "params": {"controller": "CatchUp", "action": "serviceList"}},
     {"route": "/CatchUpService/:id", "method": "get", "params": {"controller": "CatchUp", "action": "serviceRead", "id": ":id"}},
     {"route": "/CatchUpService/:id/summary", "method": "post", "params": {"controller": "CatchUp", "action": "serviceSummary", "id": ":id"}},

@@ -4,22 +4,26 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureCatchUp\Services;
 
+use DateTimeImmutable;
 use Espo\Core\Exceptions\ServiceUnavailable;
 use Espo\Entities\User;
 
 class Summary
 {
-    private const DEAL_VERDICTS = ['customer_waiting', 'follow_up_due', 'promise_due', 'decided', 'next_step_missing', 'none'];
-    private const CONVERSATION_VERDICTS = ['customer_waiting', 'follow_up_due', 'promise_due', 'new_deal', 'none'];
+    /** What the model may answer (prompt version 12). The card verdict comes from Loops, never straight from the model. */
+    private const DEAL_ANSWERS = ['loops', 'decided', 'next_step_missing', 'none'];
+    private const CONVERSATION_ANSWERS = ['loops', 'new_deal', 'none'];
 
     public function __construct(private User $user, private Verdicts $verdicts, private Parties $parties, private Records $records) {}
 
     /**
      * A deal's verdict: the stored one when this revision and evidence were already judged, otherwise the
      * backend's analysis, stored once it completes. An answer that isn't a valid verdict counts as `none`:
-     * it was paid for, and the same state is not analysed again. The same call classifies the conversation's
-     * unlabeled groups and group members; their labels go onto the Chatwoot contacts, and the verdict is
-     * stored under the evidence scope the next read, with those labels, will compute.
+     * it was paid for, and the same state is not analysed again. The model keeps the record's loops; Loops turns
+     * them and the clock into the card (customer_waiting, promise_due, follow_up_due) or into `scheduled` (Agenda,
+     * no card). The same call classifies the conversation's unlabeled groups and group members; their labels go
+     * onto the Chatwoot contacts, and the verdict is stored under the evidence scope the next read, with those
+     * labels, will compute.
      */
     public function analyse(array $snapshot, string $locale, ?string $requestId = null): array
     {
@@ -41,14 +45,35 @@ class Summary
                 $key[2] = $due !== null && $due <= time() ? $snapshot['revisions']['due'] : $snapshot['revisions']['notDue'];
             }
         }
-        $verdict = in_array($card['verdict'] ?? null, $conversation ? self::CONVERSATION_VERDICTS : self::DEAL_VERDICTS, true) ? $card['verdict'] : 'none';
+        $answer = in_array($card['verdict'] ?? null, $conversation ? self::CONVERSATION_ANSWERS : self::DEAL_ANSWERS, true) ? $card['verdict'] : 'none';
+        $record = is_array($card['record'] ?? null) ? $card['record'] : ($snapshot['record'] ?? null);
+        ['verdict' => $verdict, 'loop' => $loop] = Loops::verdict($answer, $record, is_array($snapshot['facts'] ?? null) ? $snapshot['facts'] : [],
+            new DateTimeImmutable('@' . time()), !empty($snapshot['nextAction']['pending']));
         // Atendimento follows customers and partners only: a chat whose own contact is personal, automated or team gets no card.
         if ($conversation && in_array(self::ownClass($snapshot['participants'] ?? [], $classes), ['personal', 'automated', 'team'], true)) $verdict = 'none';
         $reason = is_string($card['reason'] ?? null) ? $card['reason'] : 'The analysis could not be read.';
-        $card = $verdict === 'none' ? null : array_diff_key($card, ['verdict' => true, 'reason' => true, 'participants' => true, 'record' => true]);
+        $card = in_array($verdict, Loops::QUIET, true) || !$card ? null : self::card($card, $loop, $reason);
         $this->verdicts->store((string) $snapshot['tenantId'], ...[...$key, $verdict, $reason, $card]);
         return ['status' => 'completed', 'requestId' => $result['requestId'] ?? null, 'cached' => false,
             'verdict' => $verdict, 'reason' => $reason, 'card' => $card];
+    }
+
+    /**
+     * What the reader's card keeps of the answer. A card made from a loop shows that loop (`promise`), and the loop's
+     * own text stands in for copy the model left out (an answer written while nothing was due yet).
+     *
+     * @param array<string, mixed> $card
+     * @param ?array{side: string, text: string, dueAt: ?string} $loop
+     * @return array<string, mixed>
+     */
+    private static function card(array $card, ?array $loop, string $reason): array
+    {
+        $card = array_diff_key($card, ['verdict' => true, 'reason' => true, 'participants' => true, 'record' => true, 'promise' => true]);
+        if (!$loop) return $card;
+        $card['promise'] = $loop;
+        $card['headline'] = ($card['headline'] ?? null) ?: $loop['text'];
+        $card['whyNow'] = ($card['whyNow'] ?? null) ?: $reason;
+        return $card;
     }
 
     /** The class of the conversation's own contact or group, as labeled before or classified by this analysis. */

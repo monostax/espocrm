@@ -75,8 +75,8 @@ class RecordsTest extends TestCase
             ->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $records])
             ->onlyMethods(['request'])->getMock();
         $summary->method('request')->willReturn(['status' => 'completed', 'card' => [
-            'verdict' => 'promise_due', 'reason' => 'Prometemos o contrato', 'headline' => 'H',
-            'promise' => ['side' => 'ours', 'text' => 'enviar o contrato', 'dueAt' => '2026-11-01T18:00:00-03:00'], 'record' => $record]]);
+            'verdict' => 'loops', 'reason' => 'Prometemos o contrato', 'headline' => 'H',
+            'promise' => ['side' => 'theirs', 'text' => 'the model no longer picks it', 'dueAt' => null], 'record' => $record]]);
         $result = $summary->analyse(['id' => 'deal', 'type' => 'opportunity', 'tenantId' => 'tenant', 'revision' => 'r-now',
             'revisions' => ['due' => 'r-due', 'notDue' => 'r-not-due'], 'evidenceScope' => 'scope', 'evidence' => self::entries(),
             'facts' => [], 'catchUpPolicy' => [], 'sourceScope' => 'scope-1', 'record' => null], 'pt-BR');

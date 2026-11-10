@@ -86,11 +86,12 @@ class Feed
         // Only deals with a conversation the reader may open in Chatwoot (its inbox rules, not the CRM's copy of them).
         $deals = array_intersect_key($deals, $this->access->dealsWithOpenConversation(array_keys($deals)));
         $context = $this->context($deals, $now);
-        $quiet = $this->verdicts->quiet('Opportunity', array_map(fn ($entry) => $entry['revision'], $context));
+        // Judged at this revision: quiet ones stay out; a card's verdict tells the deck its tab before it is opened.
+        $judged = $this->verdicts->judged('Opportunity', array_map(fn ($entry) => $entry['revision'], $context));
         $items = [];
         foreach ($deals as $id => $deal) {
-            if (isset($quiet[$id])) continue;
-            $items[] = $this->candidate($deal, $context[$id], $now);
+            if (in_array($judged[$id] ?? null, Loops::QUIET, true)) continue;
+            $items[] = [...$this->candidate($deal, $context[$id], $now), 'verdict' => $judged[$id] ?? null];
         }
         return ['items' => $items, 'cursor' => count($ids) === $limit ? (string) ($offset + $limit) : null];
     }
@@ -283,7 +284,30 @@ class Feed
             'customerSpokeLast' => $state !== null && $state['last_customer_at'] !== null
                 && ($state['last_business_at'] === null || $state['last_customer_at'] > $state['last_business_at']),
             'quietDays' => Revision::quietDays($state['last_message_at'] ?? null, $now),
+            'sort' => self::sortKey($state['last_customer_at'] ?? null, $state['last_business_at'] ?? null, $state['last_message_at'] ?? null, $now),
         ];
+    }
+
+    /**
+     * Where a candidate sits in the deck, as [rank, key] sorted ascending: the order candidateIds() and ServiceFeed
+     * use (customers waiting up to WAITING_FIRST_DAYS first, longest wait first; older waits, most recent first;
+     * quiet past the follow-up threshold; moving; quiet 30+ days; nothing known). The deck merges deals and
+     * conversations into one list per tab with it.
+     *
+     * @return array{int, int}
+     */
+    public static function sortKey(?string $customerAt, ?string $businessAt, ?string $lastAt, DateTimeImmutable $now): array
+    {
+        $ts = fn (?string $at) => $at ? (new DateTimeImmutable($at, new DateTimeZone('UTC')))->getTimestamp() : null;
+        [$customer, $business, $last, $day, $clock] = [$ts($customerAt), $ts($businessAt), $ts($lastAt), 86400, $now->getTimestamp()];
+        if ($last === null) return [6, 0];
+        if ($customer !== null && ($business === null || $customer > $business)) {
+            if ($customer >= $clock - self::WAITING_FIRST_DAYS * $day) return [0, $customer];
+            if ($customer >= $clock - 30 * $day) return [1, -$customer];
+        }
+        if ($last < $clock - 30 * $day) return [4, -$last];
+        if ($last < $clock - self::FOLLOW_UP_AFTER_DAYS * $day) return [2, -$last];
+        return [3, -$last];
     }
 
     /** Day-stable facts the analysis decides on; exact times live in the messages. */
@@ -432,7 +456,7 @@ class Feed
     }
 
     /** The selected next step, when this user may read it. */
-    private function nextAction(Entity $deal): ?array
+    public function nextAction(Entity $deal): ?array
     {
         $type = $deal->get('nextActionType');
         $id = $deal->get('nextActionId');

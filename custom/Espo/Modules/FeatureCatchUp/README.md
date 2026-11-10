@@ -10,6 +10,22 @@ Em dia is a personal decision deck in Chatwoot (`/app/accounts/:accountId/catch-
 - Account limit: 300 analyses per UTC day by default (0–2000), shared by all users. Installation ceiling: `CATCH_UP_INSTALLATION_DAILY_LIMIT` on the Hatchet workers (default 20000).
 - At most 50 evidence entries (40 messages, 10 deal notes) and 32 KB reach the model. Images and documents in those messages go along as media: the newest 8, 20 MB and 20,000 input tokens in total, chosen by the backend. Voice notes go as their transcripts (as audio only when there is none); video and other kinds stay text markers.
 
+## Loops and tabs (gtm/05 §16, decided 2026-11-10)
+
+Loops are the core. Each subject's record (`Records`) keeps every move one side owes the other in `promises`: explicit ("te mando o contrato até 18h", "vou ver com meu sócio e te retorno") or implied (a question nobody answered, a proposal with no reply). Each loop has a side (`ours`, `theirs`), a short action text, a `dueAt` or none, and is open, kept or dropped. The model keeps the loops and answers only `loops`, `decided`, `next_step_missing` (deals), `new_deal` (conversations) or `none` (prompt version 12). `Loops` compares the loops' times with the clock and makes the card:
+
+| Verdict | When | Tab |
+| --- | --- | --- |
+| `customer_waiting` | one of ours with no time: due now | Esperando a gente |
+| `promise_due` | one of ours past its time (the earliest) | Esperando a gente |
+| `follow_up_due` | one of theirs past its time, or with none after `Feed::FOLLOW_UP_AFTER_DAYS` quiet days; never while the AI follow-up is armed on the deal | Esperando o cliente |
+| `decided`, `new_deal`, `next_step_missing` | the model's; a deal is stalled only with no loop open and no pending next step | Esperando a gente |
+| `scheduled` | loops open, none due: no card, the revision moves when one comes due | Agenda |
+
+The card shows the loop it was made from (`card.promise`: side, text, dueAt), and the loop's text stands in for copy the model left out. `scheduled` and `none` keep a subject out of the deck until its revision moves; the lists return the stored card verdict of the others (`Verdicts::judged`) and a `sort` key ([rank, key], `Feed::sortKey`) so Chatwoot can merge deals and conversations into one queue per tab.
+
+A record keeps at most 30 loops: every open one, then the latest closed ones (at most 10). Before 2026-11-10 the parser kept the first 30, so a long deal lost its newest open loops.
+
 ## Who sees a deal
 
 - A deal owned by a person goes to that person.
@@ -42,14 +58,15 @@ Verdicts live in `CatchUpVerdict` with `conversationId` instead of `opportunityI
 
 **Who is who (`Parties`, step 1 of gtm/05 §12).** A contact's or group's class (customer, partner, team, personal, automated) lives on the Chatwoot contact as the "Em dia" list field (custom attribute `em_dia_tipo`). People see and correct it in the contact panel. `Transcript` returns the groups among a deal's conversations and the people writing in them as `participants`, keyed by account (a group is one contact per Chatwoot account). A message from someone labeled Equipe counts as staff. Unlabeled groups and group members are classified in the same model call as the verdict, never in a background sweep, and `Summary` writes each class into the contact's field only while it is still empty, creating the field definition the first time. The verdict is stored under the evidence scope the next read will compute with those labels (`Feed::evidenceScope` hashes each entry with who it counts as sent by), so a later correction gets the deal judged again. A deal's own contact in a direct chat is never classified.
 
-3. `POST /CatchUp/:id/summary` returns the stored verdict for the same revision, locale and evidence, or starts or polls the backend analysis and stores the verdict when it completes. An answer that isn't a valid verdict is stored as `none`.
+3. `POST /CatchUp/:id/summary` returns the stored verdict for the same revision, locale and evidence, or starts or polls the backend analysis, turns its loops into the verdict (`Loops`) and stores it when it completes. An answer that isn't a valid verdict is stored as `none`.
 
 A **revision** (`Revision::of`) hashes the prompt and evidence versions, the stage, amount, owner, follow-up status, next step, the deal state, the newest Post and the quiet-time step (1, 2, 4, 7, 14, 30 days; 30 is the last check). A verdict is reused until the revision changes. Verdicts live in `CatchUpVerdict`, shared by readers who see the same evidence.
 
 ## Endpoints
 
 - `GET /CatchUp?accountId=&timeZone=&cursor=&limit=`: `{items, cursor}`
-- `GET /CatchUpCount?accountId=`: card verdicts from the last 24 hours that nobody acted on (rail badge)
+- `GET /CatchUpCount?accountId=`: card verdicts from the last 24 hours that nobody acted on (rail badge); `scheduled` doesn't count
+- `GET /CatchUpAgenda?accountId=&timeZone=`: `{items, days}`, what comes due in the next 7 days (`Agenda::DAYS`), earliest first, at most 60: loops whose time hasn't come (`loop`, from the record built from the conversations the reader may open), the deal's pending next step (`step`: Task, Call or Meeting) and the AI follow-up armed on a deal (`ai`). Stored data only, never an analysis. Same reach as the deck: Ownership, the CRM ACL and Chatwoot access; a deal shows only with a conversation the reader may open. Deal loops carry `nextAction` and `canSchedule` (no pending next step and the reader may edit the deal) for Chatwoot's **Agendar**.
 - `GET /CatchUp/:id?accountId=&timeZone=`: snapshot
 - `POST /CatchUp/:id/summary` with `{accountId, locale, timeZone, requestId?}`: `{status, requestId, verdict, reason, card, cached, snapshot}`
 - `POST /CatchUp/:id/review` with `{snapshot}`: 409 when the deal changed since the card was shown; otherwise marks its verdict acted on
