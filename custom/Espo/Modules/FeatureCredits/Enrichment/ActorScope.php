@@ -4,27 +4,24 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureCredits\Enrichment;
 
-use Espo\Core\Acl;
-use Espo\Core\AclManager;
-use Espo\Core\ApplicationState;
+use Espo\Core\Application;
+use Espo\Core\Application\ApplicationParams;
 use Espo\Core\ApplicationUser;
-use Espo\Core\Binding\BindingContainerBuilder;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\InjectableFactory;
-use Espo\Core\Record\ServiceContainer;
-use Espo\Core\Record\ServiceFactory;
 use Espo\Entities\User;
 use Espo\ORM\EntityManager;
 
 /**
- * Background bulk work runs as the human who confirmed it: services get that user's User/Acl/record
- * services, and saves record that user as creator/modifier. Never the daemon's system user.
+ * Background bulk work runs as the human who confirmed it, never the daemon's system user.
+ *
+ * A job's container already holds the system user, and Espo refuses to replace a user once set. So the
+ * work gets an application of its own whose user is the purchaser: ACL, record services, hooks and the
+ * creator/modifier stamps all see that user, as in the request where they confirmed the run. The job's
+ * own container keeps the system user.
  */
 class ActorScope
 {
-    public function __construct(private EntityManager $em, private AclManager $aclManager,
-        private InjectableFactory $factory, private ApplicationUser $applicationUser, private ApplicationState $state) {}
-
     /**
      * @template T
      * @param callable(callable(class-string): object): T $work receives a factory for actor-bound services
@@ -32,22 +29,14 @@ class ActorScope
      */
     public function run(string $actorId, callable $work): mixed
     {
-        $user = $this->em->getEntityById('User', $actorId);
+        $container = (new Application(new ApplicationParams(noErrorHandler: true)))->getContainer();
+        $user = $container->getByClass(EntityManager::class)->getEntityById(User::ENTITY_TYPE, $actorId);
         if (!$user instanceof User || $user->get('deleted') || !$user->isActive() || $user->isPortal() ||
             $user->isApi() || $user->isSystem()) {
             throw new Forbidden('Enrichment purchaser is unavailable.');
         }
-        $acl = $this->aclManager->createUserAcl($user);
-        $base = BindingContainerBuilder::create()->bindInstance(User::class, $user)->bindInstance(Acl::class, $acl);
-        $records = new ServiceContainer($this->factory->createWithBinding(ServiceFactory::class, $base->build()));
-        $binding = $base->bindInstance(ServiceContainer::class, $records)->build();
-        $previous = $this->state->hasUser() ? $this->state->getUser() : null;
-        $this->applicationUser->setUser($user);
-        try {
-            return $work(fn (string $class): object => $this->factory->createWithBinding($class, $binding));
-        } finally {
-            if ($previous) $this->applicationUser->setUser($previous);
-            else $this->applicationUser->setupSystemUser();
-        }
+        $container->getByClass(ApplicationUser::class)->setUser($user);
+        $factory = $container->getByClass(InjectableFactory::class);
+        return $work(fn (string $class): object => $factory->create($class));
     }
 }
