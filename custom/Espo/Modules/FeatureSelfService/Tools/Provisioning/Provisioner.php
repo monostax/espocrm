@@ -30,7 +30,10 @@ use Throwable;
  * Creates a self-service workspace: Tenant (with its base and admin teams,
  * on an Advanced trial waiting for its first WhatsApp channel), the trial AI cap,
  * its credit wallet (agreement and cutover, when `selfServiceCreditWallet` is configured), the owner's tenant membership and admin team, the
- * ChatwootAccount, and the owner's Chatwoot administrator membership.
+ * ChatwootAccount, and the owner's Chatwoot administrator membership. Then what the
+ * workspace starts with (WorkspaceStarter): the "Vendas" funnel, a silent AI agent
+ * managing it, and Em dia switched on. The owner can enter once their membership
+ * exists (ownerCanEnter); those last steps never hold the login.
  *
  * Progress lives in one SelfServiceProvisioning record:
  *
@@ -61,8 +64,14 @@ class Provisioner
         'creditWallet' => 'owner',
         'owner' => 'chatwootAccount',
         'chatwootAccount' => 'ownerMembership',
-        'ownerMembership' => 'done',
+        'ownerMembership' => 'salesFunnel',
+        'salesFunnel' => 'aiAgent',
+        'aiAgent' => 'emDia',
+        'emDia' => 'done',
     ];
+
+    /** Steps that run once the owner can already use the workspace. */
+    private const AFTER_ENTRY = ['salesFunnel', 'aiAgent', 'emDia', 'done'];
 
     /**
      * The trial's AI: 100 credits, about 15 AI conversations (measured in prod,
@@ -88,6 +97,7 @@ class Provisioner
         private Config $config,
         private Log $log,
         private WorkspaceWallet $wallet,
+        private WorkspaceStarter $starter,
     ) {}
 
     /**
@@ -157,6 +167,16 @@ class Provisioner
     }
 
     /**
+     * Whether the owner can use the workspace: everything up to their Chatwoot
+     * membership is done. The starter steps may still be running or retrying.
+     */
+    public static function ownerCanEnter(Entity $record): bool
+    {
+        return $record->get('status') === self::STATUS_COMPLETED ||
+            in_array((string) $record->get('step'), self::AFTER_ENTRY, true);
+    }
+
+    /**
      * Provisionings a worker should run now: due ones, and running ones whose
      * worker stopped without releasing its lease.
      *
@@ -215,6 +235,14 @@ class Provisioner
                 'owner' => $this->ensureOwner($record),
                 'chatwootAccount' => $this->ensureChatwootAccount($record),
                 'ownerMembership' => $this->ensureOwnerMembership($record),
+                'salesFunnel' => $this->starter->ensureSalesFunnel($this->tenant($record)),
+                'aiAgent' => $this->starter->ensureAiAgent(
+                    $this->chatwootAccount($record),
+                    $this->starter->ensureSalesFunnel($this->tenant($record)),
+                    (string) $record->getId(),
+                    $this->input($record)['workspaceName'],
+                ),
+                'emDia' => $this->starter->ensureEmDia($this->chatwootAccount($record)),
                 default => throw new ProvisioningFailure("Unknown step '{$step}'."),
             };
 
@@ -377,9 +405,7 @@ class Provisioner
 
     private function ensureOwnerMembership(Entity $record): void
     {
-        $accountId = (string) $record->get('chatwootAccountId');
-        $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId)
-            ?? throw new RuntimeException("ChatwootAccount {$accountId} not found.");
+        $account = $this->chatwootAccount($record);
 
         try {
             $this->memberships->ensureUserMembership(
@@ -396,6 +422,14 @@ class Provisioner
             // Retrying can't help: an operator must remove or link that user.
             throw new ProvisioningFailure("Chatwoot already has a user with the owner's email; it is not adopted.");
         }
+    }
+
+    private function chatwootAccount(Entity $record): Entity
+    {
+        $accountId = (string) $record->get('chatwootAccountId');
+
+        return $this->entityManager->getEntityById('ChatwootAccount', $accountId)
+            ?? throw new RuntimeException("ChatwootAccount {$accountId} not found.");
     }
 
     private function tenant(Entity $record): Entity

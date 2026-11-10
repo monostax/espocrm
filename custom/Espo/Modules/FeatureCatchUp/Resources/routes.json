@@ -14,5 +14,7 @@
     {"route": "/CatchUpService/:id/summary", "method": "post", "params": {"controller": "CatchUp", "action": "serviceSummary", "id": ":id"}},
     {"route": "/CatchUpService/:id/review", "method": "post", "params": {"controller": "CatchUp", "action": "serviceReview", "id": ":id"}},
     {"route": "/CatchUpService/:id/resolved", "method": "post", "params": {"controller": "CatchUp", "action": "serviceResolved", "id": ":id"}},
-    {"route": "/CatchUpService/:id/label", "method": "post", "params": {"controller": "CatchUp", "action": "serviceLabel", "id": ":id"}}
+    {"route": "/CatchUpService/:id/label", "method": "post", "params": {"controller": "CatchUp", "action": "serviceLabel", "id": ":id"}},
+    {"route": "/CatchUpProposedDeals", "method": "get", "params": {"controller": "CatchUp", "action": "proposedDeals"}},
+    {"route": "/CatchUpProposedDeals", "method": "post", "params": {"controller": "CatchUp", "action": "createProposedDeals"}}
 ]

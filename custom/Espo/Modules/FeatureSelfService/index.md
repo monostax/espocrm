@@ -88,6 +88,25 @@ enabled = CRM_SELF_SERVICE_ENABLED is exactly "true"  AND  not paused
    (`selfServiceChatwootPlatformId`, or the only platform there is), shared
    with the base team.
 4. `ownerMembership`: the owner's Chatwoot membership as `administrator`.
+5. What the workspace starts with (`WorkspaceStarter`, Self-Service PLG
+   "Next steps to launch" §7, decided 2026-11-10):
+   - `salesFunnel`: the default "Vendas" funnel (Em negociação 50%, Ganho
+     100%, Perdido 0%), shared with the base team, AI follow-ups off. Ganho and
+     Perdido carry the Monostax default rule (gtm/06). A tenant that already
+     has a funnel keeps it.
+   - `aiAgent`: a managed AI agent ("IA <workspace>") through
+     `Chatwoot/Services/AiAgentProvisioning`, with no inbox, so Chatwoot never
+     assigns it a conversation and it never replies. It manages the default
+     funnel (`funnelsToManage`), which the opportunity tracker writes through.
+     Its operation id is derived from the provisioning id, so a retry resumes
+     the same identity. It is not an attendant (`PlanRecommendation` skips AI
+     memberships); a future Chatwoot agent limit must skip it too.
+   - `emDia`: Em dia on for the Chatwoot account (`catch_up_enabled`, set
+     with the concierge key through the Account API).
+
+The owner can enter as soon as step 4 is done (`Provisioner::ownerCanEnter`,
+used by the signup's readiness): step 5 never holds the login, and a failure
+there retries on the job's backoff while the owner already works.
 
 Contracts:
 
@@ -111,7 +130,29 @@ Contracts:
   failed-and-due and paused records, and takes over records whose lease
   expired. It does nothing while self-service is off.
 
-Not here yet: starter pipeline, trial state, entitlements.
+## First read
+
+When a workspace's onboarding opens (`Tenant.onboardingStep` becomes `done`:
+its newest history is in, or the number brings none), the
+`Hooks/Tenant/ScheduleFirstRead` hook schedules `Jobs/RunFirstRead` for two
+minutes later. `Tools/Onboarding/FirstRead` then:
+
+- waits, a minute at a time and 15 minutes at most, until the CRM has the
+  imported conversations (no `ChatwootAccount.conversationBackfillPage` left
+  and at least one conversation);
+- runs `FeatureCatchUp/Services/Prefetch` as the owner (`ActorScope`): Em dia
+  analyses the first 15 cards of the owner's deck, deals first, through the
+  deck's own feeds, snapshots and analysis. The job only queues the analyses,
+  then comes back every 30 seconds (at most 6 times) to store the ones that
+  completed, so it never sleeps in one of the daemon's 4 job slots; the console
+  (`self-service first-read`) waits in place. The deck finds each verdict
+  stored and opens at once; deals found in conversations (`new_deal`) are
+  listed for "Criar todas" (`FeatureCatchUp/Services/ProposedDeals`).
+
+It runs on the workspace's credits like any Em dia analysis (the legacy run
+budget never charges Em dia; the wallet does). Subjects already judged are
+skipped, so running it again costs nothing; a failure only means the deck
+analyses its cards when opened.
 
 ## Offboarding
 
@@ -175,6 +216,8 @@ php command.php self-service provision --key=<key> --owner=<userId> --name="Acme
 php command.php self-service run --id=<provisioningId>
 php command.php self-service offboard --tenant=<tenantId> --confirm=<slug>   # start or retry, run now
 php command.php self-service offboarding --tenant=<tenantId>                 # status and counts
+php command.php self-service starter --tenant=<tenantId>      # funnel, silent AI agent, Em dia for an existing workspace
+php command.php self-service first-read --tenant=<tenantId>   # run the first read now, without waiting
 ```
 
 `provision` and `run` also need the switch on and no pause. `offboard` does not.
@@ -184,15 +227,21 @@ php command.php self-service offboarding --tenant=<tenantId>                 # s
 Unit: `tests/unit/Espo/Modules/FeatureSelfService` (policy, slugs, provisioning
 requests, signup form and phones, ID-token rules, offboarding order and kept
 types), plus
-`Chatwoot/Hooks/ChatwootAccount/SyncWithChatwootResumeTest` and
-`Global/Tools/Tenant/TenantAdminTeamProvisionerTest`.
+`Chatwoot/Hooks/ChatwootAccount/SyncWithChatwootResumeTest`,
+`Global/Tools/Tenant/TenantAdminTeamProvisionerTest` and `WorkspaceStarterTest`
+(the agent's operation id, its name, when the owner can enter).
 
 Integration: `tests/integration/Espo/Modules/FeatureSelfService` runs against a
 disposable database. `fake-chatwoot.php` stands in for the Chatwoot Platform
 API (with fault injection) and for an OAuth provider (`/oauth/authorize`,
-`/oauth/token`, claims set via `/__idtoken`). In an isolated install (MariaDB on
-a private Docker network, CRM installed from this checkout with
-`bin/command config:populate`, the `database.*` config and `rebuild`):
+`/oauth/token`, claims set via `/__idtoken`), and answers machine identities,
+account settings (`catch_up` reflects `catch_up_enabled`) and
+`conversation_access` (deny some with `/__seed {deniedConversations}`). In an
+isolated install (MariaDB on a private Docker network, CRM installed from this
+checkout with `bin/command config:populate`, the `database.*` config and
+`rebuild`), with `frontendTenantDomain` set (otherwise concierge emails fall in
+the reserved `monostax-ext.com` namespace and are refused) and the
+`ChatwootPlatform` pointing at the fake:
 
 ```sh
 FAKE_CHATWOOT_STATE=/tmp/fake.json php -S 0.0.0.0:8080 tests/integration/Espo/Modules/FeatureSelfService/fake-chatwoot.php
@@ -200,9 +249,18 @@ SELF_SERVICE_TEST_DATABASE=<db> FAKE_CHATWOOT_URL=http://<fake>:8080 \
     php phpunit.phar tests/integration/Espo/Modules/FeatureSelfService
 ```
 
-- `ProvisioningTest`: the workspace, rerun no-op, same-named tenants,
-  dedupe conflicts, concierge failure and lost reply, pause/resume, switch
-  off, instance-admin owner, live leases, deleted team keys, the job.
+- `ProvisioningTest`: the workspace with its funnel, silent AI agent and Em
+  dia, rerun no-op, the owner entering while the starter retries (one agent
+  after the retry), an existing funnel kept, same-named tenants, dedupe
+  conflicts, concierge failure and lost reply, pause/resume, switch off,
+  instance-admin owner, live leases, deleted team keys, the job.
+- `FirstReadTest`: onboarding opening schedules the first read once, the
+  wait for conversations, the console read as the owner, no read without a
+  plan.
+- `ProposedDealsTest` ("Criar todas", FeatureCatchUp): the owner's
+  proposals only (Chatwoot access, current revision), created in the default
+  funnel's open stage, linked and resolved, nothing offered twice; several
+  funnels without a default need a choice.
 - `SignupTest`: code signup to a one-time login, wrong-code lockout, token
   required, email in use, IP limit, switch off.
 - `SocialSignInTest`: new Google user without a code, existing user ticket,

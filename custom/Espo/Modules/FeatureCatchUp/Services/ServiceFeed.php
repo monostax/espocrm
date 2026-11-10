@@ -217,7 +217,7 @@ class ServiceFeed
      * @param list<string> $ids
      * @return array<string, Entity>
      */
-    private function readable(array $ids): array
+    public function readable(array $ids): array
     {
         if (!$ids) return [];
         $query = $this->select->create()->from('ChatwootConversation')->withStrictAccessControl()->buildQueryBuilder()
@@ -297,7 +297,7 @@ class ServiceFeed
         return $names;
     }
 
-    private function authorize(): void
+    public function authorize(): void
     {
         if ((!$this->user->isRegular() && !$this->user->isAdmin()) || !$this->acl->checkScope('ChatwootConversation', 'read')) throw new Forbidden();
     }

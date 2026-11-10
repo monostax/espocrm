@@ -88,6 +88,61 @@ class Verdicts
         }
     }
 
+    /**
+     * The unresolved `new_deal` verdicts of these conversations at their current revision: the deals the analysis
+     * found that nobody created or dismissed yet. A message since then moves the revision, so a proposal that the
+     * conversation has overtaken is not returned.
+     *
+     * @param array<string, string> $revisions conversation id => current revision
+     * @return array<string, array{card: array<string, mixed>, reason: ?string}>
+     */
+    public function proposals(array $revisions): array
+    {
+        if (!$revisions) return [];
+        $pairs = implode(' OR ', array_fill(0, count($revisions), '(conversation_id = ? AND revision = ?)'));
+        $values = [];
+        foreach ($revisions as $id => $revision) array_push($values, $id, $revision);
+        $query = $this->em->getPDO()->prepare("SELECT conversation_id, card, reason FROM catch_up_verdict WHERE deleted = 0 "
+            . "AND verdict = 'new_deal' AND resolved_at IS NULL AND ($pairs) ORDER BY created_at DESC");
+        $query->execute($values);
+        $found = [];
+        foreach ($query->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $card = json_decode((string) $row['card'], true);
+            if (!isset($found[(string) $row['conversation_id']]) && is_array($card)) {
+                $found[(string) $row['conversation_id']] = ['card' => $card, 'reason' => $row['reason']];
+            }
+        }
+        return $found;
+    }
+
+    /**
+     * Conversations of this account, in the reader's deck and still without an open deal, that have an unresolved
+     * `new_deal` verdict at any revision; the caller checks access and the current revision. Newest activity first.
+     *
+     * @return array<string, array{contact: ?string, grp: int}>
+     */
+    public function proposalConversations(string $tenantId, string $accountId, string $ownerSql, array $ownerParams, string $userId, int $limit): array
+    {
+        $query = $this->em->getPDO()->prepare(
+            'SELECT c.id, MAX(c.chatwoot_contact_id) AS contact, MAX(COALESCE(ct.identifier, \'\') LIKE \'%@g.us\') AS grp, MAX(c.last_activity_at) AS active '
+            . 'FROM catch_up_verdict v '
+            . 'JOIN chatwoot_conversation c ON c.id = v.conversation_id AND c.deleted = 0 AND c.chatwoot_account_id = :account '
+            . 'JOIN chatwoot_account a ON a.id = c.chatwoot_account_id '
+            . 'LEFT JOIN chatwoot_contact ct ON ct.id = c.chatwoot_contact_id AND ct.deleted = 0 '
+            . "WHERE v.deleted = 0 AND v.tenant_id = :tenant AND v.verdict = 'new_deal' AND v.resolved_at IS NULL "
+            . 'AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
+            . "AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user "
+            . "AND z.target_type = 'ChatwootConversation' AND z.snoozed_until > UTC_TIMESTAMP())" . $ownerSql
+            . ' GROUP BY c.id ORDER BY active DESC, c.id LIMIT ' . max(1, $limit)
+        );
+        $query->execute(['tenant' => $tenantId, 'account' => $accountId, 'user' => $userId, ...$ownerParams]);
+        $rows = [];
+        foreach ($query->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $rows[(string) $row['id']] = ['contact' => $row['contact'], 'grp' => (int) $row['grp']];
+        }
+        return $rows;
+    }
+
     /** Someone acted on the subject's card: it leaves the badge. */
     public function resolve(string $type, string $id): void
     {

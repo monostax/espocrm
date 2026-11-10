@@ -13,6 +13,7 @@ use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServiceUnavailable;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Provisioner;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\ProvisioningRequest;
+use Espo\Modules\FeatureSelfService\Tools\Provisioning\WorkspaceStarter;
 use Espo\Modules\Global\Tools\Tenant\TenantAdminTeamProvisioner;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -100,10 +101,74 @@ class ProvisioningTest extends TestCase
         self::assertSame(0, $this->callCount('POST /platform/api/v1/users/:id/confirm'));
         self::assertSame(1, $this->callCount('POST /platform/api/v1/accounts'));
 
+        // What the workspace starts with: the "Vendas" funnel, a silent AI agent managing it, Em dia on.
+        $funnel = $this->em->getRDBRepository('Funnel')->where(['tenantId' => $tenant->getId()])->findOne();
+        self::assertSame('Vendas', $funnel->get('name'));
+        self::assertTrue($funnel->get('isDefault'));
+        self::assertFalse($funnel->get('followupsEnabled'), 'Nothing in a trial messages customers before "Ative a IA".');
+        self::assertSame([$baseTeamId], $funnel->getLinkMultipleIdList('teams'));
+        $stages = [];
+        foreach ($this->em->getRDBRepository('OpportunityStage')->where(['funnelId' => $funnel->getId()])->order('order')->find() as $stage) {
+            $stages[$stage->get('name')] = (int) $stage->get('probability');
+            self::assertStringNotContainsString('{', (string) $stage->get('description'));
+        }
+        self::assertSame(['Em negociação' => 50, 'Ganho' => 100, 'Perdido' => 0], $stages);
+
+        // The concierge is an AI membership too (an administrator); the managed agent is an agent.
+        $agents = $this->em->getRDBRepository('ChatwootAccountUserMembership')
+            ->where(['chatwootAccountId' => $account->getId(), 'isAI' => true, 'role' => 'agent'])->find();
+        self::assertCount(1, $agents);
+        $agent = iterator_to_array($agents, false)[0];
+        self::assertSame('IA Clínica Teste', $agent->get('name'));
+        self::assertSame([], $agent->getLinkMultipleIdList('chatwootInboxes'), 'A silent agent has no inbox, so it is never assigned.');
+        self::assertSame([$funnel->getId()], $agent->getLinkMultipleIdList('funnelsToManage'));
+        self::assertSame(1, $this->callCount('POST /platform/api/v1/accounts/:id/machine_identities'));
+        $identity = $this->em->getRDBRepository('ChatwootMachineIdentity')->where(['membershipId' => $agent->getId()])->findOne();
+        self::assertSame('active', $identity->get('status'));
+        self::assertStringEndsWith('@' . $tenant->get('slug') . '.monostax-ext.com', $identity->get('email'));
+
+        $remote = $this->http('GET', '/__accounts')[(string) $account->get('chatwootAccountId')];
+        self::assertTrue($remote['settings']['catch_up_enabled'] ?? false, 'Em dia is on for a new workspace.');
+        self::assertTrue(Provisioner::ownerCanEnter($done));
+
         // Running a completed provisioning again changes nothing.
         self::assertSame('completed', $this->provisioner()->run($record->getId())->get('status'));
         self::assertSame(1, $this->callCount('POST /platform/api/v1/accounts'));
         self::assertSame(1, $this->em->getRDBRepository('TenantAiBillingRate')->where(['tenantId' => $tenant->getId()])->count());
+        self::assertSame(1, $this->em->getRDBRepository('Funnel')->where(['tenantId' => $tenant->getId()])->count());
+        self::assertSame(1, $this->callCount('POST /platform/api/v1/accounts/:id/machine_identities'));
+    }
+
+    public function testTheOwnerEntersWhileTheStarterRetriesAndTheRetryMakesOneAgent(): void
+    {
+        $this->http('POST', '/__fault', [
+            'call' => 'POST /platform/api/v1/accounts/:id/machine_identities', 'times' => 1, 'status' => 502, 'afterCreate' => true,
+        ]);
+        $record = $this->provisioner()->start($this->request('signup:starter-' . $this->suffix(), $this->owner(), 'Starter Teste'));
+
+        $failed = $this->provisioner()->run($record->getId());
+        self::assertSame('failed', $failed->get('status'));
+        self::assertSame('aiAgent', $failed->get('step'));
+        self::assertNotNull($failed->get('nextAttemptAt'));
+        self::assertTrue(Provisioner::ownerCanEnter($failed), 'The starter never holds the login.');
+
+        $done = $this->provisioner()->run($record->getId());
+        self::assertSame('completed', $done->get('status'), (string) $done->get('lastError'));
+        self::assertSame(1, $this->em->getRDBRepository('ChatwootAccountUserMembership')
+            ->where(['chatwootAccountId' => $done->get('chatwootAccountId'), 'isAI' => true, 'role' => 'agent'])->count());
+        self::assertSame(1, $this->em->getRDBRepository('ChatwootMachineIdentity')
+            ->where(['accountId' => $done->get('chatwootAccountId')])->count(), 'The retry resumes the reserved identity.');
+    }
+
+    public function testAWorkspaceThatAlreadyHasAFunnelKeepsIt(): void
+    {
+        $done = $this->provisionCompleted('signup:funnel-' . $this->suffix(), $this->owner(), 'Funil Teste');
+        $tenant = $this->em->getEntityById('Tenant', $done->get('tenantId'));
+        $starter = $this->app->getInjectableFactory()->create(WorkspaceStarter::class);
+
+        $again = $starter->ensureSalesFunnel($tenant);
+        self::assertSame(1, $this->em->getRDBRepository('Funnel')->where(['tenantId' => $tenant->getId()])->count());
+        self::assertSame('Vendas', $again->get('name'));
     }
 
     public function testSameNamedWorkspacesGetSeparateTenantsAndTeams(): void

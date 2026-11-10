@@ -10,6 +10,7 @@ use Espo\Modules\FeatureCatchUp\Services\Actions;
 use Espo\Modules\FeatureCatchUp\Services\Agenda;
 use Espo\Modules\FeatureCatchUp\Services\ConversationRecord;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
+use Espo\Modules\FeatureCatchUp\Services\ProposedDeals;
 use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
 use Espo\Modules\FeatureCatchUp\Services\Snoozes;
 use Espo\Modules\FeatureCatchUp\Services\Summary;
@@ -27,7 +28,20 @@ class CatchUp
         private ServiceFeed $service,
         private ConversationRecord $record,
         private Agenda $agenda,
+        private ProposedDeals $proposedDeals,
     ) {}
+
+    /** "Criar todas": the deals the analysis found in conversations still without one, for review. Never analyses. */
+    public function getActionProposedDeals(Request $request): object
+    {
+        return (object) $this->proposedDeals->list($request);
+    }
+
+    /** "Criar todas": create the reviewed proposals in one go. */
+    public function postActionCreateProposedDeals(Request $request): object
+    {
+        return (object) $this->proposedDeals->create($request);
+    }
 
     /** The Agenda tab: loops not due yet, pending next steps and armed AI follow-ups, from stored data only. */
     public function getActionAgenda(Request $request): object

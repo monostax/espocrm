@@ -3219,6 +3219,24 @@ public function deleteConversation(
         }
     }
 
+    /**
+     * Change account settings through the Account API (`PATCH /api/v1/accounts/:id`), which merges them. The Platform
+     * API can't change settings, so this needs an administrator's token, such as the account's concierge key. Chatwoot
+     * applies only the keys it permits there (e.g. `catch_up_enabled`).
+     *
+     * @param array<string, scalar|null> $settings
+     * @throws Error
+     */
+    public function updateAccountSettings(string $platformUrl, string $accountApiKey, int $accountId, array $settings): void
+    {
+        $url = rtrim($platformUrl, '/') . '/api/v1/accounts/' . $accountId;
+        $payload = json_encode($settings, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+        $response = $this->executeRequest($url, 'PATCH', $payload, ['api_access_token: ' . $accountApiKey, 'Content-Type: application/json']);
+        if ($response['code'] < 200 || $response['code'] >= 300) {
+            throw new Error('Failed to update account settings: HTTP ' . $response['code']);
+        }
+    }
+
     /** Episode changes are retained by Chatwoot until the matching revision is acknowledged. */
     public function episodeRequest(
         string $platformUrl,

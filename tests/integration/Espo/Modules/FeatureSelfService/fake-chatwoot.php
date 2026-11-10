@@ -47,9 +47,9 @@ if ($path === '/__reset') {
     $reply(200, []);
 }
 
-// Seeds an account's inboxes and conversations: {accountId, inboxes?, conversations?}.
+// Seeds an account's inboxes and conversations: {accountId, inboxes?, conversations?, deniedConversations?}.
 if ($path === '/__seed') {
-    foreach (['inboxes', 'conversations'] as $kind) {
+    foreach (['inboxes', 'conversations', 'deniedConversations'] as $kind) {
         if (isset($body[$kind])) {
             $state[$kind][(string) $body['accountId']] = $body[$kind];
         }
@@ -114,7 +114,51 @@ if (preg_match('#^/platform/api/v1/(accounts|users)/(\d+)$#', $path, $m) && $met
 
 if (preg_match('#^/platform/api/v1/accounts/(\d+)$#', $path, $m)) {
     $account = $state['accounts'][$m[1]] ?? null;
-    $account ? $finish(200, $account) : $finish(404, ['error' => 'not found']);
+    if (!$account) {
+        $finish(404, ['error' => 'not found']);
+    }
+    // Like the Platform API's account view: Em dia's opt-in as `catch_up`.
+    $account['catch_up'] = [
+        'enabled' => ($account['settings']['catch_up_enabled'] ?? null) === true,
+        'instance' => 'http://chatwoot.test',
+        'accountId' => (string) $account['id'],
+        'dailyLimit' => 300,
+    ];
+    $account['status'] ??= 'active';
+    $finish(200, $account);
+}
+
+// Like Chatwoot: a managed AI identity per operation, confirmed, with its own user.
+if (preg_match('#^/platform/api/v1/accounts/(\d+)/machine_identities$#', $path, $m) && $method === 'POST') {
+    $key = (string) ($body['operation_id'] ?? '');
+    if (!isset($state['machineIdentities'][$key])) {
+        $userId = $id();
+        $state['users'][$userId] = [
+            'id' => $userId, 'name' => $body['name'] ?? '', 'email' => $body['email'] ?? '',
+            'access_token' => 'token-' . $userId, 'custom_attributes' => [], 'confirmed' => true,
+        ];
+        $state['machineIdentities'][$key] = [
+            'machine_identity_id' => $body['machine_identity_id'] ?? null, 'operation_id' => $key,
+            'email' => $body['email'] ?? null, 'account_id' => (int) $m[1], 'confirmed' => true, 'user_id' => $userId,
+        ];
+    }
+    $finish(200, $state['machineIdentities'][$key]);
+}
+
+// The Account API's account update: settings merge (Em dia's opt-in lives there).
+if (preg_match('#^/api/v1/accounts/(\d+)$#', $path, $m) && $method === 'PATCH' && isset($state['accounts'][$m[1]])) {
+    $state['accounts'][$m[1]]['settings'] = array_merge($state['accounts'][$m[1]]['settings'] ?? [], $body);
+    $finish(200, $state['accounts'][$m[1]]);
+}
+
+// Like Chatwoot's conversation_access: which of these display ids the user may open (all but the denied ones).
+if (preg_match('#^/platform/api/v1/accounts/(\d+)/conversation_access$#', $path, $m) && $method === 'POST') {
+    $denied = array_map('intval', $state['deniedConversations'][$m[1]] ?? []);
+    $finish(200, ['conversation_ids' => array_values(array_diff(array_map('intval', $body['conversation_ids'] ?? []), $denied))]);
+}
+
+if ($path === '/__accounts') {
+    $reply(200, $state['accounts']);
 }
 
 if (preg_match('#^/platform/api/v1/accounts/(\d+)/account_users$#', $path, $m) && $method === 'POST') {

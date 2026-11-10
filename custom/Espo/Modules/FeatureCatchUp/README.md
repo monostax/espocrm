@@ -75,7 +75,14 @@ A **revision** (`Revision::of`) hashes the prompt and evidence versions, the sta
 - `POST /CatchUpSnooze` with `{accountId, type: Opportunity, id, until}`: per-user Adiar, at most 30 days
 - `GET /CatchUpRecord?accountId=&conversationId=` (Chatwoot display id): `{records: [{subject, agreed, promises, coveredAt}]}` for the conversation sidebar (`ConversationRecord`). Each open deal of the conversation the reader may read (newest 3), with its record under the reader's source scope; without one, the conversation's own Atendimento record. Only agreed items (with up to 2 earlier values in `was`) and open promises are returned. It reads stored records only and never analyses. It resolves the workspace with `Workspace::account`, which skips the Chatwoot opt-in call so opening a chat costs no request to Chatwoot; Chatwoot only calls it on accounts with Em dia on, and the conversation must pass both the `ChatwootConversation` and the `ChatwootMessage` ACL.
 
+- `GET /CatchUpProposedDeals?accountId=&timeZone=`: `{items: [{conversationId, contactName, inboxName, name, amount, why}], funnels: [{id, name, isDefault}]}` for "Criar todas": the unresolved `new_deal` cards at each conversation's current revision, in the reader's deck and Chatwoot access, conversations still without an open deal, at most 50, a mirrored group once. Stored verdicts only, never an analysis.
+- `POST /CatchUpProposedDeals` with `{accountId, funnelId?, items: [{conversationId, name?, amount?}]}`: creates each item that is still one of the reader's proposals through the Opportunity record service as the reader, in the chosen funnel (default: the default funnel, else the only one; `funnelRequired` / `noFunnel` otherwise) and its first open stage, assigned to the reader, with the reader's default team when it is the workspace's (else its base team), linked to the conversation; then resolves its card. Returns `{created, skipped, failed}`; one deal that can't be saved doesn't stop the others.
+
 Next steps use the existing `POST /Opportunity/:id/nextAction`.
+
+## Analysing without the deck
+
+`Services/Prefetch` runs the first cards of a reader's deck (deals first, then conversations, at most N, skipping what is judged) through the same feeds, snapshots and `Summary`, and polls queued analyses until they complete or a deadline passes. With no wait it only queues them and returns the pending ones (`waiting`); `poll()` asks once more about exactly those, so a job never sleeps in a worker slot. The caller sets the reader (the self-service first read uses `ActorScope` with the workspace owner); `Classes/DeckRequest` carries the deck's parameters. Verdicts land under the deck's own keys, so the deck opens on them.
 
 ## Deployment
 

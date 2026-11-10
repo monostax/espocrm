@@ -265,7 +265,8 @@ class Signups
 
         $status = $provisioning?->get('status');
 
-        if ($status === Provisioner::STATUS_COMPLETED) {
+        // Usable once the owner's membership exists; the starter (funnel, AI agent, Em dia) may still be finishing.
+        if ($provisioning && Provisioner::ownerCanEnter($provisioning)) {
             // The signup token stands in for the password only for a short while.
             if (strtotime((string) $signup->get('verifiedAt') . ' UTC') + self::LOGIN_WINDOW_SECONDS < time()) {
                 return ['status' => 'ready'];

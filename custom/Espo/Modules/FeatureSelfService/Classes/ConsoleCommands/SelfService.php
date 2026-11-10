@@ -11,7 +11,9 @@
 
 namespace Espo\Modules\FeatureSelfService\Classes\ConsoleCommands;
 
+use Espo\Core\ApplicationUser;
 use Espo\Core\Console\Command;
+use Espo\Core\Container\Exceptions\NotSettableException;
 use Espo\Core\Console\Command\Params;
 use Espo\Core\Console\IO;
 use Espo\Core\Exceptions\BadRequest;
@@ -19,10 +21,12 @@ use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Utils\SystemUser;
 use Espo\Modules\FeatureSelfService\Tools\Offboarding\Offboarder;
+use Espo\Modules\FeatureSelfService\Tools\Onboarding\FirstRead;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServiceUnavailable;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Provisioner;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\ProvisioningRequest;
+use Espo\Modules\FeatureSelfService\Tools\Provisioning\WorkspaceStarter;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAccess;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -50,6 +54,12 @@ use InvalidArgumentException;
  *       minutes; the job continues it. Run again to retry a failed one.
  *   php command.php self-service offboarding --tenant=<tenantId>
  *       Show a tenant's offboarding.
+ *   php command.php self-service starter --tenant=<tenantId>
+ *       Give an existing self-service workspace what new ones start with: the "Vendas"
+ *       funnel (unless it has a funnel), a silent AI agent managing it, and Em dia on.
+ *   php command.php self-service first-read --tenant=<tenantId>
+ *       Run a workspace's first read now: Em dia analyses the first cards of the owner's
+ *       deck (up to 15, on the workspace's credits). Takes up to a few minutes.
  */
 class SelfService implements Command
 {
@@ -60,10 +70,20 @@ class SelfService implements Command
         private WorkspaceAccess $access,
         private Offboarder $offboarder,
         private SystemUser $systemUser,
+        private ApplicationUser $applicationUser,
+        private WorkspaceStarter $starter,
+        private FirstRead $firstRead,
     ) {}
 
     public function run(Params $params, IO $io): void
     {
+        // Console commands run with no user; provisioning acts as the system user, as in its job.
+        try {
+            $this->applicationUser->setupSystemUser();
+        } catch (NotSettableException) {
+            // Already set.
+        }
+
         try {
             match ($params->getArgument(0) ?? 'status') {
                 'status' => $this->status($io),
@@ -74,7 +94,9 @@ class SelfService implements Command
                 'workspace' => $this->workspace($params, $io),
                 'offboard' => $this->offboard($params, $io),
                 'offboarding' => $this->offboarding($params, $io),
-                default => $this->fail($io, 'Unknown action. Use status, pause, resume, provision, run, workspace, offboard or offboarding.'),
+                'starter' => $this->starter($params, $io),
+                'first-read' => $this->runFirstRead($params, $io),
+                default => $this->fail($io, 'Unknown action. Use status, pause, resume, provision, run, workspace, offboard, offboarding, starter or first-read.'),
             };
         } catch (SelfServiceUnavailable $e) {
             $this->fail($io, $e->getMessage() . ' Set CRM_SELF_SERVICE_ENABLED=true and resume to provision.');
@@ -208,6 +230,34 @@ class SelfService implements Command
             $tenant->get('trialEndsAt') ?? '-',
             $tenant->get('chatwootAccess') ?: '-',
         ));
+    }
+
+    private function starter(Params $params, IO $io): void
+    {
+        $tenant = $this->entityManager->getEntityById('Tenant', (string) $params->getOption('tenant'));
+        $provisioning = $tenant ? $this->entityManager->getRDBRepository(Provisioner::ENTITY_TYPE)
+            ->where(['tenantId' => $tenant->getId(), 'status' => Provisioner::STATUS_COMPLETED])->findOne() : null;
+        $account = $provisioning ? $this->entityManager->getEntityById('ChatwootAccount', (string) $provisioning->get('chatwootAccountId')) : null;
+
+        if (!$tenant || !$tenant->get('plan') || !$account) {
+            $this->fail($io, 'No completed self-service workspace with that tenant id.');
+
+            return;
+        }
+
+        $funnel = $this->starter->ensureSalesFunnel($tenant);
+        $agent = $this->starter->ensureAiAgent($account, $funnel, (string) $provisioning->getId(), (string) ((array) $provisioning->get('input'))['workspaceName']);
+        $this->starter->ensureEmDia($account);
+        $io->writeLine("Tenant {$tenant->getId()}: funnel {$funnel->get('name')} ({$funnel->getId()}), AI agent {$agent->get('name')} ({$agent->getId()}), Em dia on.");
+    }
+
+    private function runFirstRead(Params $params, IO $io): void
+    {
+        $tenantId = (string) $params->getOption('tenant');
+        $result = $this->firstRead->run($tenantId, wait: false);
+        $io->writeLine($result === null
+            ? "Nothing to read for tenant {$tenantId} (not a self-service workspace whose onboarding is done)."
+            : "First read of tenant {$tenantId}: " . json_encode($result));
     }
 
     private function offboard(Params $params, IO $io): void
