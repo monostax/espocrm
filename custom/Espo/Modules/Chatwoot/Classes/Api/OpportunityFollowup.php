@@ -65,6 +65,9 @@ final class OpportunityFollowup implements MiddlewareInterface
             if ($record && $this->acl->checkField('Opportunity', 'followupCount')) {
                 $row->followupCount = (int) ($record->get('followupCount') ?? 0);
             }
+            if ($record && $this->acl->checkField('Opportunity', 'followupTimer')) {
+                $row->followupTimer = $record->get('followupTimer');
+            }
             if ($record && $this->acl->checkField('Opportunity', 'followupBreakoutLimit')) {
                 $agentId = $record->get('followupAiAgentId');
                 $limit = $record->get('followupBreakoutLimit')

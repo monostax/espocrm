@@ -13,6 +13,7 @@ use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
+use Espo\Modules\Global\Classes\NextAction\PendingActivity;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use stdClass;
@@ -153,13 +154,7 @@ abstract class RecordNextAction
 
     private function checkPending(Entity $activity): void
     {
-        $type = $activity->getEntityType();
-        $pending = $type === 'Task'
-            ? !in_array($activity->get('status'), $this->metadata->get([
-                'entityDefs', 'Task', 'fields', 'status', 'notActualOptions',
-            ]) ?? [], true)
-            : in_array($activity->get('status'), $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? [], true);
-        if (!$pending) {
+        if (!PendingActivity::isPending($activity, $this->metadata)) {
             throw new Conflict('Choose an unfinished, active activity.');
         }
     }
@@ -174,10 +169,16 @@ abstract class RecordNextAction
         $record->set('nextActionId', $activity?->getId());
         $record->set('nextActionType', $activity?->getEntityType());
         $this->entityManager->saveEntity($record);
-        return (object) [
+        $result = (object) [
             'id' => $record->getId(),
             'nextActionId' => $record->get('nextActionId'),
             'nextActionType' => $record->get('nextActionType'),
         ];
+        // A person's step pauses the AI follow-up (PauseFollowupForPersonStep); return the result.
+        if ($record->hasAttribute('followupTimer')) {
+            $result->followupTimer = $record->get('followupTimer');
+            $result->followupStatus = $record->get('followupStatus');
+        }
+        return $result;
     }
 }
