@@ -152,6 +152,32 @@ class ChatwootWhatsappInboxRecoveryTest extends TestCase
         $this->recover($this->service($api));
     }
 
+    public function testRecoversWhenChatwootOnlyReturnsTheKeyFingerprint(): void
+    {
+        $inbox = $this->inbox();
+        unset($inbox['provider_config']['api_key']);
+        $inbox['whatsapp_api_key_fingerprint'] = hash('sha256', 'meta-token');
+        $api = $this->createMock(ChatwootApiClient::class);
+        $api->method('listInboxes')->willReturn(['payload' => [$inbox]]);
+        $api->expects($this->never())->method('updateInbox');
+        $api->expects($this->once())->method('registerWhatsappInboxWebhook');
+        $this->assertSame($inbox + ['_recovered' => true], $this->recover($this->service($api)));
+    }
+
+    public function testRejectsAnInboxWhoseKeyFingerprintDiffers(): void
+    {
+        $inbox = $this->inbox();
+        unset($inbox['provider_config']['api_key']);
+        $inbox['whatsapp_api_key_fingerprint'] = hash('sha256', 'other-token');
+        $api = $this->createMock(ChatwootApiClient::class);
+        $api->method('listInboxes')->willReturn(['payload' => [$inbox]]);
+        $api->expects($this->never())->method('updateInbox');
+        $api->expects($this->never())->method('registerWhatsappInboxWebhook');
+        $this->expectException(Error::class);
+        $this->expectExceptionMessage('different credentials');
+        $this->recover($this->service($api));
+    }
+
     public function testCoexistenceRecoveryPreservesItsCrmManagedWebhook(): void
     {
         $inbox = $this->inbox();

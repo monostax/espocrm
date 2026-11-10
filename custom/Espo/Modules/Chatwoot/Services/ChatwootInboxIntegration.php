@@ -1358,15 +1358,14 @@ class ChatwootInboxIntegration
             return false;
         }
 
-        $currentApiKey = $providerConfig['api_key'] ?? null;
-
         // Token already current AND no sticky reauthorization to clear → skip the
-        // PATCH. Chatwoot redacts some secrets in responses but api_key is
-        // returned for whatsapp_cloud, so this comparison is reliable; if the
-        // inbox is flagged we still patch to force reauthorized!.
+        // PATCH. Chatwoot no longer returns api_key, only its fingerprint (see
+        // inboxHoldsWhatsappToken); if the inbox is flagged we still patch to
+        // force reauthorized!. The merged provider_config carries no api_key of its
+        // own, so we always set it before writing.
         $reauthRequired = (bool) ($inbox['reauthorization_required'] ?? false);
 
-        if ($currentApiKey === $accessToken && !$reauthRequired) {
+        if (self::inboxHoldsWhatsappToken($inbox, $accessToken) && !$reauthRequired) {
             return false;
         }
 
@@ -1389,6 +1388,27 @@ class ChatwootInboxIntegration
         );
 
         return true;
+    }
+
+    /**
+     * Whether a Chatwoot WhatsApp inbox (as returned by its API) already holds this
+     * Meta token. Chatwoot hides api_key from API responses and returns
+     * whatsapp_api_key_fingerprint (SHA-256 of the key) instead; builds from before
+     * that change still return provider_config.api_key, so both are accepted.
+     *
+     * @param array<string, mixed> $inbox
+     */
+    private static function inboxHoldsWhatsappToken(array $inbox, string $accessToken): bool
+    {
+        $fingerprint = $inbox['whatsapp_api_key_fingerprint'] ?? null;
+
+        if (is_string($fingerprint) && $fingerprint !== '') {
+            return hash_equals($fingerprint, hash('sha256', $accessToken));
+        }
+
+        $apiKey = $inbox['provider_config']['api_key'] ?? null;
+
+        return is_string($apiKey) && hash_equals($apiKey, $accessToken);
     }
 
     public function findLinkedChatwootInboxRecordId(string $channelId): ?string
@@ -2103,7 +2123,7 @@ class ChatwootInboxIntegration
 
             // A retry must not overwrite another inbox's credentials or its
             // redacted voice settings. Token rotation belongs to reconnect.
-            if (($providerConfig['api_key'] ?? null) !== $accessToken) {
+            if (!self::inboxHoldsWhatsappToken($inbox, $accessToken)) {
                 throw new Error('This WhatsApp inbox uses different credentials. Reconnect the existing inbox instead.');
             }
 
