@@ -74,6 +74,46 @@ class Records
         ]);
     }
 
+    /**
+     * A person marked a card's loop done ("Já resolvi"): the loop is kept in every record of the subject, so the next
+     * analysis reads it closed instead of raising it again, and its due time stops counting. A card names its loop by id;
+     * cards stored before ids carried one name it by side and text.
+     *
+     * @param array<string, mixed> $loop the card's `promise`
+     * @return bool whether a loop was closed
+     */
+    public function keep(string $type, string $id, array $loop, string $closedBy): bool
+    {
+        $pdo = $this->em->getPDO();
+        $query = $pdo->prepare('SELECT id, state FROM catch_up_record WHERE deleted = 0 AND subject_type = :type AND subject_id = :id');
+        $query->execute(['type' => $type, 'id' => $id]);
+        $closed = false;
+        foreach ($query->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $state = json_decode((string) $row['state'], true);
+            if (!is_array($state) || !is_array($state['promises'] ?? null)) continue;
+            $changed = false;
+            foreach ($state['promises'] as $index => $promise) {
+                if (!self::names($loop, $promise)) continue;
+                $state['promises'][$index] = [...$promise, 'status' => 'kept', 'closedBy' => $closedBy];
+                $changed = true;
+            }
+            if (!$changed) continue;
+            $pdo->prepare('UPDATE catch_up_record SET state = :state, due_ts = :due, modified_at = UTC_TIMESTAMP() WHERE id = :rid')->execute([
+                'state' => json_encode($state, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), 'due' => self::due($state), 'rid' => $row['id'],
+            ]);
+            $closed = true;
+        }
+        return $closed;
+    }
+
+    /** Whether a card's loop names this open promise. */
+    private static function names(array $loop, mixed $promise): bool
+    {
+        if (!is_array($promise) || ($promise['status'] ?? 'open') !== 'open' || ($promise['side'] ?? null) !== ($loop['side'] ?? null)) return false;
+        if (isset($loop['id']) && $loop['id'] !== '') return (string) ($promise['id'] ?? '') === (string) $loop['id'];
+        return isset($loop['text']) && mb_substr((string) ($promise['text'] ?? ''), 0, 200) === (string) $loop['text'];
+    }
+
     /** The earliest due time of an open promise, as a Unix time; code only compares times (the model sets them). */
     public static function due(?array $record): ?int
     {

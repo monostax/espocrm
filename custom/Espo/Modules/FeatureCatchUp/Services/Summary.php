@@ -63,7 +63,7 @@ class Summary
      * own text stands in for copy the model left out (an answer written while nothing was due yet).
      *
      * @param array<string, mixed> $card
-     * @param ?array{side: string, text: string, dueAt: ?string} $loop
+     * @param ?array{id: ?string, side: string, text: string, dueAt: ?string} $loop
      * @return array<string, mixed>
      */
     private static function card(array $card, ?array $loop, string $reason): array

@@ -60,7 +60,7 @@ Verdicts live in `CatchUpVerdict` with `conversationId` instead of `opportunityI
 
 3. `POST /CatchUp/:id/summary` returns the stored verdict for the same revision, locale and evidence, or starts or polls the backend analysis, turns its loops into the verdict (`Loops`) and stores it when it completes. An answer that isn't a valid verdict is stored as `none`.
 
-A **revision** (`Revision::of`) hashes the prompt and evidence versions, the stage, amount, owner, follow-up status, next step, the deal state, the newest Post and the quiet-time step (1, 2, 4, 7, 14, 30 days; 30 is the last check). A verdict is reused until the revision changes. Verdicts live in `CatchUpVerdict`, shared by readers who see the same evidence.
+A **revision** (`Revision::of`) hashes the prompt and evidence versions, the stage, amount, owner, follow-up status, next step, the deal state, the newest Post and the quiet-time step (1, 2, 4, 7, 14, 30 days; 30 is the last check). A verdict is reused until the revision changes. Verdicts live in `CatchUpVerdict`, shared by readers who see the same evidence. A card someone acted on (`resolved_at`) stays out of the deck for everyone until the revision changes, as it does on the badge; before 2026-11-10 only the badge honoured it, so an Atendimento card came back on the next load after "Já resolvi".
 
 ## Endpoints
 
@@ -72,6 +72,7 @@ A **revision** (`Revision::of`) hashes the prompt and evidence versions, the sta
 - `POST /CatchUp/:id/review` with `{snapshot}`: 409 when the deal changed since the card was shown; otherwise marks its verdict acted on
 - `POST /CatchUp/:id/close` with `{accountId, status: Won|Lost}`: moves the deal to its funnel's 100% or 0% stage through the record service
 - `POST /CatchUp/:id/resolvedElsewhere` with `{accountId, text}`: writes a Post "Resolvido por fora: …" that the next analysis reads
+- `POST /CatchUpService/:id/resolved` with `{accountId}` ("Já resolvi" on an Atendimento card): marks the card acted on and keeps the loop it showed in the conversation's record (`status: kept`, `closedBy: user:<id>`), so a later quiet step doesn't raise it again. When that moves the revision (the loop's due time stops counting), the rest of the record is sorted by `Loops`, and a quiet result (`none` / `scheduled`) is stored at the new revision; a loop already due gets its card from the next analysis
 - `POST /CatchUpSnooze` with `{accountId, type: Opportunity, id, until}`: per-user Adiar, at most 30 days
 - `GET /CatchUpRecord?accountId=&conversationId=` (Chatwoot display id): `{records: [{subject, agreed, promises, coveredAt}]}` for the conversation sidebar (`ConversationRecord`). Each open deal of the conversation the reader may read (newest 3), with its record under the reader's source scope; without one, the conversation's own Atendimento record. Only agreed items (with up to 2 earlier values in `was`) and open promises are returned. It reads stored records only and never analyses. It resolves the workspace with `Workspace::account`, which skips the Chatwoot opt-in call so opening a chat costs no request to Chatwoot; Chatwoot only calls it on accounts with Em dia on, and the conversation must pass both the `ChatwootConversation` and the `ChatwootMessage` ACL.
 

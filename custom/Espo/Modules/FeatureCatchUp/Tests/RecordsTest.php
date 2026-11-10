@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
+use Espo\ORM\EntityManager;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
 use Espo\Modules\FeatureCatchUp\Services\Records;
 use Espo\Modules\FeatureCatchUp\Services\Revision;
@@ -84,5 +85,51 @@ class RecordsTest extends TestCase
         self::assertSame('r-due', $stored[3], 'the stored promise is past due, so the next read computes the due revision');
         self::assertArrayNotHasKey('record', $stored[8], 'the record is stored on its own, never on the card');
         self::assertSame('enviar o contrato', $stored[8]['promise']['text']);
+    }
+
+    public function testJaResolviKeepsTheCardsLoopByIdOrForOlderCardsBySideAndText(): void
+    {
+        $later = '2026-11-20T18:00:00-03:00';
+        $state = ['agreed' => [], 'promises' => [
+            ['id' => 'p1', 'side' => 'theirs', 'text' => 'Verificar o painel', 'dueAt' => '2026-11-05T18:00:00-03:00', 'status' => 'open', 'openedBy' => '1249107', 'closedBy' => null],
+            ['id' => 'p2', 'side' => 'ours', 'text' => 'Verificar o painel', 'dueAt' => $later, 'status' => 'open', 'openedBy' => '1249108', 'closedBy' => null],
+            ['id' => 'p3', 'side' => 'theirs', 'text' => 'Mandar o RG', 'dueAt' => null, 'status' => 'kept', 'openedBy' => '1', 'closedBy' => '2'],
+        ]];
+        $keep = function (array $loop) use ($state): array {
+            $select = $this->createMock(\PDOStatement::class);
+            $select->method('execute')->willReturn(true);
+            $select->method('fetchAll')->willReturn([['id' => 'rec', 'state' => json_encode($state)]]);
+            $updates = [];
+            $update = $this->createMock(\PDOStatement::class);
+            $update->method('execute')->willReturnCallback(function (array $values) use (&$updates) {
+                $updates[] = $values;
+                return true;
+            });
+            $pdo = $this->createMock(\PDO::class);
+            $pdo->method('prepare')->willReturnCallback(fn (string $sql) => str_starts_with($sql, 'SELECT') ? $select : $update);
+            $em = $this->createMock(EntityManager::class);
+            $em->method('getPDO')->willReturn($pdo);
+            $closed = (new Records($em))->keep('ChatwootConversation', 'conv', $loop, 'user:erivania');
+            return [$closed, $updates];
+        };
+
+        // A card stored before loops carried an id: side and text pick it, so the customer's loop closes and ours stays.
+        [$closed, $updates] = $keep(['side' => 'theirs', 'text' => 'Verificar o painel', 'dueAt' => '2026-11-05T18:00:00-03:00']);
+        self::assertTrue($closed);
+        self::assertCount(1, $updates);
+        $promises = json_decode($updates[0]['state'], true)['promises'];
+        self::assertSame(['kept', 'user:erivania'], [$promises[0]['status'], $promises[0]['closedBy']]);
+        self::assertSame(['open', 'kept'], [$promises[1]['status'], $promises[2]['status']]);
+        self::assertSame('2', $promises[2]['closedBy'], 'a loop already closed is left as it was');
+        self::assertSame((new DateTimeImmutable($later))->getTimestamp(), $updates[0]['due'], 'the kept loop\'s time stops counting');
+
+        [$closed, $updates] = $keep(['id' => 'p2', 'side' => 'ours', 'text' => 'texto reescrito', 'dueAt' => $later]);
+        self::assertTrue($closed);
+        self::assertSame(['open', 'kept'], array_column(array_slice(json_decode($updates[0]['state'], true)['promises'], 0, 2), 'status'));
+        self::assertSame((new DateTimeImmutable('2026-11-05T18:00:00-03:00'))->getTimestamp(), $updates[0]['due'], 'the loop still open still counts');
+
+        [$closed, $updates] = $keep(['id' => 'p3', 'side' => 'theirs', 'text' => 'Mandar o RG', 'dueAt' => null]);
+        self::assertFalse($closed, 'a loop the analysis already closed is not closed again');
+        self::assertSame([], $updates);
     }
 }

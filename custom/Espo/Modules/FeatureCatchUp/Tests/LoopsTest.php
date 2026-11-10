@@ -32,7 +32,7 @@ class LoopsTest extends TestCase
             self::loop('asked', 'ours'),
         ]);
         self::assertSame('customer_waiting', $result['verdict']);
-        self::assertSame(['side' => 'ours', 'text' => 'fazer asked', 'dueAt' => null], $result['loop']);
+        self::assertSame(['id' => 'asked', 'side' => 'ours', 'text' => 'fazer asked', 'dueAt' => null], $result['loop']);
     }
 
     public function testOurPromisePastItsTimeIsDueAndTheEarliestOneShows(): void

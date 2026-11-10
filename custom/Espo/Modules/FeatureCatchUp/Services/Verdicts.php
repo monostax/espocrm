@@ -45,6 +45,8 @@ class Verdicts
      * Subjects among $revisions (id => revision) already judged at that revision, by any reader, with the verdict.
      * A subject judged `none` or `scheduled` stays out of the deck; a card verdict tells the deck which tab
      * (Loops::BUCKETS) the subject belongs in before it is opened. A card wins over a quiet verdict another reader got.
+     * A card someone acted on at this revision (resolve(): "Já resolvi", a reply sent from the card) counts as `none`
+     * for everyone, as it does for the badge: the subject comes back once its revision moves.
      *
      * @param array<string, string> $revisions
      * @return array<string, string>
@@ -56,13 +58,36 @@ class Verdicts
         $pairs = implode(' OR ', array_fill(0, count($revisions), "($column = ? AND revision = ?)"));
         $values = [];
         foreach ($revisions as $id => $revision) array_push($values, $id, $revision);
-        $query = $this->em->getPDO()->prepare("SELECT DISTINCT $column, verdict FROM catch_up_verdict WHERE deleted = 0 AND ($pairs)");
+        $query = $this->em->getPDO()->prepare(
+            "SELECT DISTINCT $column, verdict, resolved_at IS NOT NULL FROM catch_up_verdict WHERE deleted = 0 AND ($pairs)"
+        );
         $query->execute($values);
         $judged = [];
-        foreach ($query->fetchAll(\PDO::FETCH_NUM) as [$id, $verdict]) {
+        $resolved = [];
+        foreach ($query->fetchAll(\PDO::FETCH_NUM) as [$id, $verdict, $done]) {
+            if ((int) $done && !in_array($verdict, Loops::QUIET, true)) $resolved[(string) $id] = true;
             if (!isset($judged[(string) $id]) || in_array($judged[(string) $id], Loops::QUIET, true)) $judged[(string) $id] = (string) $verdict;
         }
+        foreach (array_keys($resolved) as $id) $judged[$id] = 'none';
         return $judged;
+    }
+
+    /**
+     * The card verdicts of a subject at this revision, acted on or not, with what each was stored under.
+     *
+     * @return list<array{tenantId: string, locale: string, evidenceScope: string, card: ?array<string, mixed>}>
+     */
+    public function cards(string $type, string $id, string $revision): array
+    {
+        $column = self::column($type);
+        $query = $this->em->getPDO()->prepare("SELECT tenant_id, locale, evidence_scope, card FROM catch_up_verdict WHERE deleted = 0 "
+            . "AND $column = :id AND revision = :revision AND verdict NOT IN ('none', 'scheduled')");
+        $query->execute(['id' => $id, 'revision' => $revision]);
+        return array_map(function (array $row) {
+            $card = $row['card'] ? json_decode((string) $row['card'], true) : null;
+            return ['tenantId' => (string) $row['tenant_id'], 'locale' => (string) $row['locale'], 'evidenceScope' => (string) $row['evidence_scope'],
+                'card' => is_array($card) ? $card : null];
+        }, $query->fetchAll(\PDO::FETCH_ASSOC));
     }
 
     /** @param ?array<string, mixed> $card */

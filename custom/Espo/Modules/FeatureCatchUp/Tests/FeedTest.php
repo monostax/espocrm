@@ -312,7 +312,7 @@ class FeedTest extends TestCase
             if ($expected === 'none') {
                 self::assertNull($result['card']);
             } else {
-                self::assertSame(['headline' => 'H', 'draft' => 'Oi!', 'promise' => ['side' => 'ours', 'text' => 'responder o preço', 'dueAt' => null],
+                self::assertSame(['headline' => 'H', 'draft' => 'Oi!', 'promise' => ['id' => 'p', 'side' => 'ours', 'text' => 'responder o preço', 'dueAt' => null],
                     'whyNow' => 'Asked for the price'], $result['card'], 'the card carries copy and the loop it shows, not the verdict');
             }
         }

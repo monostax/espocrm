@@ -141,12 +141,36 @@ class ServiceFeed
         $this->verdicts->resolve('ChatwootConversation', $id);
     }
 
-    /** "Já resolvi": the card leaves the deck and the badge until the conversation moves again. */
+    /**
+     * "Já resolvi": the card leaves the deck and the badge until the conversation moves again, and the loop it showed
+     * is kept in the conversation's record, so a later analysis (a quiet step) doesn't raise it again. A kept loop's due
+     * time stops counting, which can move the revision; what the record still holds is then sorted by the clock (Loops),
+     * and a quiet result is stored at the new revision so the conversation doesn't come back as unjudged. A loop that is
+     * already due gets its card from the next analysis.
+     */
     public function resolved(string $id, Request $request): void
     {
         $this->authorize();
-        $this->conversation($id, $this->workspace->resolve($request)['account']);
+        $conversation = $this->conversation($id, $this->workspace->resolve($request)['account']);
+        $now = Workspace::now($request);
+        $revision = Revision::ofConversation($conversation, $now, $this->records->dues('ChatwootConversation', [$id])[$id] ?? null);
+        $shown = $this->verdicts->cards('ChatwootConversation', $id, $revision);
         $this->verdicts->resolve('ChatwootConversation', $id);
+        $kept = false;
+        foreach ($shown as $card) {
+            $loop = $card['card']['promise'] ?? null;
+            if (is_array($loop) && $this->records->keep('ChatwootConversation', $id, $loop, 'user:' . $this->user->getId())) $kept = true;
+        }
+        if (!$kept) return;
+        $after = Revision::ofConversation($conversation, $now, $this->records->dues('ChatwootConversation', [$id])[$id] ?? null);
+        if ($after === $revision) return;
+        $open = Loops::open($this->records->load('ChatwootConversation', $id, Records::scope([$id])));
+        $verdict = $open ? Loops::pick($open, ['quietDays' => Revision::quietDays($conversation->get('lastActivityAt'), $now)], $now)['verdict'] : 'none';
+        if (!in_array($verdict, Loops::QUIET, true)) return;
+        foreach ($shown as $card) {
+            $this->verdicts->store($card['tenantId'], 'ChatwootConversation', $id, $after, $card['locale'], $card['evidenceScope'], $verdict,
+                'A person marked the card resolved.', null);
+        }
     }
 
     /**

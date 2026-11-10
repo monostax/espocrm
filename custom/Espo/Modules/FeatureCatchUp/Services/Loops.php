@@ -40,7 +40,7 @@ final class Loops
      * @param string $answer the model's verdict: loops, decided, next_step_missing, new_deal or none
      * @param array<string, mixed> $facts the snapshot's facts (quietDays, aiFollowupActive)
      * @param bool $stepPending the deal has a pending next step (Task/Call/Meeting)
-     * @return array{verdict: string, loop: ?array{side: string, text: string, dueAt: ?string}}
+     * @return array{verdict: string, loop: ?array{id: ?string, side: string, text: string, dueAt: ?string}}
      */
     public static function verdict(string $answer, ?array $record, array $facts, DateTimeImmutable $now, bool $stepPending = false): array
     {
@@ -57,7 +57,7 @@ final class Loops
      * late, otherwise the next to come due (Agenda).
      *
      * @param list<array<string, mixed>> $open
-     * @return array{verdict: string, loop: array{side: string, text: string, dueAt: ?string}}
+     * @return array{verdict: string, loop: array{id: ?string, side: string, text: string, dueAt: ?string}}
      */
     public static function pick(array $open, array $facts, DateTimeImmutable $now): array
     {
@@ -97,9 +97,11 @@ final class Loops
         return $best;
     }
 
+    /** The loop as a card shows it; its id lets "Já resolvi" keep exactly that loop in the record (Records::keep). */
     private static function found(string $verdict, array $loop): array
     {
         return ['verdict' => $verdict, 'loop' => [
+            'id' => isset($loop['id']) && (is_string($loop['id']) || is_int($loop['id'])) ? (string) $loop['id'] : null,
             'side' => (string) $loop['side'], 'text' => mb_substr((string) $loop['text'], 0, 200),
             'dueAt' => is_string($loop['dueAt'] ?? null) && $loop['dueAt'] !== '' ? $loop['dueAt'] : null,
         ]];

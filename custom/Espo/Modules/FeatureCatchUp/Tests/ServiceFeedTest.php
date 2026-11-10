@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureCatchUp\Tests;
 
+use DateTimeImmutable;
 use Espo\Core\Acl;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
@@ -15,6 +16,7 @@ use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\FeatureCatchUp\Services\Ownership;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
 use Espo\Modules\FeatureCatchUp\Services\Records;
+use Espo\Modules\FeatureCatchUp\Services\Revision;
 use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
 use Espo\Modules\FeatureCatchUp\Services\Transcript;
 use Espo\Modules\FeatureCatchUp\Services\Verdicts;
@@ -36,7 +38,7 @@ class ServiceFeedTest extends TestCase
     /** @return array{ServiceFeed, Verdicts, Parties, DataCache} */
     private function feed(array $options = []): array
     {
-        $options += ['readable' => true, 'conversationAccount' => 'crm-account', 'pdo' => null, 'seesAll' => false, 'opens' => true];
+        $options += ['readable' => true, 'conversationAccount' => 'crm-account', 'pdo' => null, 'seesAll' => false, 'opens' => true, 'records' => null];
         $user = $this->createMock(User::class);
         $user->method('isRegular')->willReturn(true);
         $user->method('getId')->willReturn('erivania');
@@ -58,7 +60,7 @@ class ServiceFeedTest extends TestCase
         $parties = $this->createMock(Parties::class);
         $cache = $this->createMock(DataCache::class);
         $feed = new ServiceFeed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user, $workspace, $owners, $verdicts,
-            $this->createMock(Transcript::class), $parties, $cache, $this->createMock(Records::class), $this->chatwoot($options['opens']));
+            $this->createMock(Transcript::class), $parties, $cache, $options['records'] ?? $this->createMock(Records::class), $this->chatwoot($options['opens']));
         return [$feed, $verdicts, $parties, $cache];
     }
 
@@ -94,6 +96,54 @@ class ServiceFeedTest extends TestCase
             }
             self::assertTrue($refused, json_encode($options));
         }
+    }
+
+    /** A follow_up_due card on a loop whose time passed, as Joe Neris's was on 2026-11-10. */
+    private const SHOWN = ['tenantId' => 'tenant', 'locale' => 'pt-BR', 'evidenceScope' => 'scope',
+        'card' => ['headline' => 'Joe ficou de checar o painel', 'promise' => ['side' => 'theirs', 'text' => 'Verificar o painel', 'dueAt' => '2026-11-05T18:00:00-03:00']]];
+
+    /** @param list<array<string, mixed>> $left the record's loops after the card's is kept */
+    private function resolvedWith(array $shown, array $left): array
+    {
+        $records = $this->createMock(Records::class);
+        $records->method('dues')->willReturnOnConsecutiveCalls(['conv' => time() - 86400], []);
+        $records->method('load')->willReturn(['agreed' => [], 'promises' => $left, 'coveredAt' => null]);
+        [$feed, $verdicts] = $this->feed(['records' => $records]);
+        $verdicts->method('cards')->willReturn($shown);
+        $verdicts->expects(self::once())->method('resolve')->with('ChatwootConversation', 'conv');
+        return [$feed, $verdicts, $records];
+    }
+
+    public function testJaResolviKeepsTheCardsLoopAndTheConversationStaysOutAtItsNewRevision(): void
+    {
+        [$feed, $verdicts, $records] = $this->resolvedWith([self::SHOWN], [['id' => 'p2', 'side' => 'theirs', 'text' => 'Mandar o RG',
+            'dueAt' => gmdate(DATE_ATOM, time() + 86400), 'status' => 'open']]);
+        $records->expects(self::once())->method('keep')->with('ChatwootConversation', 'conv', self::SHOWN['card']['promise'], 'user:erivania')
+            ->willReturn(true);
+        // The kept loop's past due time no longer counts, so the revision moves; the loop still open isn't due yet.
+        $after = Revision::ofConversation($this->entity(['chatwootAccountId' => 'crm-account'], 'conv'), new DateTimeImmutable(), null);
+        $verdicts->expects(self::once())->method('store')
+            ->with('tenant', 'ChatwootConversation', 'conv', $after, 'pt-BR', 'scope', 'scheduled', self::anything(), null);
+
+        $feed->resolved('conv', $this->request());
+    }
+
+    public function testJaResolviLeavesAnotherDueLoopToTheNextAnalysis(): void
+    {
+        [$feed, $verdicts, $records] = $this->resolvedWith([self::SHOWN], [['id' => 'p2', 'side' => 'ours', 'text' => 'Responder o preço', 'status' => 'open']]);
+        $records->method('keep')->willReturn(true);
+        $verdicts->expects(self::never())->method('store');
+
+        $feed->resolved('conv', $this->request());
+    }
+
+    public function testJaResolviOnACardWithoutALoopOnlyResolvesIt(): void
+    {
+        [$feed, $verdicts, $records] = $this->resolvedWith([[...self::SHOWN, 'card' => ['headline' => 'Novo negócio']]], []);
+        $records->expects(self::never())->method('keep');
+        $verdicts->expects(self::never())->method('store');
+
+        $feed->resolved('conv', $this->request());
     }
 
     public function testCandidatesStayInTheAccountAndLeaveOutDealsNonCustomersAndChatsStillMoving(): void
