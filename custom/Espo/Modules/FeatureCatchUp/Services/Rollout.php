@@ -17,9 +17,17 @@ class Rollout
     public const DEFAULT_DAILY_LIMIT = 300;
     public const MAX_DAILY_LIMIT = 2000;
 
+    /** @var array<string, array> Opt-ins already confirmed in this request: a deck batch reads one account up to ten times. */
+    private array $policies = [];
+
     public function __construct(private EntityManager $em, private SelectBuilderFactory $select, private ChatwootApiClient $api) {}
 
     public function forAccount(Entity $account): array
+    {
+        return $this->policies[(string) $account->getId()] ??= $this->fetch($account);
+    }
+
+    private function fetch(Entity $account): array
     {
         $platform = $this->em->getEntityById('ChatwootPlatform', (string) $account->get('platformId'));
         if (!$platform || !$platform->get('backendUrl') || !$platform->get('accessToken') || !$platform->get('frontendUrl')) throw new Forbidden();

@@ -8,6 +8,7 @@ use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Modules\FeatureCatchUp\Services\Actions;
 use Espo\Modules\FeatureCatchUp\Services\Agenda;
+use Espo\Modules\FeatureCatchUp\Services\Batch;
 use Espo\Modules\FeatureCatchUp\Services\ConversationRecord;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\ProposedDeals;
@@ -29,6 +30,7 @@ class CatchUp
         private ConversationRecord $record,
         private Agenda $agenda,
         private ProposedDeals $proposedDeals,
+        private Batch $batch,
     ) {}
 
     /** "Criar todas": the deals the analysis found in conversations still without one, for review. Never analyses. */
@@ -53,6 +55,18 @@ class CatchUp
     public function getActionRecord(Request $request): object
     {
         return (object) $this->record->read($request);
+    }
+
+    /** The deck's analyses, up to Batch::MAX_START subjects of either lane: snapshot plus stored verdict or queued analysis. */
+    public function postActionBatch(Request $request): object
+    {
+        return (object) $this->batch->start($request);
+    }
+
+    /** Where the deck's queued analyses stand; only finished ones build their snapshot again and are stored. */
+    public function postActionBatchStatus(Request $request): object
+    {
+        return (object) $this->batch->status($request);
     }
 
     public function getActionList(Request $request): object
@@ -131,7 +145,7 @@ class CatchUp
         if ($requestId !== null && (!is_string($requestId) || !preg_match('/^[a-f0-9]{64}$/D', $requestId))) {
             throw new BadRequest('Invalid summary request ID.');
         }
-        return [$locale === 'pt_BR' || $locale === 'pt' ? 'pt-BR' : 'en', $requestId];
+        return [Summary::locale($locale), $requestId];
     }
 
     public function postActionClose(Request $request): object
