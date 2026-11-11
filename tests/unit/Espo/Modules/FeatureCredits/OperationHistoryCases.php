@@ -120,10 +120,19 @@ trait OperationHistoryCases
             $this->assertSame($beforeConversationRead, $this->auditSnapshot($pdo));
             $this->assertSame('released', $rows[$released]['state']);
             $this->assertSame('0.0000', $rows[$released]['settledCredits']);
-            $pdo->exec("UPDATE credit_usage SET source_type = 'Contact', source_id = 'deleted-private-source',
+            $this->assertSame('ChatwootConversation', $rows[$usage]['sourceType']);
+            $this->assertFalse($rows[$usage]['sourceRequest']);
+            $pdo->exec("UPDATE credit_usage SET source_id = 'deleted-private-source',
                 operation_key = 'private-key', evidence = '{\"private\":true}' WHERE id = " . $pdo->quote($usage));
             $this->assertSame($rows, $read());
             $this->assertSame([], $conversationRead());
+            $pdo->exec("UPDATE credit_usage SET source_type = 'Opportunity', evidence = '{\"sourceRequestId\":\""
+                . str_repeat('a', 64) . "\"}' WHERE id = " . $pdo->quote($usage));
+            $pdo->exec("UPDATE credit_usage SET source_type = 'Unsupported' WHERE id = " . $pdo->quote($released));
+            $rows = $read();
+            $this->assertSame(['Opportunity', true], [$rows[$usage]['sourceType'], $rows[$usage]['sourceRequest']]);
+            $this->assertSame([null, false], [$rows[$released]['sourceType'], $rows[$released]['sourceRequest']]);
+            $this->assertStringNotContainsString('aaaa', json_encode($rows, JSON_THROW_ON_ERROR));
         });
     }
 
@@ -148,7 +157,8 @@ trait OperationHistoryCases
             $result = (array) (new CreditOperations($access, $this->operationHistory($pdo)))->getActionList($request, $response);
             $this->assertSame('9999999999.9999', $result['list'][0]['reservedCredits']);
             $this->assertSame(['id', 'reservationId', 'operationType', 'billingRegime', 'state', 'reservedCredits',
-                'accruedCreditsExact', 'settledCredits', 'admittedAt', 'settledAt'], array_keys($result['list'][0]));
+                'accruedCreditsExact', 'settledCredits', 'admittedAt', 'settledAt', 'sourceType', 'sourceRequest'],
+                array_keys($result['list'][0]));
             $this->assertSame($result, json_decode(json_encode($result, JSON_THROW_ON_ERROR), true));
             $this->assertSame($before, $this->auditSnapshot($pdo));
         });

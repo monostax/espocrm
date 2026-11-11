@@ -53,7 +53,7 @@ final class OperationHistory
                 $params[] = $conversationId;
             }
             $query = $pdo->prepare('SELECT u.id, u.deleted, u.operation_type, u.billing_regime,
-                u.state, u.admitted_at, u.settled_at, u.settled_credits,
+                u.state, u.admitted_at, u.settled_at, u.settled_credits, u.source_type, u.evidence,
                 r.id AS reservation_id, r.deleted AS reservation_deleted, r.state AS reservation_state,
                 r.settled_at AS reservation_settled_at, r.reserved_credits, r.accrued_credits_exact
                 FROM credit_usage u LEFT JOIN credit_reservation r ON r.usage_id = u.id
@@ -116,7 +116,8 @@ final class OperationHistory
                     'state' => $row['state'], 'reservedCredits' => (string) $reserved,
                     'accruedCreditsExact' => (string) $accrued->strippedOfTrailingZeros(),
                     'settledCredits' => $settled === null ? null : (string) $settled,
-                    'admittedAt' => $row['admitted_at'], 'settledAt' => $row['settled_at']];
+                    'admittedAt' => $row['admitted_at'], 'settledAt' => $row['settled_at'],
+                    ...self::source($row['source_type'], $row['evidence'])];
             }
             $last = $list ? $list[count($list) - 1] : null;
             $next = $hasMore ? OperationHistoryQuery::cursor($input->tenantId, $last['admittedAt'], $last['id']) : null;
@@ -128,5 +129,22 @@ final class OperationHistory
             }
             throw $e;
         }
+    }
+
+    /**
+     * What kind of record spent the credits, so a report can say "AI follow-up" rather than "AI". Never the source
+     * id, name or evidence: opening a source still goes through OperationSource and its record ACL. A source request
+     * marks an operation started from a queued request (Em dia's analyses) rather than a run of the AI agent.
+     *
+     * @return array{sourceType: ?string, sourceRequest: bool}
+     */
+    private static function source(?string $type, ?string $evidence): array
+    {
+        $decoded = $evidence === null ? null : json_decode($evidence);
+        $request = is_object($decoded) ? ($decoded->sourceRequestId ?? null) : null;
+        return [
+            'sourceType' => is_string($type) && SourceReference::supports($type) ? $type : null,
+            'sourceRequest' => is_string($request) && preg_match('/^[a-f0-9]{64}$/D', $request) === 1,
+        ];
     }
 }
