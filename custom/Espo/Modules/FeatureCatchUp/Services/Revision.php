@@ -15,7 +15,11 @@ use Espo\ORM\Entity;
  */
 final class Revision
 {
-    /** Keep in step with the backend's CATCH_UP_PROMPT_VERSION; bumping it has every deal judged again. */
+    /**
+     * Follows the backend's CATCH_UP_PROMPT_VERSION when a change should have every deal and conversation judged again.
+     * Version 13 (funnels and stages for a found deal) left it at 12: only stored `new_deal` cards from before it are
+     * analysed again (Verdicts::outdated), so no other subject is charged a new analysis.
+     */
     public const PROMPT_VERSION = '12';
     /**
      * Where the conversation is read from and what moves a revision; bumping it has every deal judged again. 2: Chatwoot,

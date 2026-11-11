@@ -9,9 +9,11 @@ use DateTimeZone;
 use Espo\Core\Application;
 use Espo\Core\Application\ApplicationParams;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Conflict;
 use Espo\Modules\FeatureCatchUp\Classes\DeckRequest;
 use Espo\Modules\FeatureCatchUp\Services\ProposedDeals;
 use Espo\Modules\FeatureCatchUp\Services\Revision;
+use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
 use Espo\Modules\FeatureCatchUp\Services\Verdicts;
 use Espo\Modules\FeatureCredits\Enrichment\ActorScope;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
@@ -22,8 +24,9 @@ use Espo\ORM\EntityManager;
 use PHPUnit\Framework\TestCase;
 
 /**
- * "Criar todas" against a real CRM database and a fake Chatwoot, as the owner of a freshly provisioned workspace
- * (its "Vendas" funnel, Em dia on). Same runtime as ProvisioningTest; see FeatureSelfService/index.md.
+ * "Criar oportunidade" on an Atendimento card against a real CRM database and a fake Chatwoot, as the owner of a
+ * freshly provisioned workspace (its "Vendas" funnel, Em dia on). Same runtime as ProvisioningTest; see
+ * FeatureSelfService/index.md.
  */
 class ProposedDealsTest extends TestCase
 {
@@ -52,103 +55,116 @@ class ProposedDealsTest extends TestCase
         $this->app->getInjectableFactory()->create(SelfServicePolicy::class)->resume();
     }
 
-    public function testListsTheReadersProposalsAndCreatesTheChosenOnesInTheDefaultFunnel(): void
+    public function testCreatesTheFoundDealAsTheCardShowsItInTheProposedFunnelAndStage(): void
     {
         $workspace = $this->workspace('Clínica Propostas');
+        $won = $this->stage($workspace['funnel'], 100);
         $a = $this->conversation($workspace, 501, 'Ana');
-        $b = $this->conversation($workspace, 502, 'Bruno');
-        $hidden = $this->conversation($workspace, 503, 'Carla');
-        $none = $this->conversation($workspace, 504, 'Davi');
-        $this->propose($workspace, $a, ['name' => 'Ana - Limpeza de pele', 'amount' => 250]);
-        $this->propose($workspace, $b, ['name' => 'Bruno - Massagem', 'amount' => null]);
-        $this->propose($workspace, $hidden, ['name' => 'Carla - Peeling', 'amount' => 400]);
-        $this->store($workspace, $none, 'none', null);
-        // Chatwoot won't let the owner open Carla's conversation: her proposal is not offered.
-        $this->http('POST', '/__seed', ['accountId' => $workspace['remoteAccountId'], 'deniedConversations' => [503]]);
+        $this->propose($workspace, $a, ['name' => 'Ana - Limpeza de pele', 'amount' => 250, 'funnelId' => $workspace['funnel']->getId(),
+            'stageId' => $won->getId()]);
+        $token = $this->shown($workspace, $a);
 
-        $listed = $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->list($this->request($workspace)));
-        self::assertSame(['Ana - Limpeza de pele', 'Bruno - Massagem'], array_column($listed['items'], 'name'));
-        self::assertSame([250.0, null], array_column($listed['items'], 'amount'));
-        self::assertSame('Ana', $listed['items'][0]['contactName']);
-        self::assertSame([['id' => $workspace['funnel']->getId(), 'name' => 'Vendas', 'isDefault' => true]], $listed['funnels']);
+        $result = $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->create($this->request($workspace, ['snapshot' => $token]), $a->getId()));
 
-        $result = $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->create($this->request($workspace, [
-            'items' => [
-                (object) ['conversationId' => $a->getId(), 'name' => 'Ana - Limpeza de pele premium', 'amount' => 300],
-                (object) ['conversationId' => $b->getId()],
-                (object) ['conversationId' => $hidden->getId()],
-                (object) ['conversationId' => $none->getId()],
-            ],
-        ])));
-
-        self::assertSame([$a->getId(), $b->getId()], array_column($result['created'], 'conversationId'));
-        self::assertSame([$hidden->getId(), $none->getId()], $result['skipped'], 'Only proposals the owner could act on are created.');
-        self::assertSame([], $result['failed']);
-
-        $deal = $this->em->getEntityById('Opportunity', $result['created'][0]['opportunityId']);
-        self::assertSame('Ana - Limpeza de pele premium', $deal->get('name'));
-        self::assertEquals(300, $deal->get('amount'));
-        self::assertSame($workspace['funnel']->getId(), $deal->get('funnelId'));
-        self::assertSame('Em negociação', $this->em->getEntityById('OpportunityStage', $deal->get('opportunityStageId'))->get('name'));
-        self::assertSame('Open', $deal->get('status'));
+        $deal = $this->em->getEntityById('Opportunity', $result['id']);
+        self::assertSame('Ana - Limpeza de pele', $deal->get('name'));
+        self::assertEquals(250, $deal->get('amount'));
+        self::assertSame([$workspace['funnel']->getId(), $won->getId()], [$deal->get('funnelId'), $deal->get('opportunityStageId')]);
+        self::assertSame('Won', $deal->get('status'), 'Paid and booked: created won.');
         self::assertSame($workspace['tenant']->getId(), $deal->get('tenantId'));
-        self::assertSame($workspace['ownerId'], $deal->get('assignedUserId'));
+        self::assertSame($workspace['ownerId'], $deal->get('assignedUserId'), 'Nobody assigned in Chatwoot: the reader.');
         self::assertSame($workspace['ownerId'], $deal->get('createdById'), 'Created as the owner, not the system.');
         self::assertSame([$a->getId()], $deal->getLinkMultipleIdList('chatwootConversations'));
-        self::assertSame('Bruno - Massagem', $this->em->getEntityById('Opportunity', $result['created'][1]['opportunityId'])->get('name'));
 
-        // Their cards are resolved and they now have a deal: nothing is offered twice.
-        $again = $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->list($this->request($workspace)));
-        self::assertSame([], $again['items']);
-        $twice = $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->create($this->request($workspace, [
-            'items' => [(object) ['conversationId' => $a->getId()]],
-        ])));
-        self::assertSame([], $twice['created']);
+        // The card is resolved: the same card can't create a second deal.
+        try {
+            $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->create($this->request($workspace, ['snapshot' => $token]), $a->getId()));
+            self::fail('A resolved proposal created a second deal.');
+        } catch (Conflict) {
+            self::assertCount(1, $this->deals($a));
+        }
     }
 
-    public function testAProposalTheConversationHasOvertakenIsNotOffered(): void
+    public function testTheReaderCanChangeNameAmountFunnelAndStageBeforeCreating(): void
+    {
+        $workspace = $this->workspace('Clínica Funis');
+        [$exams, $quote] = $this->funnel($workspace, 'Exames', 'Orçamento', 40);
+        $b = $this->conversation($workspace, 502, 'Bruno');
+        $this->propose($workspace, $b, ['name' => 'Bruno - Consulta', 'amount' => 800, 'funnelId' => $workspace['funnel']->getId(),
+            'stageId' => $this->stage($workspace['funnel'], 100)->getId()]);
+        $token = $this->shown($workspace, $b);
+
+        // A stage of another funnel is refused.
+        try {
+            $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->create($this->request($workspace, [
+                'snapshot' => $token, 'funnelId' => $exams->getId(), 'stageId' => $this->stage($workspace['funnel'], 100)->getId(),
+            ]), $b->getId()));
+            self::fail('A stage of another funnel was accepted.');
+        } catch (BadRequest $e) {
+            self::assertSame('invalidStage', $e->getMessage());
+        }
+
+        $result = $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->create($this->request($workspace, [
+            'snapshot' => $token, 'name' => 'Bruno - Ultrassom', 'amount' => null, 'funnelId' => $exams->getId(), 'stageId' => $quote->getId(),
+        ]), $b->getId()));
+        $deal = $this->em->getEntityById('Opportunity', $result['id']);
+        self::assertSame(['Bruno - Ultrassom', 0.0, $exams->getId(), $quote->getId(), 'Open'],
+            [$deal->get('name'), (float) $deal->get('amount'), $deal->get('funnelId'), $deal->get('opportunityStageId'), $deal->get('status')]);
+    }
+
+    public function testAProposalFromBeforeFunnelsGoesInTheDefaultFunnelsFirstOpenStage(): void
+    {
+        $workspace = $this->workspace('Clínica Antiga');
+        $c = $this->conversation($workspace, 503, 'Carla');
+        $this->propose($workspace, $c, ['name' => 'Carla - Peeling', 'amount' => 400]);
+
+        $result = $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->create(
+            $this->request($workspace, ['snapshot' => $this->shown($workspace, $c)]), $c->getId()));
+        $deal = $this->em->getEntityById('Opportunity', $result['id']);
+        self::assertSame($workspace['funnel']->getId(), $deal->get('funnelId'));
+        self::assertSame('Em negociação', $this->em->getEntityById('OpportunityStage', $deal->get('opportunityStageId'))->get('name'));
+    }
+
+    public function testAConversationThatMovedSinceTheCardWasShownIsAConflict(): void
     {
         $workspace = $this->workspace('Clínica Movida');
         $conversation = $this->conversation($workspace, 601, 'Elisa');
         $this->propose($workspace, $conversation, ['name' => 'Elisa - Botox', 'amount' => 900]);
+        $token = $this->shown($workspace, $conversation);
 
-        // A new message since the analysis: the proposal belongs to an older revision.
+        // A new message since the card was shown: the proposal belongs to an older revision.
         $conversation->set(['lastActivityAt' => gmdate('Y-m-d H:i:s', time() - 3600), 'lastMessageReceivedAt' => gmdate('Y-m-d H:i:s', time() - 3600)]);
         $this->em->saveEntity($conversation, ['skipHooks' => true]);
 
-        $listed = $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->list($this->request($workspace)));
-        self::assertSame([], $listed['items']);
+        try {
+            $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->create($this->request($workspace, ['snapshot' => $token]), $conversation->getId()));
+            self::fail('A moved conversation created a deal.');
+        } catch (Conflict) {
+            self::assertSame([], $this->deals($conversation));
+        }
     }
 
-    public function testSeveralFunnelsWithoutADefaultNeedAChoice(): void
+    public function testTheDealGoesToThePersonAssignedInChatwoot(): void
     {
-        $workspace = $this->workspace('Clínica Funis');
-        $workspace['funnel']->set('isDefault', false);
-        $this->em->saveEntity($workspace['funnel']);
-        $exams = $this->em->createEntity('Funnel', [
-            'name' => 'Exames', 'tenantId' => $workspace['tenant']->getId(),
-            'teamsIds' => [(string) $workspace['tenant']->get('baseUserTeamId')], 'isActive' => true, 'isDefault' => false,
+        $workspace = $this->workspace('Clínica Equipe');
+        $suffix = bin2hex(random_bytes(4));
+        $agent = $this->em->createEntity('User', [
+            'userName' => 'agent-' . $suffix, 'type' => 'regular', 'isActive' => true, 'lastName' => 'Agent ' . $suffix,
+            'emailAddress' => "agent-{$suffix}@example.com", 'teamsIds' => [(string) $workspace['tenant']->get('baseUserTeamId')],
         ]);
-        $stage = $this->em->createEntity('OpportunityStage', [
-            'name' => 'Orçamento', 'order' => 1, 'probability' => 40, 'funnelId' => $exams->getId(),
-            'teamsIds' => [(string) $workspace['tenant']->get('baseUserTeamId')],
-        ]);
+        $chatwootUserId = random_int(100000, 999999);
+        $this->em->createEntity('ChatwootUser', [
+            'name' => 'Agent ' . $suffix, 'chatwootUserId' => $chatwootUserId, 'platformId' => $workspace['account']->get('platformId'),
+            'assignedUserId' => $agent->getId(),
+        ], ['skipHooks' => true]);
         $conversation = $this->conversation($workspace, 701, 'Fábio');
+        $conversation->set('assigneeId', $chatwootUserId);
+        $this->em->saveEntity($conversation, ['skipHooks' => true]);
         $this->propose($workspace, $conversation, ['name' => 'Fábio - Ultrassom', 'amount' => 180]);
-        $items = [(object) ['conversationId' => $conversation->getId()]];
-
-        try {
-            $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->create($this->request($workspace, ['items' => $items])));
-            self::fail('Without a default funnel the reader must choose one.');
-        } catch (BadRequest $e) {
-            self::assertSame('funnelRequired', $e->getMessage());
-        }
 
         $result = $this->asOwner($workspace, fn (ProposedDeals $deals) => $deals->create(
-            $this->request($workspace, ['items' => $items, 'funnelId' => $exams->getId()])));
-        $deal = $this->em->getEntityById('Opportunity', $result['created'][0]['opportunityId']);
-        self::assertSame($exams->getId(), $deal->get('funnelId'));
-        self::assertSame($stage->getId(), $deal->get('opportunityStageId'));
+            $this->request($workspace, ['snapshot' => $this->shown($workspace, $conversation)]), $conversation->getId()));
+        self::assertSame($agent->getId(), $this->em->getEntityById('Opportunity', $result['id'])->get('assignedUserId'));
     }
 
     /**
@@ -216,7 +232,7 @@ class ProposedDealsTest extends TestCase
         return $this->em->getEntityById('ChatwootConversation', $conversation->getId());
     }
 
-    /** @param array{name: string, amount: ?float} $deal */
+    /** @param array{name: string, amount: ?float, funnelId?: string, stageId?: string} $deal */
     private function propose(array $workspace, Entity $conversation, array $deal): void
     {
         $this->store($workspace, $conversation, 'new_deal', [
@@ -231,6 +247,43 @@ class ProposedDealsTest extends TestCase
             (string) $workspace['tenant']->getId(), 'ChatwootConversation', (string) $conversation->getId(),
             Revision::ofConversation($conversation, $now), 'pt-BR', 'scope-' . $conversation->getId(), $verdict, 'test', $card,
         );
+    }
+
+    /** The card as the owner's deck shows it (Atendimento snapshot): its token. */
+    private function shown(array $workspace, Entity $conversation): string
+    {
+        $snapshot = $this->app->getInjectableFactory()->create(ActorScope::class)->run($workspace['ownerId'],
+            fn (callable $make) => $make(ServiceFeed::class)->snapshot((string) $conversation->getId(), $this->request($workspace)));
+        return (string) $snapshot['snapshot'];
+    }
+
+    /** A funnel's first active stage at this probability. */
+    private function stage(Entity $funnel, int $probability): Entity
+    {
+        $stage = $this->em->getRDBRepository('OpportunityStage')
+            ->where(['funnelId' => $funnel->getId(), 'probability' => $probability, 'isActive' => true])->order('order')->findOne();
+        self::assertNotNull($stage, "The funnel has a {$probability}% stage.");
+        return $stage;
+    }
+
+    /** @return array{Entity, Entity} a second funnel and its one open stage */
+    private function funnel(array $workspace, string $name, string $stageName, int $probability): array
+    {
+        $team = (string) $workspace['tenant']->get('baseUserTeamId');
+        $funnel = $this->em->createEntity('Funnel', [
+            'name' => $name, 'tenantId' => $workspace['tenant']->getId(), 'teamsIds' => [$team], 'isActive' => true, 'isDefault' => false,
+        ]);
+        $stage = $this->em->createEntity('OpportunityStage', [
+            'name' => $stageName, 'order' => 1, 'probability' => $probability, 'funnelId' => $funnel->getId(), 'teamsIds' => [$team],
+        ]);
+        return [$funnel, $stage];
+    }
+
+    /** @return list<string> the deals linked to a conversation */
+    private function deals(Entity $conversation): array
+    {
+        return array_map(fn (Entity $deal) => (string) $deal->getId(), iterator_to_array($this->em->getRDBRepository('ChatwootConversation')
+            ->getRelation($conversation, 'opportunities')->find(), false));
     }
 
     /**

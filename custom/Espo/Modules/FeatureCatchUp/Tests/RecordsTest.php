@@ -9,6 +9,7 @@ use DateTimeZone;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\Modules\FeatureCatchUp\Services\DealTargets;
 use Espo\Modules\FeatureCatchUp\Services\Loops;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
 use Espo\Modules\FeatureCatchUp\Services\Records;
@@ -74,7 +75,7 @@ class RecordsTest extends TestCase
         $stored = null;
         $verdicts->method('store')->willReturnCallback(function (...$args) use (&$stored): void { $stored = $args; });
         $summary = $this->getMockBuilder(Summary::class)
-            ->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $records])
+            ->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $records, $this->createMock(DealTargets::class)])
             ->onlyMethods(['request'])->getMock();
         $summary->method('request')->willReturn(['status' => 'completed', 'card' => [
             'verdict' => 'loops', 'reason' => 'Prometemos o contrato', 'headline' => 'H',

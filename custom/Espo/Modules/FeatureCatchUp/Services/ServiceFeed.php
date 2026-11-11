@@ -148,13 +148,43 @@ class ServiceFeed
     /** Acting on a card first confirms the conversation hasn't moved since the card was shown. */
     public function review(string $id, string $token, Request $request): void
     {
+        $this->shownConversation($id, $token, $request);
+        $this->verdicts->resolve('ChatwootConversation', $id);
+    }
+
+    /**
+     * The conversation of a card the reader was shown, when it hasn't moved since: in the deck's account, open to the
+     * reader in the CRM and in Chatwoot, at the revision the card was built from.
+     *
+     * @return array{conversation: Entity, revision: string}
+     * @throws Conflict when the conversation moved, or the card wasn't shown (or expired)
+     */
+    public function shownConversation(string $id, string $token, Request $request): array
+    {
         $this->authorize();
         $conversation = $this->conversation($id, $this->workspace->resolve($request)['account']);
         $snapshot = $this->shown($id, $token);
-        if (Revision::ofConversation($conversation) !== $snapshot['revision']) {
-            throw new Conflict('This conversation changed since the card was shown.');
-        }
-        $this->verdicts->resolve('ChatwootConversation', $id);
+        $revision = Revision::ofConversation($conversation);
+        if ($revision !== $snapshot['revision']) throw new Conflict('This conversation changed since the card was shown.');
+        return ['conversation' => $conversation, 'revision' => $revision];
+    }
+
+    /** The CRM user behind the conversation's Chatwoot assignee when that is a person (not an AI agent). */
+    public function assignee(string $id): ?string
+    {
+        $query = $this->em->getPDO()->prepare('SELECT ' . Ownership::CONVERSATION_PERSON_SQL
+            . ' FROM chatwoot_conversation c JOIN chatwoot_account a ON a.id = c.chatwoot_account_id WHERE c.id = :id');
+        $query->execute(['id' => $id]);
+        $user = $query->fetchColumn();
+        return is_string($user) && $user !== '' ? $user : null;
+    }
+
+    /** Whether the conversation already has an open deal (it then belongs to Negócios). */
+    public function hasOpenDeal(string $id): bool
+    {
+        $query = $this->em->getPDO()->prepare('SELECT EXISTS(' . self::OPEN_DEAL_SQL . ') FROM chatwoot_conversation c WHERE c.id = :id');
+        $query->execute(['id' => $id]);
+        return (bool) $query->fetchColumn();
     }
 
     /**

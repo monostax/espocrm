@@ -15,6 +15,7 @@ use Espo\Core\Utils\DataCache;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
+use Espo\Modules\FeatureCatchUp\Services\DealTargets;
 use Espo\Modules\FeatureCatchUp\Services\DealStates;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\Ownership;
@@ -291,7 +292,7 @@ class FeedTest extends TestCase
         $verdicts = $this->createMock(Verdicts::class);
         $verdicts->method('find')->willReturn(['verdict' => 'none', 'reason' => 'Automated code', 'card' => null]);
         $verdicts->expects(self::never())->method('store');
-        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class)])
+        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class), $this->createMock(DealTargets::class)])
             ->onlyMethods(['request'])->getMock();
         $summary->expects(self::never())->method('request');
         $result = $summary->analyse($this->snapshot(), 'pt-BR');
@@ -312,7 +313,7 @@ class FeedTest extends TestCase
             $verdicts->expects(self::once())->method('store')->willReturnCallback(function (...$args) use (&$stored): void {
                 $stored = $args;
             });
-            $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class)])
+            $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class), $this->createMock(DealTargets::class)])
                 ->onlyMethods(['request'])->getMock();
             $summary->method('request')->willReturn(['status' => 'completed', 'requestId' => str_repeat('a', 64), 'card' => $card]);
             $result = $summary->analyse($this->snapshot(), 'pt-BR');
@@ -335,7 +336,7 @@ class FeedTest extends TestCase
         $verdicts = $this->createMock(Verdicts::class);
         $verdicts->method('find')->willReturn(null);
         $verdicts->expects(self::never())->method('store');
-        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class)])
+        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class), $this->createMock(DealTargets::class)])
             ->onlyMethods(['request'])->getMock();
         $summary->method('request')->willReturn(['status' => 'limited', 'requestId' => str_repeat('b', 64)]);
         $result = $summary->analyse($this->snapshot(), 'en');
@@ -356,7 +357,7 @@ class FeedTest extends TestCase
         $verdicts->method('find')->willReturn(null);
         $stored = null;
         $verdicts->expects(self::once())->method('store')->willReturnCallback(function (...$args) use (&$stored): void { $stored = $args; });
-        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $parties, $this->createMock(Records::class)])
+        $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $parties, $this->createMock(Records::class), $this->createMock(DealTargets::class)])
             ->onlyMethods(['request'])->getMock();
         $summary->method('request')->willReturn(['status' => 'completed', 'card' => [
             'verdict' => 'none', 'reason' => 'A doutora respondeu', 'participants' => $answers]]);
@@ -382,7 +383,7 @@ class FeedTest extends TestCase
             $verdicts->method('find')->willReturn(null);
             $stored = null;
             $verdicts->method('store')->willReturnCallback(function (...$args) use (&$stored): void { $stored = $args; });
-            $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $parties, $this->createMock(Records::class)])
+            $summary = $this->getMockBuilder(Summary::class)->setConstructorArgs([$this->createMock(User::class), $verdicts, $parties, $this->createMock(Records::class), $this->createMock(DealTargets::class)])
                 ->onlyMethods(['request'])->getMock();
             $summary->method('request')->willReturn(['status' => 'completed', 'card' => $card]);
             $snapshot = [...$this->snapshot(), 'type' => 'conversation',

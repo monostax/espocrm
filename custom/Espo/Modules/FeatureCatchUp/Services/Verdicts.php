@@ -115,8 +115,8 @@ class Verdicts
             "DELETE FROM catch_up_verdict WHERE $column = :id AND locale = :locale AND evidence_scope = :scope AND revision <> :revision"
         )->execute(['id' => $id, 'locale' => $locale, 'scope' => $evidenceScope, 'revision' => $revision]);
         $stored = $this->find($type, $id, $revision, $locale, $evidenceScope);
-        if ($stored && empty($stored['card']['redraft'])) return;
-        // A card the clock moved to another loop was analysed again for its copy: the new analysis replaces it.
+        if ($stored && !self::outdated($stored)) return;
+        // A card the clock moved to another loop, or an outdated one, was analysed again: the new analysis replaces it.
         if ($stored) $this->em->getPDO()->prepare(
             "DELETE FROM catch_up_verdict WHERE $column = :id AND locale = :locale AND evidence_scope = :scope AND revision = :revision"
         )->execute(['id' => $id, 'locale' => $locale, 'scope' => $evidenceScope, 'revision' => $revision]);
@@ -162,31 +162,17 @@ class Verdicts
     }
 
     /**
-     * Conversations of this account, in the reader's deck and still without an open deal, that have an unresolved
-     * `new_deal` verdict at any revision; the caller checks access and the current revision. Newest activity first.
+     * A stored card that is analysed again when the deck reaches it, at the same revision: one the clock moved to a loop
+     * its copy wasn't written for (`redraft`), or a found deal from before prompt version 13, which proposed no funnel or
+     * stage. Only those cards are analysed again; the revision stays, so no other deal or conversation is.
      *
-     * @return array<string, array{contact: ?string, grp: int}>
+     * @param array{verdict?: ?string, card?: ?array<string, mixed>} $stored
      */
-    public function proposalConversations(string $tenantId, string $accountId, string $ownerSql, array $ownerParams, string $userId, int $limit): array
+    public static function outdated(array $stored): bool
     {
-        $query = $this->em->getPDO()->prepare(
-            'SELECT c.id, MAX(c.chatwoot_contact_id) AS contact, MAX(COALESCE(ct.identifier, \'\') LIKE \'%@g.us\') AS grp, MAX(c.last_activity_at) AS active '
-            . 'FROM catch_up_verdict v '
-            . 'JOIN chatwoot_conversation c ON c.id = v.conversation_id AND c.deleted = 0 AND c.chatwoot_account_id = :account '
-            . 'JOIN chatwoot_account a ON a.id = c.chatwoot_account_id '
-            . 'LEFT JOIN chatwoot_contact ct ON ct.id = c.chatwoot_contact_id AND ct.deleted = 0 '
-            . "WHERE v.deleted = 0 AND v.tenant_id = :tenant AND v.verdict = 'new_deal' AND v.resolved_at IS NULL "
-            . 'AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
-            . "AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user "
-            . "AND z.target_type = 'ChatwootConversation' AND z.snoozed_until > UTC_TIMESTAMP())" . $ownerSql
-            . ' GROUP BY c.id ORDER BY active DESC, c.id LIMIT ' . max(1, $limit)
-        );
-        $query->execute(['tenant' => $tenantId, 'account' => $accountId, 'user' => $userId, ...$ownerParams]);
-        $rows = [];
-        foreach ($query->fetchAll(\PDO::FETCH_ASSOC) as $row) {
-            $rows[(string) $row['id']] = ['contact' => $row['contact'], 'grp' => (int) $row['grp']];
-        }
-        return $rows;
+        if (!empty($stored['card']['redraft'])) return true;
+        $deal = $stored['card']['proposedDeal'] ?? null;
+        return ($stored['verdict'] ?? null) === 'new_deal' && is_array($deal) && !array_key_exists('funnelId', $deal);
     }
 
     /** Someone acted on the subject's card: it leaves the deck and the counts until the subject moves, the clock included. */

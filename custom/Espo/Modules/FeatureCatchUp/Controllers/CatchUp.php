@@ -33,18 +33,6 @@ class CatchUp
         private Batch $batch,
     ) {}
 
-    /** "Criar todas": the deals the analysis found in conversations still without one, for review. Never analyses. */
-    public function getActionProposedDeals(Request $request): object
-    {
-        return (object) $this->proposedDeals->list($request);
-    }
-
-    /** "Criar todas": create the reviewed proposals in one go. */
-    public function postActionCreateProposedDeals(Request $request): object
-    {
-        return (object) $this->proposedDeals->create($request);
-    }
-
     /** The Agenda tab: loops not due yet, pending next steps and armed AI follow-ups, from stored data only. */
     public function getActionAgenda(Request $request): object
     {
@@ -117,6 +105,12 @@ class CatchUp
     {
         $this->service->resolved($this->id($request), $request);
         return (object) ['success' => true];
+    }
+
+    /** "Criar oportunidade" on an Atendimento card: the deal it found, as shown or as the reader changed it. */
+    public function postActionServiceDeal(Request $request): object
+    {
+        return (object) $this->proposedDeals->create($request, $this->id($request));
     }
 
     public function postActionServiceLabel(Request $request): object

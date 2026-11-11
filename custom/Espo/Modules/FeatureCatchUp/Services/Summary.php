@@ -10,11 +10,17 @@ use Espo\Entities\User;
 
 class Summary
 {
-    /** What the model may answer (prompt version 12). The card verdict comes from Loops, never straight from the model. */
+    /** What the model may answer (prompt version 13). The card verdict comes from Loops, never straight from the model. */
     private const DEAL_ANSWERS = ['loops', 'decided', 'next_step_missing', 'none'];
     private const CONVERSATION_ANSWERS = ['loops', 'new_deal', 'none'];
 
-    public function __construct(private User $user, private Verdicts $verdicts, private Parties $parties, private Records $records) {}
+    public function __construct(
+        private User $user,
+        private Verdicts $verdicts,
+        private Parties $parties,
+        private Records $records,
+        private DealTargets $targets,
+    ) {}
 
     /**
      * A deal's verdict: the stored one when this revision and evidence were already judged, otherwise the
@@ -37,7 +43,10 @@ class Summary
         $key = [$conversation ? 'ChatwootConversation' : 'Opportunity', $snapshot['id'], $snapshot['revision'], $locale, $snapshot['evidenceScope']];
         $this->verdicts->flipDue((string) $snapshot['tenantId']);
         $stored = $this->verdicts->find(...$key);
-        if ($stored && empty($stored['card']['redraft'])) return ['status' => 'completed', 'cached' => true, ...$stored];
+        if ($stored && !Verdicts::outdated($stored)) return ['status' => 'completed', 'cached' => true, ...$stored];
+        // A found deal from before funnels is read again in full (no record, the newest messages), so its funnel and stage
+        // have the whole conversation behind them, not only the few messages after the record.
+        if ($stored && $conversation && empty($stored['card']['redraft'])) $snapshot['record'] = null;
         $result = $this->request($snapshot, $locale, $requestId, $notify);
         if ($result['status'] !== 'completed') return [...$result, 'cached' => false, 'verdict' => null, 'reason' => null, 'card' => null];
         $card = is_array($result['card'] ?? null) ? $result['card'] : null;
@@ -60,6 +69,10 @@ class Summary
         // copy for the card it becomes.
         $basis = $loop && $verdict !== 'none' ? Loops::basis(Loops::open($record), $facts, $snapshot['quietSince'] ?? null) : null;
         $card = $verdict === 'none' || !$card ? null : self::card($card, $loop, $reason);
+        // A found deal keeps its funnel and stage only when they are ones the analysis was offered.
+        if ($conversation && is_array($card['proposedDeal'] ?? null)) {
+            $card['proposedDeal'] = $this->targets->sanitize((string) $snapshot['tenantId'], $card['proposedDeal']);
+        }
         $this->verdicts->store((string) $snapshot['tenantId'], ...[...$key, $verdict, $reason, $card, $basis,
             $basis ? Loops::flipsAt($basis, $now) : null]);
         return ['status' => 'completed', 'requestId' => $result['requestId'] ?? null, 'cached' => false,
@@ -136,6 +149,8 @@ class Summary
                 $snapshot['participants'] ?? []),
             'policy' => $snapshot['catchUpPolicy'],
         ];
+        // A conversation may become a deal: the funnels and stages the reader may put it in (DealTargets).
+        if (($snapshot['type'] ?? null) === 'conversation') $payload['funnels'] = $this->targets->forPrompt((string) $snapshot['tenantId']);
         if ($requestId !== null) $payload['requestId'] = $requestId;
         // Not part of the analysis: what the backend sends back when it finishes (Settle::complete).
         if ($notify !== null) $payload['notify'] = $notify;

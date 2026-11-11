@@ -147,7 +147,8 @@ minutes later. `Tools/Onboarding/FirstRead` then:
   completed, so it never sleeps in one of the daemon's 4 job slots; the console
   (`self-service first-read`) waits in place. The deck finds each verdict
   stored and opens at once; deals found in conversations (`new_deal`) are
-  listed for "Criar todas" (`FeatureCatchUp/Services/ProposedDeals`).
+  cards that create the deal in one tap, in the funnel and stage the analysis
+  picked (`FeatureCatchUp/Services/ProposedDeals`).
 
 It runs on the workspace's credits like any Em dia analysis (the legacy run
 budget never charges Em dia; the wallet does). Subjects already judged are
@@ -257,10 +258,12 @@ SELF_SERVICE_TEST_DATABASE=<db> FAKE_CHATWOOT_URL=http://<fake>:8080 \
 - `FirstReadTest`: onboarding opening schedules the first read once, the
   wait for conversations, the console read as the owner, no read without a
   plan.
-- `ProposedDealsTest` ("Criar todas", FeatureCatchUp): the owner's
-  proposals only (Chatwoot access, current revision), created in the default
-  funnel's open stage, linked and resolved, nothing offered twice; several
-  funnels without a default need a choice.
+- `ProposedDealsTest` ("Criar oportunidade" on a found deal, FeatureCatchUp):
+  created as the card shows it (the proposed funnel and won stage), linked and
+  resolved, never twice; the reader's changes (another funnel's stage refused,
+  then accepted); a card from before funnels in the default funnel's open
+  stage; a conversation that moved since is a conflict; the deal goes to the
+  person assigned in Chatwoot.
 - `SignupTest`: code signup to a one-time login, wrong-code lockout, token
   required, email in use, IP limit, switch off.
 - `SocialSignInTest`: new Google user without a code, existing user ticket,
