@@ -58,7 +58,7 @@ class WorkspaceTrialTest extends TestCase
     {
         [$tenant, $account] = $this->workspace();
 
-        self::assertSame('advanced', $tenant->get('plan'));
+        self::assertSame('monostax', $tenant->get('plan'));
         self::assertSame('trial', $tenant->get('subscriptionStatus'));
         self::assertSame(WorkspaceTrial::STEP_CONNECT_WHATSAPP, $tenant->get('onboardingStep'));
         self::assertNull($tenant->get('trialStartsAt'));

@@ -59,7 +59,8 @@ class Provisioner
     public const STATUS_FAILED = 'failed';
 
     private const STEP_NEXT = [
-        'tenant' => 'aiAllowance',
+        'tenant' => 'featurePacks',
+        'featurePacks' => 'aiAllowance',
         'aiAllowance' => 'creditWallet',
         'creditWallet' => 'owner',
         'owner' => 'chatwootAccount',
@@ -230,6 +231,7 @@ class Provisioner
 
             match ($step) {
                 'tenant' => $this->ensureTenant($record, $lease),
+                'featurePacks' => $this->starter->ensureFeaturePacks($this->tenant($record)),
                 'aiAllowance' => $this->ensureAiAllowance($record),
                 'creditWallet' => $this->wallet->ensure((string) $record->get('tenantId'), (string) $record->get('createdAt'), (string) $record->getId()),
                 'owner' => $this->ensureOwner($record),

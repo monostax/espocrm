@@ -51,9 +51,9 @@ class PlanOffersTest extends TestCase
             ], ['skipHooks' => true]);
         }
 
-        if (!$this->em->getPDO()->query("SELECT COUNT(*) FROM credit_billing_catalog WHERE version = 'self-service-2026-11-v1'")->fetchColumn()) {
+        if (!$this->em->getPDO()->query("SELECT COUNT(*) FROM credit_billing_catalog WHERE version = 'self-service-2026-11-v2'")->fetchColumn()) {
             $definition = json_decode((string) file_get_contents(
-                'custom/Espo/Modules/FeatureCredits/Resources/billing/self-service-2026-11.json'
+                'custom/Espo/Modules/FeatureCredits/Resources/billing/self-service-2026-11-v2.json'
             ), false, 32, JSON_THROW_ON_ERROR);
             $definition->effectiveFrom = gmdate('Y-m-d H:i:s', time() - 60);
             // Private offers need their real tenant, which this runtime doesn't have.
@@ -67,7 +67,7 @@ class PlanOffersTest extends TestCase
         }
     }
 
-    public function testThePlansPageGetsPricesPacksAndARecommendation(): void
+    public function testThePlansPageGetsThePlanItsCreditStepsAndARecommendation(): void
     {
         $suffix = bin2hex(random_bytes(4));
         /** @var User $owner */
@@ -91,16 +91,15 @@ class PlanOffersTest extends TestCase
 
         $offer = $controller->getActionPlans($request);
 
-        self::assertSame(
-            [['basic', '229.00', 1, 1], ['advanced', '289.00', 3, 3]],
-            array_map(fn ($plan) => [$plan['key'], $plan['seatPrice'], $plan['whatsappIncluded'], $plan['instagramIncluded']], $offer->plans)
-        );
-        self::assertSame(
-            [['2000', '997.00', 300], ['7000', '2497.00', 1075], ['15000', '4497.00', 2300]],
-            array_map(fn ($pack) => [$pack['key'], $pack['price'], $pack['conversations']], $offer->packs)
-        );
-        self::assertSame('basic', $offer->recommendation['plan']);
-        self::assertSame('2000', $offer->recommendation['pack']);
+        self::assertSame([
+            'key' => 'monostax', 'seatPrice' => '249.00', 'includedCredits' => 250, 'includedConversations' => 38,
+            'minSeats' => 1, 'maxSeats' => 1000, 'whatsappPerSeat' => 1, 'instagramPerSeat' => 1,
+        ], $offer->plan);
+        self::assertCount(21, $offer->credits, '0 to 20.000 in steps of 1.000.');
+        self::assertSame(['0', '0.00', 0], [$offer->credits[0]['key'], $offer->credits[0]['price'], $offer->credits[0]['conversations']]);
+        self::assertSame(['2000', '998.00', 300], [$offer->credits[2]['key'], $offer->credits[2]['price'], $offer->credits[2]['conversations']]);
+        self::assertSame(['20000', '9980.00'], [$offer->credits[20]['key'], $offer->credits[20]['price']]);
+        self::assertSame('0', $offer->recommendation['credits'], 'No AI used yet: the included credits are enough.');
         self::assertGreaterThanOrEqual(1, $offer->recommendation['seats']);
         self::assertSame("plans-{$suffix}@example.test", $offer->payer['email']);
     }

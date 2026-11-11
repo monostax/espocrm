@@ -14,6 +14,7 @@ use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServiceUnavailable;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Provisioner;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\ProvisioningRequest;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\WorkspaceStarter;
+use Espo\Modules\Global\Classes\Utils\FeatureVerticalChecker;
 use Espo\Modules\Global\Tools\Tenant\TenantAdminTeamProvisioner;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -130,6 +131,10 @@ class ProvisioningTest extends TestCase
         $remote = $this->http('GET', '/__accounts')[(string) $account->get('chatwootAccountId')];
         self::assertTrue($remote['settings']['catch_up_enabled'] ?? false, 'Em dia is on for a new workspace.');
         self::assertTrue(Provisioner::ownerCanEnter($done));
+
+        // One plan with everything: the feature packs it includes are on.
+        $verticals = $this->app->getInjectableFactory()->create(FeatureVerticalChecker::class);
+        self::assertEqualsCanonicalizing(WorkspaceStarter::FEATURE_PACKS, $verticals->getTenantVerticals((string) $tenant->getId()));
 
         // Running a completed provisioning again changes nothing.
         self::assertSame('completed', $this->provisioner()->run($record->getId())->get('status'));

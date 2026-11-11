@@ -81,7 +81,11 @@ enabled = CRM_SELF_SERVICE_ENABLED is exactly "true"  AND  not paused
 1. `tenant`: the Tenant with a DNS-safe slug, its base team and its admin
    team. Teams are keyed by `Team.provisioningKey` (`tenant-base:<id>`,
    `tenant-admin:<id>`), never by name, so same-named businesses never share
-   a team.
+   a team. The Tenant starts on plan `monostax` (the one plan, gtm/07), trial.
+   - `featurePacks`: the feature packs the plan includes (campaigns, journeys,
+     playbooks, calls, meetings; `WorkspaceStarter::FEATURE_PACKS`), as roles
+     on the base team, the same way the `feature-packs` command switches them
+     on. Packs already on are left alone.
 2. `owner`: the user joins the tenant, its base and admin teams, and gets the
    base team as default team. Instance administrators can't own a workspace.
 3. `chatwootAccount`: the ChatwootAccount on the server-chosen platform
@@ -129,6 +133,31 @@ Contracts:
 - The `RunSelfServiceProvisionings` job runs every minute. It runs due,
   failed-and-due and paused records, and takes over records whose lease
   expired. It does nothing while self-service is off.
+
+## Plan and checkout
+
+One plan since 2026-11-11 (`gtm/07-pricing-positioning.md`): R$249 per
+attendant with 250 credits each, plus optional monthly credits in 1.000-credit
+steps at R$499 per 1.000. Catalog
+`FeatureCredits/Resources/billing/self-service-2026-11-v2.json` (unpublished):
+21 seat offers of plan `monostax` with `seats.includedCredits`, the zero step
+costing nothing on top of the attendants; extra credits at R$599 per 1.000;
+Ferraz Veloso's private offer.
+
+- `GET /SelfService/plans?accountId=` (`PlanOffers`, `PlanRecommendation`):
+  the plan, the credit steps (labelled in conversations at ~6.5 credits each,
+  rounded down to 25) and the preselection: the people answering in
+  Chatwoot, and the smallest step that, with their included credits, covers
+  the trial's AI conversations scaled to a month.
+- `POST /SelfService/checkout {accountId, seats, credits, payer}`
+  (`PlanCheckout`, tenant administrators): one monthly Asaas subscription
+  charged to a card (`CREDIT_CARD`, so it renews by itself) for attendants ×
+  249 plus the step. The accepted terms carry credits = step + 250 ×
+  attendants, granted on each paid invoice and kept until the end of the
+  following period.
+- Not built yet: changing attendants or credits on a live subscription (Asaas
+  subscription updates), Pix Automático, buying extra credits from Chatwoot,
+  agent and channel limits.
 
 ## First read
 
@@ -250,8 +279,8 @@ SELF_SERVICE_TEST_DATABASE=<db> FAKE_CHATWOOT_URL=http://<fake>:8080 \
     php phpunit.phar tests/integration/Espo/Modules/FeatureSelfService
 ```
 
-- `ProvisioningTest`: the workspace with its funnel, silent AI agent and Em
-  dia, rerun no-op, the owner entering while the starter retries (one agent
+- `ProvisioningTest`: the workspace with its funnel, silent AI agent, Em
+  dia and feature packs, rerun no-op, the owner entering while the starter retries (one agent
   after the retry), an existing funnel kept, same-named tenants, dedupe
   conflicts, concierge failure and lost reply, pause/resume, switch off,
   instance-admin owner, live leases, deleted team keys, the job.

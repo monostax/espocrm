@@ -27,6 +27,7 @@
             "type": "enum",
             "options": [
                 "tenant",
+                "featurePacks",
                 "aiAllowance",
                 "creditWallet",
                 "owner",

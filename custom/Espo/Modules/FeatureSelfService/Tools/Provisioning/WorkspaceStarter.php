@@ -12,8 +12,10 @@
 namespace Espo\Modules\FeatureSelfService\Tools\Provisioning;
 
 use Espo\Core\InjectableFactory;
+use Espo\Core\Utils\Metadata;
 use Espo\Modules\Chatwoot\Services\AiAgentProvisioning;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Global\Classes\Utils\FeatureVerticalChecker;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use RuntimeException;
@@ -25,13 +27,18 @@ use RuntimeException;
  *   found in the imported history have somewhere to go;
  * - a silent AI agent: no inbox, so Chatwoot never assigns it a conversation and it never replies. It manages the
  *   default funnel, which the opportunity tracker (gtm/06) writes through; "Ative a IA" later only connects an inbox;
- * - Em dia switched on, so the first read can analyse the imported conversations.
+ * - Em dia switched on, so the first read can analyse the imported conversations;
+ * - the feature packs the plan includes (campaigns, journeys, playbooks, calls, meetings): one plan with everything
+ *   since 2026-11-11 (gtm/07), so nothing a trial uses disappears after paying.
  *
  * Each step finds what an earlier attempt made and finishes it, so the provisioning can rerun it.
  */
 class WorkspaceStarter
 {
     public const FUNNEL_NAME = 'Vendas';
+
+    /** Feature packs (app.featureVerticals) every self-service workspace gets. */
+    public const FEATURE_PACKS = ['campaigns', 'journeys', 'playbooks', 'calls', 'meetings'];
 
     /**
      * The default funnel's stages. Ganho and Perdido are the Monostax default rule (gtm/06 §"Decided 2026-11-10"),
@@ -70,7 +77,37 @@ class WorkspaceStarter
         private EntityManager $entityManager,
         private InjectableFactory $factory,
         private ChatwootApiClient $apiClient,
+        private Metadata $metadata,
+        private FeatureVerticalChecker $verticals,
     ) {}
+
+    /**
+     * Switches on the plan's feature packs: each pack is its role on the tenant's base user team, as the
+     * `feature-packs` console command does. Packs already on stay as they are.
+     */
+    public function ensureFeaturePacks(Entity $tenant): void
+    {
+        $team = $this->entityManager->getEntityById('Team', (string) $tenant->get('baseUserTeamId'));
+
+        if (!$team) {
+            throw new RuntimeException('Tenant ' . $tenant->getId() . ' has no base user team for its feature packs.');
+        }
+
+        $definitions = $this->metadata->get(['app', 'featureVerticals']) ?? [];
+        $toHash = $this->metadata->get(['app', 'recordId', 'type']) === 'uuid4' ||
+            $this->metadata->get(['app', 'recordId', 'dbType']) === 'uuid';
+        $relation = $this->entityManager->getRDBRepository('Team')->getRelation($team, 'roles');
+
+        foreach (array_diff(self::FEATURE_PACKS, $this->verticals->getTenantVerticals((string) $tenant->getId())) as $pack) {
+            $staticId = $definitions[$pack]['roleStaticId'] ?? null;
+
+            if (!is_string($staticId) || !($definitions[$pack]['pack'] ?? false)) {
+                throw new RuntimeException("Feature pack '{$pack}' is not defined.");
+            }
+
+            $relation->relateById(FeatureVerticalChecker::roleIdFor($staticId, $toHash));
+        }
+    }
 
     /**
      * The workspace's funnel. A tenant that already has one keeps it; otherwise "Vendas" and its stages are created

@@ -103,13 +103,13 @@ class WorkspaceAccessTest extends TestCase
         $this->runJob();
         self::assertSame(WorkspaceAccess::STATUS_FROZEN, $this->reload($tenant)->get('subscriptionStatus'));
 
-        $this->paidPlan((string) $tenant->getId(), 'advanced', 4, '2026-12-10 03:00:00');
+        $this->paidPlan((string) $tenant->getId(), 'monostax', 4, '2026-12-10 03:00:00');
         $access = $this->app->getInjectableFactory()->create(WorkspaceAccess::class);
 
         $access->applyBilling((string) $tenant->getId(), '2026-12-01 12:00:00');
         $tenant = $this->reload($tenant);
         self::assertSame(WorkspaceAccess::STATUS_ACTIVE, $tenant->get('subscriptionStatus'), 'Paying unfreezes.');
-        self::assertSame('advanced', $tenant->get('plan'));
+        self::assertSame('monostax', $tenant->get('plan'));
         self::assertSame(4, $tenant->get('seats'));
         self::assertEmpty($tenant->get('frozenAt'));
         self::assertFalse($this->trial()->state($tenant)['trialEnded']);
@@ -123,7 +123,7 @@ class WorkspaceAccessTest extends TestCase
         $access->applyBilling((string) $tenant->getId(), '2026-12-13 04:00:00');
         self::assertSame(WorkspaceAccess::STATUS_FROZEN, $this->reload($tenant)->get('subscriptionStatus'), 'Grace over.');
 
-        $this->paidPlan((string) $tenant->getId(), 'advanced', 4, '2027-01-10 03:00:00');
+        $this->paidPlan((string) $tenant->getId(), 'monostax', 4, '2027-01-10 03:00:00');
         $access->applyBilling((string) $tenant->getId(), '2026-12-14 12:00:00');
         self::assertSame(WorkspaceAccess::STATUS_ACTIVE, $this->reload($tenant)->get('subscriptionStatus'), 'Paying the renewal reopens.');
     }
@@ -182,8 +182,9 @@ class WorkspaceAccessTest extends TestCase
 
         if (!$obligation) {
             $obligation = substr(bin2hex(random_bytes(9)), 0, 17);
-            $snapshot = json_encode(['schema' => 'billing-offer-v2', 'operation' => 'subscription', 'price' => '2153.00',
-                'seats' => ['plan' => $plan, 'unitPrice' => '289.00', 'min' => 1, 'max' => 50, 'quantity' => $seats, 'basePrice' => '997.00']]);
+            $snapshot = json_encode(['schema' => 'billing-offer-v2', 'operation' => 'subscription', 'price' => '996.00',
+                'seats' => ['plan' => $plan, 'unitPrice' => '249.00', 'min' => 1, 'max' => 1000, 'includedCredits' => '250.0000',
+                    'quantity' => $seats, 'basePrice' => '0.00', 'baseCredits' => '0.0000']]);
             $pdo->prepare('INSERT INTO credit_billing_obligation (id, tenant_id, request_key, input_hash, provider, integration_id,
                 catalog_id, terms_id, terms_snapshot, operation, billing_country, assignment_revision, state, created_at, created_by_id,
                 acceptance_hash, deleted)

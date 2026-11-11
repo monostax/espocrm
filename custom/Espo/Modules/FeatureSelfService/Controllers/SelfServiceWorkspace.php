@@ -46,8 +46,9 @@ use Espo\ORM\EntityManager;
  *        once the newest window is in. Afterwards, applies a payment the
  *        billing engine already recorded without waiting for the job.
  *   GET  /SelfService/plans?accountId=
- *        Plans, monthly AI packs and what the checkout preselects.
- *   POST /SelfService/checkout {accountId, plan, seats, pack, payer: {name, cpfCnpj, email}}
+ *        The plan (attendant price, credits included per attendant), the
+ *        monthly-credit steps and what the checkout preselects.
+ *   POST /SelfService/checkout {accountId, seats, credits, payer: {name, cpfCnpj, email}}
  *        Starts the monthly subscription; returns the secure payment page.
  *        Billing administrators only (the tenant-admin role). Errors are
  *        {"code": ...}: ALREADY_SUBSCRIBED, CHECKOUT_IN_PROGRESS, PAYER_CHANGED,
@@ -141,7 +142,7 @@ class SelfServiceWorkspace
         }
 
         $recommendation = $this->injectableFactory->create(PlanRecommendation::class)
-            ->recommend($tenant, $account, $offer['plans'], $offer['packs']);
+            ->recommend($tenant, $account, $offer['plan'], $offer['credits']);
 
         return (object) ($offer + [
             'recommendation' => $recommendation,
@@ -161,7 +162,7 @@ class SelfServiceWorkspace
         $payer = $body->payer ?? null;
         $seats = $body->seats ?? null;
 
-        if (!is_string($body->plan ?? null) || !is_string($body->pack ?? null) || !is_int($seats) ||
+        if (!is_string($body->credits ?? null) || !is_int($seats) ||
             !is_object($payer) || !is_string($payer->name ?? null) || !is_string($payer->cpfCnpj ?? null) ||
             !is_string($payer->email ?? null)) {
             throw BadRequest::createWithBody('INVALID_REQUEST', $this->code('INVALID_REQUEST'));
@@ -169,7 +170,7 @@ class SelfServiceWorkspace
 
         try {
             return (object) $this->injectableFactory->create(PlanCheckout::class)->start(
-                $tenantId, (string) $this->user->getId(), $body->plan, $seats, $body->pack,
+                $tenantId, (string) $this->user->getId(), $seats, $body->credits,
                 ['name' => trim($payer->name), 'cpfCnpj' => preg_replace('/\D/', '', $payer->cpfCnpj), 'email' => trim($payer->email)]
             );
         } catch (InvalidArgumentException $e) {

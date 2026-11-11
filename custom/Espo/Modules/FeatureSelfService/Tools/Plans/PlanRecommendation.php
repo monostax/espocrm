@@ -17,49 +17,41 @@ use Espo\ORM\EntityManager;
 /**
  * What the checkout preselects, from how the workspace was used:
  *  - attendants: the people answering in Chatwoot (no AI users, no concierge);
- *  - plan: Advanced when campaigns were used or the connected channels need
- *    more than Basic includes for that many attendants;
- *  - pack: the smallest that covers the AI conversations of the trial,
- *    scaled to a month.
+ *  - monthly credits: the smallest step that, with the attendants' included
+ *    credits, covers the AI conversations of the trial scaled to a month
+ *    (none when the included credits are enough or there is too little to go by).
  */
 class PlanRecommendation
 {
-    private const WHATSAPP = ['whatsappQrcode', 'whatsappCloudApi', 'whatsappCoexistence'];
-
     public function __construct(private EntityManager $entityManager) {}
 
     /**
-     * @param list<array{key: string, whatsappIncluded: int, instagramIncluded: int}> $plans
-     * @param list<array{key: string, conversations: int}> $packs Smallest first.
-     * @return array{plan: string, seats: int, pack: string, attendants: int, trialConversations: ?int}
+     * @param array{includedCredits: int} $plan
+     * @param list<array{key: string, credits: int}> $steps Smallest first; the first is the zero step.
+     * @return array{seats: int, credits: string, attendants: int, trialConversations: ?int}
      */
-    public function recommend(Entity $tenant, Entity $account, array $plans, array $packs): array
+    public function recommend(Entity $tenant, Entity $account, array $plan, array $steps): array
     {
         $attendants = $this->attendants($account);
         $seats = max(1, $attendants);
-        $basic = $plans[0];
-        $extra = $seats - 1;
-
-        [$whatsapp, $instagram] = $this->channels($account);
-        $needsAdvanced = $whatsapp > $basic['whatsappIncluded'] + $extra ||
-            $instagram > $basic['instagramIncluded'] + $extra ||
-            $this->usedCampaigns((string) $tenant->getId());
-
         $monthly = $this->monthlyAiConversations($tenant);
-        $pack = $packs[0]['key'];
+        $credits = $steps[0]['key'];
 
-        foreach ($packs as $candidate) {
-            $pack = $candidate['key'];
+        if ($monthly !== null) {
+            $needed = $monthly * PlanOffers::CREDITS_PER_CONVERSATION - $seats * $plan['includedCredits'];
 
-            if ($monthly === null || $candidate['conversations'] >= $monthly) {
-                break;
+            foreach ($steps as $step) {
+                $credits = $step['key'];
+
+                if ($step['credits'] >= $needed) {
+                    break;
+                }
             }
         }
 
         return [
-            'plan' => $needsAdvanced ? ($plans[1]['key'] ?? $basic['key']) : $basic['key'],
             'seats' => $seats,
-            'pack' => $pack,
+            'credits' => $credits,
             'attendants' => $attendants,
             'trialConversations' => $monthly,
         ];
@@ -77,28 +69,6 @@ class PlanRecommendation
         }
 
         return $this->entityManager->getRDBRepository('ChatwootAccountUserMembership')->where($where)->count();
-    }
-
-    /**
-     * @return array{0: int, 1: int}
-     */
-    private function channels(Entity $account): array
-    {
-        $repository = $this->entityManager->getRDBRepository('ChatwootInboxIntegration');
-        $base = ['chatwootAccountId' => $account->getId(), 'status' => 'ACTIVE'];
-
-        return [
-            $repository->where($base + ['channelType' => self::WHATSAPP])->count(),
-            $repository->where($base + ['channelType' => 'instagram'])->count(),
-        ];
-    }
-
-    private function usedCampaigns(string $tenantId): bool
-    {
-        return $this->entityManager->getRDBRepository('WhatsAppCampaign')
-            ->select(['id'])
-            ->where(['tenantId' => $tenantId])
-            ->findOne() !== null;
     }
 
     /**

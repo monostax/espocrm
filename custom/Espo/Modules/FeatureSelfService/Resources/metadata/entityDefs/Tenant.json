@@ -2,7 +2,7 @@
     "fields": {
         "plan": {
             "type": "enum",
-            "options": ["", "basic", "advanced", "professional"],
+            "options": ["", "monostax", "basic", "advanced", "professional"],
             "default": "",
             "readOnly": true,
             "massUpdateDisabled": true,

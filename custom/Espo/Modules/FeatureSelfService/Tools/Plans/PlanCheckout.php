@@ -20,15 +20,20 @@ use Espo\Modules\FeatureCredits\Billing\Subscriptions;
 use InvalidArgumentException;
 
 /**
- * Starts a self-service plan: one monthly subscription for attendants × the
- * plan's price plus the AI pack, on the billing engine's hosted checkout
- * (accept → payer → subscription → first invoice). Each step replays safely,
- * so a retry continues an open checkout with the same terms. One with other
- * terms is replaced while nothing was charged for it.
+ * Starts the self-service plan: one monthly subscription for attendants × the
+ * attendant price plus the chosen monthly credits, on the billing engine's
+ * hosted checkout (accept → payer → subscription → first invoice). The
+ * subscription is charged to a card, so it renews by itself; manual PIX and
+ * boleto churn and stay with sales-led annual plans (decided 2026-11-11). Each
+ * step replays safely, so a retry continues an open checkout with the same
+ * terms. One with other terms is replaced while nothing was charged for it.
  */
 class PlanCheckout
 {
     private const OPEN = ['accepted', 'creating', 'unknown', 'pending', 'active'];
+
+    /** Asaas billing type of the plan subscription. */
+    private const BILLING_TYPE = 'CREDIT_CARD';
 
     public function __construct(
         private Accounts $accounts,
@@ -42,13 +47,13 @@ class PlanCheckout
      * @param array{name: string, cpfCnpj: string, email: string} $payer
      * @return array{state: string, paymentUrl: ?string, obligationId: string}
      * @throws Conflict ALREADY_SUBSCRIBED, CHECKOUT_IN_PROGRESS, PAYER_CHANGED
-     * @throws InvalidArgumentException invalid plan, pack, seats or payer
+     * @throws InvalidArgumentException invalid monthly credits, seats or payer
      * @throws ServiceUnavailable the payment provider didn't confirm a step; retry
      */
-    public function start(string $tenantId, string $actorId, string $plan, int $seats, string $pack, array $payer): array
+    public function start(string $tenantId, string $actorId, int $seats, string $credits, array $payer): array
     {
-        $terms = $this->offers->find($tenantId, $plan, $pack)
-            ?? throw new InvalidArgumentException('Unknown plan or pack.');
+        $terms = $this->offers->find($tenantId, $credits)
+            ?? throw new InvalidArgumentException('Unknown monthly credits.');
 
         $context = $this->accounts->context($tenantId);
 
@@ -89,7 +94,7 @@ class PlanCheckout
         }
 
         if (!$view['charge'] || $view['charge']['state'] !== 'bound') {
-            $charge = $this->creation->charge($tenantId, $obligationId, $customer['creationId'], 'UNDEFINED',
+            $charge = $this->creation->charge($tenantId, $obligationId, $customer['creationId'], self::BILLING_TYPE,
                 (string) $view['earliestDueDate']);
 
             if ($charge['state'] !== 'bound') {
