@@ -11,9 +11,9 @@ use DateTimeImmutable;
  * other, explicit ("te mando o contrato até 18h") or implied (an unanswered question, a proposal with no reply). The model
  * keeps the loops; this class only compares their times with the clock and the follow-up rule, and turns them into the
  * card a reader sees and the bucket it sits in:
- * - Esperando a gente: one of ours is due. Without a time it is due now (customer_waiting); with one, once it passes
+ * - Esperando resposta: one of ours is due. Without a time it is due now (customer_waiting); with one, once it passes
  *   (promise_due). Opening and closing a deal (decided, new_deal) and a stalled deal (next_step_missing) are ours too.
- * - Esperando o cliente: one of theirs is late (follow_up_due): its time passed, or, without one, the conversation has
+ * - Esperando follow-up: one of theirs is late (follow_up_due): its time passed, or, without one, the conversation has
  *   been quiet for Feed::FOLLOW_UP_AFTER_DAYS. Not while the AI follow-up is armed on the deal: the AI nudges then.
  * - Agenda: loops are open but none is due yet (`scheduled`, no card).
  *

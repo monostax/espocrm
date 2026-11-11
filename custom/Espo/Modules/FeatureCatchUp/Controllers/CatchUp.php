@@ -63,7 +63,7 @@ class CatchUp
     }
 
     /**
-     * The deck's totals: cards by tab (`us`: Esperando a gente, `customer`: Esperando o cliente, `found`: Negócios
+     * The deck's totals: cards by tab (`us`: Esperando resposta, `customer`: Esperando follow-up, `found`: Negócios
      * encontrados), subjects whose settle analysis is still to come (`pending`), and the badge (`count`, every card).
      */
     public function getActionCount(Request $request): object
