@@ -23,6 +23,8 @@ use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Jobs\SyncInboxesFromChatwoot;
 use Espo\Modules\Chatwoot\Services\WahaInboxAdoption;
 use Espo\Modules\FeatureAiUsage\Services\Access as BillingAccess;
+use Espo\Modules\FeatureCredits\Billing\Providers as BillingProviders;
+use Espo\Modules\FeatureSelfService\Tools\Plans\ExtraCredits;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanCheckout;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanOffers;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanRecommendation;
@@ -64,6 +66,14 @@ use Espo\ORM\EntityManager;
  *        Cancels it with the payment provider; access stays until the paid
  *        period ends. Billing administrators only. Errors: NO_ACTIVE_SUBSCRIPTION,
  *        PAYMENT_PENDING (the provider didn't confirm; retry).
+ *   GET  /SelfService/credits?accountId=
+ *        Extra-credit packages (never expire, spent after the month's credits),
+ *        whether the workspace is on the credit wallet and needs a payer.
+ *   POST /SelfService/credits/checkout {accountId, package, payer?: {name, cpfCnpj, email}}
+ *        One-off charge on the hosted payment page; returns its URL. Billing
+ *        administrators of wallet workspaces only. Errors: WALLET_REQUIRED,
+ *        PAYER_REQUIRED, PAYER_CHANGED, INVALID_DOCUMENT, INVALID_REQUEST,
+ *        CREDITS_UNAVAILABLE (sales of packages are off), PAYMENT_PENDING.
  *
  * Access follows the feature-pack endpoint: the user must be able to read the
  * account and act for its tenant.
@@ -232,6 +242,59 @@ class SelfServiceWorkspace
         }
     }
 
+    public function getActionCredits(Request $request): object
+    {
+        [, $tenant] = $this->resolve($request->getQueryParam('accountId'));
+        $tenantId = (string) $tenant->getId();
+        $extra = $this->injectableFactory->create(ExtraCredits::class);
+        $integration = $this->injectableFactory->create(BillingProviders::class)->capability('asaas')?->integrationId;
+
+        return (object) ($extra->offers($tenantId) + [
+            'canManage' => $this->canManageBilling($tenantId),
+            'payerRequired' => !$extra->hasPayer($tenantId, $integration),
+            'payer' => ['name' => (string) $tenant->get('name'), 'email' => (string) $this->user->get('emailAddress')],
+        ]);
+    }
+
+    public function postActionCreditsCheckout(Request $request): object
+    {
+        $body = $request->getParsedBody();
+        [$account, $tenant] = $this->resolve($body->accountId ?? null);
+        $tenantId = (string) $tenant->getId();
+        $this->injectableFactory->create(BillingAccess::class)->assertTenant($tenantId);
+
+        $payer = $body->payer ?? null;
+
+        if (!is_string($body->package ?? null) || ($payer !== null && (!is_object($payer) ||
+            !is_string($payer->name ?? null) || !is_string($payer->cpfCnpj ?? null) || !is_string($payer->email ?? null)))) {
+            throw BadRequest::createWithBody('INVALID_REQUEST', $this->code('INVALID_REQUEST'));
+        }
+
+        try {
+            return (object) $this->injectableFactory->create(ExtraCredits::class)->start(
+                $tenantId, (string) $this->user->getId(), $body->package,
+                $payer === null ? null : [
+                    'name' => trim($payer->name), 'cpfCnpj' => preg_replace('/\D/', '', $payer->cpfCnpj), 'email' => trim($payer->email),
+                ],
+                $this->returnUrl($account, '/credits?tab=topups&paid=1')
+            );
+        } catch (InvalidArgumentException $e) {
+            $code = match (true) {
+                $e->getMessage() === 'PAYER_REQUIRED' => 'PAYER_REQUIRED',
+                str_contains($e->getMessage(), 'CPF/CNPJ') => 'INVALID_DOCUMENT',
+                default => 'INVALID_REQUEST',
+            };
+
+            throw BadRequest::createWithBody($code, $this->code($code));
+        } catch (Conflict $e) {
+            $code = in_array($e->getMessage(), ['WALLET_REQUIRED', 'PAYER_CHANGED'], true) ? $e->getMessage() : 'CREDITS_UNAVAILABLE';
+
+            throw Conflict::createWithBody($code, $this->code($code));
+        } catch (ServiceUnavailable) {
+            throw ServiceUnavailable::createWithBody('PAYMENT_PENDING', $this->code('PAYMENT_PENDING'));
+        }
+    }
+
     private function canManageBilling(string $tenantId): bool
     {
         try {
@@ -247,7 +310,7 @@ class SelfServiceWorkspace
      * Settings › Planos & Assinatura on the workspace's Chatwoot, where the
      * payer lands after paying. Off until the domain is registered in Asaas.
      */
-    private function returnUrl(Entity $account): ?string
+    private function returnUrl(Entity $account, string $path = '/settings/plan?paid=1'): ?string
     {
         if ($this->config->get('selfServiceCheckoutReturnEnabled') !== true) {
             return null;
@@ -260,7 +323,7 @@ class SelfServiceWorkspace
             return null;
         }
 
-        return $frontend . '/app/accounts/' . (int) $account->get('chatwootAccountId') . '/settings/plan?paid=1';
+        return $frontend . '/app/accounts/' . (int) $account->get('chatwootAccountId') . $path;
     }
 
     private function code(string $code): string

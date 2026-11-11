@@ -168,9 +168,20 @@ Ferraz Veloso's private offer.
   follows paid periods, so it stays until the paid period ends, then the usual
   grace. `GET /SelfService/workspace` adds `subscriptionCancelled` so the
   banner says when the workspace pauses instead of asking to pay.
+- `GET /SelfService/credits?accountId=` and `POST /SelfService/credits/checkout
+  {accountId, package, payer?}` (`ExtraCredits`): extra credits bought from
+  Chatwoot's credits page, from the catalog's BRL packages (R$599 per 1.000;
+  they never expire and are spent after the month's credits). Only workspaces
+  on the credit wallet (an effective `tenant_credit_cutover`) and billing
+  administrators. A one-off Asaas charge (`UNDEFINED`: Pix, card or boleto)
+  with a readable description and, with `selfServiceCheckoutReturnEnabled`, a
+  return to `/credits?tab=topups&paid=1`. The payer is the workspace's Asaas
+  customer from its first checkout; the first purchase asks for one. Buying the
+  same package while its invoice is open continues that invoice.
+  `lastPurchase` tells the page when the credits are in. Needs the provider's
+  `purchase` operation (gitops `crmBillingAsaasProductionPurchasesEnabled`).
 - Not built yet: changing attendants or credits on a live subscription (Asaas
-  subscription updates), Pix Automático, buying extra credits from Chatwoot,
-  agent and channel limits.
+  subscription updates), Pix Automático, agent and channel limits.
 
 ## First read
 

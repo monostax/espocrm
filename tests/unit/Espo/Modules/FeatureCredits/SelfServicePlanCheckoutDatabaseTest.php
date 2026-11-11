@@ -10,7 +10,7 @@ use Espo\Core\Utils\{Config, Crypt};
 use Espo\Modules\FeatureCredits\Accounting\Clock;
 use Espo\Modules\FeatureCredits\Billing\{Accounts, Catalog, Checkout, Creation, CreationStore, Subscriptions};
 use Espo\Modules\FeatureCredits\Billing\Asaas\{Adapter, Connection, Response};
-use Espo\Modules\FeatureSelfService\Tools\Plans\{PlanCheckout, PlanOffers, PlanSubscription};
+use Espo\Modules\FeatureSelfService\Tools\Plans\{ExtraCredits, PlanCheckout, PlanOffers, PlanSubscription};
 use Espo\ORM\EntityManager;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -111,6 +111,57 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
     }
 
     #[DataProvider('dialects')]
+    public function testExtraCreditsAreSoldToWalletWorkspacesAsOneOffCharges(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo): void {
+            [, $transport, $engine, , , , $extra] = $this->prepare($pdo);
+            $this->assertFalse($extra->offers('tenant')['wallet']);
+
+            try {
+                $extra->start('tenant', 'owner', '50', self::payer());
+                $this->fail('A workspace off the wallet bought credits it would never spend.');
+            } catch (Conflict $e) {
+                $this->assertSame('WALLET_REQUIRED', $e->getMessage());
+            }
+
+            $pdo->exec("INSERT INTO tenant_credit_cutover (id, tenant_id, cutover_at, input_hash, evidence, created_at, deleted)
+                VALUES ('cutover0000000001', 'tenant', '2026-10-12 00:00:00', '" . str_repeat('a', 64) . "', '{}', '2026-10-12 00:00:00', FALSE)");
+            $offers = $extra->offers('tenant');
+            $this->assertTrue($offers['wallet']);
+            $this->assertSame([['key' => '50', 'credits' => 50, 'price' => '25.00', 'conversations' => 0]], $offers['packages']);
+            $this->assertNull($offers['lastPurchase']);
+            $this->assertFalse($extra->hasPayer('tenant', 'test-asaas'));
+
+            try {
+                $extra->start('tenant', 'owner', '50', null);
+                $this->fail('The first purchase started without a payer.');
+            } catch (\InvalidArgumentException $e) {
+                $this->assertSame('PAYER_REQUIRED', $e->getMessage());
+            }
+
+            $result = $extra->start('tenant', 'owner', '50', self::payer(), 'https://chat.example.test/app/accounts/61/credits?tab=topups&paid=1');
+            $this->assertSame('pending', $result['state']);
+            $payments = $transport->posted('/payments');
+            $this->assertCount(1, $payments);
+            $this->assertSame('25.00', $payments[0]['value']);
+            $this->assertSame('UNDEFINED', $payments[0]['billingType'], 'One-off: the payer picks Pix, card or boleto.');
+            $this->assertSame('Créditos extras Monostax: 50 créditos de IA, sem validade', $payments[0]['description']);
+            $this->assertSame(['successUrl' => 'https://chat.example.test/app/accounts/61/credits?tab=topups&paid=1', 'autoRedirect' => true],
+                $payments[0]['callback']);
+            $this->assertSame('purchase', $engine->read('tenant', $result['obligationId'])['acceptance']['terms']['operation']);
+
+            $again = $extra->start('tenant', 'owner', '50', null, 'https://chat.example.test/app/accounts/61/credits?tab=topups&paid=1');
+            $this->assertSame($result['obligationId'], $again['obligationId'], 'The open invoice is continued.');
+            $this->assertCount(1, $transport->posted('/payments'));
+            $this->assertTrue($extra->hasPayer('tenant', 'test-asaas'));
+            $this->assertSame(['state' => 'pending', 'credits' => 50], $extra->offers('tenant')['lastPurchase']);
+
+            $this->expectException(\InvalidArgumentException::class);
+            $extra->start('tenant', 'owner', '7000', null);
+        });
+    }
+
+    #[DataProvider('dialects')]
     public function testChangingTheChoiceReplacesTheUnpaidSubscription(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo): void {
@@ -186,10 +237,11 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
         $store = new CreationStore($accounts, new Crypt($config), $connections);
         $engine = new Checkout($accounts, $store, $connections, $transport);
         $subscriptions = new Subscriptions($accounts, $store, $connections, $transport);
-        $checkout = new PlanCheckout($accounts, $engine, new Creation($store, new Adapter($transport)),
-            $subscriptions, new PlanOffers($catalog));
+        $creation = new Creation($store, new Adapter($transport));
+        $checkout = new PlanCheckout($accounts, $engine, $creation, $subscriptions, new PlanOffers($catalog));
+        $extra = new ExtraCredits($accounts, $catalog, $engine, $creation, $manager, $clock);
 
-        return [$checkout, $transport, $engine, $pdo, $manager, $subscriptions];
+        return [$checkout, $transport, $engine, $pdo, $manager, $subscriptions, $extra];
     }
 
     private function database(string $dialect, callable $test): void
@@ -251,6 +303,18 @@ final class PlanTestTransport extends \Espo\Modules\FeatureCredits\Billing\Asaas
             }
 
             return new Response(404, null);
+        }
+
+        // A one-off charge (extra credits) as Asaas returns it while unpaid.
+        if ($method === 'GET' && preg_match('#^/payments/(pay_[0-9]+)$#', $path, $match)) {
+            foreach ($this->inner->objects as $object) {
+                if ($object['id'] !== $match[1]) continue;
+
+                return new Response(200, ['object' => 'payment', 'id' => $object['id'], 'customer' => $object['customer'],
+                    'value' => $object['value'], 'originalValue' => $object['value'], 'billingType' => $object['billingType'],
+                    'dueDate' => $object['dueDate'], 'originalDueDate' => $object['dueDate'], 'externalReference' => $object['externalReference'],
+                    'deleted' => false, 'status' => 'PENDING', 'invoiceUrl' => 'https://sandbox.asaas.com/i/' . $object['id']]);
+            }
         }
 
         return $this->inner->send($connection, $method, $path, $json, $query);

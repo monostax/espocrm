@@ -12,5 +12,7 @@
     {"route": "/SelfService/plans", "method": "get", "params": {"controller": "SelfServiceWorkspace", "action": "plans"}},
     {"route": "/SelfService/checkout", "method": "post", "params": {"controller": "SelfServiceWorkspace", "action": "checkout"}},
     {"route": "/SelfService/subscription", "method": "get", "params": {"controller": "SelfServiceWorkspace", "action": "subscription"}},
-    {"route": "/SelfService/subscription/cancel", "method": "post", "params": {"controller": "SelfServiceWorkspace", "action": "subscriptionCancel"}}
+    {"route": "/SelfService/subscription/cancel", "method": "post", "params": {"controller": "SelfServiceWorkspace", "action": "subscriptionCancel"}},
+    {"route": "/SelfService/credits", "method": "get", "params": {"controller": "SelfServiceWorkspace", "action": "credits"}},
+    {"route": "/SelfService/credits/checkout", "method": "post", "params": {"controller": "SelfServiceWorkspace", "action": "creditsCheckout"}}
 ]
