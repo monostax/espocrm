@@ -105,7 +105,6 @@ class ProvisioningTest extends TestCase
         $funnel = $this->em->getRDBRepository('Funnel')->where(['tenantId' => $tenant->getId()])->findOne();
         self::assertSame('Vendas', $funnel->get('name'));
         self::assertTrue($funnel->get('isDefault'));
-        self::assertFalse($funnel->get('followupsEnabled'), 'Nothing in a trial messages customers before "Ative a IA".');
         self::assertSame([$baseTeamId], $funnel->getLinkMultipleIdList('teams'));
         $stages = [];
         foreach ($this->em->getRDBRepository('OpportunityStage')->where(['funnelId' => $funnel->getId()])->order('order')->find() as $stage) {
@@ -122,6 +121,7 @@ class ProvisioningTest extends TestCase
         self::assertSame('IA Clínica Teste', $agent->get('name'));
         self::assertSame([], $agent->getLinkMultipleIdList('chatwootInboxes'), 'A silent agent has no inbox, so it is never assigned.');
         self::assertSame([$funnel->getId()], $agent->getLinkMultipleIdList('funnelsToManage'));
+        self::assertFalse($agent->get('followupsEnabled'), 'The trial AI never schedules follow-ups on its own.');
         self::assertSame(1, $this->callCount('POST /platform/api/v1/accounts/:id/machine_identities'));
         $identity = $this->em->getRDBRepository('ChatwootMachineIdentity')->where(['membershipId' => $agent->getId()])->findOne();
         self::assertSame('active', $identity->get('status'));

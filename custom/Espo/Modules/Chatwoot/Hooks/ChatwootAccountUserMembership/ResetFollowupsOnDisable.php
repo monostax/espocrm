@@ -19,8 +19,10 @@ use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\Option\SaveOptions;
 
 /**
- * Bulk-resets active follow-up loops when an AI agent's automatic
- * follow-up toggle (`followupsEnabled`) is switched OFF.
+ * Bulk-resets active follow-up loops when an AI agent's "schedules
+ * follow-ups on its own" toggle (`followupsEnabled`) is switched OFF. The
+ * toggle only gates the AI's own scheduling, but switching it off still
+ * cancels every follow-up this agent drives, manual ones included.
  *
  * Every Opportunity currently in `followupStatus = 'FollowupActive'`
  * (or with a non-null timer) whose follow-up loop is DRIVEN by this

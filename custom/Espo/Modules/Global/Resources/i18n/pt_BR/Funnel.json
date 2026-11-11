@@ -18,11 +18,7 @@
         "tenant": "Ambiente",
         "isActive": "Ativo",
         "isDefault": "É Padrão",
-        "followupsEnabled": "Follow-up Automático Ativado",
         "opportunityStages": "Estágios da Oportunidade"
-    },
-    "tooltips": {
-        "followupsEnabled": "Quando desativado, oportunidades deste funil nunca executam follow-ups automáticos: o funcionário digital não agenda follow-ups em novas oportunidades, follow-ups agendados deixam de disparar, e oportunidades atualmente em 'Follow-up Ativo' têm o agendamento limpo (passando para 'Follow-up Inativo' com a contagem preservada) no momento em que você desativa. O funcionário digital continua criando e atualizando oportunidades neste funil normalmente."
     },
     "boolFilters": {
         "onlyMy": "Atribuído a Mim"

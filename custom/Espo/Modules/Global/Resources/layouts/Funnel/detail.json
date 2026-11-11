@@ -18,12 +18,6 @@
             ],
             [
                 {
-                    "name": "followupsEnabled"
-                },
-                false
-            ],
-            [
-                {
                     "name": "description",
                     "fullWidth": true
                 }

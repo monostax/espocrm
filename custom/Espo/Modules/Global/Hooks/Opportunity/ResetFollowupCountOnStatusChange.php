@@ -26,9 +26,9 @@ use Espo\ORM\Repository\Option\SaveOptions;
  * is never reset here.
  *
  * Runs at $order = 19 — AFTER {@see AutoSetFollowupStatusOnClose}
- * ($order = 10) and {@see EnforceFollowupsEnabled} ($order = 18) so a
- * timer that was coerced to null on a closed or follow-up-disabled
- * opportunity does not reset `followupCount`.
+ * ($order = 10) and {@see PauseFollowupForPersonStep} ($order = 17) so a
+ * timer that was coerced to null on a closed opportunity or behind a
+ * person's pending step does not reset `followupCount`.
  *
  * @implements BeforeSave<Opportunity>
  */

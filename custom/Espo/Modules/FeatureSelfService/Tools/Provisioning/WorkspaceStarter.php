@@ -94,8 +94,6 @@ class WorkspaceStarter
                 'teamsIds' => [$baseTeamId],
                 'isActive' => true,
                 'isDefault' => true,
-                // AI follow-ups message customers: nothing in a trial does that before "Ative a IA".
-                'followupsEnabled' => false,
             ]);
 
             foreach (self::STAGES as $stage) {
@@ -123,6 +121,12 @@ class WorkspaceStarter
             'instructions' => '',
             'operationId' => self::operationId($provisioningId),
         ]);
+
+        // AI follow-ups message customers: the agent never schedules them on its own until a person turns that on.
+        if ($membership->get('followupsEnabled')) {
+            $membership->set('followupsEnabled', false);
+            $this->entityManager->saveEntity($membership, ['silent' => true, 'skipAssignedUserApiKeyProvision' => true]);
+        }
 
         $funnels = $this->entityManager
             ->getRDBRepository('ChatwootAccountUserMembership')

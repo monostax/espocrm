@@ -11,10 +11,6 @@
                 { "name": "isDefault" }
             ],
             [
-                { "name": "followupsEnabled" },
-                false
-            ],
-            [
                 {
                     "name": "description",
                     "fullWidth": true

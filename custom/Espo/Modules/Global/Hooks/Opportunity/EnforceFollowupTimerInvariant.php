@@ -24,7 +24,7 @@ use Espo\ORM\Repository\Option\SaveOptions;
  *   followupTimer === null  ⇒  'FollowupInactive'
  *
  * Runs at $order = 20 — AFTER {@see AutoSetFollowupStatusOnClose}
- * ($order = 10), {@see EnforceFollowupsEnabled} ($order = 18), and
+ * ($order = 10), {@see PauseFollowupForPersonStep} ($order = 17), and
  * {@see ResetFollowupCountOnStatusChange} ($order = 19) so `followupStatus`
  * always reflects the final `followupTimer` value.
  *

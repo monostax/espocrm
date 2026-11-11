@@ -16,11 +16,6 @@
                 {
                     "name": "isActive"
                 }
-            ],
-            [
-                {
-                    "name": "followupsEnabled"
-                }
             ]
         ]
     }

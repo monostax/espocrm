@@ -28,9 +28,9 @@ use Espo\ORM\Repository\Option\SaveOptions;
  *
  * Pausing only clears `followupTimer`, so the cycle count is kept, as when
  * a user turns the follow-up off. Runs at $order = 17, before
- * {@see EnforceFollowupsEnabled} (18), {@see ResetFollowupCountOnStatusChange}
- * (19) and {@see EnforceFollowupTimerInvariant} (20), which derives
- * `followupStatus` from the timer.
+ * {@see ResetFollowupCountOnStatusChange} (19) and
+ * {@see EnforceFollowupTimerInvariant} (20), which derives `followupStatus`
+ * from the timer.
  *
  * @implements BeforeSave<Opportunity>
  */
