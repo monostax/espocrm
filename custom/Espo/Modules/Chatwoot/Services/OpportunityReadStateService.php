@@ -64,7 +64,7 @@ class OpportunityReadStateService
                 'parentType' => 'Opportunity',
                 'parentId=s' => $scope,
                 'OR' => [['createdById!=' => $userId], ['createdById' => null]],
-            ])->where(['type' => OpportunityStreamEvents::TYPES])->where($this->eventAccess->where($this->user));
+            ])->where(self::countsAsUnreadWhere($userId))->where($this->eventAccess->where($this->user));
 
         // GROUP BY makes each one-row-per-opportunity derived table. In particular,
         // MariaDB must not re-evaluate the event ACL and unread predicate for every
@@ -388,6 +388,7 @@ class OpportunityReadStateService
 
         if ($unreadWhere) {
             $where = $this->otherPostsWhere(array_keys($opportunities), $userId);
+            $where[] = self::countsAsUnreadWhere($userId);
             $where['AND'] = [['OR' => $unreadWhere]];
             foreach ($this->countPosts($where) as $id => $count) {
                 $result[$id]['unreadCount'] = $count;
@@ -654,6 +655,19 @@ class OpportunityReadStateService
             'OR' => [['createdById!=' => $userId], ['createdById' => null]],
             $this->streamWhere(),
         ];
+    }
+
+    /**
+     * Only a received-message pill or a post/reply that @mentions the viewer makes an
+     * opportunity unread. Plain posts and other pills (overdue activities) never do;
+     * the read cursor still moves past every stream entry.
+     */
+    private static function countsAsUnreadWhere(string $userId): array
+    {
+        return ['OR' => [
+            ['type' => OpportunityStreamEvents::MESSAGE_RECEIVED],
+            ['type' => Note::TYPE_POST] + self::mentionWhere($userId),
+        ]];
     }
 
     private function streamWhere(): array

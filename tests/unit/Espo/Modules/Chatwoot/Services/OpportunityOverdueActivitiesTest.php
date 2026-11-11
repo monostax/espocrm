@@ -233,6 +233,7 @@ class OpportunityOverdueActivitiesTest extends TestCase
         self::assertTrue($entity->get('isInternal'));
         $note = $this->createMock(Note::class);
         $note->method('getType')->willReturn($type);
+        $note->method('getParentType')->willReturn('Opportunity');
         // No parent dependencies are initialized: reaching notification fan-out would fail.
         $processor = (new ReflectionClass(NoteHookProcessor::class))->newInstanceWithoutConstructor();
         $processor->afterSave($note, new Params());

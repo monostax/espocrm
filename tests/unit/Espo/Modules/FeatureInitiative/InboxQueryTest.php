@@ -46,7 +46,7 @@ class InboxQueryTest extends TestCase
         $this->pdo->sqliteCreateFunction('IF', fn ($condition, $yes, $no) => $condition ? $yes : $no);
         $tables = [
             'Initiative' => ['id', 'tenantId', 'initiativeTypeId', 'stageId', 'assignedUserId', 'status', 'readable', 'deleted'],
-            'Note' => ['id', 'parentType', 'parentId', 'type', 'createdById', 'opportunityThreadRootId', 'opportunityPostDeleted', 'number', 'deleted'],
+            'Note' => ['id', 'parentType', 'parentId', 'type', 'createdById', 'opportunityThreadRootId', 'opportunityPostDeleted', 'opportunityMentionUserIds', 'number', 'deleted'],
             'ActivityReadState' => ['id', 'parentType', 'parentId', 'userId', 'threadKey', 'lastSeenNumber', 'isMarkedUnread', 'deleted'],
         ];
         $defs = [];
@@ -105,14 +105,17 @@ class InboxQueryTest extends TestCase
         $this->pdo->exec("INSERT INTO initiative (id, tenant_id, initiative_type_id, status, readable) VALUES
             ('a', 'tenant-a', 'type-a', 'Open', 1), ('b', 'tenant-a', 'type-a', 'Completed', 1),
             ('c', 'tenant-b', 'type-b', 'In Progress', 1), ('d', 'tenant-a', 'type-b', 'In Progress', 0)");
-        $this->pdo->exec("INSERT INTO note (id, parent_type, parent_id, type, created_by_id, number)
-            VALUES ('post-a', 'Initiative', 'a', 'Post', 'other', 1), ('post-c', 'Initiative', 'c', 'Post', 'other', 2)");
+        // Only a post that @mentions the viewer makes a record unread; a plain post on b does not.
+        $this->pdo->exec("INSERT INTO note (id, parent_type, parent_id, type, created_by_id, opportunity_mention_user_ids, number)
+            VALUES ('post-a', 'Initiative', 'a', 'Post', 'other', '[\"agent\"]', 1),
+            ('post-b', 'Initiative', 'b', 'Post', 'other', NULL, 3),
+            ('post-c', 'Initiative', 'c', 'Post', 'other', '[\"agent\"]', 2)");
     }
 
-    /** SQLite accepts the same SQL but not the parentheses around UNION members. */
+    /** SQLite accepts the same SQL but not the parentheses around UNION members, nor ILIKE. */
     private function sqlite(string $sql): string
     {
-        $sql = str_replace(['((SELECT', ') UNION (SELECT'], ['(SELECT', ' UNION SELECT'], $sql);
+        $sql = str_replace(['((SELECT', ') UNION (SELECT', ' ILIKE '], ['(SELECT', ' UNION SELECT', ' LIKE '], $sql);
         return preg_replace('/\)\) AS ([`"])activityUnread/', ') AS $1activityUnread', $sql);
     }
 

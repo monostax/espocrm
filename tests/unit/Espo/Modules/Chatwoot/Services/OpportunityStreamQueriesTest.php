@@ -138,13 +138,42 @@ class OpportunityStreamQueriesTest extends TestCase
             ]);
     }
 
-    public function testUnreadCountsTenMessagesNotOnePillAndExcludesHiddenEventsAndOwnPosts(): void
+    /** The same predicate getReadStates counts with. */
+    private function unreadWhere(): array
+    {
+        $where = (new ReflectionMethod($this->service, 'otherPostsWhere'))->invoke($this->service, ['opp'], 'agent');
+        $where[] = (new ReflectionMethod(OpportunityReadStateService::class, 'countsAsUnreadWhere'))->invoke(null, 'agent');
+        return $where;
+    }
+
+    private function mention(int $number): void
+    {
+        $this->pdo->exec("UPDATE note SET opportunity_mention_user_ids = '[\"agent\"]' WHERE id = 'note-$number'");
+    }
+
+    public function testUnreadCountsMessagesAndMentionsButNotPlainPostsHiddenEventsOrOwnPosts(): void
     {
         $this->insert(14, 'Post', author: 'agent');
-        $where = (new ReflectionMethod($this->service, 'otherPostsWhere'))->invoke($this->service, ['opp'], 'agent');
+        $this->mention(14);
+        $this->insert(15, 'Post', author: 'colleague');
+        $this->insert(16, 'Post', author: 'colleague');
+        $this->mention(16);
         $query = SelectBuilder::create()->from('Note')->select([['COUNT:id', 'count']])
-            ->where($where)->where(['number>' => 1])->build();
-        self::assertSame(10, (int) $this->pdo->query($this->composer->composeSelect($query))->fetchColumn());
+            ->where($this->unreadWhere())->where(['number>' => 1])->build();
+        // Ten visible messages plus the colleague's mention; not the plain post, hidden message, or own post.
+        self::assertSame(11, (int) $this->pdo->query($this->composer->composeSelect($query))->fetchColumn());
+    }
+
+    public function testPlainPostDoesNotMakeTheOpportunityUnreadButAMentionDoes(): void
+    {
+        $this->pdo->exec('UPDATE opportunity_read_state SET last_seen_number = 13');
+        $builder = SelectBuilder::create()->from('Opportunity', 'opportunity')->select('id');
+        $this->service->applyListFilter($builder, true);
+        $sql = $this->composer->composeSelect($builder->build());
+        $this->insert(14, 'Post', author: 'colleague');
+        self::assertSame([], $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN));
+        $this->mention(14);
+        self::assertSame(['opp'], $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN));
     }
 
     public function testCardParticipantsIncludeThreadAuthorsAndExcludeEventsDeletedUsersAndOtherStreams(): void
@@ -356,18 +385,25 @@ class OpportunityStreamQueriesTest extends TestCase
         }
     }
 
-    public function testOverdueActivityCountsAsOneUnreadEntryAndBecomesThePreview(): void
+    public function testOverdueActivityNeverMakesTheOpportunityUnreadButBecomesThePreview(): void
     {
+        $this->pdo->exec('UPDATE opportunity_read_state SET last_seen_number = 11');
         $this->insert(14, OpportunityStreamEvents::ACTIVITY_OVERDUE, 'visible-task');
         $this->pdo->exec("UPDATE note SET related_type = 'Task' WHERE id = 'note-14'");
         $this->insert(15, OpportunityStreamEvents::ACTIVITY_OVERDUE, 'hidden-task');
         $this->pdo->exec("UPDATE note SET related_type = 'Task' WHERE id = 'note-15'");
-        $where = (new ReflectionMethod($this->service, 'otherPostsWhere'))->invoke($this->service, ['opp'], 'agent');
         $query = SelectBuilder::create()->from('Note')->select([['COUNT:id', 'count']])
-            ->where($where)->where(['number>' => 11])->build();
-        self::assertSame(1, (int) $this->pdo->query($this->composer->composeSelect($query))->fetchColumn());
+            ->where($this->unreadWhere())->where(['number>' => 11])->build();
+        self::assertSame(0, (int) $this->pdo->query($this->composer->composeSelect($query))->fetchColumn());
+        $unread = SelectBuilder::create()->from('Opportunity', 'opportunity')->select('id');
+        $this->service->applyListFilter($unread, true);
+        $sql = $this->composer->composeSelect($unread->build());
+        self::assertSame([], $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN));
         $builder = SelectBuilder::create()->from('Note')->select('id');
         (new LatestOpportunityEntry($this->user, $this->access))->apply($builder);
         self::assertSame(['note-14'], $this->pdo->query($this->composer->composeSelect($builder->build()))->fetchAll(PDO::FETCH_COLUMN));
+        // A received message after the pill still makes it unread.
+        $this->insert(16, OpportunityMessageEvents::TYPE);
+        self::assertSame(['opp'], $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN));
     }
 }

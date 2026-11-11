@@ -133,7 +133,8 @@ class OpportunityStreamQueryTest extends TestCase
     public function testUnreadPreservesCutoffsMentionsThreadsAndManualMarks(): void
     {
         foreach (['mine', 'read', 'no-cutoff', 'closed', 'mention', 'colleague', 'participant', 'manual',
-            'thread', 'seen-thread', 'hidden', 'self', 'legacy', 'other-tenant', 'deleted-note'] as $id) {
+            'thread', 'seen-thread', 'hidden', 'self', 'legacy', 'other-tenant', 'deleted-note',
+            'plain', 'plain-thread', 'overdue'] as $id) {
             $this->opportunity($id, match ($id) {
                 'closed', 'mention', 'manual' => ['status' => 'Won'],
                 'colleague', 'participant' => ['assigned_user_id' => 'other'],
@@ -151,19 +152,26 @@ class OpportunityStreamQueryTest extends TestCase
             }
         }
         $number = 20;
+        // Only received-message pills and posts/replies that @mention me make an opportunity unread.
+        $message = ['type' => 'ChatwootMessageReceived'];
+        $mention = ['opportunity_mention_user_ids' => '["me"]'];
         foreach (['mine', 'read', 'no-cutoff', 'closed', 'mention', 'colleague', 'participant',
-            'thread', 'seen-thread', 'hidden', 'self', 'legacy', 'other-tenant', 'deleted-note'] as $id) {
+            'thread', 'seen-thread', 'hidden', 'self', 'legacy', 'other-tenant', 'deleted-note',
+            'plain', 'plain-thread', 'overdue'] as $id) {
             $this->note($id, $number++, match ($id) {
-                'mention' => ['opportunity_mention_user_ids' => '["me"]'],
-                'thread', 'seen-thread' => ['opportunity_thread_root_id' => $id],
-                'hidden' => ['visible' => 0],
-                'self' => ['created_by_id' => 'me'],
-                'deleted-note' => ['deleted' => 1],
-                default => [],
+                'mention' => $mention,
+                'thread', 'seen-thread' => ['opportunity_thread_root_id' => $id] + $mention,
+                'hidden' => ['visible' => 0] + $message,
+                'self' => ['created_by_id' => 'me'] + $mention,
+                'deleted-note' => ['deleted' => 1] + $message,
+                'plain' => [],
+                'plain-thread' => ['opportunity_thread_root_id' => $id],
+                'overdue' => ['type' => 'ActivityOverdue'],
+                default => $message,
             });
         }
         // Multiple qualifying notes must not multiply list rows or aggregate counts.
-        $this->note('mine', 99);
+        $this->note('mine', 99, $message);
         $this->insert('opportunity_thread_read_state', ['id' => 'seen', 'root_note_id' => 'seen-thread',
             'user_id' => 'me', 'last_seen_number' => 1000]);
         $query = SelectBuilder::create()->from('Opportunity')->select(['id'])->order('id');
@@ -250,11 +258,12 @@ class OpportunityStreamQueryTest extends TestCase
             });
             $this->state($id);
         }
-        $this->note('mine', 20);
-        $this->note('mine', 21);
-        $this->note('unassigned', 22);
-        $this->note('closed', 23);
-        $this->note('other-tenant', 24);
+        $message = ['type' => 'ChatwootMessageReceived'];
+        $this->note('mine', 20, $message);
+        $this->note('mine', 21, $message);
+        $this->note('unassigned', 22, $message);
+        $this->note('closed', 23, $message);
+        $this->note('other-tenant', 24, $message);
         foreach (['all' => [3, 2], 'me' => [2, 1], 'unassigned' => [1, 1]] as $tab => [$all, $unread]) {
             $request = $this->createMock(Request::class);
             $request->method('getQueryParam')->willReturnCallback(fn ($key) => $key === 'assigneeTab' ? $tab : null);

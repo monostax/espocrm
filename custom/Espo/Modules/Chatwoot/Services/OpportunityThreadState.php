@@ -89,7 +89,12 @@ class OpportunityThreadState
         }
     }
 
-    /** @return array<string, array> */
+    /**
+     * Opportunity-level unread replies: only replies that @mention the viewer, like the
+     * main stream. Per-thread summaries still count every unread reply.
+     *
+     * @return array<string, array>
+     */
     public function unreadByOpportunity(array $ids): array
     {
         if (!$ids) {
@@ -97,18 +102,17 @@ class OpportunityThreadState
         }
         $query = SelectBuilder::create()->from('Note')->select([
             'parentId', 'opportunityThreadRootId', ['COUNT:id', 'count'],
-        ])->where(['parentType' => 'Opportunity', 'parentId' => $ids, 'type' => Note::TYPE_POST])
-            ->where(self::unreadWhere($this->user->getId()))->group(['parentId', 'opportunityThreadRootId']);
+        ])->where([
+            'parentType' => 'Opportunity', 'parentId' => $ids, 'type' => Note::TYPE_POST,
+            'opportunityMentionUserIds!=' => null,
+            'opportunityMentionUserIds*' => '%"' . $this->user->getId() . '"%',
+        ])->where(self::unreadWhere($this->user->getId()))->group(['parentId', 'opportunityThreadRootId']);
         $result = [];
         foreach ($this->entityManager->getQueryExecutor()->execute($query->build())->fetchAll(\PDO::FETCH_ASSOC) as $row) {
             $id = $row['parentId'];
-            $result[$id] ??= ['count' => 0, 'rootIds' => [], 'hasMention' => false];
+            $result[$id] ??= ['count' => 0, 'rootIds' => [], 'hasMention' => true];
             $result[$id]['count'] += (int) $row['count'];
             $result[$id]['rootIds'][] = $row['opportunityThreadRootId'];
-        }
-        $query->where(['opportunityMentionUserIds*' => '%"' . $this->user->getId() . '"%']);
-        foreach ($this->entityManager->getQueryExecutor()->execute($query->build())->fetchAll(\PDO::FETCH_ASSOC) as $row) {
-            $result[$row['parentId']]['hasMention'] = true;
         }
         return $result;
     }

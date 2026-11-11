@@ -56,7 +56,7 @@ class ActivityDiscussion
             'parentType' => $type, 'type' => 'Post', 'opportunityPostDeleted' => false,
         ]);
         if ($unread) {
-            $notes->where($this->unreadWhere('activityPost'));
+            $notes->where($this->unreadWhere('activityPost'))->where($this->countsAsUnreadWhere($type));
             $marked = SelectBuilder::create()->from('ActivityReadState')->select('parentId', 'id')->where([
                 'parentType' => $type, 'userId' => $this->user->getId(),
                 'threadKey' => 'main', 'isMarkedUnread' => true,
@@ -64,12 +64,27 @@ class ActivityDiscussion
             $union = UnionBuilder::create()->query($notes->build())->query($marked)->build();
             $ids = SelectBuilder::create()->fromQuery($union, 'activityUnread')->select('id')->build();
         } else {
-            $ids = $notes->where([
-                'opportunityMentionUserIds!=' => null,
-                'opportunityMentionUserIds*' => '%"' . $this->user->getId() . '"%',
-            ])->build();
+            $ids = $notes->where($this->mentionWhere())->build();
         }
         $query->where(Cmp::in(Expr::column('id'), $ids));
+    }
+
+    /**
+     * Only a post or reply that @mentions the viewer makes a record unread; plain posts
+     * never do. AI sessions are the viewer's own chat with an agent, so every reply counts.
+     * Per-thread summaries still count every unread reply.
+     */
+    private function countsAsUnreadWhere(string $type): array
+    {
+        return $type === 'AiSession' ? [] : $this->mentionWhere();
+    }
+
+    private function mentionWhere(): array
+    {
+        return [
+            'opportunityMentionUserIds!=' => null,
+            'opportunityMentionUserIds*' => '%"' . $this->user->getId() . '"%',
+        ];
     }
 
     public function states(string $type, array $ids): array
@@ -88,7 +103,8 @@ class ActivityDiscussion
         }
         $query = SelectBuilder::create()->from('Note')->select(['parentId', 'opportunityThreadRootId', ['COUNT:id', 'count']])
             ->where(['parentType' => $type, 'parentId' => $ids, 'type' => 'Post', 'opportunityPostDeleted' => false])
-            ->where($this->unreadWhere())->group(['parentId', 'opportunityThreadRootId'])->build();
+            ->where($this->unreadWhere())->where($this->countsAsUnreadWhere($type))
+            ->group(['parentId', 'opportunityThreadRootId'])->build();
         foreach ($this->em->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $row) {
             $state = &$result[$row['parentId']];
             $count = (int) $row['count'];
