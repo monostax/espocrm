@@ -16,9 +16,11 @@ final class Creation
         return $this->execute($tenant, $this->store->customer($tenant, $obligation, $profile));
     }
 
-    public function charge(string $tenant, string $obligation, string $customerCreation, string $billingType, string $dueDate): array
+    /** @param array{description?: string, successUrl?: string} $presentation See Asaas\Command::charge. */
+    public function charge(string $tenant, string $obligation, string $customerCreation, string $billingType, string $dueDate,
+        array $presentation = []): array
     {
-        return $this->execute($tenant, $this->store->charge($tenant, $obligation, $customerCreation, $billingType, $dueDate));
+        return $this->execute($tenant, $this->store->charge($tenant, $obligation, $customerCreation, $billingType, $dueDate, $presentation));
     }
 
     private function execute(string $tenant, array $claim): array

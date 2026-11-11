@@ -18,6 +18,7 @@ use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\ServiceUnavailable;
 use Espo\Core\InjectableFactory;
+use Espo\Core\Utils\Config;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Jobs\SyncInboxesFromChatwoot;
 use Espo\Modules\Chatwoot\Services\WahaInboxAdoption;
@@ -25,6 +26,7 @@ use Espo\Modules\FeatureAiUsage\Services\Access as BillingAccess;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanCheckout;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanOffers;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanRecommendation;
+use Espo\Modules\FeatureSelfService\Tools\Plans\PlanSubscription;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAccess;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceWallet;
@@ -53,6 +55,15 @@ use Espo\ORM\EntityManager;
  *        Billing administrators only (the tenant-admin role). Errors are
  *        {"code": ...}: ALREADY_SUBSCRIBED, CHECKOUT_IN_PROGRESS, PAYER_CHANGED,
  *        INVALID_DOCUMENT, INVALID_REQUEST, PLANS_UNAVAILABLE, PAYMENT_PENDING.
+ *        With config `selfServiceCheckoutReturnEnabled`, the payment page sends
+ *        the payer back to Settings › Planos & Assinatura once paid (the
+ *        Chatwoot domain must be registered in the Asaas account first).
+ *   GET  /SelfService/subscription?accountId=
+ *        The plan subscription for Settings › Planos & Assinatura.
+ *   POST /SelfService/subscription/cancel {accountId}
+ *        Cancels it with the payment provider; access stays until the paid
+ *        period ends. Billing administrators only. Errors: NO_ACTIVE_SUBSCRIPTION,
+ *        PAYMENT_PENDING (the provider didn't confirm; retry).
  *
  * Access follows the feature-pack endpoint: the user must be able to read the
  * account and act for its tenant.
@@ -66,13 +77,21 @@ class SelfServiceWorkspace
         private UserTenantResolver $userTenantResolver,
         private WorkspaceTrial $trial,
         private InjectableFactory $injectableFactory,
+        private Config $config,
     ) {}
 
     public function getActionState(Request $request): object
     {
         [, $tenant] = $this->resolve($request->getQueryParam('accountId'));
+        $state = $this->trial->state($tenant);
 
-        return (object) $this->trial->state($tenant);
+        if ($state['selfService'] ?? false) {
+            // A cancelled plan runs out with its paid period: the banner says so instead of "pay the invoice".
+            $state['subscriptionCancelled'] = $this->injectableFactory->create(PlanSubscription::class)
+                ->isCancelled((string) $tenant->getId());
+        }
+
+        return (object) $state;
     }
 
     public function postActionRefresh(Request $request): object
@@ -153,7 +172,7 @@ class SelfServiceWorkspace
     public function postActionCheckout(Request $request): object
     {
         $body = $request->getParsedBody();
-        [, $tenant] = $this->resolve($body->accountId ?? null);
+        [$account, $tenant] = $this->resolve($body->accountId ?? null);
         $tenantId = (string) $tenant->getId();
 
         // The billing engine's own rule for who may buy: tenant administrators.
@@ -171,7 +190,8 @@ class SelfServiceWorkspace
         try {
             return (object) $this->injectableFactory->create(PlanCheckout::class)->start(
                 $tenantId, (string) $this->user->getId(), $seats, $body->credits,
-                ['name' => trim($payer->name), 'cpfCnpj' => preg_replace('/\D/', '', $payer->cpfCnpj), 'email' => trim($payer->email)]
+                ['name' => trim($payer->name), 'cpfCnpj' => preg_replace('/\D/', '', $payer->cpfCnpj), 'email' => trim($payer->email)],
+                $this->returnUrl($account)
             );
         } catch (InvalidArgumentException $e) {
             $code = str_contains($e->getMessage(), 'CPF/CNPJ') ? 'INVALID_DOCUMENT' : 'INVALID_REQUEST';
@@ -185,6 +205,62 @@ class SelfServiceWorkspace
         } catch (ServiceUnavailable) {
             throw ServiceUnavailable::createWithBody('PAYMENT_PENDING', $this->code('PAYMENT_PENDING'));
         }
+    }
+
+    public function getActionSubscription(Request $request): object
+    {
+        [, $tenant] = $this->resolve($request->getQueryParam('accountId'));
+        $tenantId = (string) $tenant->getId();
+
+        return (object) ($this->injectableFactory->create(PlanSubscription::class)->read($tenantId)
+            + ['canManage' => $this->canManageBilling($tenantId)]);
+    }
+
+    public function postActionSubscriptionCancel(Request $request): object
+    {
+        [, $tenant] = $this->resolve($request->getParsedBody()->accountId ?? null);
+        $tenantId = (string) $tenant->getId();
+        $this->injectableFactory->create(BillingAccess::class)->assertTenant($tenantId);
+
+        try {
+            return (object) ($this->injectableFactory->create(PlanSubscription::class)
+                ->cancel($tenantId, (string) $this->user->getId()) + ['canManage' => true]);
+        } catch (Conflict) {
+            throw Conflict::createWithBody('NO_ACTIVE_SUBSCRIPTION', $this->code('NO_ACTIVE_SUBSCRIPTION'));
+        } catch (ServiceUnavailable) {
+            throw ServiceUnavailable::createWithBody('PAYMENT_PENDING', $this->code('PAYMENT_PENDING'));
+        }
+    }
+
+    private function canManageBilling(string $tenantId): bool
+    {
+        try {
+            $this->injectableFactory->create(BillingAccess::class)->assertTenant($tenantId);
+
+            return true;
+        } catch (Forbidden) {
+            return false;
+        }
+    }
+
+    /**
+     * Settings › Planos & Assinatura on the workspace's Chatwoot, where the
+     * payer lands after paying. Off until the domain is registered in Asaas.
+     */
+    private function returnUrl(Entity $account): ?string
+    {
+        if ($this->config->get('selfServiceCheckoutReturnEnabled') !== true) {
+            return null;
+        }
+
+        $platform = $this->entityManager->getEntityById('ChatwootPlatform', (string) $account->get('platformId'));
+        $frontend = rtrim((string) $platform?->get('frontendUrl'), '/');
+
+        if (!str_starts_with($frontend, 'https://')) {
+            return null;
+        }
+
+        return $frontend . '/app/accounts/' . (int) $account->get('chatwootAccountId') . '/settings/plan?paid=1';
     }
 
     private function code(string $code): string

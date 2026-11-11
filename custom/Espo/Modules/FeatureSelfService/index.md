@@ -155,6 +155,19 @@ Ferraz Veloso's private offer.
   249 plus the step. The accepted terms carry credits = step + 250 ×
   attendants, granted on each paid invoice and kept until the end of the
   following period.
+- The invoice says what is bought ("Plano Monostax: 2 atendentes, 2.500
+  créditos de IA por mês"). With config `selfServiceCheckoutReturnEnabled`, the
+  subscription carries an Asaas callback that sends the payer back to Chatwoot
+  Settings › Planos & Assinatura (`/app/accounts/<id>/settings/plan?paid=1`);
+  the Chatwoot domain must be registered in the Asaas account first.
+- `GET /SelfService/subscription?accountId=` (`PlanSubscription`): the plan
+  subscription for Settings › Planos & Assinatura (attendants, credits, price,
+  paid-through date, state) and whether the viewer may manage billing.
+- `POST /SelfService/subscription/cancel {accountId}` (tenant administrators):
+  cancels the active subscription with Asaas. Nothing more is charged; access
+  follows paid periods, so it stays until the paid period ends, then the usual
+  grace. `GET /SelfService/workspace` adds `subscriptionCancelled` so the
+  banner says when the workspace pauses instead of asking to pay.
 - Not built yet: changing attendants or credits on a live subscription (Asaas
   subscription updates), Pix Automático, buying extra credits from Chatwoot,
   agent and channel limits.

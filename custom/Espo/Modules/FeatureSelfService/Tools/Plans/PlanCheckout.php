@@ -48,9 +48,12 @@ class PlanCheckout
      * @return array{state: string, paymentUrl: ?string, obligationId: string}
      * @throws Conflict ALREADY_SUBSCRIBED, CHECKOUT_IN_PROGRESS, PAYER_CHANGED
      * @throws InvalidArgumentException invalid monthly credits, seats or payer
+     * @param ?string $returnUrl Where the payment page sends the payer once paid (Asaas callback); its domain
+     *     must be the one registered in the Asaas account.
      * @throws ServiceUnavailable the payment provider didn't confirm a step; retry
      */
-    public function start(string $tenantId, string $actorId, int $seats, string $credits, array $payer): array
+    public function start(string $tenantId, string $actorId, int $seats, string $credits, array $payer,
+        ?string $returnUrl = null): array
     {
         $terms = $this->offers->find($tenantId, $credits)
             ?? throw new InvalidArgumentException('Unknown monthly credits.');
@@ -94,8 +97,10 @@ class PlanCheckout
         }
 
         if (!$view['charge'] || $view['charge']['state'] !== 'bound') {
+            $presentation = ['description' => self::description($terms, $seats)]
+                + ($returnUrl !== null ? ['successUrl' => $returnUrl] : []);
             $charge = $this->creation->charge($tenantId, $obligationId, $customer['creationId'], self::BILLING_TYPE,
-                (string) $view['earliestDueDate']);
+                (string) $view['earliestDueDate'], $presentation);
 
             if ($charge['state'] !== 'bound') {
                 throw new ServiceUnavailable('The subscription was not confirmed yet.');
@@ -156,6 +161,15 @@ class PlanCheckout
         }
 
         return null;
+    }
+
+    /** What the invoice says, e.g. "Plano Monostax: 2 atendentes, 2.500 créditos de IA por mês". */
+    public static function description(\Espo\Modules\FeatureCredits\Billing\OfferTerms $terms, int $seats): string
+    {
+        $credits = (int) round((float) $terms->credits) + $seats * (int) round((float) ($terms->seats['includedCredits'] ?? 0));
+
+        return sprintf('Plano Monostax: %d %s, %s créditos de IA por mês',
+            $seats, $seats === 1 ? 'atendente' : 'atendentes', number_format($credits, 0, ',', '.'));
     }
 
     private static function key(string $purpose): string

@@ -33,18 +33,29 @@ final readonly class Command
         return new self('customer', $body);
     }
 
-    public static function charge(OfferTerms $terms, string $customerId, string $reference, string $billingType, string $dueDate): self
+    /**
+     * @param array{description?: string, successUrl?: string} $presentation What the payer sees: the invoice
+     *     description, and where Asaas sends them after paying (its domain must be the one registered in the
+     *     Asaas account). Neither changes the accepted terms.
+     */
+    public static function charge(OfferTerms $terms, string $customerId, string $reference, string $billingType, string $dueDate,
+        array $presentation = []): self
     {
         self::externalId('customer', $customerId); self::reference($reference);
         GrantInput::timestamp($dueDate . ' 00:00:00');
         if ($terms->currency !== 'BRL' || !in_array($billingType, ['PIX', 'BOLETO', 'CREDIT_CARD', 'UNDEFINED'], true)) {
             throw new InvalidArgumentException('Asaas requires BRL and a supported payment method.');
         }
+        self::presentation($presentation);
         $body = ['customer' => $customerId, 'billingType' => $billingType, 'value' => $terms->price,
-            'externalReference' => $reference, 'description' => 'CRM credits ' . $terms->offerId . ' / ' . $terms->version,
+            'externalReference' => $reference,
+            'description' => $presentation['description'] ?? ('CRM credits ' . $terms->offerId . ' / ' . $terms->version),
             // No account-level late fees/discounts may silently alter the accepted price.
             'discount' => ['value' => 0, 'dueDateLimitDays' => 0, 'type' => 'FIXED'],
             'interest' => ['value' => 0], 'fine' => ['value' => 0, 'type' => 'FIXED']];
+        if (isset($presentation['successUrl'])) {
+            $body['callback'] = ['successUrl' => $presentation['successUrl'], 'autoRedirect' => true];
+        }
         if ($terms->operation === 'subscription') {
             $body['cycle'] = 'MONTHLY'; $body['nextDueDate'] = $dueDate;
             return new self('subscription', $body);
@@ -79,6 +90,23 @@ final readonly class Command
     {
         $prefix = match ($kind) { 'customer' => 'cus_', 'payment' => 'pay_', 'subscription' => 'sub_', default => throw new InvalidArgumentException('Invalid Asaas object kind.') };
         if (!preg_match('/^' . $prefix . '[a-zA-Z0-9_-]{1,100}$/D', $id)) throw new InvalidArgumentException('Invalid Asaas object reference.');
+    }
+
+    private static function presentation(array $presentation): void
+    {
+        if (array_diff(array_keys($presentation), ['description', 'successUrl'])) {
+            throw new InvalidArgumentException('Unknown payer-facing charge field.');
+        }
+        $description = $presentation['description'] ?? null;
+        if ($description !== null && (!is_string($description) || trim($description) !== $description || $description === '' ||
+            mb_strlen($description) > 300 || preg_match('/[\x00-\x1f\x7f]/', $description))) {
+            throw new InvalidArgumentException('A bounded single-line charge description is required.');
+        }
+        $url = $presentation['successUrl'] ?? null;
+        if ($url !== null && (!is_string($url) || strlen($url) > 500 || !str_starts_with($url, 'https://') ||
+            filter_var($url, FILTER_VALIDATE_URL) === false || preg_match('/[\x00-\x20\x7f]/', $url))) {
+            throw new InvalidArgumentException('An absolute HTTPS return URL is required.');
+        }
     }
 
     private static function reference(string $reference): void

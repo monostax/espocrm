@@ -10,7 +10,7 @@ use Espo\Core\Utils\{Config, Crypt};
 use Espo\Modules\FeatureCredits\Accounting\Clock;
 use Espo\Modules\FeatureCredits\Billing\{Accounts, Catalog, Checkout, Creation, CreationStore, Subscriptions};
 use Espo\Modules\FeatureCredits\Billing\Asaas\{Adapter, Connection, Response};
-use Espo\Modules\FeatureSelfService\Tools\Plans\{PlanCheckout, PlanOffers};
+use Espo\Modules\FeatureSelfService\Tools\Plans\{PlanCheckout, PlanOffers, PlanSubscription};
 use Espo\ORM\EntityManager;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -48,6 +48,8 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
             $this->assertSame('1745.00', $subscriptions[0]['value'], '3 × 249 + 998.');
             $this->assertSame('MONTHLY', $subscriptions[0]['cycle']);
             $this->assertSame('CREDIT_CARD', $subscriptions[0]['billingType'], 'A card renews by itself.');
+            $this->assertSame('Plano Monostax: 3 atendentes, 2.750 créditos de IA por mês', $subscriptions[0]['description']);
+            $this->assertArrayNotHasKey('callback', $subscriptions[0], 'No return URL unless one is given.');
             $terms = $engine->read('tenant', $result['obligationId'])['acceptance']['terms'];
             $this->assertSame(3, $terms['seats']['quantity']);
             $this->assertSame('2750.0000', $terms['credits'], '2.000 monthly credits + 3 × 250 included.');
@@ -57,6 +59,54 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
             $this->assertSame($result['paymentUrl'], $again['paymentUrl']);
             $this->assertCount(1, $transport->posted('/subscriptions'), 'A retry continues the same checkout.');
             $this->assertCount(1, $transport->posted('/customers'));
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testThePaymentPageSendsThePayerBack(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo): void {
+            [$checkout, $transport] = $this->prepare($pdo);
+
+            $checkout->start('tenant', 'owner', 1, '0', self::payer(), 'https://chat.example.test/app/accounts/61/settings/plan?paid=1');
+
+            $subscription = $transport->posted('/subscriptions')[0];
+            $this->assertSame(['successUrl' => 'https://chat.example.test/app/accounts/61/settings/plan?paid=1', 'autoRedirect' => true],
+                $subscription['callback']);
+            $this->assertSame('Plano Monostax: 1 atendente, 250 créditos de IA por mês', $subscription['description']);
+            $this->assertSame('249.00', $subscription['value']);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testAPaidPlanIsReadAndCancelledKeepingItsPaidPeriod(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo): void {
+            [$checkout, $transport, , , $manager, $subscriptions] = $this->prepare($pdo);
+            $plan = new PlanSubscription($manager, $subscriptions);
+            $this->assertNull($plan->read('tenant')['subscription']);
+
+            $started = $checkout->start('tenant', 'owner', 3, '2000', self::payer());
+            $pdo->exec("UPDATE credit_billing_obligation SET state = 'active' WHERE id = '{$started['obligationId']}'");
+            $pdo->prepare('INSERT INTO credit_billing_period (id, tenant_id, obligation_id, period_key, starts_at, ends_at, terms_id,
+                binding_hash, created_at, paid_payment_id, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                ->execute(['period00000000001', 'tenant', $started['obligationId'], '2026-11-13', '2026-10-13 03:00:00',
+                    '2026-11-13 03:00:00', str_repeat('c', 64), str_repeat('e', 64), $this->now, 'pay_paid', 0]);
+
+            $this->assertSame(['state' => 'active', 'seats' => 3, 'seatPrice' => '249.00', 'monthlyCredits' => 2000,
+                'includedCredits' => 750, 'totalCredits' => 2750, 'price' => '1745.00', 'currency' => 'BRL',
+                'paidThrough' => '2026-11-13 03:00:00'], $plan->read('tenant')['subscription']);
+            $this->assertFalse($plan->isCancelled('tenant'));
+
+            $read = $plan->cancel('tenant', 'owner');
+            $this->assertSame('cancelled', $read['subscription']['state']);
+            $this->assertSame('2026-11-13 03:00:00', $read['subscription']['paidThrough'], 'Access runs to the end of the paid period.');
+            $this->assertTrue($plan->isCancelled('tenant'));
+            $this->assertCount(1, array_filter($transport->calls, static fn ($call) => $call[2] === 'DELETE'));
+
+            $this->expectException(Conflict::class);
+            $this->expectExceptionMessage('NO_ACTIVE_SUBSCRIPTION');
+            $plan->cancel('tenant', 'owner');
         });
     }
 
@@ -135,10 +185,11 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
         $accounts = new Accounts($manager, $clock, $catalog, new BillingTestProviders());
         $store = new CreationStore($accounts, new Crypt($config), $connections);
         $engine = new Checkout($accounts, $store, $connections, $transport);
+        $subscriptions = new Subscriptions($accounts, $store, $connections, $transport);
         $checkout = new PlanCheckout($accounts, $engine, new Creation($store, new Adapter($transport)),
-            new Subscriptions($accounts, $store, $connections, $transport), new PlanOffers($catalog));
+            $subscriptions, new PlanOffers($catalog));
 
-        return [$checkout, $transport, $engine, $pdo];
+        return [$checkout, $transport, $engine, $pdo, $manager, $subscriptions];
     }
 
     private function database(string $dialect, callable $test): void

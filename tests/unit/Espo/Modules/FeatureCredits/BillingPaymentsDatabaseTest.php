@@ -287,6 +287,34 @@ final class BillingPaymentsDatabaseTest extends TestCase
     }
 
     #[DataProvider('dialects')]
+    public function testForeignPaymentEventsBackOffThenStopAskingTheProvider(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, BillingPaymentFixtures $f): void {
+            // A payment of the same Asaas account that this CRM never sold: no subscription, no binding.
+            $f->transport->objects['foreign'] = ['object' => 'payment', 'id' => 'pay_foreign1', 'customer' => 'cus_other',
+                'value' => '100.00', 'billingType' => 'PIX', 'deleted' => false, 'status' => 'RECEIVED'];
+            $this->now = '2026-10-13 00:00:00';
+            $f->events->receive('asaas-br', 'fixture-webhook-token', json_encode(['id' => 'evt_foreign', 'event' => 'PAYMENT_RECEIVED', 'payment' => ['id' => 'pay_foreign1']]));
+            $lookups = fn (): int => count(array_filter($f->transport->calls, static fn ($call) => $call[2] === 'GET' && $call[3] === '/payments/pay_foreign1'));
+            $event = fn (): array => $pdo->query('SELECT state, last_reason, next_attempt_at FROM credit_billing_event')->fetch(PDO::FETCH_ASSOC);
+
+            $f->events->processBatch();
+            $this->assertSame(['state' => 'pending', 'last_reason' => 'unmatched', 'next_attempt_at' => '2026-10-13 00:02:00'], $event(), 'A fresh event may still be ours.');
+
+            $this->now = '2026-10-14 00:00:00'; $f->events->processBatch();
+            $this->assertSame('2026-10-14 06:00:00', $event()['next_attempt_at'], 'A day old: at most every 6 hours.');
+
+            $this->now = '2026-10-16 00:01:00'; $f->events->processBatch();
+            $this->assertSame('unmatched', $event()['state'], 'Three days old: parked.');
+            $asked = $lookups();
+            $this->now = '2026-10-20 00:00:00';
+            $this->assertSame(0, $f->events->processBatch());
+            $this->assertSame($asked, $lookups(), 'A parked event never asks the provider again.');
+            $this->assertSame(0, $this->rows($pdo, 'credit_grant'));
+        });
+    }
+
+    #[DataProvider('dialects')]
     public function testReviewAndUnresolvedEventsRemainRecoverableAndNeverRepeatPost(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo, BillingPaymentFixtures $f): void {

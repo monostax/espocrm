@@ -24,14 +24,22 @@ final class CreationStore
             static fn (string $reference, array $accepted, ?string $customer) => Command::customer($profile, $reference));
     }
 
-    public function charge(string $tenant, string $obligation, string $customerCreation, string $billingType, string $dueDate): array
+    /** @param array{description?: string, successUrl?: string} $presentation See Command::charge. */
+    public function charge(string $tenant, string $obligation, string $customerCreation, string $billingType, string $dueDate,
+        array $presentation = []): array
     {
         GrantInput::identity($customerCreation); GrantInput::timestamp($dueDate . ' 00:00:00');
         if (!in_array($billingType, ['PIX', 'BOLETO', 'CREDIT_CARD', 'UNDEFINED'], true)) throw new \InvalidArgumentException('Unsupported Asaas payment method.');
-        return $this->claim($tenant, $obligation, 'charge', $obligation,
-            ['customerCreation' => $customerCreation, 'billingType' => $billingType, 'dueDate' => $dueDate],
+        $input = ['customerCreation' => $customerCreation, 'billingType' => $billingType, 'dueDate' => $dueDate];
+        // Only a presentation joins the creation input, so earlier creations keep their identity.
+        if ($presentation) {
+            ksort($presentation);
+            $input['presentation'] = $presentation;
+        }
+        return $this->claim($tenant, $obligation, 'charge', $obligation, $input,
             static fn (string $reference, array $accepted, ?string $customer) => Command::charge(
-                OfferTerms::fromSnapshot((object) $accepted['terms']), $customer, $reference, $billingType, $dueDate), $customerCreation);
+                OfferTerms::fromSnapshot((object) $accepted['terms']), $customer, $reference, $billingType, $dueDate, $presentation),
+            $customerCreation);
     }
 
     private function claim(string $tenant, string $obligation, string $kind, string $source, array $input, callable $command, ?string $customerCreation = null): array

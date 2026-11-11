@@ -13,6 +13,15 @@ use PDO;
 /** Durable minimal inbox: authenticate, persist, acknowledge. Processing performs authoritative GETs separately. */
 final class Events
 {
+    /**
+     * Asaas delivers every event of the account, including payments this CRM never sold. An event that matches no
+     * binding is retried with a growing delay (a quarter of its age, 2 minutes to 6 hours) and parked as `unmatched`
+     * after 3 days, so foreign payments stop costing provider lookups. Our own events match within minutes.
+     */
+    private const UNMATCHED_MIN_DELAY = 120;
+    private const UNMATCHED_MAX_DELAY = 21600;
+    private const UNMATCHED_GIVE_UP_AFTER = 259200;
+
     public function __construct(private EntityManager $entityManager, private Connections $connections, private Clock $clock, private Payments $payments, private Subscriptions $subscriptions) {}
 
     public function receive(string $integration, #[\SensitiveParameter] string $token, #[\SensitiveParameter] string $raw): array
@@ -87,6 +96,12 @@ final class Events
             catch (Conflict) { $reason = 'verification_conflict'; }
             catch (ServiceUnavailable) { $reason = 'lookup_unresolved'; }
             $next = ($result['retryAt'] ?? null) ?? (new \DateTimeImmutable($this->clock->now(), new \DateTimeZone('UTC')))->modify('+2 minutes')->format('Y-m-d H:i:s');
+            if ($reason === 'unmatched') {
+                $nowAt = strtotime($this->clock->now() . ' UTC');
+                $age = max(0, $nowAt - strtotime($row['received_at'] . ' UTC'));
+                if ($age >= self::UNMATCHED_GIVE_UP_AFTER) $state = 'unmatched';
+                else $next = gmdate('Y-m-d H:i:s', $nowAt + max(self::UNMATCHED_MIN_DELAY, min(self::UNMATCHED_MAX_DELAY, intdiv($age, 4))));
+            }
             // Concurrent processors cannot undo an already completed delivery; accounting has its own read fence.
             $pdo->prepare("UPDATE credit_billing_event SET state=?, last_reason=?, next_attempt_at=?, lease_token=NULL
                 WHERE id=? AND state='pending' AND lease_token=?")
