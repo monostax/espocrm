@@ -23,7 +23,11 @@ class Verdicts
 
     /** Verdicts read for the tab counts: newest first, any verdict (a newer quiet one hides an older card). */
     private const COUNT_LIMIT = 5000;
-    /** A message this recent with no analysis since is still being analysed: the settle wait, then the analysis. */
+    /**
+     * A subject whose last message is Feed::SETTLE_MINUTES to this old, with no analysis since, has settled and its analysis
+     * is on the way. One still in conversation is not counted (on a busy account there always is one, decided 2026-11-11),
+     * and an analysis that never lands stops counting after this.
+     */
     public const PENDING_MINUTES = Feed::SETTLE_MINUTES + 15;
     /** Verdicts picked again per call when their time comes; the rest on the next read. */
     private const FLIP_BATCH = 200;
@@ -308,8 +312,8 @@ class Verdicts
     }
 
     /**
-     * Atendimento conversations of the reader's deck with a message from the last PENDING_MINUTES and no analysis since:
-     * their settle analysis is still to come. Same deck filters as cardConversations().
+     * Atendimento conversations of the reader's deck that settled in the last PENDING_MINUTES (last message SETTLE_MINUTES
+     * to PENDING_MINUTES old) with no analysis since: their analysis is on the way. Same deck filters as cardConversations().
      *
      * @return array<string, array{contact: ?string, grp: int}>
      */
@@ -322,6 +326,7 @@ class Verdicts
             . 'WHERE c.deleted = 0 AND c.chatwoot_account_id = :account '
             . 'AND c.last_activity_at >= UTC_TIMESTAMP() - INTERVAL ' . self::PENDING_MINUTES . ' MINUTE '
             . 'AND ' . self::LAST_MESSAGE_SQL . ' >= UTC_TIMESTAMP() - INTERVAL ' . self::PENDING_MINUTES . ' MINUTE '
+            . 'AND ' . self::LAST_MESSAGE_SQL . ' <= UTC_TIMESTAMP() - INTERVAL ' . Feed::SETTLE_MINUTES . ' MINUTE '
             . 'AND NOT EXISTS (SELECT 1 FROM catch_up_verdict v WHERE v.deleted = 0 AND v.conversation_id = c.id AND v.created_at >= '
             . self::LAST_MESSAGE_SQL . ') '
             . self::CONVERSATION_DECK_SQL . $ownerSql
@@ -363,8 +368,8 @@ class Verdicts
     }
 
     /**
-     * Open deals of the reader's deck with a message from the last PENDING_MINUTES and no analysis since: their settle
-     * analysis is still to come.
+     * Open deals of the reader's deck that settled in the last PENDING_MINUTES (last message SETTLE_MINUTES to
+     * PENDING_MINUTES old) with no analysis since: their analysis is on the way.
      *
      * @return list<string>
      */
@@ -374,6 +379,7 @@ class Verdicts
             'SELECT o.id FROM opportunity o JOIN catch_up_deal_state s ON s.id = o.id AND s.deleted = 0 '
             . "WHERE o.deleted = 0 AND o.tenant_id = :tenant AND o.status NOT IN ('Won','Lost') "
             . 'AND s.last_message_at >= UTC_TIMESTAMP() - INTERVAL ' . self::PENDING_MINUTES . ' MINUTE '
+            . 'AND s.last_message_at <= UTC_TIMESTAMP() - INTERVAL ' . Feed::SETTLE_MINUTES . ' MINUTE '
             . 'AND NOT EXISTS (SELECT 1 FROM catch_up_verdict v WHERE v.deleted = 0 AND v.opportunity_id = o.id AND v.created_at >= s.last_message_at) '
             . self::DEAL_DECK_SQL . $ownerSql
             . ' LIMIT ' . self::COUNT_LIMIT
