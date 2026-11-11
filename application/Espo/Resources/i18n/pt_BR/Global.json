@@ -11,7 +11,7 @@
     "ExternalAccount": "Conta externa",
     "Extension": "Extensão",
     "InboundEmail": "E-mail de Entrada",
-    "Stream": "Comentários",
+    "Stream": "Mural",
     "Import": "Importar",
     "Job": "Tarefas",
     "EmailFilter": "Filtro de Email",
@@ -74,7 +74,7 @@
     "ExternalAccount": "Contas externas",
     "Extension": "Extensões",
     "InboundEmail": "E-mails de Entrada",
-    "Stream": "Comentários",
+    "Stream": "Mural",
     "Job": "Tarefas",
     "EmailFilter": "Filtros de Email",
     "Portal": "Portais",
@@ -196,7 +196,7 @@
     "Inactive": "Inativo",
     "Write your comment here": "Escreva seu comentário aqui",
     "Post": "Postar",
-    "Stream": "Comentários",
+    "Stream": "Mural",
     "Show more": "Exibir mais",
     "Dashlet Options": "Opções do Painel",
     "Full Form": "Formulário Completo",
@@ -455,7 +455,7 @@
     "children": "Criança"
   },
   "dashlets": {
-    "Stream": "Comentários",
+    "Stream": "Mural",
     "Emails": "Minha Caixa de Entrada",
     "Records": "Lista de Registro"
   },
