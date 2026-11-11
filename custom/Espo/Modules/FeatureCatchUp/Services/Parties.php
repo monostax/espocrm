@@ -25,7 +25,7 @@ class Parties
     public const KEY = 'em_dia_tipo';
     public const LABELS = [
         'customer' => 'Cliente',
-        'partner' => 'Parceiro ou fornecedor',
+        'partner' => 'Parceiro / Fornecedor',
         'team' => 'Equipe',
         'personal' => 'Pessoal',
         'automated' => 'Automático',
