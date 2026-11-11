@@ -42,23 +42,6 @@ class Records
         return ['agreed' => array_values($state['agreed'] ?? []), 'promises' => array_values($state['promises'] ?? []), 'coveredAt' => $row['covered_at']];
     }
 
-    /**
-     * The earliest due time of an open promise per subject, over every record of it. Only a time leaves here:
-     * it decides when a subject is judged again, never what anyone reads.
-     *
-     * @param list<string> $ids
-     * @return array<string, int> subject id => Unix time
-     */
-    public function dues(string $type, array $ids): array
-    {
-        if (!$ids) return [];
-        $marks = implode(',', array_fill(0, count($ids), '?'));
-        $query = $this->em->getPDO()->prepare("SELECT subject_id, MIN(due_ts) FROM catch_up_record WHERE deleted = 0 AND subject_type = ? "
-            . "AND subject_id IN ($marks) AND due_ts IS NOT NULL GROUP BY subject_id");
-        $query->execute([$type, ...array_values($ids)]);
-        return array_map('intval', $query->fetchAll(\PDO::FETCH_KEY_PAIR));
-    }
-
     /** @param array<string, mixed> $record the analysis's record */
     public function store(string $tenantId, string $type, string $id, string $scope, array $record, ?string $coveredAt): void
     {

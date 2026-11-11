@@ -15,7 +15,10 @@ use DateTimeImmutable;
  *   (promise_due). Opening and closing a deal (decided, new_deal) and a stalled deal (next_step_missing) are ours too.
  * - Esperando o cliente: one of theirs is late (follow_up_due): its time passed, or, without one, the conversation has
  *   been quiet for Feed::FOLLOW_UP_AFTER_DAYS. Not while the AI follow-up is armed on the deal: the AI nudges then.
- * - Agenda: loops are open but none is due yet (`scheduled`, no card; the revision moves when one comes due).
+ * - Agenda: loops are open but none is due yet (`scheduled`, no card).
+ *
+ * Time alone never asks for an analysis (decided 2026-11-11): the stored verdict keeps its open loops (basis()) and the
+ * time the clock next changes the pick (flipsAt()); Verdicts::flipDue() picks again then, in code.
  */
 final class Loops
 {
@@ -76,6 +79,57 @@ final class Loops
         }
         $next = self::earliest(array_filter($open, fn ($loop) => self::due($loop) !== null)) ?? $open[0];
         return self::found('scheduled', $next);
+    }
+
+    /**
+     * What a stored verdict is picked again from when the clock moves: the open loops, when the conversation went quiet,
+     * and whether the AI follow-up was armed. Null for a verdict that no loop decides (decided, new_deal, none).
+     *
+     * @param list<array<string, mixed>> $open
+     * @return ?array{loops: list<array<string, mixed>>, quietSince: ?string, followup: bool}
+     */
+    public static function basis(array $open, array $facts, ?string $quietSince): ?array
+    {
+        if (!$open) return null;
+        $keep = fn (array $loop) => array_intersect_key($loop, array_flip(['id', 'side', 'text', 'dueAt', 'status']));
+        return ['loops' => array_map($keep, $open), 'quietSince' => $quietSince, 'followup' => !empty($facts['aiFollowupActive'])];
+    }
+
+    /** The facts pick() reads, at $now, from a stored basis. */
+    public static function factsAt(array $basis, DateTimeImmutable $now): array
+    {
+        return ['quietDays' => Revision::quietDays($basis['quietSince'] ?? null, $now), 'aiFollowupActive' => !empty($basis['followup'])];
+    }
+
+    /**
+     * The next time the clock alone can change pick(): one of our loops or (without the AI follow-up) one of theirs comes
+     * due, or a loop of theirs without a time crosses the follow-up threshold. Null when nothing will.
+     *
+     * @param array{loops: list<array<string, mixed>>, quietSince: ?string, followup: bool} $basis
+     */
+    public static function flipsAt(array $basis, DateTimeImmutable $now): ?int
+    {
+        $clock = $now->getTimestamp();
+        $times = [];
+        foreach (self::open(['promises' => $basis['loops'] ?? []]) as $loop) {
+            $due = self::due($loop);
+            if ($loop['side'] === 'theirs' && !empty($basis['followup'])) continue;
+            if ($due !== null && $due > $clock) $times[] = $due;
+            if ($due === null && $loop['side'] === 'theirs' && !empty($basis['quietSince'])) {
+                $quiet = (new DateTimeImmutable((string) $basis['quietSince'], new \DateTimeZone('UTC')))->getTimestamp();
+                $threshold = $quiet + Feed::FOLLOW_UP_AFTER_DAYS * 86400;
+                if ($threshold > $clock) $times[] = $threshold;
+            }
+        }
+        return $times ? min($times) : null;
+    }
+
+    /** Whether two card loops are the same: by id when both have one, else by side and text. */
+    public static function same(?array $a, ?array $b): bool
+    {
+        if (!$a || !$b) return $a === $b;
+        if (isset($a['id'], $b['id'])) return (string) $a['id'] === (string) $b['id'];
+        return ($a['side'] ?? null) === ($b['side'] ?? null) && trim((string) ($a['text'] ?? '')) === trim((string) ($b['text'] ?? ''));
     }
 
     /** A loop's due time as a Unix time; null when it has none (or none code can read). */

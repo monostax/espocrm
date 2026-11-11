@@ -209,31 +209,39 @@ class FeedTest extends TestCase
         $feed->review('deal', 'token', $this->request());
     }
 
-    public function testRevisionMovesWithTheDealAndWithSilenceInSteps(): void
+    public function testRevisionMovesWithTheDealButNotWithTime(): void
     {
         $now = new DateTimeImmutable('2026-11-04 12:00:00', new DateTimeZone('UTC'));
-        $base = Revision::of($this->deal(), $this->state(), null, null, $now);
-        self::assertSame($base, Revision::of($this->deal(), $this->state(), null, null, $now), 'same state, same revision');
-        self::assertNotSame($base, Revision::of($this->deal(), $this->state(['message_count' => 13]), null, null, $now), 'a new message');
-        self::assertNotSame($base, Revision::of($this->deal(['opportunityStageId' => 'quote']), $this->state(), null, null, $now), 'a stage change');
-        self::assertNotSame($base, Revision::of($this->deal(), $this->state(), null, '2026-11-04 09:00:00', $now), 'a note on the deal');
-        self::assertNotSame($base, Revision::of($this->deal(), $this->state(['staff_user_id' => 'ana']), null, null, $now), 'a new deck owner');
+        $base = Revision::of($this->deal(), $this->state(), null, null);
+        self::assertSame($base, Revision::of($this->deal(), $this->state(), null, null), 'same state, same revision');
+        self::assertNotSame($base, Revision::of($this->deal(), $this->state(['message_count' => 13]), null, null), 'a new message');
+        self::assertNotSame($base, Revision::of($this->deal(['opportunityStageId' => 'quote']), $this->state(), null, null), 'a stage change');
+        self::assertNotSame($base, Revision::of($this->deal(), $this->state(), null, '2026-11-04 09:00:00'), 'a note on the deal');
+        self::assertNotSame($base, Revision::of($this->deal(), $this->state(['staff_user_id' => 'ana']), null, null), 'a new deck owner');
         $task = ['id' => 'task', 'status' => 'Not Started', 'dateEndDate' => '2026-11-05'];
-        self::assertNotSame(Revision::of($this->deal(), $this->state(), $task, null, $now),
-            Revision::of($this->deal(), $this->state(), [...$task, 'status' => 'Completed'], null, $now), 'the next step was done');
-
-        $quiet = fn (string $last, string $at) => Revision::of($this->deal(), $this->state(['last_message_at' => $last]), null, null,
-            new DateTimeImmutable($at, new DateTimeZone('UTC')));
-        self::assertSame($quiet('2026-10-20 10:00:00', '2026-10-28 11:00:00'), $quiet('2026-10-20 10:00:00', '2026-11-02 11:00:00'),
-            'day 8 and day 13 of silence are the same step');
-        self::assertNotSame($quiet('2026-10-20 10:00:00', '2026-10-21 09:00:00'), $quiet('2026-10-20 10:00:00', '2026-10-21 11:00:00'),
-            'the first full day of silence is a new step');
-        self::assertNotSame($quiet('2026-10-01 10:00:00', '2026-10-30 11:00:00'), $quiet('2026-10-01 10:00:00', '2026-10-31 11:00:00'),
-            'day 30 of silence is the last check');
-        self::assertSame($quiet('2026-09-01 10:00:00', '2026-10-01 11:00:00'), $quiet('2026-09-01 10:00:00', '2026-11-01 11:00:00'),
-            'after 30 days silence no longer brings a deal back');
+        self::assertNotSame(Revision::of($this->deal(), $this->state(), $task, null),
+            Revision::of($this->deal(), $this->state(), [...$task, 'status' => 'Completed'], null), 'the next step was done');
+        // Silence and due promises are the clock against the stored loops (Loops::flipsAt), never a new analysis.
+        $method = new \ReflectionMethod(Revision::class, 'of');
+        self::assertSame(4, $method->getNumberOfParameters(), 'no clock goes into a revision');
         self::assertSame(1, Revision::quietDays('2026-11-03 11:00:00', $now));
         self::assertNull(Revision::quietDays(null, $now));
+    }
+
+    public function testAConversationsRevisionMovesWithItsMessagesNotWithActivity(): void
+    {
+        $conversation = function (array $values): Entity {
+            $values += ['lastMessageReceivedAt' => '2026-11-04 10:00:00', 'lastMessageSentAt' => '2026-11-04 09:00:00',
+                'lastActivityAt' => '2026-11-04 10:00:00', 'assigneeId' => 'ana'];
+            $entity = $this->createMock(Entity::class);
+            $entity->method('get')->willReturnCallback(fn ($field) => $values[$field] ?? null);
+            return $entity;
+        };
+        $base = Revision::ofConversation($conversation([]));
+        self::assertNotSame($base, Revision::ofConversation($conversation(['lastMessageReceivedAt' => '2026-11-04 11:00:00'])), 'the customer wrote');
+        self::assertNotSame($base, Revision::ofConversation($conversation(['lastMessageSentAt' => '2026-11-04 11:00:00'])), 'we wrote');
+        self::assertSame($base, Revision::ofConversation($conversation(['lastActivityAt' => '2026-11-04 12:00:00', 'assigneeId' => 'bia'])),
+            'an assignment is activity the analysis does not read');
     }
 
     public function testDeckOwnerIsThePersonOnTheDealOrTheLastStaffWriter(): void
@@ -268,12 +276,13 @@ class FeedTest extends TestCase
         self::assertSame(['deckOwner' => 'manuella'], $params);
     }
 
-    public function testTheBadgeCountsOnlyCardsWhoseConversationChatwootOpensForTheReader(): void
+    public function testTheTabCountsTakeOnlyCardsWhoseConversationChatwootOpensForTheReader(): void
     {
-        foreach ([true => 1, false => 0] as $opens => $expected) {
+        foreach ([true => ['us' => 2, 'customer' => 1, 'pending' => 1], false => ['us' => 0, 'customer' => 0, 'pending' => 0]] as $opens => $expected) {
             [$feed, , $verdicts] = $this->feed(opens: (bool) $opens);
-            $verdicts->method('cardDeals')->willReturn(['deal']);
-            self::assertSame(['count' => $expected], $feed->count($this->request()), 'not even a tenant admin counts what Chatwoot closes');
+            $verdicts->method('cardDeals')->willReturn(['a' => 'customer_waiting', 'b' => 'promise_due', 'c' => 'follow_up_due', 'd' => 'none', 'e' => 'scheduled']);
+            $verdicts->method('pendingDeals')->willReturn(['f']);
+            self::assertSame($expected, $feed->count($this->request()), 'not even a tenant admin counts what Chatwoot closes');
         }
     }
 
@@ -312,8 +321,11 @@ class FeedTest extends TestCase
             if ($expected === 'none') {
                 self::assertNull($result['card']);
             } else {
-                self::assertSame(['headline' => 'H', 'draft' => 'Oi!', 'promise' => ['id' => 'p', 'side' => 'ours', 'text' => 'responder o preço', 'dueAt' => null],
-                    'whyNow' => 'Asked for the price'], $result['card'], 'the card carries copy and the loop it shows, not the verdict');
+                $loop = ['id' => 'p', 'side' => 'ours', 'text' => 'responder o preço', 'dueAt' => null];
+                self::assertSame(['headline' => 'H', 'draft' => 'Oi!', 'promise' => $loop, 'draftFor' => $loop,
+                    'whyNow' => 'Asked for the price'], $result['card'], 'the card carries copy and the loop it shows (and wrote for), not the verdict');
+                self::assertSame([$loop + ['status' => 'open']], $stored[9]['loops'], 'the verdict keeps its loops for the clock');
+                self::assertNull($stored[10], 'a loop we owe now never flips with time');
             }
         }
     }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureCatchUp\Services;
 
-use DateTimeImmutable;
 use Espo\Core\Acl;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
@@ -40,7 +39,6 @@ class ProposedDeals
         private Workspace $workspace,
         private Ownership $owners,
         private Verdicts $verdicts,
-        private Records $records,
         private ChatwootAccess $access,
         private ServiceFeed $service,
         private ServiceContainer $recordServices,
@@ -57,7 +55,7 @@ class ProposedDeals
         $this->service->authorize();
         ['tenant' => $tenant, 'account' => $account] = $this->workspace->resolve($request);
         return [
-            'items' => array_values($this->proposals($tenant, $account, Workspace::now($request))),
+            'items' => array_values($this->proposals($tenant, $account)),
             'funnels' => array_map(fn (Entity $funnel) => [
                 'id' => $funnel->getId(), 'name' => (string) $funnel->get('name'), 'isDefault' => (bool) $funnel->get('isDefault'),
             ], $this->funnels((string) $tenant->getId())),
@@ -79,7 +77,7 @@ class ProposedDeals
         $items = $body->items ?? null;
         if (!is_array($items) || !$items || count($items) > self::LIMIT) throw new BadRequest('Invalid items.');
         [$funnelId, $stageId] = $this->stage((string) $tenant->getId(), is_string($body->funnelId ?? null) ? $body->funnelId : null);
-        $proposals = $this->proposals($tenant, $account, Workspace::now($request));
+        $proposals = $this->proposals($tenant, $account);
         $currency = (string) ($this->config->get('defaultCurrency') ?: 'BRL');
         $teamId = $this->team($tenant);
         $created = [];
@@ -127,17 +125,13 @@ class ProposedDeals
      *
      * @return array<string, array{conversationId: string, contactName: string, inboxName: ?string, name: string, amount: ?float, why: ?string}>
      */
-    private function proposals(Entity $tenant, Entity $account, DateTimeImmutable $now): array
+    private function proposals(Entity $tenant, Entity $account): array
     {
         [$owner, $params] = $this->owners->conversationClause();
         $rows = $this->verdicts->proposalConversations((string) $tenant->getId(), (string) $account->getId(), $owner, $params,
             $this->user->getId(), self::LIMIT);
         $conversations = $this->access->filter($this->service->readable(array_keys($rows)));
-        $dues = $this->records->dues('ChatwootConversation', array_keys($conversations));
-        $found = $this->verdicts->proposals(array_map(
-            fn (Entity $conversation) => Revision::ofConversation($conversation, $now, $dues[$conversation->getId()] ?? null),
-            $conversations,
-        ));
+        $found = $this->verdicts->proposals(array_map(fn (Entity $conversation) => Revision::ofConversation($conversation), $conversations));
         $items = [];
         $groups = [];
         foreach ($conversations as $id => $conversation) {

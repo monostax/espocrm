@@ -118,4 +118,33 @@ class LoopsTest extends TestCase
         usort($sorted, fn ($a, $b) => $a <=> $b);
         self::assertSame($keys, $sorted, 'longest recent wait, shorter wait, older wait, quiet, moving, dormant, unknown');
     }
+
+    public function testTheClockFlipsAVerdictWhenALoopComesDueOrTheCustomerHasBeenQuietLongEnough(): void
+    {
+        $now = new DateTimeImmutable(self::NOW);
+        $quietSince = '2026-11-10 12:00:00';
+        $nudge = (new DateTimeImmutable($quietSince, new DateTimeZone('UTC')))->getTimestamp() + Feed::FOLLOW_UP_AFTER_DAYS * 86400;
+        $basis = Loops::basis([self::loop('rg', 'theirs'), self::loop('contrato', 'ours', '2026-11-14T18:00:00-03:00')], [], $quietSince);
+        self::assertSame($nudge, Loops::flipsAt($basis, $now), 'a quiet customer is nudged once the follow-up threshold passes');
+        self::assertSame('scheduled', Loops::pick($basis['loops'], Loops::factsAt($basis, $now), $now)['verdict']);
+        $then = (new DateTimeImmutable('@' . $nudge));
+        $picked = Loops::pick($basis['loops'], Loops::factsAt($basis, $then), $then);
+        self::assertSame(['follow_up_due', 'rg'], [$picked['verdict'], $picked['loop']['id']]);
+        self::assertSame((new DateTimeImmutable('2026-11-14T18:00:00-03:00'))->getTimestamp(), Loops::flipsAt($basis, $then),
+            'our promise coming due is next');
+
+        $armed = Loops::basis([self::loop('rg', 'theirs', '2026-11-11T12:00:00-03:00')], ['aiFollowupActive' => true], $quietSince);
+        self::assertNull(Loops::flipsAt($armed, $now), 'with the AI follow-up armed, their late loops are the AI\'s to chase');
+        self::assertNull(Loops::basis([], [], $quietSince), 'no loops, nothing for the clock');
+        $waiting = Loops::basis([self::loop('preco', 'ours')], [], $quietSince);
+        self::assertNull(Loops::flipsAt($waiting, $now), 'a customer waiting on us stays a card until a message moves it');
+    }
+
+    public function testTheSameLoopIsMatchedByIdOrBySideAndText(): void
+    {
+        self::assertTrue(Loops::same(['id' => 'a', 'side' => 'ours', 'text' => 'x'], ['id' => 'a', 'side' => 'ours', 'text' => 'y']));
+        self::assertFalse(Loops::same(['id' => 'a', 'side' => 'ours', 'text' => 'x'], ['id' => 'b', 'side' => 'ours', 'text' => 'x']));
+        self::assertTrue(Loops::same(['side' => 'theirs', 'text' => 'mandar o RG '], ['side' => 'theirs', 'text' => 'mandar o RG']));
+        self::assertFalse(Loops::same(['side' => 'theirs', 'text' => 'x'], null));
+    }
 }

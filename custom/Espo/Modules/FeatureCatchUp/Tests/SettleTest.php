@@ -114,6 +114,13 @@ class SettleTest extends TestCase
         self::assertSame(['subjects' => [['lane' => 'service', 'id' => 'conv', 'status' => 'pending', 'cached' => false, 'reader' => 'ana']]], $result);
     }
 
+    public function testTheWindowAnalysedWhenEmDiaIsTurnedOnTellsTheBackendItIsABackfill(): void
+    {
+        $this->settle([], 'ana')->start(12, 2775, true);
+
+        self::assertTrue($this->analyses[0][3]['backfill'], 'outside the daily limit');
+    }
+
     public function testItsOpenDealsAreAnalysedInsteadByAnAdministratorWhoMayOpenThem(): void
     {
         $result = $this->settle(['d2', 'd1'], null, ['first-admin', 'second-admin'], ['first-admin'])->start(12, 2775);

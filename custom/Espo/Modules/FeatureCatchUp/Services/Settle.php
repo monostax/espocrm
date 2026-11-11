@@ -15,10 +15,11 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 /**
- * Analysis at settle (decided 2026-11-10): a 1:1 conversation whose customer sent the last message is analysed once it
- * has been quiet for Feed::SETTLE_MINUTES, before anyone opens a deck. Its "Esperando a gente" card is then ready when
- * the deck opens, and the badge counts it. Chats where we spoke last and follow-up day steps stay lazy (the deck's
- * window); a morning pass for those comes with the WhatsApp digest.
+ * Analysis at settle (decided 2026-11-10; every conversation since 2026-11-11): a conversation is analysed once it has
+ * been quiet for Feed::SETTLE_MINUTES, whoever wrote last, groups included, before anyone opens a deck. Its card is then
+ * ready when the deck opens and the tab counts are the deck's totals. Time alone never asks for an analysis: the stored
+ * loops and the clock decide when a promise comes due or a quiet customer needs a nudge (Verdicts::flipDue()). When Em dia
+ * is turned on, the backend hands over the 30-day window the same way (`backfill`), outside the account's daily limit.
  *
  * The backend finds these conversations in Chatwoot (Hatchet `catch-up-settle`) and hands each one to start(). When the
  * analysis finishes, Hatchet calls complete(), which stores the verdict, so nothing polls.
@@ -49,7 +50,7 @@ class Settle
      *
      * @return array{subjects: list<array{lane: string, id: string, status: string}>, skipped?: string}
      */
-    public function start(int $chatwootAccountId, int $displayId): array
+    public function start(int $chatwootAccountId, int $displayId, bool $backfill = false): array
     {
         if ($chatwootAccountId < 1 || $displayId < 1) throw new BadRequest('Invalid conversation.');
         $account = $this->account($chatwootAccountId);
@@ -71,7 +72,7 @@ class Settle
         $result = [];
         foreach ($subjects as [$lane, $id]) {
             $readers = $this->readers($lane, $id, $conversation->getId(), $account->getId());
-            $result[] = ['lane' => $lane, 'id' => $id, ...$this->queue($lane, $id, $readers, $context)];
+            $result[] = ['lane' => $lane, 'id' => $id, ...$this->queue($lane, $id, $readers, $context, $backfill)];
         }
         return ['subjects' => $result];
     }
@@ -104,9 +105,10 @@ class Settle
      * @param array{accountId: string, timeZone: string, locale: string} $context
      * @return array{status: string, cached?: bool, reader?: string}
      */
-    private function queue(string $lane, string $id, array $readers, array $context): array
+    private function queue(string $lane, string $id, array $readers, array $context, bool $backfill = false): array
     {
         $notify = ['lane' => $lane, 'id' => $id, 'accountId' => $context['accountId'], 'timeZone' => $context['timeZone']];
+        if ($backfill) $notify['backfill'] = true;
         foreach ($readers as $reader) {
             try {
                 $answer = $this->actors->run($reader, fn (callable $make) => $this->summary($make, $lane, $id, $context, null, $notify));

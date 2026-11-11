@@ -28,7 +28,7 @@ class ServiceFeed
 {
     private const PAGE_SIZE = 20;
     /** Conversations with activity in this window are candidates. */
-    private const WINDOW_DAYS = 30;
+    public const WINDOW_DAYS = 30;
     /** An open deal linked to conversation `c`: such a conversation is a Negócios card instead. */
     public const OPEN_DEAL_SQL = 'SELECT 1 FROM chatwoot_conversation_opportunity r JOIN opportunity o ON o.id = r.opportunity_id '
         . "AND o.deleted = 0 AND o.status NOT IN ('Won','Lost') WHERE r.chatwoot_conversation_id = c.id AND r.deleted = 0";
@@ -54,7 +54,7 @@ class ServiceFeed
     public function list(Request $request): array
     {
         $this->authorize();
-        $account = $this->workspace->resolve($request)['account'];
+        ['tenant' => $tenant, 'account' => $account] = $this->workspace->resolve($request);
         $now = Workspace::now($request);
         $cursor = (string) ($request->getQueryParam('cursor') ?? '');
         if ($cursor !== '' && !ctype_digit($cursor)) throw new BadRequest('Invalid cursor.');
@@ -63,18 +63,19 @@ class ServiceFeed
         $rows = $this->candidates($account->getId(), $offset, $limit);
         // The CRM's inbox filter, then Chatwoot's own rules (teams, participation, custom roles, admins' own inboxes).
         $conversations = $this->access->filter($this->readable(array_keys($rows)));
-        $dues = $this->records->dues('ChatwootConversation', array_keys($conversations));
-        $judged = $this->verdicts->judged('ChatwootConversation',
-            array_map(fn ($c) => Revision::ofConversation($c, $now, $dues[$c->getId()] ?? null), $conversations));
+        $this->verdicts->flipDue($tenant->getId());
+        $judged = $this->verdicts->judged('ChatwootConversation', array_map(fn ($c) => Revision::ofConversation($c), $conversations));
         $names = $this->userNames(array_filter(array_column($rows, 'owner')));
-        $items = [];
+        // A WhatsApp group is mirrored once per member number; the reader gets one copy they may open: the one already
+        // judged (settle analyses one copy), else the first.
         $groups = [];
+        foreach (array_keys($conversations) as $id) {
+            $contact = $rows[$id]['contact'];
+            if ($rows[$id]['grp'] && (!isset($groups[$contact]) || (!isset($judged[$groups[$contact]]) && isset($judged[$id])))) $groups[$contact] = $id;
+        }
+        $items = [];
         foreach ($conversations as $id => $conversation) {
-            // A WhatsApp group is mirrored once per member number; the reader gets the first copy they may open.
-            if ($rows[$id]['grp']) {
-                if (isset($groups[$rows[$id]['contact']])) continue;
-                $groups[$rows[$id]['contact']] = true;
-            }
+            if ($rows[$id]['grp'] && $groups[$rows[$id]['contact']] !== $id) continue;
             if (in_array($judged[$id] ?? null, Loops::QUIET, true)) continue;
             $items[] = [...$this->candidate($conversation, $names[$rows[$id]['owner'] ?? ''] ?? null, (bool) $rows[$id]['grp'], $now),
                 'verdict' => $judged[$id] ?? null];
@@ -82,12 +83,29 @@ class ServiceFeed
         return ['items' => $items, 'cursor' => count($rows) === $limit ? (string) ($offset + $limit) : null];
     }
 
-    /** Atendimento cards in the reader's deck nobody acted on, for the badge. */
-    public function count(string $tenantId, Entity $account): int
+    /**
+     * The reader's Atendimento cards by tab (Loops::BUCKETS) and the conversations whose settle analysis is still to come,
+     * for the tab counts and the badge. A WhatsApp group mirrored once per member number counts once.
+     *
+     * @return array{us: int, customer: int, pending: int}
+     */
+    public function count(string $tenantId, Entity $account): array
     {
         [$sql, $params] = $this->owners->conversationClause();
-        return count($this->access->openConversations(
-            $this->verdicts->cardConversations($tenantId, $account->getId(), $sql, $params, $this->user->getId())));
+        $rows = array_filter($this->verdicts->cardConversations($tenantId, $account->getId(), $sql, $params, $this->user->getId()),
+            fn (array $row) => isset(Loops::BUCKETS[$row['verdict']]));
+        $pending = $this->verdicts->pendingConversations($account->getId(), $sql, $params, $this->user->getId());
+        $open = $this->access->openConversations(array_values(array_unique([...array_keys($rows), ...array_keys($pending)])));
+        $groups = [];
+        $once = function (array $row) use (&$groups): bool {
+            if (!$row['grp']) return true;
+            if (isset($groups[$row['contact']])) return false;
+            return $groups[$row['contact']] = true;
+        };
+        $cards = [];
+        foreach (array_intersect_key($rows, $open) as $id => $row) if ($once($row)) $cards[$id] = $row['verdict'];
+        $waiting = count(array_filter(array_intersect_key($pending, $open), $once));
+        return Feed::tally($cards, $waiting);
     }
 
     public function snapshot(string $id, Request $request): array
@@ -103,14 +121,15 @@ class ServiceFeed
         $own = array_values(array_filter($participants, fn ($p) => !empty($p['own'])))[0] ?? null;
         $owner = $this->owner($id);
         $candidate = $this->candidate($conversation, $owner ? ($this->userNames([$owner])[$owner] ?? null) : null, (bool) ($own['group'] ?? false), $now);
-        $revision = Revision::ofConversation($conversation, $now, $this->records->dues('ChatwootConversation', [$id])[$id] ?? null);
-        $revisions = ['due' => Revision::ofConversation($conversation, $now, $now->getTimestamp()), 'notDue' => Revision::ofConversation($conversation, $now)];
+        $revision = Revision::ofConversation($conversation);
         $scope = Feed::evidenceScope($evidence);
         $sourceScope = Records::scope([$id]);
         $result = [
             ...$candidate,
             'tenantId' => $tenant->getId(), 'catchUpPolicy' => $policy,
-            'revision' => $revision, 'revisions' => $revisions, 'evidenceScope' => $scope, 'evidence' => $evidence, 'participants' => $participants,
+            'revision' => $revision, 'evidenceScope' => $scope, 'evidence' => $evidence, 'participants' => $participants,
+            // When the conversation went quiet, so the stored verdict can be picked again as time passes (Loops::basis).
+            'quietSince' => $conversation->get('lastActivityAt'),
             'sourceScope' => $sourceScope, 'record' => $this->records->load('ChatwootConversation', $id, $sourceScope),
             'facts' => $this->facts($candidate, $now), 'nextAction' => null, 'closable' => ['won' => false, 'lost' => false],
             'conversation' => [
@@ -122,7 +141,6 @@ class ServiceFeed
         $result['snapshot'] = hash('sha256', json_encode([$id, $this->user->getId(), $revision, $scope], JSON_THROW_ON_ERROR));
         $this->cache->store($this->snapshotKey($id), [
             'token' => $result['snapshot'], 'revision' => $revision, 'expires' => time() + 86400, 'participants' => $participants,
-            'alternates' => array_values($revisions),
         ]);
         return $result;
     }
@@ -133,9 +151,7 @@ class ServiceFeed
         $this->authorize();
         $conversation = $this->conversation($id, $this->workspace->resolve($request)['account']);
         $snapshot = $this->shown($id, $token);
-        $now = Workspace::now($request);
-        $current = Revision::ofConversation($conversation, $now, $this->records->dues('ChatwootConversation', [$id])[$id] ?? null);
-        if (!in_array($current, [$snapshot['revision'], ...($snapshot['alternates'] ?? [])], true)) {
+        if (Revision::ofConversation($conversation) !== $snapshot['revision']) {
             throw new Conflict('This conversation changed since the card was shown.');
         }
         $this->verdicts->resolve('ChatwootConversation', $id);
@@ -143,17 +159,17 @@ class ServiceFeed
 
     /**
      * "Já resolvi": the card leaves the deck and the badge until the conversation moves again, and the loop it showed
-     * is kept in the conversation's record, so a later analysis (a quiet step) doesn't raise it again. A kept loop's due
-     * time stops counting, which can move the revision; what the record still holds is then sorted by the clock (Loops),
-     * and a quiet result is stored at the new revision so the conversation doesn't come back as unjudged. A loop that is
-     * already due gets its card from the next analysis.
+     * is kept in the conversation's record, so a later analysis doesn't raise it again. What the record still holds is
+     * sorted by the clock (Loops): with nothing due now, the stored verdict becomes that (`scheduled` or `none`) and comes
+     * back as a card, in code, when the next loop comes due. A loop that is already due gets its card from the next
+     * analysis.
      */
     public function resolved(string $id, Request $request): void
     {
         $this->authorize();
         $conversation = $this->conversation($id, $this->workspace->resolve($request)['account']);
         $now = Workspace::now($request);
-        $revision = Revision::ofConversation($conversation, $now, $this->records->dues('ChatwootConversation', [$id])[$id] ?? null);
+        $revision = Revision::ofConversation($conversation);
         $shown = $this->verdicts->cards('ChatwootConversation', $id, $revision);
         $this->verdicts->resolve('ChatwootConversation', $id);
         $kept = false;
@@ -162,15 +178,12 @@ class ServiceFeed
             if (is_array($loop) && $this->records->keep('ChatwootConversation', $id, $loop, 'user:' . $this->user->getId())) $kept = true;
         }
         if (!$kept) return;
-        $after = Revision::ofConversation($conversation, $now, $this->records->dues('ChatwootConversation', [$id])[$id] ?? null);
-        if ($after === $revision) return;
         $open = Loops::open($this->records->load('ChatwootConversation', $id, Records::scope([$id])));
-        $verdict = $open ? Loops::pick($open, ['quietDays' => Revision::quietDays($conversation->get('lastActivityAt'), $now)], $now)['verdict'] : 'none';
-        if (!in_array($verdict, Loops::QUIET, true)) return;
-        foreach ($shown as $card) {
-            $this->verdicts->store($card['tenantId'], 'ChatwootConversation', $id, $after, $card['locale'], $card['evidenceScope'], $verdict,
-                'A person marked the card resolved.', null);
-        }
+        $basis = Loops::basis($open, [], $conversation->get('lastActivityAt'));
+        $picked = $basis ? Loops::pick($open, Loops::factsAt($basis, $now), $now) : ['verdict' => 'none', 'loop' => null];
+        if (!in_array($picked['verdict'], Loops::QUIET, true)) return;
+        $this->verdicts->settleAs('ChatwootConversation', $id, $revision, $picked['verdict'], $picked['loop'], $basis,
+            $basis ? Loops::flipsAt($basis, $now) : null, 'A person marked the card resolved.');
     }
 
     /**

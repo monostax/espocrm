@@ -74,13 +74,21 @@ class CatchUp
         return (object) $this->feed->list($request);
     }
 
-    /** Cards in the reader's deck nobody acted on: deals (Negócios) plus conversations without one (Atendimento). */
+    /**
+     * The deck's totals: cards by tab (`us`: Esperando a gente, `customer`: Esperando o cliente), subjects whose settle
+     * analysis is still to come (`pending`), and the badge (`count`, every card).
+     */
     public function getActionCount(Request $request): object
     {
-        $deals = (int) $this->feed->count($request)['count'];
+        $deals = $this->feed->count($request);
         ['tenant' => $tenant, 'account' => $account] = $this->workspace->resolve($request);
         $service = $this->service->count($tenant->getId(), $account);
-        return (object) ['count' => $deals + $service, 'deals' => $deals, 'service' => $service];
+        $us = $deals['us'] + $service['us'];
+        $customer = $deals['customer'] + $service['customer'];
+        return (object) [
+            'count' => $us + $customer, 'us' => $us, 'customer' => $customer, 'pending' => $deals['pending'] + $service['pending'],
+            'deals' => $deals['us'] + $deals['customer'], 'service' => $service['us'] + $service['customer'],
+        ];
     }
 
     public function getActionServiceList(Request $request): object

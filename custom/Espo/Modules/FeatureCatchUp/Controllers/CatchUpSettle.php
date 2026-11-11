@@ -18,11 +18,14 @@ final class CatchUpSettle
 {
     public function __construct(private Settle $settle) {}
 
-    /** A conversation whose customer sent the last message has been quiet for the settle time (Hatchet `catch-up-settle`). */
+    /**
+     * A conversation has been quiet for the settle time (Hatchet `catch-up-settle`), or is in the window of an account that
+     * just turned Em dia on (`catch-up-backfill`, `backfill: true`).
+     */
     public function postActionStart(Request $request): object
     {
         $input = $this->verified($request);
-        return (object) $this->settle->start((int) ($input->accountId ?? 0), (int) ($input->conversationId ?? 0));
+        return (object) $this->settle->start((int) ($input->accountId ?? 0), (int) ($input->conversationId ?? 0), ($input->backfill ?? false) === true);
     }
 
     /** An analysis start() queued has finished (Hatchet `catch-up-summary`): store its verdict. */

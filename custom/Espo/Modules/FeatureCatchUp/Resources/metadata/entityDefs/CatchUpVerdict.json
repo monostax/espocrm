@@ -9,12 +9,15 @@
         "verdict": { "type": "varchar", "maxLength": 32, "required": true },
         "reason": { "type": "varchar", "maxLength": 255 },
         "card": { "type": "jsonObject" },
+        "basis": { "type": "jsonObject" },
+        "flipsAt": { "type": "datetime" },
         "resolvedAt": { "type": "datetime" },
         "createdAt": { "type": "datetime", "readOnly": true }
     },
     "indexes": {
         "dealRevision": { "columns": ["opportunityId", "revision", "locale", "evidenceScope"], "unique": true },
         "conversationRevision": { "columns": ["conversationId", "revision", "locale", "evidenceScope"], "unique": true },
-        "tenantOpen": { "columns": ["tenantId", "resolvedAt", "createdAt"] }
+        "tenantOpen": { "columns": ["tenantId", "resolvedAt", "createdAt"] },
+        "tenantFlips": { "columns": ["tenantId", "flipsAt"] }
     }
 }

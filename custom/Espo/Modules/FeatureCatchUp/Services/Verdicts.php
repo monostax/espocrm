@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureCatchUp\Services;
 
+use DateTimeImmutable;
 use Espo\ORM\EntityManager;
 
 /**
  * Stored analyses, one per subject revision, locale and evidence scope. A subject is a deal (Negócios) or a
  * conversation without one (Atendimento). Shared by every reader who can see the same evidence, so an owner
  * and the admins pay for one analysis. `none` verdicts keep a quiet subject out of the deck until its
- * revision changes, and so do `scheduled` ones (loops open, none due yet).
+ * revision changes, and so do `scheduled` ones (loops open, none due yet). A verdict a loop decides keeps that
+ * loop's basis and the time the clock next changes it (`flips_at`); flipDue() picks it again then, in code.
  */
 class Verdicts
 {
@@ -19,10 +21,15 @@ class Verdicts
     /** Subject type => the column holding its id. */
     public const SUBJECTS = ['Opportunity' => 'opportunity_id', 'ChatwootConversation' => 'conversation_id'];
 
-    /** A card nobody acted on stops counting for the badge after this long. */
-    private const BADGE_HOURS = 24;
-    /** Cards checked for the badge; the rail shows 9+ anyway. */
-    private const BADGE_LIMIT = 500;
+    /** Verdicts read for the tab counts: newest first, any verdict (a newer quiet one hides an older card). */
+    private const COUNT_LIMIT = 5000;
+    /** A message this recent with no analysis since is still being analysed: the settle wait, then the analysis. */
+    public const PENDING_MINUTES = Feed::SETTLE_MINUTES + 15;
+    /** Verdicts picked again per call when their time comes; the rest on the next read. */
+    private const FLIP_BATCH = 200;
+
+    /** @var array<string, true> tenants whose due verdicts this request already picked again */
+    private array $flipped = [];
 
     public function __construct(private EntityManager $em) {}
 
@@ -90,22 +97,32 @@ class Verdicts
         }, $query->fetchAll(\PDO::FETCH_ASSOC));
     }
 
-    /** @param ?array<string, mixed> $card */
+    /**
+     * @param ?array<string, mixed> $card
+     * @param ?array<string, mixed> $basis what the verdict is picked again from as time passes (Loops::basis)
+     * @param ?int $flipsAt when the clock next changes it (Loops::flipsAt)
+     */
     public function store(string $tenantId, string $type, string $id, string $revision, string $locale, string $evidenceScope,
-        string $verdict, ?string $reason, ?array $card): void
+        string $verdict, ?string $reason, ?array $card, ?array $basis = null, ?int $flipsAt = null): void
     {
         $column = self::column($type);
         // Only the newest analysis of a subject for this locale and scope is ever read again.
         $this->em->getPDO()->prepare(
             "DELETE FROM catch_up_verdict WHERE $column = :id AND locale = :locale AND evidence_scope = :scope AND revision <> :revision"
         )->execute(['id' => $id, 'locale' => $locale, 'scope' => $evidenceScope, 'revision' => $revision]);
-        if ($this->find($type, $id, $revision, $locale, $evidenceScope)) return;
+        $stored = $this->find($type, $id, $revision, $locale, $evidenceScope);
+        if ($stored && empty($stored['card']['redraft'])) return;
+        // A card the clock moved to another loop was analysed again for its copy: the new analysis replaces it.
+        if ($stored) $this->em->getPDO()->prepare(
+            "DELETE FROM catch_up_verdict WHERE $column = :id AND locale = :locale AND evidence_scope = :scope AND revision = :revision"
+        )->execute(['id' => $id, 'locale' => $locale, 'scope' => $evidenceScope, 'revision' => $revision]);
         try {
             $this->em->createEntity('CatchUpVerdict', [
                 $type === 'Opportunity' ? 'opportunityId' : 'conversationId' => $id,
                 'tenantId' => $tenantId, 'revision' => $revision, 'locale' => $locale,
                 'evidenceScope' => $evidenceScope, 'verdict' => $verdict, 'reason' => $reason !== null ? mb_substr($reason, 0, 255) : null,
                 'card' => $card !== null ? (object) $card : null,
+                'basis' => $basis !== null ? (object) $basis : null, 'flipsAt' => self::at($flipsAt),
             ]);
         } catch (\PDOException $e) {
             // A concurrent poll stored the same analysis first.
@@ -168,63 +185,221 @@ class Verdicts
         return $rows;
     }
 
-    /** Someone acted on the subject's card: it leaves the badge. */
+    /** Someone acted on the subject's card: it leaves the deck and the counts until the subject moves, the clock included. */
     public function resolve(string $type, string $id): void
     {
         $column = self::column($type);
-        $this->em->getPDO()->prepare("UPDATE catch_up_verdict SET resolved_at = UTC_TIMESTAMP() WHERE $column = :id AND resolved_at IS NULL")
+        $this->em->getPDO()->prepare("UPDATE catch_up_verdict SET resolved_at = UTC_TIMESTAMP(), flips_at = NULL WHERE $column = :id AND resolved_at IS NULL")
             ->execute(['id' => $id]);
     }
 
     /**
-     * Atendimento cards from the last day nobody acted on, for conversations of this account still without an
-     * open deal, in the reader's deck and not overtaken by a message. Returns a number only.
+     * "Já resolvi" kept the card's loop and nothing else is due now: the subject's verdicts at this revision become what
+     * its other loops make (`scheduled` or `none`), so the clock brings the next loop back as a card (flipDue()).
+     *
+     * @param ?array{id: ?string, side: string, text: string, dueAt: ?string} $loop
+     * @param ?array<string, mixed> $basis
      */
-    /** @return list<string> conversation ids; the caller checks access and counts */
+    public function settleAs(string $type, string $id, string $revision, string $verdict, ?array $loop, ?array $basis, ?int $flipsAt, string $reason): void
+    {
+        $column = self::column($type);
+        $pdo = $this->em->getPDO();
+        $rows = $pdo->prepare("SELECT id, card FROM catch_up_verdict WHERE deleted = 0 AND $column = :id AND revision = :revision");
+        $rows->execute(['id' => $id, 'revision' => $revision]);
+        $update = $pdo->prepare('UPDATE catch_up_verdict SET verdict = :verdict, reason = :reason, card = :card, basis = :basis, '
+            . 'flips_at = :flips, resolved_at = NULL WHERE id = :row');
+        foreach ($rows->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $card = $row['card'] ? json_decode((string) $row['card'], true) : null;
+            $update->execute([
+                'verdict' => $verdict, 'reason' => $reason, 'row' => $row['id'], 'flips' => self::at($flipsAt),
+                'card' => is_array($card) ? json_encode(self::moved($card, $loop), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) : null,
+                'basis' => $basis !== null ? json_encode($basis, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) : null,
+            ]);
+        }
+    }
+
+    /**
+     * The tenant's verdicts whose time came, picked again from their stored loops and the clock (Loops), in code: a
+     * promise came due, a quiet customer crossed the follow-up threshold. No analysis runs; a card that now shows a loop
+     * its copy wasn't written for is marked `redraft`, and the deck analyses it again when it reaches it. Once per request.
+     */
+    public function flipDue(string $tenantId): void
+    {
+        if (isset($this->flipped[$tenantId])) return;
+        $this->flipped[$tenantId] = true;
+        $pdo = $this->em->getPDO();
+        $query = $pdo->prepare('SELECT id, card, basis FROM catch_up_verdict WHERE deleted = 0 AND tenant_id = :tenant '
+            . 'AND flips_at IS NOT NULL AND flips_at <= UTC_TIMESTAMP() AND resolved_at IS NULL LIMIT ' . self::FLIP_BATCH);
+        $query->execute(['tenant' => $tenantId]);
+        $rows = $query->fetchAll(\PDO::FETCH_ASSOC);
+        if (!$rows) return;
+        $now = new DateTimeImmutable('@' . time());
+        $update = $pdo->prepare('UPDATE catch_up_verdict SET verdict = :verdict, card = :card, flips_at = :flips WHERE id = :row');
+        foreach ($rows as $row) {
+            $basis = $row['basis'] ? json_decode((string) $row['basis'], true) : null;
+            $card = $row['card'] ? json_decode((string) $row['card'], true) : null;
+            if (!is_array($basis) || !is_array($card)) {
+                $pdo->prepare('UPDATE catch_up_verdict SET flips_at = NULL WHERE id = :row')->execute(['row' => $row['id']]);
+                continue;
+            }
+            $open = Loops::open(['promises' => $basis['loops'] ?? []]);
+            ['verdict' => $verdict, 'loop' => $loop] = $open ? Loops::pick($open, Loops::factsAt($basis, $now), $now) : ['verdict' => 'none', 'loop' => null];
+            $update->execute([
+                'verdict' => $verdict, 'row' => $row['id'], 'flips' => self::at(Loops::flipsAt($basis, $now)),
+                'card' => json_encode(self::moved($card, $loop), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+            ]);
+        }
+    }
+
+    /**
+     * A stored card whose loop the clock (or "Já resolvi") changed: it shows the new loop. Copy written for another loop
+     * (`draftFor`, set when the card was analysed) is written again: the card is marked `redraft`.
+     *
+     * @param array<string, mixed> $card
+     * @param ?array<string, mixed> $loop
+     * @return array<string, mixed>
+     */
+    public static function moved(array $card, ?array $loop): array
+    {
+        $draftFor = $card['draftFor'] ?? $card['promise'] ?? null;
+        $card['promise'] = $loop;
+        if ($loop && !Loops::same($loop, is_array($draftFor) ? $draftFor : null)) {
+            $card['redraft'] = true;
+            $card['headline'] = $loop['text'];
+        }
+        return $card;
+    }
+
+    /** A Unix time as the datetime columns store it (UTC). */
+    private static function at(?int $time): ?string
+    {
+        return $time === null ? null : gmdate('Y-m-d H:i:s', $time);
+    }
+
+    /**
+     * The verdict each Atendimento conversation of the reader's deck has now, for the tab counts: conversations of this
+     * account still without an open deal, active in the deck's window, not labeled personal, automated or team, not snoozed
+     * by the reader, unresolved and not overtaken by a message since (activity doesn't count). A conversation judged for
+     * several readers or locales counts by its newest verdict. The caller checks access, keeps one copy per WhatsApp group
+     * and counts the card verdicts by tab.
+     *
+     * @return array<string, array{verdict: string, contact: ?string, grp: int}> conversation id => newest verdict
+     */
     public function cardConversations(string $tenantId, string $accountId, string $ownerSql, array $ownerParams, string $userId): array
     {
+        $this->flipDue($tenantId);
         $query = $this->em->getPDO()->prepare(
-            'SELECT DISTINCT v.conversation_id FROM catch_up_verdict v '
+            'SELECT v.conversation_id, v.verdict, c.chatwoot_contact_id, (COALESCE(ct.identifier, \'\') LIKE \'%@g.us\') FROM catch_up_verdict v '
             . 'JOIN chatwoot_conversation c ON c.id = v.conversation_id AND c.deleted = 0 AND c.chatwoot_account_id = :account '
             . 'JOIN chatwoot_account a ON a.id = c.chatwoot_account_id '
-            . "WHERE v.deleted = 0 AND v.tenant_id = :tenant AND v.verdict NOT IN ('none', 'scheduled') AND v.resolved_at IS NULL "
-            . 'AND v.created_at >= UTC_TIMESTAMP() - INTERVAL ' . self::BADGE_HOURS . ' HOUR '
-            . 'AND (c.last_activity_at IS NULL OR c.last_activity_at <= v.created_at) '
-            . 'AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
-            . "AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user "
-            . "AND z.target_type = 'ChatwootConversation' AND z.snoozed_until > UTC_TIMESTAMP())" . $ownerSql
-            . ' LIMIT ' . self::BADGE_LIMIT
+            . self::CONVERSATION_FILTERS_SQL
+            . 'WHERE v.deleted = 0 AND v.tenant_id = :tenant AND v.resolved_at IS NULL '
+            . 'AND c.last_activity_at >= UTC_TIMESTAMP() - INTERVAL ' . ServiceFeed::WINDOW_DAYS . ' DAY '
+            . 'AND ' . self::LAST_MESSAGE_SQL . ' <= v.created_at '
+            . self::CONVERSATION_DECK_SQL . $ownerSql
+            . ' ORDER BY v.created_at DESC LIMIT ' . self::COUNT_LIMIT
         );
         $query->execute(['tenant' => $tenantId, 'account' => $accountId, 'user' => $userId, ...$ownerParams]);
+        $found = [];
+        foreach ($query->fetchAll(\PDO::FETCH_NUM) as [$id, $verdict, $contact, $grp]) {
+            $found[(string) $id] ??= ['verdict' => (string) $verdict, 'contact' => $contact !== null ? (string) $contact : null, 'grp' => (int) $grp];
+        }
+        return $found;
+    }
+
+    /**
+     * Atendimento conversations of the reader's deck with a message from the last PENDING_MINUTES and no analysis since:
+     * their settle analysis is still to come. Same deck filters as cardConversations().
+     *
+     * @return array<string, array{contact: ?string, grp: int}>
+     */
+    public function pendingConversations(string $accountId, string $ownerSql, array $ownerParams, string $userId): array
+    {
+        $query = $this->em->getPDO()->prepare(
+            'SELECT c.id, c.chatwoot_contact_id, (COALESCE(ct.identifier, \'\') LIKE \'%@g.us\') FROM chatwoot_conversation c '
+            . 'JOIN chatwoot_account a ON a.id = c.chatwoot_account_id '
+            . self::CONVERSATION_FILTERS_SQL
+            . 'WHERE c.deleted = 0 AND c.chatwoot_account_id = :account '
+            . 'AND c.last_activity_at >= UTC_TIMESTAMP() - INTERVAL ' . self::PENDING_MINUTES . ' MINUTE '
+            . 'AND ' . self::LAST_MESSAGE_SQL . ' >= UTC_TIMESTAMP() - INTERVAL ' . self::PENDING_MINUTES . ' MINUTE '
+            . 'AND NOT EXISTS (SELECT 1 FROM catch_up_verdict v WHERE v.deleted = 0 AND v.conversation_id = c.id AND v.created_at >= '
+            . self::LAST_MESSAGE_SQL . ') '
+            . self::CONVERSATION_DECK_SQL . $ownerSql
+            . ' LIMIT ' . self::COUNT_LIMIT
+        );
+        $query->execute(['account' => $accountId, 'user' => $userId, ...$ownerParams]);
+        $found = [];
+        foreach ($query->fetchAll(\PDO::FETCH_NUM) as [$id, $contact, $grp]) {
+            $found[(string) $id] = ['contact' => $contact !== null ? (string) $contact : null, 'grp' => (int) $grp];
+        }
+        return $found;
+    }
+
+    /**
+     * The verdict each open deal of the reader's deck has now, for the tab counts: in the deck's window (not dormant), not
+     * snoozed by the reader, unresolved and not overtaken by a message since. A deal judged for several readers or locales
+     * counts by its newest verdict. The caller keeps the deals with a conversation the reader may open and counts the card
+     * verdicts by tab.
+     *
+     * @return array<string, string> deal id => newest verdict
+     */
+    public function cardDeals(string $tenantId, string $ownerSql, array $ownerParams, string $userId): array
+    {
+        $this->flipDue($tenantId);
+        $query = $this->em->getPDO()->prepare(
+            'SELECT v.opportunity_id, v.verdict FROM catch_up_verdict v '
+            . 'JOIN opportunity o ON o.id = v.opportunity_id AND o.deleted = 0 AND o.tenant_id = :tenant '
+            . "AND o.status NOT IN ('Won','Lost') LEFT JOIN catch_up_deal_state s ON s.id = o.id AND s.deleted = 0 "
+            . 'WHERE v.deleted = 0 AND v.tenant_id = :verdictTenant AND v.resolved_at IS NULL '
+            . 'AND (s.last_message_at IS NULL OR s.last_message_at <= v.created_at) '
+            . 'AND (s.last_message_at IS NULL OR s.last_message_at >= UTC_TIMESTAMP() - INTERVAL ' . Feed::DORMANT_DAYS . ' DAY) '
+            . self::DEAL_DECK_SQL . $ownerSql
+            . ' ORDER BY v.created_at DESC LIMIT ' . self::COUNT_LIMIT
+        );
+        $query->execute(['tenant' => $tenantId, 'verdictTenant' => $tenantId, 'user' => $userId, ...$ownerParams]);
+        $found = [];
+        foreach ($query->fetchAll(\PDO::FETCH_NUM) as [$id, $verdict]) $found[(string) $id] ??= (string) $verdict;
+        return $found;
+    }
+
+    /**
+     * Open deals of the reader's deck with a message from the last PENDING_MINUTES and no analysis since: their settle
+     * analysis is still to come.
+     *
+     * @return list<string>
+     */
+    public function pendingDeals(string $tenantId, string $ownerSql, array $ownerParams, string $userId): array
+    {
+        $query = $this->em->getPDO()->prepare(
+            'SELECT o.id FROM opportunity o JOIN catch_up_deal_state s ON s.id = o.id AND s.deleted = 0 '
+            . "WHERE o.deleted = 0 AND o.tenant_id = :tenant AND o.status NOT IN ('Won','Lost') "
+            . 'AND s.last_message_at >= UTC_TIMESTAMP() - INTERVAL ' . self::PENDING_MINUTES . ' MINUTE '
+            . 'AND NOT EXISTS (SELECT 1 FROM catch_up_verdict v WHERE v.deleted = 0 AND v.opportunity_id = o.id AND v.created_at >= s.last_message_at) '
+            . self::DEAL_DECK_SQL . $ownerSql
+            . ' LIMIT ' . self::COUNT_LIMIT
+        );
+        $query->execute(['tenant' => $tenantId, 'user' => $userId, ...$ownerParams]);
         return array_map('strval', $query->fetchAll(\PDO::FETCH_COLUMN));
     }
+
+    /** The newest message either way of conversation `c` (activity left out; a private note counts as sent). */
+    private const LAST_MESSAGE_SQL = "GREATEST(COALESCE(c.last_message_received_at, '1970-01-01'), COALESCE(c.last_message_sent_at, '1970-01-01'))";
+    /** Joins for conversation `c`'s contact `ct` and its label `p`. */
+    private const CONVERSATION_FILTERS_SQL = 'LEFT JOIN chatwoot_contact ct ON ct.id = c.chatwoot_contact_id AND ct.deleted = 0 '
+        . 'LEFT JOIN catch_up_party p ON p.chatwoot_account_id = c.chatwoot_account_id AND p.chatwoot_contact_id = ct.chatwoot_contact_id AND p.deleted = 0 ';
+    /** Conversation `c` belongs in the reader's Atendimento deck (ServiceFeed::candidates()), minus the settle wait and the owner rule. */
+    private const CONVERSATION_DECK_SQL = "AND COALESCE(ct.identifier, '') <> 'whatsapp.integration' "
+        . "AND (p.party_class IS NULL OR p.party_class IN ('customer', 'partner')) "
+        . 'AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
+        . 'AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '
+        . "AND z.target_type = 'ChatwootConversation' AND z.snoozed_until > UTC_TIMESTAMP())";
+    /** Deal `o` belongs in the reader's Negócios deck (Feed::candidateIds()), minus the settle wait, the window and the owner rule. */
+    private const DEAL_DECK_SQL = 'AND EXISTS (SELECT 1 FROM chatwoot_conversation_opportunity r WHERE r.opportunity_id = o.id AND r.deleted = 0) '
+        . 'AND o.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '
+        . "AND z.target_type = 'Opportunity' AND z.snoozed_until > UTC_TIMESTAMP())";
 
     private static function column(string $type): string
     {
         return self::SUBJECTS[$type] ?? throw new \InvalidArgumentException("Unsupported Em dia subject: $type");
-    }
-
-    /**
-     * Cards from the last day nobody acted on, on open deals in the reader's deck, that no message has overtaken
-     * (a reply from the conversation itself settles a card without a review). The caller keeps only deals with a
-     * conversation the reader may open in Chatwoot and counts them.
-     *
-     * @return list<string> deal ids
-     */
-    public function cardDeals(string $tenantId, string $ownerSql, array $ownerParams, string $userId): array
-    {
-        $query = $this->em->getPDO()->prepare(
-            'SELECT DISTINCT v.opportunity_id FROM catch_up_verdict v '
-            . 'JOIN opportunity o ON o.id = v.opportunity_id AND o.deleted = 0 AND o.tenant_id = :tenant '
-            . "AND o.status NOT IN ('Won','Lost') LEFT JOIN catch_up_deal_state s ON s.id = o.id AND s.deleted = 0 "
-            . "WHERE v.deleted = 0 AND v.tenant_id = :verdictTenant AND v.verdict NOT IN ('none', 'scheduled') AND v.resolved_at IS NULL "
-            . 'AND v.created_at >= UTC_TIMESTAMP() - INTERVAL ' . self::BADGE_HOURS . ' HOUR '
-            . 'AND (s.last_message_at IS NULL OR s.last_message_at <= v.created_at) '
-            . "AND o.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user "
-            . "AND z.target_type = 'Opportunity' AND z.snoozed_until > UTC_TIMESTAMP())" . $ownerSql
-            . ' LIMIT ' . self::BADGE_LIMIT
-        );
-        $query->execute(['tenant' => $tenantId, 'verdictTenant' => $tenantId, 'user' => $userId, ...$ownerParams]);
-        return array_map('strval', $query->fetchAll(\PDO::FETCH_COLUMN));
     }
 }

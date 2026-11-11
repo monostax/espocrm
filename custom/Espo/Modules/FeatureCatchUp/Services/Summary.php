@@ -21,42 +21,47 @@ class Summary
      * backend's analysis, stored once it completes. An answer that isn't a valid verdict counts as `none`:
      * it was paid for, and the same state is not analysed again. The model keeps the record's loops; Loops turns
      * them and the clock into the card (customer_waiting, promise_due, follow_up_due) or into `scheduled` (Agenda,
-     * no card). The same call classifies the conversation's unlabeled groups and group members; their labels go
+     * no card), and the verdict keeps those loops so the clock can change it later without an analysis
+     * (Verdicts::flipDue()). A card the clock moved to a loop its copy wasn't written for (`redraft`) is analysed
+     * again. The same call classifies the conversation's unlabeled groups and group members; their labels go
      * onto the Chatwoot contacts, and the verdict is stored under the evidence scope the next read, with those
      * labels, will compute.
      *
-     * @param ?array{lane: string, id: string, accountId: string, timeZone: string} $notify Analysis at settle (Settle): the
-     *     backend calls back with this when the analysis finishes, so the CRM stores the verdict without anyone polling.
+     * @param ?array{lane: string, id: string, accountId: string, timeZone: string, backfill?: bool} $notify Analysis at
+     *     settle (Settle): the backend calls back with this when the analysis finishes, so the CRM stores the verdict
+     *     without anyone polling. `backfill`: the window analysed when Em dia is turned on, outside the daily limit.
      */
     public function analyse(array $snapshot, string $locale, ?string $requestId = null, ?array $notify = null): array
     {
         $conversation = ($snapshot['type'] ?? 'opportunity') === 'conversation';
         $key = [$conversation ? 'ChatwootConversation' : 'Opportunity', $snapshot['id'], $snapshot['revision'], $locale, $snapshot['evidenceScope']];
+        $this->verdicts->flipDue((string) $snapshot['tenantId']);
         $stored = $this->verdicts->find(...$key);
-        if ($stored) return ['status' => 'completed', 'cached' => true, ...$stored];
+        if ($stored && empty($stored['card']['redraft'])) return ['status' => 'completed', 'cached' => true, ...$stored];
         $result = $this->request($snapshot, $locale, $requestId, $notify);
         if ($result['status'] !== 'completed') return [...$result, 'cached' => false, 'verdict' => null, 'reason' => null, 'card' => null];
         $card = is_array($result['card'] ?? null) ? $result['card'] : null;
         $classes = $this->parties->store($snapshot['participants'] ?? [], is_array($card['participants'] ?? null) ? $card['participants'] : []);
         if ($classes) $key[4] = Feed::evidenceScope(Transcript::relabel($snapshot['evidence'], $classes));
-        // The updated record replaces the reader's record; its due promises decide the revision the next read computes.
+        // The updated record replaces the reader's record.
         if (is_array($card['record'] ?? null) && !empty($snapshot['sourceScope'])) {
             $this->records->store((string) $snapshot['tenantId'], $key[0], $snapshot['id'], $snapshot['sourceScope'], $card['record'],
                 Records::edge($snapshot['evidence']));
-            if (isset($snapshot['revisions'])) {
-                $due = $this->records->dues($key[0], [$snapshot['id']])[$snapshot['id']] ?? null;
-                $key[2] = $due !== null && $due <= time() ? $snapshot['revisions']['due'] : $snapshot['revisions']['notDue'];
-            }
         }
         $answer = in_array($card['verdict'] ?? null, $conversation ? self::CONVERSATION_ANSWERS : self::DEAL_ANSWERS, true) ? $card['verdict'] : 'none';
         $record = is_array($card['record'] ?? null) ? $card['record'] : ($snapshot['record'] ?? null);
-        ['verdict' => $verdict, 'loop' => $loop] = Loops::verdict($answer, $record, is_array($snapshot['facts'] ?? null) ? $snapshot['facts'] : [],
-            new DateTimeImmutable('@' . time()), !empty($snapshot['nextAction']['pending']));
+        $facts = is_array($snapshot['facts'] ?? null) ? $snapshot['facts'] : [];
+        $now = new DateTimeImmutable('@' . time());
+        ['verdict' => $verdict, 'loop' => $loop] = Loops::verdict($answer, $record, $facts, $now, !empty($snapshot['nextAction']['pending']));
         // Atendimento follows customers and partners only: a chat whose own contact is personal, automated or team gets no card.
         if ($conversation && in_array(self::ownClass($snapshot['participants'] ?? [], $classes), ['personal', 'automated', 'team'], true)) $verdict = 'none';
         $reason = is_string($card['reason'] ?? null) ? $card['reason'] : 'The analysis could not be read.';
-        $card = in_array($verdict, Loops::QUIET, true) || !$card ? null : self::card($card, $loop, $reason);
-        $this->verdicts->store((string) $snapshot['tenantId'], ...[...$key, $verdict, $reason, $card]);
+        // A verdict a loop decided keeps the loops, so the clock can change it without an analysis; `scheduled` keeps its
+        // copy for the card it becomes.
+        $basis = $loop && $verdict !== 'none' ? Loops::basis(Loops::open($record), $facts, $snapshot['quietSince'] ?? null) : null;
+        $card = $verdict === 'none' || !$card ? null : self::card($card, $loop, $reason);
+        $this->verdicts->store((string) $snapshot['tenantId'], ...[...$key, $verdict, $reason, $card, $basis,
+            $basis ? Loops::flipsAt($basis, $now) : null]);
         return ['status' => 'completed', 'requestId' => $result['requestId'] ?? null, 'cached' => false,
             'verdict' => $verdict, 'reason' => $reason, 'card' => $card];
     }
@@ -74,6 +79,8 @@ class Summary
         $card = array_diff_key($card, ['verdict' => true, 'reason' => true, 'participants' => true, 'record' => true, 'promise' => true]);
         if (!$loop) return $card;
         $card['promise'] = $loop;
+        // The loop this copy was written for: a card the clock moves to another loop is analysed again (Verdicts::moved).
+        $card['draftFor'] = $loop;
         $card['headline'] = ($card['headline'] ?? null) ?: $loop['text'];
         $card['whyNow'] = ($card['whyNow'] ?? null) ?: $reason;
         return $card;

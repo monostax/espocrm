@@ -36,10 +36,7 @@ class Feed
      * showed "customer waiting" cards for chats the team was answering.
      */
     public const SETTLE_MINUTES = 30;
-    /**
-     * A deal quiet this long has had its last check (the 30-day quiet step) and leaves the deck: 30 days plus
-     * time for a deck to reach it. It comes back when a message moves it.
-     */
+    /** A deal quiet this long leaves the deck. It comes back when a message moves it. */
     public const DORMANT_DAYS = 45;
     /**
      * Customers waiting on us for up to this many days come first, longest wait first (decided 2026-11-10: an
@@ -85,8 +82,9 @@ class Feed
         $deals = $this->readable($ids);
         // Only deals with a conversation the reader may open in Chatwoot (its inbox rules, not the CRM's copy of them).
         $deals = array_intersect_key($deals, $this->access->dealsWithOpenConversation(array_keys($deals)));
-        $context = $this->context($deals, $now);
+        $context = $this->context($deals);
         // Judged at this revision: quiet ones stay out; a card's verdict tells the deck its tab before it is opened.
+        $this->verdicts->flipDue($tenantId);
         $judged = $this->verdicts->judged('Opportunity', array_map(fn ($entry) => $entry['revision'], $context));
         $items = [];
         foreach ($deals as $id => $deal) {
@@ -96,13 +94,32 @@ class Feed
         return ['items' => $items, 'cursor' => count($ids) === $limit ? (string) ($offset + $limit) : null];
     }
 
+    /**
+     * The reader's Negócios cards by tab (Loops::BUCKETS) and the deals whose settle analysis is still to come, for the
+     * tab counts and the badge. Every subject is analysed at settle (decided 2026-11-11), so these are the deck's totals.
+     *
+     * @return array{us: int, customer: int, pending: int}
+     */
     public function count(Request $request): array
     {
         $this->authorize();
         $tenantId = $this->workspace->resolve($request)['tenant']->getId();
         [$sql, $params] = $this->owners->clause();
-        $ids = $this->verdicts->cardDeals($tenantId, $sql, $params, $this->user->getId());
-        return ['count' => count($this->access->dealsWithOpenConversation($ids))];
+        $cards = array_filter($this->verdicts->cardDeals($tenantId, $sql, $params, $this->user->getId()), fn ($verdict) => isset(Loops::BUCKETS[$verdict]));
+        $pending = $this->verdicts->pendingDeals($tenantId, $sql, $params, $this->user->getId());
+        $open = $this->access->dealsWithOpenConversation(array_values(array_unique([...array_keys($cards), ...$pending])));
+        return self::tally(array_intersect_key($cards, $open), count(array_filter($pending, fn ($id) => isset($open[$id]))));
+    }
+
+    /**
+     * @param array<string, string> $cards subject id => card verdict
+     * @return array{us: int, customer: int, pending: int}
+     */
+    public static function tally(array $cards, int $pending): array
+    {
+        $counts = ['us' => 0, 'customer' => 0, 'pending' => $pending];
+        foreach ($cards as $verdict) $counts[Loops::BUCKETS[$verdict]]++;
+        return $counts;
     }
 
     public function snapshot(string $id, Request $request): array
@@ -112,7 +129,7 @@ class Feed
         $now = Workspace::now($request);
         $deal = $this->deal($id, $tenant->getId());
         if (!$this->states->load([$id])) $this->states->refresh([$id]);
-        $context = $this->context([$id => $deal], $now)[$id];
+        $context = $this->context([$id => $deal])[$id];
         $conversations = $this->conversations($deal);
         if (!$conversations) throw new Forbidden('No conversation of this deal can be opened.');
         ['evidence' => $messages, 'participants' => $participants] = $this->transcript->read($conversations, $now);
@@ -124,7 +141,8 @@ class Feed
         $result = [
             ...$this->candidate($deal, $context, $now),
             'sourceScope' => $sourceScope, 'record' => $this->records->load('Opportunity', $id, $sourceScope),
-            'revisions' => $context['revisions'],
+            // When the conversation went quiet, so the stored verdict can be picked again as time passes (Loops::basis).
+            'quietSince' => $context['state']['last_message_at'] ?? null,
             'tenantId' => $tenant->getId(), 'catchUpPolicy' => $policy,
             'revision' => $context['revision'], 'evidenceScope' => $scope, 'evidence' => $evidence, 'participants' => $participants,
             'facts' => [...$this->facts($deal, $context, $now), 'earlierDeals' => $this->earlierDeals($deal, array_keys($conversations), $now)],
@@ -134,7 +152,6 @@ class Feed
         $result['snapshot'] = hash('sha256', json_encode([$id, $this->user->getId(), $context['revision'], $scope], JSON_THROW_ON_ERROR));
         $this->cache->store($this->snapshotKey($id), [
             'token' => $result['snapshot'], 'revision' => $context['revision'], 'expires' => time() + 86400,
-            'alternates' => array_values($context['revisions']),
         ]);
         return $result;
     }
@@ -150,9 +167,7 @@ class Feed
             throw new Conflict('Refresh this card before acting on it.');
         }
         $deal = $this->deal($id, $tenantId);
-        $now = Workspace::now($request);
-        // The analysis may have stored a record that moves the revision across a due promise; that is not a change.
-        if (!in_array($this->context([$id => $deal], $now)[$id]['revision'], [$snapshot['revision'], ...($snapshot['alternates'] ?? [])], true)) {
+        if ($this->context([$id => $deal])[$id]['revision'] !== $snapshot['revision']) {
             throw new Conflict('This deal changed since the card was shown.');
         }
         $this->verdicts->resolve('Opportunity', $id);
@@ -245,24 +260,18 @@ class Feed
      * @param array<string, Entity> $deals
      * @return array<string, array<string, mixed>>
      */
-    private function context(array $deals, DateTimeImmutable $now): array
+    private function context(array $deals): array
     {
         $ids = array_keys($deals);
         $states = $this->states->load($ids);
         $posts = $this->lastPosts($ids);
-        $dues = $this->records->dues('Opportunity', $ids);
         $context = [];
         foreach ($deals as $id => $deal) {
             $state = $states[$id] ?? null;
             $nextAction = $this->nextAction($deal);
             $context[$id] = [
                 'state' => $state, 'nextAction' => $nextAction,
-                'revision' => Revision::of($deal, $state, $nextAction, $posts[$id] ?? null, $now, $dues[$id] ?? null),
-                // The revision once a stored record has, or no longer has, a promise past due.
-                'revisions' => [
-                    'due' => Revision::of($deal, $state, $nextAction, $posts[$id] ?? null, $now, $now->getTimestamp()),
-                    'notDue' => Revision::of($deal, $state, $nextAction, $posts[$id] ?? null, $now, null),
-                ],
+                'revision' => Revision::of($deal, $state, $nextAction, $posts[$id] ?? null),
                 'ownerId' => $this->owners->deckOwnerId($deal->get('assignedUserId'), $state['staff_user_id'] ?? null),
             ];
         }

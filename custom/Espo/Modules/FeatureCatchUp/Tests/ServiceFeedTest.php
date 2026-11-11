@@ -106,7 +106,6 @@ class ServiceFeedTest extends TestCase
     private function resolvedWith(array $shown, array $left): array
     {
         $records = $this->createMock(Records::class);
-        $records->method('dues')->willReturnOnConsecutiveCalls(['conv' => time() - 86400], []);
         $records->method('load')->willReturn(['agreed' => [], 'promises' => $left, 'coveredAt' => null]);
         [$feed, $verdicts] = $this->feed(['records' => $records]);
         $verdicts->method('cards')->willReturn($shown);
@@ -114,16 +113,18 @@ class ServiceFeedTest extends TestCase
         return [$feed, $verdicts, $records];
     }
 
-    public function testJaResolviKeepsTheCardsLoopAndTheConversationStaysOutAtItsNewRevision(): void
+    public function testJaResolviKeepsTheCardsLoopAndTheClockBringsTheNextLoopBack(): void
     {
+        $due = time() + 86400;
         [$feed, $verdicts, $records] = $this->resolvedWith([self::SHOWN], [['id' => 'p2', 'side' => 'theirs', 'text' => 'Mandar o RG',
-            'dueAt' => gmdate(DATE_ATOM, time() + 86400), 'status' => 'open']]);
+            'dueAt' => gmdate(DATE_ATOM, $due), 'status' => 'open']]);
         $records->expects(self::once())->method('keep')->with('ChatwootConversation', 'conv', self::SHOWN['card']['promise'], 'user:erivania')
             ->willReturn(true);
-        // The kept loop's past due time no longer counts, so the revision moves; the loop still open isn't due yet.
-        $after = Revision::ofConversation($this->entity(['chatwootAccountId' => 'crm-account'], 'conv'), new DateTimeImmutable(), null);
-        $verdicts->expects(self::once())->method('store')
-            ->with('tenant', 'ChatwootConversation', 'conv', $after, 'pt-BR', 'scope', 'scheduled', self::anything(), null);
+        // Nothing else is due now: the verdict at this revision becomes `scheduled`, and comes back when the RG is due.
+        $revision = Revision::ofConversation($this->entity(['chatwootAccountId' => 'crm-account'], 'conv'));
+        $verdicts->expects(self::once())->method('settleAs')->with('ChatwootConversation', 'conv', $revision, 'scheduled',
+            self::callback(fn ($loop) => $loop['id'] === 'p2'), self::callback(fn ($basis) => count($basis['loops']) === 1), $due, self::anything());
+        $verdicts->expects(self::never())->method('store');
 
         $feed->resolved('conv', $this->request());
     }
@@ -132,7 +133,7 @@ class ServiceFeedTest extends TestCase
     {
         [$feed, $verdicts, $records] = $this->resolvedWith([self::SHOWN], [['id' => 'p2', 'side' => 'ours', 'text' => 'Responder o preço', 'status' => 'open']]);
         $records->method('keep')->willReturn(true);
-        $verdicts->expects(self::never())->method('store');
+        $verdicts->expects(self::never())->method('settleAs');
 
         $feed->resolved('conv', $this->request());
     }
@@ -141,7 +142,7 @@ class ServiceFeedTest extends TestCase
     {
         [$feed, $verdicts, $records] = $this->resolvedWith([[...self::SHOWN, 'card' => ['headline' => 'Novo negócio']]], []);
         $records->expects(self::never())->method('keep');
-        $verdicts->expects(self::never())->method('store');
+        $verdicts->expects(self::never())->method('settleAs');
 
         $feed->resolved('conv', $this->request());
     }

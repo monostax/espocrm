@@ -9,9 +9,9 @@ use DateTimeZone;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\Modules\FeatureCatchUp\Services\Loops;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
 use Espo\Modules\FeatureCatchUp\Services\Records;
-use Espo\Modules\FeatureCatchUp\Services\Revision;
 use Espo\Modules\FeatureCatchUp\Services\Summary;
 use Espo\Modules\FeatureCatchUp\Services\Verdicts;
 use PHPUnit\Framework\TestCase;
@@ -51,23 +51,24 @@ class RecordsTest extends TestCase
         self::assertNotSame(Records::scope(['a']), Records::scope(['a', 'b']), 'a reader who sees fewer chats gets their own record');
     }
 
-    public function testAPromisePassingItsDueMovesTheRevision(): void
+    public function testAPromisePassingItsDueIsTheClockNotANewRevision(): void
     {
-        $deal = $this->createMock(Entity::class);
-        $deal->method('get')->willReturn(null);
         $now = new DateTimeImmutable('2026-11-05 21:00:00', new DateTimeZone('UTC'));
-        $before = Revision::of($deal, null, null, null, $now, $now->getTimestamp() + 3600);
-        self::assertSame($before, Revision::of($deal, null, null, null, $now, null), 'a promise not yet due changes nothing');
-        self::assertNotSame($before, Revision::of($deal, null, null, null, $now, $now->getTimestamp() - 60));
+        $due = $now->getTimestamp() + 3600;
+        $basis = Loops::basis([['id' => 'c', 'side' => 'ours', 'text' => 'enviar o contrato', 'dueAt' => gmdate(DATE_ATOM, $due), 'status' => 'open']], [], null);
+        self::assertSame($due, Loops::flipsAt($basis, $now), 'the verdict is picked again when the promise comes due');
+        self::assertSame('scheduled', Loops::pick($basis['loops'], Loops::factsAt($basis, $now), $now)['verdict']);
+        $later = $now->modify('+2 hours');
+        self::assertSame('promise_due', Loops::pick($basis['loops'], Loops::factsAt($basis, $later), $later)['verdict']);
+        self::assertNull(Loops::flipsAt($basis, $later), 'nothing else is coming');
     }
 
-    public function testTheRecordIsStoredAndTheVerdictFiledUnderTheRevisionTheNextReadComputes(): void
+    public function testTheRecordIsStoredAndTheVerdictFiledUnderTheRevisionTheReaderRead(): void
     {
         $record = ['agreed' => [['key' => 'valor', 'value' => 'R$ 800', 'messageId' => '12']],
             'promises' => [['id' => 'contrato', 'side' => 'ours', 'text' => 'enviar o contrato', 'dueAt' => '2026-11-01T18:00:00-03:00', 'status' => 'open']]];
         $records = $this->createMock(Records::class);
         $records->expects(self::once())->method('store')->with('tenant', 'Opportunity', 'deal', 'scope-1', $record, '2026-11-05T13:08:00-03:00');
-        $records->method('dues')->willReturn(['deal' => (new DateTimeImmutable('2026-11-01T18:00:00-03:00'))->getTimestamp()]);
         $verdicts = $this->createMock(Verdicts::class);
         $verdicts->method('find')->willReturn(null);
         $stored = null;
@@ -79,10 +80,10 @@ class RecordsTest extends TestCase
             'verdict' => 'loops', 'reason' => 'Prometemos o contrato', 'headline' => 'H',
             'promise' => ['side' => 'theirs', 'text' => 'the model no longer picks it', 'dueAt' => null], 'record' => $record]]);
         $result = $summary->analyse(['id' => 'deal', 'type' => 'opportunity', 'tenantId' => 'tenant', 'revision' => 'r-now',
-            'revisions' => ['due' => 'r-due', 'notDue' => 'r-not-due'], 'evidenceScope' => 'scope', 'evidence' => self::entries(),
+            'evidenceScope' => 'scope', 'evidence' => self::entries(),
             'facts' => [], 'catchUpPolicy' => [], 'sourceScope' => 'scope-1', 'record' => null], 'pt-BR');
         self::assertSame('promise_due', $result['verdict']);
-        self::assertSame('r-due', $stored[3], 'the stored promise is past due, so the next read computes the due revision');
+        self::assertSame('r-now', $stored[3], 'a promise past due is the clock, not another revision');
         self::assertArrayNotHasKey('record', $stored[8], 'the record is stored on its own, never on the card');
         self::assertSame('enviar o contrato', $stored[8]['promise']['text']);
     }

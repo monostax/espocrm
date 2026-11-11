@@ -13,8 +13,11 @@ use Espo\ORM\EntityManager;
 /** Chatwoot account settings own the opt-in. A missing flag, ambiguous mapping or failed lookup never enables it. */
 class Rollout
 {
-    /** Card copy is generated for every card a user reaches; keep in step with Chatwoot's CatchUpConfiguration. */
-    public const DEFAULT_DAILY_LIMIT = 300;
+    /**
+     * Every conversation is analysed when it settles (2026-11-11): sized for ~350 settles a day (Grupo Mousa) with room.
+     * Keep in step with Chatwoot's CatchUpConfiguration.
+     */
+    public const DEFAULT_DAILY_LIMIT = 1000;
     public const MAX_DAILY_LIMIT = 2000;
 
     /** @var array<string, array> Opt-ins already confirmed in this request: a deck batch reads one account up to ten times. */
