@@ -198,7 +198,30 @@ class ContactInbox
             $data->readState = $states[$row['id']] ?? null;
             $list[] = $data;
         }
+        if (static::ENTITY_TYPE === 'Contact') $this->partyClasses($this->workspace($request), $list);
         return (object) ['list' => $this->tags->decorate(static::ENTITY_TYPE, $list), 'total' => $total, 'hasMore' => $offset + count($page) < $total];
+    }
+
+    /**
+     * Who each contact is to the business (customer, partner, team, personal, automated), as Em dia labeled its
+     * Chatwoot contacts in this workspace. FeatureCatchUp's Parties mirrors those labels into catch_up_party; a
+     * contact linked to several Chatwoot contacts takes the latest label.
+     *
+     * @param list<object> $list
+     */
+    private function partyClasses(Entity $workspace, array $list): void
+    {
+        if (!$list) return;
+        $ids = array_column($list, 'id');
+        $statement = $this->em->getPDO()->prepare(
+            'SELECT cc.contact_id, p.party_class FROM chatwoot_contact cc '
+            . 'JOIN catch_up_party p ON p.chatwoot_account_id = cc.chatwoot_account_id AND p.chatwoot_contact_id = cc.chatwoot_contact_id '
+            . 'WHERE cc.deleted = 0 AND p.deleted = 0 AND p.party_class IS NOT NULL AND cc.chatwoot_account_id = ? AND p.tenant_id = ? '
+            . 'AND cc.contact_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY p.modified_at'
+        );
+        $statement->execute([$workspace->getId(), (string) $workspace->get('tenantId'), ...$ids]);
+        $classes = $statement->fetchAll(PDO::FETCH_KEY_PAIR);
+        foreach ($list as $data) $data->partyClass = $classes[$data->id] ?? null;
     }
 
     public function counts(Request $request): object
