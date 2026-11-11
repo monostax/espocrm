@@ -125,6 +125,23 @@ final class AsaasPaymentVerificationTest extends TestCase
         MonthlyPeriod::forDueDate('2026-10-15', '2026-11-16');
     }
 
+    public function testMonthlyCreditsLastUntilTheEndOfTheFollowingPeriod(): void
+    {
+        foreach ([
+            ['2026-10-15', '2026-11-15', '2026-12-15'],
+            // Anchored on the 31st: short months clamp, and the boundary after one returns to the 31st.
+            ['2026-12-31', '2027-01-31', '2027-02-28'],
+            ['2027-01-31', '2027-02-28', '2027-03-31'],
+            ['2026-12-31', '2027-02-28', '2027-03-31'],
+            ['2028-01-30', '2028-02-29', '2028-03-30'],
+        ] as [$anchor, $due, $nextDue]) {
+            $period = MonthlyPeriod::forDueDate($anchor, $due);
+            $following = MonthlyPeriod::forDueDate($anchor, $nextDue);
+            $this->assertSame($following['start'], $period['end']);
+            $this->assertSame($following['end'], MonthlyPeriod::followingEnd($period['start'], $period['end']), "{$anchor} / {$due}");
+        }
+    }
+
     public function testWebhookAuthenticationIsIntegrationScopedAndUsesDistinctSecretWithSalesDisabled(): void
     {
         $config = $this->createStub(Config::class);

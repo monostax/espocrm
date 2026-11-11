@@ -18,8 +18,9 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * FeatureSelfService's plan checkout on the real billing engine (both
- * dialects, fake Asaas): attendants × price + pack as one subscription, the
- * hosted invoice, safe retries, and replacing an unpaid checkout.
+ * dialects, fake Asaas): attendants × price + monthly credits as one card
+ * subscription, the credits each attendant brings, the hosted invoice, safe
+ * retries, and replacing an unpaid checkout.
  */
 final class SelfServicePlanCheckoutDatabaseTest extends TestCase
 {
@@ -38,17 +39,20 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
         $this->database($dialect, function (PDO $pdo): void {
             [$checkout, $transport, $engine] = $this->prepare($pdo);
 
-            $result = $checkout->start('tenant', 'owner', 'basic', 3, '2000', self::payer());
+            $result = $checkout->start('tenant', 'owner', 3, '2000', self::payer());
 
             $this->assertSame('pending', $result['state']);
             $this->assertStringStartsWith('https://sandbox.asaas.com/i/', $result['paymentUrl']);
             $subscriptions = $transport->posted('/subscriptions');
             $this->assertCount(1, $subscriptions);
-            $this->assertSame('1684.00', $subscriptions[0]['value'], '3 × 229 + 997.');
+            $this->assertSame('1745.00', $subscriptions[0]['value'], '3 × 249 + 998.');
             $this->assertSame('MONTHLY', $subscriptions[0]['cycle']);
-            $this->assertSame(3, $engine->read('tenant', $result['obligationId'])['acceptance']['terms']['seats']['quantity']);
+            $this->assertSame('CREDIT_CARD', $subscriptions[0]['billingType'], 'A card renews by itself.');
+            $terms = $engine->read('tenant', $result['obligationId'])['acceptance']['terms'];
+            $this->assertSame(3, $terms['seats']['quantity']);
+            $this->assertSame('2750.0000', $terms['credits'], '2.000 monthly credits + 3 × 250 included.');
 
-            $again = $checkout->start('tenant', 'owner', 'basic', 3, '2000', self::payer());
+            $again = $checkout->start('tenant', 'owner', 3, '2000', self::payer());
             $this->assertSame($result['obligationId'], $again['obligationId']);
             $this->assertSame($result['paymentUrl'], $again['paymentUrl']);
             $this->assertCount(1, $transport->posted('/subscriptions'), 'A retry continues the same checkout.');
@@ -61,15 +65,15 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
     {
         $this->database($dialect, function (PDO $pdo): void {
             [$checkout, $transport, $engine] = $this->prepare($pdo);
-            $first = $checkout->start('tenant', 'owner', 'basic', 3, '2000', self::payer());
+            $first = $checkout->start('tenant', 'owner', 3, '2000', self::payer());
 
-            $second = $checkout->start('tenant', 'owner', 'advanced', 5, '7000', self::payer());
+            $second = $checkout->start('tenant', 'owner', 5, '0', self::payer());
 
             $this->assertNotSame($first['obligationId'], $second['obligationId']);
             $this->assertSame('cancelled', $engine->read('tenant', $first['obligationId'])['state']);
             $this->assertCount(1, array_filter($transport->calls, static fn ($call) => $call[2] === 'DELETE'));
             $subscriptions = $transport->posted('/subscriptions');
-            $this->assertSame('3942.00', $subscriptions[1]['value'], '5 × 289 + 2.497.');
+            $this->assertSame('1245.00', $subscriptions[1]['value'], '5 × 249, no monthly credits on top.');
             $this->assertCount(1, $transport->posted('/customers'), 'The payer is reused.');
         });
     }
@@ -80,20 +84,20 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
         $this->database($dialect, function (PDO $pdo): void {
             [$checkout, , , $pdoCheck] = $this->prepare($pdo);
 
-            foreach ([['pro', 3, '2000'], ['basic', 0, '2000'], ['basic', 3, '500']] as [$plan, $seats, $pack]) {
+            foreach ([[0, '2000'], [3, '500'], [3, '30000'], [1001, '0']] as [$seats, $credits]) {
                 try {
-                    $checkout->start('tenant', 'owner', $plan, $seats, $pack, self::payer());
-                    $this->fail("{$plan}/{$seats}/{$pack} started a checkout.");
+                    $checkout->start('tenant', 'owner', $seats, $credits, self::payer());
+                    $this->fail("{$seats}/{$credits} started a checkout.");
                 } catch (\InvalidArgumentException) {
                     $this->addToAssertionCount(1);
                 }
             }
 
-            $paid = $checkout->start('tenant', 'owner', 'basic', 2, '2000', self::payer());
+            $paid = $checkout->start('tenant', 'owner', 2, '2000', self::payer());
             $pdoCheck->exec("UPDATE credit_billing_obligation SET state = 'active' WHERE id = '{$paid['obligationId']}'");
             $this->expectException(Conflict::class);
             $this->expectExceptionMessage('ALREADY_SUBSCRIBED');
-            $checkout->start('tenant', 'owner', 'advanced', 2, '2000', self::payer());
+            $checkout->start('tenant', 'owner', 2, '0', self::payer());
         });
     }
 
@@ -115,16 +119,15 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
 
         $catalog = new Catalog($manager, $clock);
         $input = BillingFixtures::definition();
-        foreach (['basic' => '229', 'advanced' => '289'] as $plan => $unit) {
-            foreach (['2000' => '997', '7000' => '2497'] as $credits => $price) {
-                $credits = (string) $credits;
-                $input->products[] = (object) ['productId' => "plan-{$plan}-{$credits}", 'productVersion' => 'v1',
-                    'name' => "{$plan} {$credits}", 'operation' => 'subscription', 'credits' => $credits];
-                $input->offers[] = (object) ['offerId' => "plan-{$plan}-{$credits}-br", 'version' => 'v1',
-                    'productId' => "plan-{$plan}-{$credits}", 'productVersion' => 'v1', 'countries' => ['BR'],
-                    'currency' => 'BRL', 'price' => $price, 'interval' => 'month',
-                    'seats' => (object) ['plan' => $plan, 'unitPrice' => $unit, 'min' => 1, 'max' => 50]];
-            }
+        // The one plan, as in self-service-2026-11-v2: R$249 per attendant with 250 credits each, plus 1.000-credit steps.
+        foreach (['0' => '0', '1000' => '499', '2000' => '998'] as $credits => $price) {
+            $credits = (string) $credits;
+            $input->products[] = (object) ['productId' => "plan-credits-{$credits}", 'productVersion' => 'v1',
+                'name' => "Plan, {$credits} monthly credits", 'operation' => 'subscription', 'credits' => $credits];
+            $input->offers[] = (object) ['offerId' => "plan-credits-{$credits}-br", 'version' => 'v1',
+                'productId' => "plan-credits-{$credits}", 'productVersion' => 'v1', 'countries' => ['BR'],
+                'currency' => 'BRL', 'price' => $price, 'interval' => 'month',
+                'seats' => (object) ['plan' => 'monostax', 'unitPrice' => '249', 'min' => 1, 'max' => 1000, 'includedCredits' => '250']];
         }
         $catalog->publish($input, 'admin');
         $this->now = '2026-10-13 00:00:00';
@@ -188,7 +191,7 @@ final class PlanTestTransport extends \Espo\Modules\FeatureCredits\Billing\Asaas
                 if ($object['id'] !== $subscriptionId) continue;
                 $payment = ['object' => 'payment', 'id' => 'pay_first_' . $subscriptionId, 'customer' => $object['customer'],
                     'subscription' => $subscriptionId, 'value' => $object['value'], 'originalValue' => $object['value'],
-                    'billingType' => 'UNDEFINED', 'dueDate' => $object['nextDueDate'], 'originalDueDate' => $object['nextDueDate'],
+                    'billingType' => $object['billingType'] ?? 'UNDEFINED', 'dueDate' => $object['nextDueDate'], 'originalDueDate' => $object['nextDueDate'],
                     'deleted' => false, 'status' => 'PENDING', 'invoiceUrl' => 'https://sandbox.asaas.com/i/first-' . $subscriptionId];
 
                 return new Response(200, $path === '/payments'

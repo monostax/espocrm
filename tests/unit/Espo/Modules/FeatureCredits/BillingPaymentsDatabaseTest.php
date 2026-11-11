@@ -238,14 +238,16 @@ final class BillingPaymentsDatabaseTest extends TestCase
             $id = $f->payment($charge); $this->assertSame('awaiting_period', $f->read($id, 'sub_forged')['state']);
             $this->assertSame(1, $this->rows($pdo, 'credit_grant'));
             $this->now = '2026-10-20 12:00:00'; $first = $f->read($id);
-            $this->assertSame('2026-11-15 03:00:00', $first['funding']['expiresAt']); $this->assertSame('150.0000', $this->balance($pdo));
+            // Monthly credits roll over one period: the grant lasts until the end of the next one.
+            $this->assertSame('2026-12-15 03:00:00', $first['funding']['expiresAt']); $this->assertSame('150.0000', $this->balance($pdo));
             $otherId = $f->payment($charge, 'pay_alternate'); $alternate = $f->read($otherId);
             $this->assertSame($first['funding'], $alternate['funding']); $this->assertSame($first['periodId'], $alternate['periodId']);
             $next = $f->payment($charge, 'pay_next', '2026-11-15'); $this->now = '2026-11-20 00:00:00';
             $second = $f->read($next); $this->assertNotSame($first['periodId'], $second['periodId']);
-            $this->assertSame('150.0000', $this->balance($pdo)); $this->assertSame(3, $this->rows($pdo, 'credit_grant'));
+            $this->assertSame('250.0000', $this->balance($pdo), 'The first month carried over beside the second.');
+            $this->assertSame(3, $this->rows($pdo, 'credit_grant'));
             $this->assertSame('active', $f->accounts->readObligation('tenant', $accepted['obligationId'])['state']);
-            $this->assertSame('2026-12-15 03:00:00', $second['funding']['expiresAt']); $this->audit($f);
+            $this->assertSame('2027-01-15 03:00:00', $second['funding']['expiresAt']); $this->audit($f);
         });
     }
 
@@ -253,7 +255,8 @@ final class BillingPaymentsDatabaseTest extends TestCase
     public function testEndedPeriodGrantAndExpirationAreAtomicAtExactBoundary(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo, BillingPaymentFixtures $f): void {
-            [, $charge] = $f->charge(true); $id = $f->payment($charge); $this->now = '2026-11-15 03:00:00';
+            // Read only once the carried-over month has ended too.
+            [, $charge] = $f->charge(true); $id = $f->payment($charge); $this->now = '2026-12-15 03:00:00';
             $result = $f->read($id); $this->assertTrue($result['endedPeriod']); $this->assertSame('0.0000', $this->balance($pdo));
             $this->assertSame('0.0000', $pdo->query('SELECT remaining_credits FROM credit_grant')->fetchColumn());
             $this->assertSame(2, $this->rows($pdo, 'credit_transaction')); $this->assertSame($result, $f->read($id)); $this->audit($f);
@@ -328,7 +331,7 @@ final class BillingPaymentsDatabaseTest extends TestCase
     public function testAllFinancialAndBillingWriteFailuresRollbackTogether(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo, BillingPaymentFixtures $f) use ($dialect): void {
-            [, $charge] = $f->charge(true); $id = $f->payment($charge); $this->now = '2026-12-01 00:00:00';
+            [, $charge] = $f->charge(true); $id = $f->payment($charge); $this->now = '2026-12-20 00:00:00';
             foreach (['credit_billing_period' => 'receipt IS NULL', 'credit_billing_obligation' => "state<>'active'",
                 'credit_billing_payment' => 'identity_hash IS NULL', 'credit_billing_verification' => '1=0',
                 'credit_transaction' => "type<>'expiration'", 'credit_grant' => '1=0'] as $table => $condition) {

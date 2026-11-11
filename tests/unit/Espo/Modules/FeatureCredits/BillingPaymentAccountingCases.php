@@ -22,7 +22,7 @@ trait BillingPaymentAccountingCases
             $this->now = '2026-10-12 00:00:00'; $f = new BillingPaymentFixtures($pdo, $this->now);
             $f->catalog->publish(BillingFixtures::definition(), 'admin'); $this->now = '2026-10-13 00:00:00';
             [, $charge] = $f->charge(true); $id = $f->payment($charge);
-            $this->now = '2026-11-15 03:00:00'; $receipt = $f->read($id);
+            $this->now = '2026-12-15 03:00:00'; $receipt = $f->read($id); // After the carried-over month.
             $this->assertTrue($receipt['endedPeriod']);
             $this->assertSame('-5.0000', $this->balanceStatus($pdo)->inspect('tenant')['balance']);
             $this->assertSame('5.0000', (string) NativeSearchDebt::outstanding($pdo, 'tenant'));

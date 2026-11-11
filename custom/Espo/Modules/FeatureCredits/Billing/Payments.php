@@ -139,7 +139,10 @@ final class Payments
                         $terms = $accepted['terms'];
                         $receipt = $terms['credits'] === '0.0000' ? ['grantId' => null, 'transactionId' => null, 'grantedCredits' => '0.0000', 'expiresAt' => $period['ends_at']] :
                             $this->funding->grantLocked($pdo, $wallet, $now, new GrantInput($tenant, $terms['operation'], 'billing:' . $period['id'],
-                                $terms['credits'], $period['starts_at'], $period['ends_at'], (object) [
+                                $terms['credits'], $period['starts_at'],
+                                // Monthly credits roll over one period (decided 2026-11-11).
+                                $terms['operation'] === 'subscription' ? MonthlyPeriod::followingEnd($period['starts_at'], $period['ends_at']) : $period['ends_at'],
+                                (object) [
                                     'obligationId' => $row['obligation_id'], 'periodId' => $period['id'], 'paymentId' => $row['id'],
                                     'provider' => 'asaas', 'integrationId' => $row['integration_id'], 'environment' => $row['environment'],
                                     'externalPaymentId' => $row['external_id'], 'termsId' => $terms['termsId'],

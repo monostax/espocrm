@@ -18,13 +18,18 @@ final readonly class OfferTerms implements JsonSerializable
     public array $countries;
     public string $termsId;
     /**
-     * Seat pricing (schema billing-offer-v2): `plan`, `unitPrice`, `min`, `max`.
-     * In a catalog the price is the base (the AI pack). Accepted terms add
-     * `quantity` and `basePrice`, and their price is the monthly total
-     * basePrice + unitPrice × quantity, so every exact-amount check downstream
-     * (charge value, payment verification, refunds) keeps comparing one price.
+     * Seat pricing (schema billing-offer-v2): `plan`, `unitPrice`, `min`, `max`,
+     * and optionally `includedCredits` per seat. In a catalog the price is the
+     * base (the monthly credits on top of the seats; zero when there are none)
+     * and the credits are the base credits. Accepted terms add `quantity` and
+     * `basePrice` (plus `baseCredits` with included credits): their price is the
+     * monthly total basePrice + unitPrice × quantity and their credits
+     * baseCredits + includedCredits × quantity, so every exact-amount check
+     * downstream (charge value, payment verification, refunds, the monthly
+     * grant) keeps comparing one price and one credit amount.
      *
-     * @var ?array{plan: string, unitPrice: string, min: int, max: int, quantity?: int, basePrice?: string}
+     * @var ?array{plan: string, unitPrice: string, min: int, max: int, includedCredits?: string,
+     *     quantity?: int, basePrice?: string, baseCredits?: string}
      */
     public ?array $seats;
 
@@ -66,9 +71,10 @@ final readonly class OfferTerms implements JsonSerializable
         sort($countries, SORT_STRING);
         $this->countries = $countries;
         // Launch currencies have two minor-unit decimals. Never round or convert sale prices.
+        // A seat offer's catalog price is only its base: the seats make the total positive.
         if (!in_array($currency, ['BRL', 'USD'], true) || !is_string($price) ||
             !preg_match('/^(?:0|[1-9][0-9]{0,9})(?:\.[0-9]{1,2})?$/D', $price) ||
-            !BigDecimal::of($price)->isPositive()) {
+            ($seats === null && !BigDecimal::of($price)->isPositive())) {
             throw new InvalidArgumentException('An explicit positive BRL/USD decimal-string price is required.');
         }
         $this->price = (string) BigDecimal::of($price)->toScale(2);
@@ -78,7 +84,7 @@ final readonly class OfferTerms implements JsonSerializable
             throw new InvalidArgumentException('Purchase credits must be positive; monthly allowances cannot be negative.');
         }
         $this->credits = (string) $amount;
-        $this->seats = $seats === null ? null : self::seats($seats, $operation, $this->price);
+        $this->seats = $seats === null ? null : self::seats($seats, $operation, $this->price, $this->credits);
         $this->termsId = hash('sha256', json_encode($this->definition(), JSON_THROW_ON_ERROR));
     }
 
@@ -92,18 +98,35 @@ final readonly class OfferTerms implements JsonSerializable
             throw new InvalidArgumentException('Seat quantity outside the offer range.');
         }
         $total = BigDecimal::of($this->price)->plus(BigDecimal::of($this->seats['unitPrice'])->multipliedBy($quantity));
+        $credits = $this->credits;
+        $accepted = ['quantity' => $quantity, 'basePrice' => $this->price];
+        if (isset($this->seats['includedCredits'])) {
+            $credits = (string) Amount::fromString($this->credits)->plus(self::included($this->seats['includedCredits'], $quantity));
+            $accepted['baseCredits'] = $this->credits;
+        }
 
         return new self($this->offerId, $this->version, $this->productId, $this->productVersion, $this->operation,
-            $this->countries, $this->currency, (string) $total->toScale(2), $this->credits, $this->interval,
-            $this->tenantId, $this->seats + ['quantity' => $quantity, 'basePrice' => $this->price]);
+            $this->countries, $this->currency, (string) $total->toScale(2), $credits, $this->interval,
+            $this->tenantId, $this->seats + $accepted);
     }
 
-    private static function seats(array $seats, string $operation, string $price): array
+    /** Credits a number of seats bring with them. */
+    private static function included(string $perSeat, int $quantity): Amount
+    {
+        return Amount::fromString((string) BigDecimal::of($perSeat)->multipliedBy($quantity)->toScale(4));
+    }
+
+    private static function seats(array $seats, string $operation, string $price, string $credits): array
     {
         $keys = array_keys($seats);
         sort($keys);
         $accepted = isset($seats['quantity']) || isset($seats['basePrice']);
+        $included = array_key_exists('includedCredits', $seats);
         $expected = $accepted ? ['basePrice', 'max', 'min', 'plan', 'quantity', 'unitPrice'] : ['max', 'min', 'plan', 'unitPrice'];
+        if ($included) {
+            $expected = [...$expected, 'includedCredits', ...($accepted ? ['baseCredits'] : [])];
+            sort($expected);
+        }
         if ($operation !== 'subscription' || $keys !== $expected ||
             !is_string($seats['plan']) || !preg_match('/^[a-z][a-z0-9-]{0,23}$/D', $seats['plan']) ||
             !is_string($seats['unitPrice']) || !preg_match('/^(?:0|[1-9][0-9]{0,9})(?:\.[0-9]{1,2})?$/D', $seats['unitPrice']) ||
@@ -113,6 +136,13 @@ final readonly class OfferTerms implements JsonSerializable
         }
         $normalized = ['plan' => $seats['plan'], 'unitPrice' => (string) BigDecimal::of($seats['unitPrice'])->toScale(2),
             'min' => $seats['min'], 'max' => $seats['max']];
+        if ($included) {
+            $perSeat = Amount::fromString($seats['includedCredits']);
+            if ($perSeat->compareTo(Amount::fromString('0')) <= 0) {
+                throw new InvalidArgumentException('Included seat credits must be positive.');
+            }
+            $normalized['includedCredits'] = (string) $perSeat;
+        }
         if ($accepted) {
             if (!is_int($seats['quantity']) || $seats['quantity'] < $seats['min'] || $seats['quantity'] > $seats['max'] ||
                 !is_string($seats['basePrice']) || !preg_match('/^(?:0|[1-9][0-9]{0,9})(?:\.[0-9]{1,2})?$/D', $seats['basePrice'])) {
@@ -124,6 +154,14 @@ final readonly class OfferTerms implements JsonSerializable
                 throw new InvalidArgumentException('Seat terms price must equal base plus seats.');
             }
             $normalized += ['quantity' => $seats['quantity'], 'basePrice' => (string) $base];
+            if ($included) {
+                $baseCredits = Amount::fromString($seats['baseCredits']);
+                $all = $baseCredits->plus(self::included($normalized['includedCredits'], $seats['quantity']));
+                if ($all->compareTo(Amount::fromString($credits)) !== 0) {
+                    throw new InvalidArgumentException('Seat terms credits must equal base plus included credits.');
+                }
+                $normalized['baseCredits'] = (string) $baseCredits;
+            }
         }
 
         return $normalized;

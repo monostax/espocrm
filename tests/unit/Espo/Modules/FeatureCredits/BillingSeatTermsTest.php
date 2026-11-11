@@ -11,11 +11,12 @@ use PHPUnit\Framework\TestCase;
 /** Seat-priced plans: the catalog price is the base, accepted terms carry the total. */
 final class BillingSeatTermsTest extends TestCase
 {
-    private static function catalog(array $seats = ['plan' => 'basic', 'unitPrice' => '229', 'min' => 1, 'max' => 50]): CatalogDefinition
+    private static function catalog(array $seats = ['plan' => 'basic', 'unitPrice' => '229', 'min' => 1, 'max' => 50],
+        string $price = '997'): CatalogDefinition
     {
         $input = BillingFixtures::definition();
         $input->offers[] = (object) ['offerId' => 'plan-basic-br', 'version' => 'v1', 'productId' => 'monthly', 'productVersion' => 'v1',
-            'countries' => ['BR'], 'currency' => 'BRL', 'price' => '997', 'interval' => 'month', 'seats' => (object) $seats];
+            'countries' => ['BR'], 'currency' => 'BRL', 'price' => $price, 'interval' => 'month', 'seats' => (object) $seats];
 
         return new CatalogDefinition($input);
     }
@@ -96,6 +97,54 @@ final class BillingSeatTermsTest extends TestCase
         $input->offers[] = (object) ['offerId' => 'pack-seats', 'version' => 'v1', 'productId' => 'pack', 'productVersion' => 'v1',
             'countries' => ['BR'], 'currency' => 'BRL', 'price' => '25', 'interval' => null,
             'seats' => (object) ['plan' => 'basic', 'unitPrice' => '229', 'min' => 1, 'max' => 50]];
+        $this->expectException(InvalidArgumentException::class);
+        new CatalogDefinition($input);
+    }
+
+    public function testIncludedCreditsComeWithEachSeatOnAFreeBase(): void
+    {
+        $terms = self::catalog(['plan' => 'monostax', 'unitPrice' => '249', 'min' => 1, 'max' => 1000, 'includedCredits' => '250'], '0')
+            ->offers['plan-basic-br'];
+
+        $this->assertSame('0.00', $terms->price, 'The one plan with no monthly credits on top costs only its attendants.');
+        $this->assertSame('100.0000', $terms->credits);
+        $this->assertSame('250.0000', $terms->seats['includedCredits']);
+
+        $accepted = $terms->withQuantity(3);
+        $this->assertSame('747.00', $accepted->price);
+        $this->assertSame('850.0000', $accepted->credits, '100 base + 3 × 250 included.');
+        $this->assertSame('100.0000', $accepted->seats['baseCredits']);
+        $restored = OfferTerms::fromSnapshot(json_decode(json_encode($accepted, JSON_THROW_ON_ERROR), false, 32, JSON_THROW_ON_ERROR));
+        $this->assertEquals($accepted, $restored);
+
+        foreach ([
+            fn ($s) => $s->credits = '1000.0000',
+            fn ($s) => $s->seats->includedCredits = '500.0000',
+            fn ($s) => $s->seats->baseCredits = '0.0000',
+        ] as $tamper) {
+            $copy = json_decode(json_encode($accepted, JSON_THROW_ON_ERROR), false, 32, JSON_THROW_ON_ERROR);
+            $tamper($copy);
+            try {
+                OfferTerms::fromSnapshot($copy);
+                $this->fail('Tampered included credits were accepted.');
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function testOnlySeatOffersHaveAFreeBaseAndIncludedCreditsArePositive(): void
+    {
+        foreach ([
+            ['plan' => 'monostax', 'unitPrice' => '249', 'min' => 1, 'max' => 1000, 'includedCredits' => '0'],
+            ['plan' => 'monostax', 'unitPrice' => '249', 'min' => 1, 'max' => 1000, 'includedCredits' => 250],
+        ] as $seats) {
+            try { self::catalog($seats); $this->fail('Invalid included credits were accepted.'); }
+            catch (InvalidArgumentException) { $this->addToAssertionCount(1); }
+        }
+
+        $input = BillingFixtures::definition();
+        $input->offers[0]->price = '0';
         $this->expectException(InvalidArgumentException::class);
         new CatalogDefinition($input);
     }

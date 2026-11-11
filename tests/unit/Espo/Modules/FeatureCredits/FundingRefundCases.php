@@ -81,7 +81,8 @@ trait FundingRefundCases
             $request = (new Requests($f->lock, $f->funding))->authorize($this->request($usage))['requestId'];
             (new Outcomes($f->lock))->record(new OutcomeInput('tenant', $usage, 'execution', $request, 'success', 0, 0, 1000, (object) ['source' => 'provider']));
             $settled = (new Settlements($f->lock, $f->funding))->settle('tenant', $usage, 'execution');
-            $this->now = '2026-11-16 00:00:00'; $this->refundResponse($f, $id, [], 'REFUNDED'); $result = $f->read($id);
+            // After the carried-over month, when the monthly grant has expired.
+            $this->now = '2026-12-16 00:00:00'; $this->refundResponse($f, $id, [], 'REFUNDED'); $result = $f->read($id);
             $this->assertSame('reversed', $result['state']);
             $this->assertSame('0.1875', $result['reversal']['debtCredits']);
             $this->assertSame('0.0000', $result['reversal']['recoveredCredits']);

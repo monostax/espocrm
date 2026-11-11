@@ -118,10 +118,10 @@ final readonly class CatalogDefinition
         return array_replace(array_fill_keys($keys, null), $data);
     }
 
-    /** Seat pricing of an offer, validated by OfferTerms. */
+    /** Seat pricing of an offer (with optional credits per seat), validated by OfferTerms. */
     private static function seatFields(mixed $input): array
     {
-        return self::fields($input, ['plan', 'unitPrice', 'min', 'max']);
+        return self::fields($input, ['plan', 'unitPrice', 'min', 'max'], ['includedCredits']);
     }
 
     private static function identity(mixed $value): void
