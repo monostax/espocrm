@@ -363,14 +363,20 @@ class Feed
         foreach ($query->fetchAll(\PDO::FETCH_COLUMN) as $id) {
             $earlier = $this->em->getEntityById('Opportunity', (string) $id);
             if (!$earlier || !$this->acl->checkEntityRead($earlier)) continue;
-            $opened = (new DateTimeImmutable((string) $earlier->get('createdAt'), new DateTimeZone('UTC')))->setTimezone($now->getTimezone());
-            $amount = $earlier->get('amount') !== null ? ' ' . trim(($earlier->get('amountCurrency') ?? '') . ' ' . $earlier->get('amount')) : '';
-            $closed = in_array($earlier->get('status'), ['Won', 'Lost'], true) && $earlier->get('closeDate') ? ', closed ' . $earlier->get('closeDate') : '';
-            $lines[] = mb_substr((string) $earlier->get('name'), 0, 80) . ' (' . ($earlier->get('status') ?: 'open') . $amount
-                . ', opened ' . $opened->format('Y-m-d') . $closed . ')';
+            $lines[] = self::dealLine($earlier, $now);
             if (count($lines) >= self::EARLIER_DEALS) break;
         }
         return $lines ? implode('; ', $lines) : null;
+    }
+
+    /** A deal as the analysis reads it: name, status, amount, and the opened and closed dates in the reader's time zone. */
+    public static function dealLine(Entity $deal, DateTimeImmutable $now): string
+    {
+        $opened = (new DateTimeImmutable((string) $deal->get('createdAt'), new DateTimeZone('UTC')))->setTimezone($now->getTimezone());
+        $amount = $deal->get('amount') !== null ? ' ' . trim(($deal->get('amountCurrency') ?? '') . ' ' . $deal->get('amount')) : '';
+        $closed = in_array($deal->get('status'), ['Won', 'Lost'], true) && $deal->get('closeDate') ? ', closed ' . $deal->get('closeDate') : '';
+        return mb_substr((string) $deal->get('name'), 0, 80) . ' (' . ($deal->get('status') ?: 'open') . $amount
+            . ', opened ' . $opened->format('Y-m-d') . $closed . ')';
     }
 
     /**

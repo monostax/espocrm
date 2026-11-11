@@ -43,9 +43,11 @@ class Summary
         $key = [$conversation ? 'ChatwootConversation' : 'Opportunity', $snapshot['id'], $snapshot['revision'], $locale, $snapshot['evidenceScope']];
         $this->verdicts->flipDue((string) $snapshot['tenantId']);
         $stored = $this->verdicts->find(...$key);
-        if ($stored && !Verdicts::outdated($stored)) return ['status' => 'completed', 'cached' => true, ...$stored];
-        // A found deal from before funnels is read again in full (no record, the newest messages), so its funnel and stage
-        // have the whole conversation behind them, not only the few messages after the record.
+        // The conversation's closed deals the reader may read (ServiceFeed::dealKeys); a found deal remembers them.
+        $closedDeals = $conversation && is_array($snapshot['closedDeals'] ?? null) ? array_values($snapshot['closedDeals']) : [];
+        if ($stored && !Verdicts::outdated($stored, $closedDeals)) return ['status' => 'completed', 'cached' => true, ...$stored];
+        // An outdated found deal (from before funnels, or without a deal closed since) is read again in full (no record, the
+        // newest messages), so its funnel and stage, or the deal it duplicates, have the whole conversation behind them.
         if ($stored && $conversation && empty($stored['card']['redraft'])) $snapshot['record'] = null;
         $result = $this->request($snapshot, $locale, $requestId, $notify);
         if ($result['status'] !== 'completed') return [...$result, 'cached' => false, 'verdict' => null, 'reason' => null, 'card' => null];
@@ -73,8 +75,9 @@ class Summary
         if ($conversation && is_array($card['proposedDeal'] ?? null)) {
             $card['proposedDeal'] = $this->targets->sanitize((string) $snapshot['tenantId'], $card['proposedDeal']);
         }
+        if ($verdict === 'new_deal' && $card !== null) $card['closedDeals'] = $closedDeals;
         $this->verdicts->store((string) $snapshot['tenantId'], ...[...$key, $verdict, $reason, $card, $basis,
-            $basis ? Loops::flipsAt($basis, $now) : null]);
+            $basis ? Loops::flipsAt($basis, $now) : null, $closedDeals]);
         return ['status' => 'completed', 'requestId' => $result['requestId'] ?? null, 'cached' => false,
             'verdict' => $verdict, 'reason' => $reason, 'card' => $card];
     }

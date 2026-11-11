@@ -60,8 +60,13 @@ class ProposedDeals
         $tenant = $this->workspace->resolve($request)['tenant'];
         $tenantId = (string) $tenant->getId();
         if ($this->service->hasOpenDeal($id)) throw new Conflict('This conversation already has an open deal.');
-        $proposal = $this->verdicts->proposals([$id => $revision])[$id]['card']['proposedDeal'] ?? null;
+        $card = $this->verdicts->proposals([$id => $revision])[$id]['card'] ?? null;
+        $proposal = $card['proposedDeal'] ?? null;
         if (!is_array($proposal)) throw new Conflict('This conversation changed since the card was shown.');
+        // A deal closed on the conversation since the card was made may be this one: the card is analysed again first.
+        if (Verdicts::missesClosedDeal($card, ServiceFeed::dealKeys($this->service->closedDeals($id, $tenantId)))) {
+            throw new Conflict('This conversation changed since the card was shown.');
+        }
 
         $name = property_exists($body, 'name') ? (is_string($body->name) ? trim($body->name) : '') : (string) ($proposal['name'] ?? '');
         if ($name === '' || mb_strlen($name) > 150) throw new BadRequest('Invalid name.');

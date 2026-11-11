@@ -35,6 +35,8 @@ class ServiceFeed
     private const WAITING = 'c.last_message_received_at IS NOT NULL AND (c.last_message_sent_at IS NULL OR c.last_message_received_at > c.last_message_sent_at)';
     /** Waiting on us for up to Feed::WAITING_FIRST_DAYS: these come first, longest wait first. */
     private const RECENT_WAIT = self::WAITING . ' AND c.last_message_received_at >= UTC_TIMESTAMP() - INTERVAL ' . Feed::WAITING_FIRST_DAYS . ' DAY';
+    /** The conversation's won and lost deals named in its facts (closedDeals). */
+    private const CLOSED_DEALS = 3;
 
     public function __construct(
         private EntityManager $em,
@@ -124,6 +126,7 @@ class ServiceFeed
         $revision = Revision::ofConversation($conversation);
         $scope = Feed::evidenceScope($evidence);
         $sourceScope = Records::scope([$id]);
+        $closed = $this->closedDeals($id, (string) $tenant->getId());
         $result = [
             ...$candidate,
             'tenantId' => $tenant->getId(), 'catchUpPolicy' => $policy,
@@ -131,7 +134,9 @@ class ServiceFeed
             // When the conversation went quiet, so the stored verdict can be picked again as time passes (Loops::basis).
             'quietSince' => $conversation->get('lastActivityAt'),
             'sourceScope' => $sourceScope, 'record' => $this->records->load('ChatwootConversation', $id, $sourceScope),
-            'facts' => $this->facts($candidate, $now), 'nextAction' => null, 'closable' => ['won' => false, 'lost' => false],
+            'facts' => $this->facts($candidate, $now, $closed), 'nextAction' => null, 'closable' => ['won' => false, 'lost' => false],
+            // A found deal analysed without one of these is analysed again (Verdicts::outdated).
+            'closedDeals' => self::dealKeys($closed),
             'conversation' => [
                 'conversationId' => (int) $conversation->get('chatwootConversationId'),
                 'accountId' => (int) $account->get('chatwootAccountId'), 'inboxName' => $conversation->get('inboxName'),
@@ -185,6 +190,42 @@ class ServiceFeed
         $query = $this->em->getPDO()->prepare('SELECT EXISTS(' . self::OPEN_DEAL_SQL . ') FROM chatwoot_conversation c WHERE c.id = :id');
         $query->execute(['id' => $id]);
         return (bool) $query->fetchColumn();
+    }
+
+    /**
+     * The conversation's own deals, newest first, at most CLOSED_DEALS, and only those the reader may read. They are all
+     * won or lost: an open one makes the conversation a Negócios card. The analysis reads them (`facts.closedDeals`) so a
+     * purchase already registered isn't found again: the AI agent often wins a deal minutes after the customer confirms,
+     * and on 2026-11-11 11 of Instituto Ferraz Veloso's 21 found deals were deals it had already won.
+     *
+     * @return list<Entity>
+     */
+    public function closedDeals(string $id, string $tenantId): array
+    {
+        $query = $this->em->getPDO()->prepare('SELECT DISTINCT o.id, o.created_at FROM chatwoot_conversation_opportunity r '
+            . "JOIN opportunity o ON o.id = r.opportunity_id AND o.deleted = 0 AND o.status IN ('Won','Lost') "
+            . 'WHERE r.deleted = 0 AND r.chatwoot_conversation_id = ? AND o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 10');
+        $query->execute([$id, $tenantId]);
+        $deals = [];
+        foreach ($query->fetchAll(\PDO::FETCH_COLUMN) as $dealId) {
+            $deal = $this->em->getEntityById('Opportunity', (string) $dealId);
+            if (!$deal || !$this->acl->checkEntityRead($deal)) continue;
+            $deals[] = $deal;
+            if (count($deals) >= self::CLOSED_DEALS) break;
+        }
+        return $deals;
+    }
+
+    /**
+     * What a found deal remembers of the closed deals it was analysed with (Verdicts::outdated): each deal and status,
+     * hashed, so a card shared with a reader who may not read a deal doesn't name it.
+     *
+     * @param list<Entity> $deals
+     * @return list<string>
+     */
+    public static function dealKeys(array $deals): array
+    {
+        return array_map(fn (Entity $deal) => substr(hash('sha256', $deal->getId() . ':' . $deal->get('status')), 0, 16), $deals);
     }
 
     /**
@@ -341,8 +382,13 @@ class ServiceFeed
         ];
     }
 
-    /** Day-stable facts the analysis decides on; exact times live in the messages. */
-    private function facts(array $candidate, DateTimeImmutable $now): array
+    /**
+     * Day-stable facts the analysis decides on; exact times live in the messages. `closedDeals` only when there are any,
+     * so a conversation without one keeps the backend request it had.
+     *
+     * @param list<Entity> $closed
+     */
+    private function facts(array $candidate, DateTimeImmutable $now, array $closed = []): array
     {
         return [
             'conversation' => $candidate['name'], 'contactName' => $candidate['contactName'], 'group' => $candidate['group'],
@@ -350,6 +396,7 @@ class ServiceFeed
             'quietDays' => $candidate['quietDays'], 'lastSpeaker' => $candidate['customerSpokeLast'] ? 'customer' : 'business',
             'followUpAfterDays' => Feed::FOLLOW_UP_AFTER_DAYS,
             'today' => $now->format('Y-m-d'), 'timeZone' => $now->getTimezone()->getName(),
+            ...($closed ? ['closedDeals' => implode('; ', array_map(fn (Entity $deal) => Feed::dealLine($deal, $now), $closed))] : []),
         ];
     }
 

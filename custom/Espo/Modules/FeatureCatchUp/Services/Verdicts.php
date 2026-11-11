@@ -105,9 +105,10 @@ class Verdicts
      * @param ?array<string, mixed> $card
      * @param ?array<string, mixed> $basis what the verdict is picked again from as time passes (Loops::basis)
      * @param ?int $flipsAt when the clock next changes it (Loops::flipsAt)
+     * @param list<string> $closedDeals the closed deals this analysis had, so a stored found deal without them is replaced
      */
     public function store(string $tenantId, string $type, string $id, string $revision, string $locale, string $evidenceScope,
-        string $verdict, ?string $reason, ?array $card, ?array $basis = null, ?int $flipsAt = null): void
+        string $verdict, ?string $reason, ?array $card, ?array $basis = null, ?int $flipsAt = null, array $closedDeals = []): void
     {
         $column = self::column($type);
         // Only the newest analysis of a subject for this locale and scope is ever read again.
@@ -115,7 +116,7 @@ class Verdicts
             "DELETE FROM catch_up_verdict WHERE $column = :id AND locale = :locale AND evidence_scope = :scope AND revision <> :revision"
         )->execute(['id' => $id, 'locale' => $locale, 'scope' => $evidenceScope, 'revision' => $revision]);
         $stored = $this->find($type, $id, $revision, $locale, $evidenceScope);
-        if ($stored && !self::outdated($stored)) return;
+        if ($stored && !self::outdated($stored, $closedDeals)) return;
         // A card the clock moved to another loop, or an outdated one, was analysed again: the new analysis replaces it.
         if ($stored) $this->em->getPDO()->prepare(
             "DELETE FROM catch_up_verdict WHERE $column = :id AND locale = :locale AND evidence_scope = :scope AND revision = :revision"
@@ -163,16 +164,35 @@ class Verdicts
 
     /**
      * A stored card that is analysed again when the deck reaches it, at the same revision: one the clock moved to a loop
-     * its copy wasn't written for (`redraft`), or a found deal from before prompt version 13, which proposed no funnel or
-     * stage. Only those cards are analysed again; the revision stays, so no other deal or conversation is.
+     * its copy wasn't written for (`redraft`), a found deal from before prompt version 13, which proposed no funnel or
+     * stage, or a found deal analysed without one of the conversation's closed deals (2026-11-11): it may be the deal the
+     * AI agent already won. Only those cards are analysed again; the revision stays, so no other deal or conversation is.
+     * A reader who may read fewer of the closed deals than the analysis had gets the stored card, so two readers never
+     * take turns paying for it.
      *
      * @param array{verdict?: ?string, card?: ?array<string, mixed>} $stored
+     * @param list<string> $closedDeals the conversation's closed deals the reader may read (ServiceFeed::dealKeys)
      */
-    public static function outdated(array $stored): bool
+    public static function outdated(array $stored, array $closedDeals = []): bool
     {
         if (!empty($stored['card']['redraft'])) return true;
+        if (($stored['verdict'] ?? null) !== 'new_deal') return false;
         $deal = $stored['card']['proposedDeal'] ?? null;
-        return ($stored['verdict'] ?? null) === 'new_deal' && is_array($deal) && !array_key_exists('funnelId', $deal);
+        if (is_array($deal) && !array_key_exists('funnelId', $deal)) return true;
+        return self::missesClosedDeal($stored['card'] ?? null, $closedDeals);
+    }
+
+    /**
+     * Whether a found deal's card was analysed without one of these closed deals (ServiceFeed::dealKeys). A card from
+     * before 2026-11-11 remembers none.
+     *
+     * @param ?array<string, mixed> $card
+     * @param list<string> $closedDeals
+     */
+    public static function missesClosedDeal(?array $card, array $closedDeals): bool
+    {
+        $known = is_array($card['closedDeals'] ?? null) ? $card['closedDeals'] : [];
+        return array_diff($closedDeals, $known) !== [];
     }
 
     /** Someone acted on the subject's card: it leaves the deck and the counts until the subject moves, the clock included. */
