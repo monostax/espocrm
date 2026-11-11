@@ -22,10 +22,11 @@ use DateTimeImmutable;
  */
 final class Loops
 {
-    /** Verdicts with a card, by bucket. */
+    /** Verdicts with a card, by bucket. Found deals have their own tab (Negócios encontrados, decided 2026-11-11). */
     public const BUCKETS = [
-        'customer_waiting' => 'us', 'promise_due' => 'us', 'decided' => 'us', 'next_step_missing' => 'us', 'new_deal' => 'us',
+        'customer_waiting' => 'us', 'promise_due' => 'us', 'decided' => 'us', 'next_step_missing' => 'us',
         'follow_up_due' => 'customer',
+        'new_deal' => 'found',
     ];
     /** Judged, with nothing to show now: kept out of the deck until the revision moves. */
     public const QUIET = ['none', 'scheduled'];

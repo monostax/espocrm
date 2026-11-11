@@ -98,7 +98,7 @@ class Feed
      * The reader's Negócios cards by tab (Loops::BUCKETS) and the deals whose settle analysis is still to come, for the
      * tab counts and the badge. Every subject is analysed at settle (decided 2026-11-11), so these are the deck's totals.
      *
-     * @return array{us: int, customer: int, pending: int}
+     * @return array{us: int, customer: int, found: int, pending: int}
      */
     public function count(Request $request): array
     {
@@ -113,11 +113,11 @@ class Feed
 
     /**
      * @param array<string, string> $cards subject id => card verdict
-     * @return array{us: int, customer: int, pending: int}
+     * @return array{us: int, customer: int, found: int, pending: int}
      */
     public static function tally(array $cards, int $pending): array
     {
-        $counts = ['us' => 0, 'customer' => 0, 'pending' => $pending];
+        $counts = ['us' => 0, 'customer' => 0, 'found' => 0, 'pending' => $pending];
         foreach ($cards as $verdict) $counts[Loops::BUCKETS[$verdict]]++;
         return $counts;
     }

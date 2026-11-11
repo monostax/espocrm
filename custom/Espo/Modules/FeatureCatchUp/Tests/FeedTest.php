@@ -279,9 +279,9 @@ class FeedTest extends TestCase
 
     public function testTheTabCountsTakeOnlyCardsWhoseConversationChatwootOpensForTheReader(): void
     {
-        foreach ([true => ['us' => 2, 'customer' => 1, 'pending' => 1], false => ['us' => 0, 'customer' => 0, 'pending' => 0]] as $opens => $expected) {
+        foreach ([true => ['us' => 2, 'customer' => 1, 'found' => 1, 'pending' => 1], false => ['us' => 0, 'customer' => 0, 'found' => 0, 'pending' => 0]] as $opens => $expected) {
             [$feed, , $verdicts] = $this->feed(opens: (bool) $opens);
-            $verdicts->method('cardDeals')->willReturn(['a' => 'customer_waiting', 'b' => 'promise_due', 'c' => 'follow_up_due', 'd' => 'none', 'e' => 'scheduled']);
+            $verdicts->method('cardDeals')->willReturn(['a' => 'customer_waiting', 'b' => 'promise_due', 'c' => 'follow_up_due', 'd' => 'none', 'e' => 'scheduled', 'g' => 'new_deal']);
             $verdicts->method('pendingDeals')->willReturn(['f']);
             self::assertSame($expected, $feed->count($this->request()), 'not even a tenant admin counts what Chatwoot closes');
         }

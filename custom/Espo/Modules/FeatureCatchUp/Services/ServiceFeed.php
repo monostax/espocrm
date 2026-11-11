@@ -87,7 +87,7 @@ class ServiceFeed
      * The reader's Atendimento cards by tab (Loops::BUCKETS) and the conversations whose settle analysis is still to come,
      * for the tab counts and the badge. A WhatsApp group mirrored once per member number counts once.
      *
-     * @return array{us: int, customer: int, pending: int}
+     * @return array{us: int, customer: int, found: int, pending: int}
      */
     public function count(string $tenantId, Entity $account): array
     {

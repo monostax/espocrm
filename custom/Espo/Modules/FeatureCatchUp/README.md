@@ -19,7 +19,8 @@ Loops are the core. Each subject's record (`Records`) keeps every move one side 
 | `customer_waiting` | one of ours with no time: due now | Esperando a gente |
 | `promise_due` | one of ours past its time (the earliest) | Esperando a gente |
 | `follow_up_due` | one of theirs past its time, or with none after `Feed::FOLLOW_UP_AFTER_DAYS` quiet days; never while the AI follow-up is armed on the deal | Esperando o cliente |
-| `decided`, `new_deal`, `next_step_missing` | the model's; a deal is stalled only with no loop open and no pending next step | Esperando a gente |
+| `decided`, `next_step_missing` | the model's; a deal is stalled only with no loop open and no pending next step | Esperando a gente |
+| `new_deal` | the model's: a conversation with no deal that should have one | Negócios encontrados (its own tab since 2026-11-11, so found deals don't sit behind the timing order) |
 | `scheduled` | loops open, none due: no card, the revision moves when one comes due | Agenda |
 
 The card shows the loop it was made from (`card.promise`: side, text, dueAt), and the loop's text stands in for copy the model left out. `scheduled` and `none` keep a subject out of the deck until its revision moves; the lists return the stored card verdict of the others (`Verdicts::judged`) and a `sort` key ([rank, key], `Feed::sortKey`) so Chatwoot can merge deals and conversations into one queue per tab.
@@ -95,7 +96,7 @@ Next steps use the existing `POST /Opportunity/:id/nextAction`.
 
 **Time never asks for an analysis (2026-11-11).** A revision holds only what the analysis reads (messages, the deal's fields, notes); quiet days and due promises are not in it. A verdict that a loop decides stores its open loops (`basis`) and the time the clock next changes the pick (`flipsAt`, Loops::flipsAt): a promise of ours coming due, one of theirs coming due, or a loop of theirs crossing `FOLLOW_UP_AFTER_DAYS` of quiet. `Verdicts::flipDue()` picks those verdicts again in code (Loops::pick) whenever the tenant's deck, counts or analyses are read; a card whose new loop isn't the one its copy was written for (`draftFor`) is marked `redraft`, and the deck analyses it again when it reaches it. `scheduled` verdicts keep their copy for the card they become. "Já resolvi" keeps the loop in the record and turns the verdict into what the remaining loops make, so the next loop comes back on time.
 
-**Counts.** `GET /CatchUpCount` returns `us` (Esperando a gente), `customer` (Esperando o cliente), `pending` (a message from the last `Verdicts::PENDING_MINUTES` with no analysis since: its settle is still to come) and `count` (the badge: every card). Each subject counts by its newest verdict, unresolved and not overtaken by a message (activity doesn't count), within the deck's window and filters, through the reader's Chatwoot access; a WhatsApp group counts once.
+**Counts.** `GET /CatchUpCount` returns `us` (Esperando a gente), `customer` (Esperando o cliente), `found` (Negócios encontrados), `pending` (a message from the last `Verdicts::PENDING_MINUTES` with no analysis since: its settle is still to come) and `count` (the badge: every card). Each subject counts by its newest verdict, unresolved and not overtaken by a message (activity doesn't count), within the deck's window and filters, through the reader's Chatwoot access; a WhatsApp group counts once.
 
 ## Deployment
 

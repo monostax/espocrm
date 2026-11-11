@@ -95,10 +95,11 @@ class LoopsTest extends TestCase
             'with a loop open the loops decide');
     }
 
-    public function testBucketsSplitOurMovesFromTheCustomers(): void
+    public function testBucketsSplitOurMovesFromTheCustomersAndFoundDeals(): void
     {
         self::assertSame('customer', Loops::BUCKETS['follow_up_due']);
-        foreach (['customer_waiting', 'promise_due', 'decided', 'next_step_missing', 'new_deal'] as $verdict) {
+        self::assertSame('found', Loops::BUCKETS['new_deal'], 'found deals have their own tab');
+        foreach (['customer_waiting', 'promise_due', 'decided', 'next_step_missing'] as $verdict) {
             self::assertSame('us', Loops::BUCKETS[$verdict], $verdict);
         }
     }
