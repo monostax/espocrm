@@ -75,7 +75,8 @@ class Summary
         if ($conversation && is_array($card['proposedDeal'] ?? null)) {
             $card['proposedDeal'] = $this->targets->sanitize((string) $snapshot['tenantId'], $card['proposedDeal']);
         }
-        if ($verdict === 'new_deal' && $card !== null) $card['closedDeals'] = $closedDeals;
+        // Any card that offers a deal remembers the closed deals it was analysed with (Verdicts::missesClosedDeal).
+        if (is_array($card['proposedDeal'] ?? null)) $card['closedDeals'] = $closedDeals;
         $this->verdicts->store((string) $snapshot['tenantId'], ...[...$key, $verdict, $reason, $card, $basis,
             $basis ? Loops::flipsAt($basis, $now) : null, $closedDeals]);
         return ['status' => 'completed', 'requestId' => $result['requestId'] ?? null, 'cached' => false,

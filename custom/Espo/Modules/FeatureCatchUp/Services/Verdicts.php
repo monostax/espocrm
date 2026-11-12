@@ -136,9 +136,11 @@ class Verdicts
     }
 
     /**
-     * The unresolved `new_deal` verdicts of these conversations at their current revision: the deals the analysis
-     * found that nobody created or dismissed yet. A message since then moves the revision, so a proposal that the
-     * conversation has overtaken is not returned.
+     * The deals the analysis proposed for these conversations at their current revision that nobody created or
+     * dismissed yet: the card of each conversation's newest unresolved verdict, when it carries a proposedDeal. That is
+     * a `new_deal` card, or since prompt 15 a loops card whose customer shows buying intent and waits on us (it answers
+     * them and offers the deal). A message since then moves the revision, so a proposal that the conversation has
+     * overtaken is not returned.
      *
      * @param array<string, string> $revisions conversation id => current revision
      * @return array<string, array{card: array<string, mixed>, reason: ?string}>
@@ -150,14 +152,16 @@ class Verdicts
         $values = [];
         foreach ($revisions as $id => $revision) array_push($values, $id, $revision);
         $query = $this->em->getPDO()->prepare("SELECT conversation_id, card, reason FROM catch_up_verdict WHERE deleted = 0 "
-            . "AND verdict = 'new_deal' AND resolved_at IS NULL AND ($pairs) ORDER BY created_at DESC");
+            . "AND resolved_at IS NULL AND ($pairs) ORDER BY created_at DESC");
         $query->execute($values);
+        $seen = [];
         $found = [];
         foreach ($query->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            $id = (string) $row['conversation_id'];
+            if (isset($seen[$id])) continue;
+            $seen[$id] = true;
             $card = json_decode((string) $row['card'], true);
-            if (!isset($found[(string) $row['conversation_id']]) && is_array($card)) {
-                $found[(string) $row['conversation_id']] = ['card' => $card, 'reason' => $row['reason']];
-            }
+            if (is_array($card['proposedDeal'] ?? null)) $found[$id] = ['card' => $card, 'reason' => $row['reason']];
         }
         return $found;
     }
@@ -176,8 +180,9 @@ class Verdicts
     public static function outdated(array $stored, array $closedDeals = []): bool
     {
         if (!empty($stored['card']['redraft'])) return true;
-        if (($stored['verdict'] ?? null) !== 'new_deal') return false;
         $deal = $stored['card']['proposedDeal'] ?? null;
+        // Found deals, and since prompt 15 loops cards that offer a deal too.
+        if (($stored['verdict'] ?? null) !== 'new_deal' && !is_array($deal)) return false;
         if (is_array($deal) && !array_key_exists('funnelId', $deal)) return true;
         return self::missesClosedDeal($stored['card'] ?? null, $closedDeals);
     }

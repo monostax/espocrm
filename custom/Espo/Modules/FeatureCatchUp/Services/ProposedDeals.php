@@ -20,7 +20,8 @@ use Espo\ORM\EntityManager;
 
 /**
  * "Criar oportunidade" on an Atendimento card (decided 2026-11-11): the deal the analysis found in a conversation still
- * without one (`new_deal`) is created in one tap, with the name, amount, funnel and stage the card shows. The reader
+ * without one (`new_deal`, or since 2026-11-12 a reply card whose customer shows buying intent and waits on us) is
+ * created in one tap, with the name, amount, funnel and stage the card shows. The reader
  * may change any of them on the card first. It replaced "Criar todas" (the banner and its review list), which put every
  * deal in one funnel and its first stage.
  *

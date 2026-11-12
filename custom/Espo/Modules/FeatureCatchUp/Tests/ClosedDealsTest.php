@@ -107,7 +107,10 @@ class ClosedDealsTest extends TestCase
         self::assertFalse(Verdicts::outdated($found(['k1']), ['k1']));
         self::assertFalse(Verdicts::outdated($found(['k1', 'k2']), ['k1']), 'a reader who may read fewer deals gets the stored card');
         self::assertTrue(Verdicts::outdated($found(['k1']), ['k1', 'k3']));
-        self::assertFalse(Verdicts::outdated(['verdict' => 'customer_waiting', 'card' => ['headline' => 'H']], ['k1']), 'only found deals');
+        self::assertFalse(Verdicts::outdated(['verdict' => 'customer_waiting', 'card' => ['headline' => 'H']], ['k1']), 'only cards that offer a deal');
+        $reply = ['verdict' => 'customer_waiting', 'card' => ['headline' => 'H', 'proposedDeal' => ['name' => 'Ana', 'funnelId' => 'f', 'stageId' => 's'], 'closedDeals' => []]];
+        self::assertTrue(Verdicts::outdated($reply, ['k1']), 'a reply card that offers a deal, made before a deal closed');
+        self::assertFalse(Verdicts::outdated($reply));
         self::assertFalse(Verdicts::outdated(['verdict' => 'none', 'card' => null], ['k1']));
     }
 
@@ -147,6 +150,21 @@ class ClosedDealsTest extends TestCase
         self::assertSame(['new_deal', false], [$result['verdict'], $result['cached']], 'the stale card is analysed again, in full');
         self::assertSame(['k1'], $stored[8]['closedDeals']);
         self::assertSame(['k1'], $stored[11], 'the store replaces the stale card');
+    }
+
+    public function testAReplyCardThatOffersADealRemembersTheClosedDealsToo(): void
+    {
+        [$summary, $verdicts] = $this->summary(null);
+        $summary->method('request')->willReturn(['status' => 'completed', 'card' => ['verdict' => 'loops', 'reason' => 'Pediu o link da reunião',
+            'headline' => 'Enviar o link', 'whyNow' => 'w', 'draft' => 'Oi Alysson, segue o link',
+            'record' => ['agreed' => [], 'promises' => [['id' => 'p1', 'side' => 'ours', 'text' => 'Enviar o link da reunião', 'status' => 'open']]],
+            'proposedDeal' => ['name' => 'Alysson - Demonstração', 'amount' => null, 'funnelId' => 'f', 'stageId' => 's1']]]);
+        $stored = null;
+        $verdicts->expects(self::once())->method('store')->willReturnCallback(function (...$args) use (&$stored): void { $stored = $args; });
+
+        self::assertSame('customer_waiting', $summary->analyse($this->snapshot(['k1']), 'pt-BR')['verdict']);
+        self::assertSame('Alysson - Demonstração', $stored[8]['proposedDeal']['name']);
+        self::assertSame(['k1'], $stored[8]['closedDeals']);
     }
 
     public function testAnAnswerThatIsNoLongerAFoundDealRemembersNothing(): void

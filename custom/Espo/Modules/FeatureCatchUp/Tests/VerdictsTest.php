@@ -48,6 +48,25 @@ class VerdictsTest extends TestCase
         ], $judged);
     }
 
+    public function testAProposalIsTheNewestUnresolvedCardThatOffersADealReplyCardsIncluded(): void
+    {
+        $deal = ['name' => 'Alysson - Demonstração', 'amount' => null, 'funnelId' => 'f', 'stageId' => 's'];
+        $proposals = $this->verdicts([
+            // A reply card that also offers the deal (prompt 15).
+            ['conversation_id' => 'reply', 'card' => json_encode(['headline' => 'Enviar o link', 'proposedDeal' => $deal]), 'reason' => 'r'],
+            ['conversation_id' => 'found', 'card' => json_encode(['proposedDeal' => $deal]), 'reason' => 'r'],
+            // A newer card without a deal hides an older proposal at the same revision.
+            ['conversation_id' => 'overtaken', 'card' => json_encode(['headline' => 'Responder']), 'reason' => 'r'],
+            ['conversation_id' => 'overtaken', 'card' => json_encode(['proposedDeal' => $deal]), 'reason' => 'r'],
+            ['conversation_id' => 'plain', 'card' => json_encode(['headline' => 'Responder', 'proposedDeal' => null]), 'reason' => 'r'],
+        ], $sql)->proposals(['reply' => 'r1', 'found' => 'r2', 'overtaken' => 'r3', 'plain' => 'r4']);
+
+        self::assertStringNotContainsString("verdict = 'new_deal'", $sql);
+        self::assertStringContainsString('resolved_at IS NULL', $sql);
+        self::assertSame(['reply', 'found'], array_keys($proposals));
+        self::assertSame($deal, $proposals['reply']['card']['proposedDeal']);
+    }
+
     /** A PDO whose SELECTs answer $rows (by the first matching fragment) and whose other statements are recorded. */
     private function recording(array $answers, array &$writes, array &$queries = []): Verdicts
     {
