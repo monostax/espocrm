@@ -23,7 +23,7 @@
     },
     "links": {
         "subscription": { "type": "belongsTo", "entity": "WhatsAppNotificationSubscription" },
-        "card": { "type": "belongsTo", "entity": "WhatsAppDeckCard" }
+        "card": { "type": "belongsTo", "entity": "WhatsAppDeckCard", "foreignName": "contactName" }
     },
     "indexes": {
         "sendKey": { "columns": ["sendKey", "deleted"], "unique": true },
