@@ -8,7 +8,7 @@ Off until the config says otherwise (see Config).
 
 Meta wants the recipient's own opt-in, and a card quotes customers, so nothing goes to a number until the person proves they hold it. They send a code FROM that number (`PhoneCodes`): a wa.me link with the text ready ("Ativar Em dia 7KQ2-M9XP"), or its QR code. The sender is the number, nothing typed is trusted, and the message opens Meta's 24h window.
 
-- **Settings › Avisos no WhatsApp** (Chatwoot, every member, workspaces with Em dia on): `POST /WhatsAppNotifications/code` gives the code; the incoming message activates the person's subscription in that workspace and sends a welcome with "👀 Ver agora".
+- **Settings › Notificações no WhatsApp** (Chatwoot, every member, workspaces with Em dia on): `POST /WhatsAppNotifications/code` gives the code; the incoming message activates the person's subscription in that workspace and sends a welcome with "👀 Ver agora".
 - **Self-service signup** (FeatureSelfService `Signups`): right after the email code, the signup waits in status `phone` until the code arrives (`SelfService/signup/:id/phone` gives a new one). The verified number becomes the owner's phone, and the user and workspace are created then (by the webhook, so a closed tab still finishes; a status poll takes over after 90 s). One free trial per verified number: a number that verified another signup is refused, and the person may send from another one. When the workspace is ready, the owner's subscription is created with that number.
 - Codes: 8 characters without look-alikes, valid 15 minutes, used once; a number with 5 wrong codes in an hour is ignored for the rest of it.
 

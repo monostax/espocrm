@@ -53,7 +53,7 @@ class Copy
             'pause.morning' => '👍 Até mais! Seu card da manhã chega às {time}. Escreva *em dia* quando quiser ver os próximos.',
             'welcome' => "✅ Pronto, {name}! Seu Em dia de *{workspace}* agora chega aqui.\nEscreva *em dia* quando quiser ver seus cards.",
             'welcome.morning' => "✅ Pronto, {name}! Seu Em dia de *{workspace}* agora chega aqui.\n☀️ Todo dia às {time} eu mando o primeiro card. Escreva *em dia* quando quiser ver mais.",
-            'stopped' => '🔕 Avisos desligados. Para voltar, ative de novo no Monostax em Configurações › Avisos no WhatsApp.',
+            'stopped' => '🔕 Avisos desligados. Para voltar, ative de novo no Monostax em Configurações › Notificações no WhatsApp.',
             'code.unknown' => 'Não reconheci esse código. Gere um novo no Monostax e envie de novo.',
             'signup.ok' => '✅ WhatsApp confirmado! Pode voltar para a página do Monostax.',
             'signup.taken' => 'Este WhatsApp já tem um espaço no Monostax. Entre com seu e-mail em app.monostax.ai.',

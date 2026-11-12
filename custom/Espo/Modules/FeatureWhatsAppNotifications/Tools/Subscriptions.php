@@ -17,7 +17,7 @@ use Throwable;
 
 /**
  * One subscription per person and workspace. Each person turns it on for themselves (Meta wants the recipient's own
- * opt-in): Settings › Avisos no WhatsApp gives a code that the person sends from their WhatsApp, or the signup's
+ * opt-in): Settings › Notificações no WhatsApp gives a code that the person sends from their WhatsApp, or the signup's
  * WhatsApp check does it for the owner. "PARAR" or the app's "Parar avisos" stops it; only a new code turns it back on.
  */
 class Subscriptions

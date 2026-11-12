@@ -10,7 +10,7 @@ use Espo\ORM\EntityManager;
 /**
  * Proving a WhatsApp number: the person sends a code FROM that number to the Avisos number (a wa.me link with the text
  * ready, or its QR code). The sender is the number, so nothing typed is trusted, and the message opens Meta's 24h
- * window. Used by Settings › Avisos no WhatsApp (`subscription`) and by self-service signup (`signup`).
+ * window. Used by Settings › Notificações no WhatsApp (`subscription`) and by self-service signup (`signup`).
  *
  * Codes are 8 characters from an alphabet without look-alikes, valid 15 minutes, used once. A number with 5 wrong
  * codes in an hour is ignored for the rest of the hour, so a code can't be guessed from a phone.

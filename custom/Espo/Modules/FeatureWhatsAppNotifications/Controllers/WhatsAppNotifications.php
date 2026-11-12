@@ -11,7 +11,7 @@ use Espo\Modules\FeatureWhatsAppNotifications\Tools\Subscriptions;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Taps;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Workspaces;
 
-/** Settings › Avisos no WhatsApp: each person's own subscription in the workspace given by `accountId`. */
+/** Settings › Notificações no WhatsApp: each person's own subscription in the workspace given by `accountId`. */
 class WhatsAppNotifications
 {
     public function __construct(
