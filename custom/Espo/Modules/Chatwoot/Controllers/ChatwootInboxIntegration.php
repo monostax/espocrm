@@ -15,10 +15,12 @@ use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
 use Espo\Core\Controllers\Record;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Modules\Chatwoot\Services\ChatwootInboxIntegration as ChatwootInboxIntegrationService;
+use Espo\Modules\Chatwoot\Tools\MetaPhoneNumberOwner;
 use stdClass;
 
 /**
@@ -36,6 +38,8 @@ class ChatwootInboxIntegration extends Record
      */
     public function postActionCreate(Request $request, Response $response): stdClass
     {
+        $this->assertMetaPhoneNumberAvailable($request->getParsedBody());
+
         $result = parent::postActionCreate($request, $response);
         $channelId = $result->id ?? null;
 
@@ -58,6 +62,12 @@ class ChatwootInboxIntegration extends Record
                 return $valueMap;
             } catch (\Exception $e) {
                 $service->removeIntegration($channelId);
+
+                // Inboxes created outside the CRM aren't in the owner lookup;
+                // Chatwoot still rejects the duplicate number.
+                if (str_contains($e->getMessage(), 'Phone number has already been taken')) {
+                    throw $this->metaPhoneNumberTaken();
+                }
 
                 if ($e instanceof Error) {
                     throw $e;
@@ -198,6 +208,34 @@ class ChatwootInboxIntegration extends Record
         $entity = $service->linkWahaCompanion($id);
 
         return $entity->getValueMap();
+    }
+
+    /**
+     * @throws Conflict
+     */
+    private function assertMetaPhoneNumberAvailable(stdClass $data): void
+    {
+        $phoneNumberId = $data->phoneNumberId ?? null;
+
+        if (
+            !in_array($data->channelType ?? null, MetaPhoneNumberOwner::CHANNEL_TYPES, true) ||
+            !is_string($phoneNumberId) ||
+            $phoneNumberId === ''
+        ) {
+            return;
+        }
+
+        if ($this->injectableFactory->create(MetaPhoneNumberOwner::class)->owners([$phoneNumberId]) !== []) {
+            throw $this->metaPhoneNumberTaken();
+        }
+    }
+
+    private function metaPhoneNumberTaken(): Conflict
+    {
+        return Conflict::createWithBody(
+            'Phone number is already connected to an inbox.',
+            (string) json_encode(['code' => MetaPhoneNumberOwner::TAKEN_CODE])
+        );
     }
 
     private function getChatwootInboxIntegrationService(): ChatwootInboxIntegrationService

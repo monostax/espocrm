@@ -37,6 +37,12 @@
             "maxLength": 255,
             "readOnly": true,
             "notStorable": true
+        },
+        "connectedIn": {
+            "type": "enum",
+            "options": ["", "this", "other"],
+            "readOnly": true,
+            "notStorable": true
         }
     },
     "links": {}

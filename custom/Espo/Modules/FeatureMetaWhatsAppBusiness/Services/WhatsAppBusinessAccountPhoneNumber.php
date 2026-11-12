@@ -17,6 +17,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Record\Collection as RecordCollection;
 use Espo\Core\Utils\Log;
+use Espo\Modules\Chatwoot\Tools\MetaPhoneNumberOwner;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Tools\OAuth\TokensProvider;
@@ -41,6 +42,7 @@ class WhatsAppBusinessAccountPhoneNumber
         private WhatsAppOAuthHelper $oAuthHelper,
         private Log $log,
         private Acl $acl,
+        private MetaPhoneNumberOwner $phoneNumberOwner,
     ) {}
 
     /**
@@ -48,11 +50,17 @@ class WhatsAppBusinessAccountPhoneNumber
      *
      * @param string $oAuthAccountId The OAuthAccount ID
      * @param string $businessAccountId The WABA ID
+     * @param ?string $chatwootAccountId CRM ChatwootAccount the caller is connecting for; numbers live
+     *   there get connectedIn=this, numbers live in any other workspace connectedIn=other.
      * @return RecordCollection
      * @throws Error
      * @throws Forbidden
      */
-    public function find(string $oAuthAccountId, string $businessAccountId): RecordCollection
+    public function find(
+        string $oAuthAccountId,
+        string $businessAccountId,
+        ?string $chatwootAccountId = null,
+    ): RecordCollection
     {
         if (!$this->acl->checkScope('WhatsAppBusinessAccount', 'read')) {
             throw new Forbidden("No read access to WhatsAppBusinessAccount.");
@@ -98,9 +106,19 @@ class WhatsAppBusinessAccountPhoneNumber
 
         try {
             $phoneNumbers = $this->apiClient->getPhoneNumbers($accessToken, $businessAccountId, self::DEFAULT_API_VERSION);
+            $owners = $this->phoneNumberOwner->owners(array_map(
+                static fn (array $phone): string => (string) ($phone['id'] ?? ''),
+                $phoneNumbers
+            ));
 
             foreach ($phoneNumbers as $phoneData) {
                 $entity = $this->mapPhoneNumberToEntity($phoneData, $oAuthAccountId, $accountName);
+                $owner = $owners[(string) ($phoneData['id'] ?? '')] ?? null;
+
+                if ($owner !== null) {
+                    $entity->set('connectedIn', $owner === $chatwootAccountId ? 'this' : 'other');
+                }
+
                 $collection->append($entity);
                 $totalCount++;
             }

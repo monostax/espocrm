@@ -41,7 +41,7 @@ class WhatsAppBusinessAccountPhoneNumber
 
     /**
      * GET WhatsAppBusinessAccountPhoneNumber - List phone numbers.
-     * Route: GET api/v1/WhatsAppBusinessAccountPhoneNumber?oAuthAccountId=xxx&businessAccountId=yyy
+     * Route: GET api/v1/WhatsAppBusinessAccountPhoneNumber?oAuthAccountId=xxx&businessAccountId=yyy[&chatwootAccountId=zzz]
      *
      * Also supports legacy `credentialId` parameter for backward compatibility
      * during migration. When credentialId is provided, it resolves the
@@ -72,7 +72,8 @@ class WhatsAppBusinessAccountPhoneNumber
         }
 
         $service = $this->getService();
-        $result = $service->find($oAuthAccountId, $businessAccountId);
+        $chatwootAccountId = $request->getQueryParam('chatwootAccountId');
+        $result = $service->find($oAuthAccountId, $businessAccountId, $chatwootAccountId ?: null);
 
         return (object) [
             'total' => $result->getTotal(),
