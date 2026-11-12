@@ -3311,6 +3311,25 @@ public function deleteConversation(
         return $contact;
     }
 
+    /**
+     * One account-API call whose status the caller maps itself (FeatureWhatsAppNotifications: a 403 or 422 from a
+     * person's token means something to the person, not an error to log). $path starts with /api/v1/accounts/.
+     *
+     * @param array<string, mixed>|null $body
+     * @return array{code: int, body: array<string, mixed>}
+     */
+    public function accountRequest(string $platformUrl, string $token, string $method, string $path, ?array $body = null): array
+    {
+        $payload = $body === null ? null : json_encode($body, JSON_UNESCAPED_UNICODE);
+        if ($payload === false) {
+            throw new Error('Failed to encode the Chatwoot request body.');
+        }
+        return $this->executeRequest(rtrim($platformUrl, '/') . $path, $method, $payload, [
+            'api_access_token: ' . $token,
+            'Content-Type: application/json',
+        ]);
+    }
+
     /** Retrieve the viewer's latest conversations for an exact inbox and recipient. */
     public function getContactConversations(
         string $platformUrl,

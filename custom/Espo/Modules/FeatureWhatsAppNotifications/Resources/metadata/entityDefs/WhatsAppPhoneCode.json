@@ -1,0 +1,18 @@
+{
+    "fields": {
+        "purpose": { "type": "varchar", "maxLength": 12 },
+        "codeHash": { "type": "varchar", "maxLength": 64 },
+        "code": { "type": "varchar", "maxLength": 9 },
+        "userId": { "type": "varchar", "maxLength": 24 },
+        "chatwootAccountId": { "type": "varchar", "maxLength": 24 },
+        "signupId": { "type": "varchar", "maxLength": 24 },
+        "expiresAt": { "type": "datetime" },
+        "usedAt": { "type": "datetime" },
+        "phone": { "type": "varchar", "maxLength": 20 },
+        "createdAt": { "type": "datetime", "readOnly": true }
+    },
+    "indexes": {
+        "codeHash": { "columns": ["codeHash"] },
+        "signup": { "columns": ["signupId"] }
+    }
+}

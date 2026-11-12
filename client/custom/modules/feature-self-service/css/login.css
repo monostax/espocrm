@@ -441,6 +441,35 @@
     }
 }
 
+/* WhatsApp check: QR code on a computer, the link button on a phone. */
+#login.login-card .login-qrcode {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0 4px;
+}
+
+#login.login-card .login-qrcode img,
+#login.login-card .login-qrcode canvas {
+    border-radius: 8px;
+}
+
+#login.login-card .login-qrcode-hint {
+    text-align: center;
+}
+
+#login.login-card a.login-button {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+}
+
+@media (max-width: 600px) {
+    #login.login-card .login-qrcode,
+    #login.login-card .login-qrcode-hint {
+        display: none;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     #login.login-card .login-spinner {
         animation-duration: 2400ms;

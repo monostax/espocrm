@@ -32,6 +32,18 @@ class ServiceFeed
     /** An open deal linked to conversation `c`: such a conversation is a Negócios card instead. */
     public const OPEN_DEAL_SQL = 'SELECT 1 FROM chatwoot_conversation_opportunity r JOIN opportunity o ON o.id = r.opportunity_id '
         . "AND o.deleted = 0 AND o.status NOT IN ('Won','Lost') WHERE r.chatwoot_conversation_id = c.id AND r.deleted = 0";
+    /**
+     * Monostax's own WhatsApp number, digits only: "Monostax - Avisos" (+55 91 4040-3376) sends Em dia cards and alerts
+     * to customers' staff, so it lands in the inbox of an owner who connected the number they signed up with.
+     */
+    public const SYSTEM_WHATSAPP_NUMBER = '559140403376';
+    /**
+     * Contact `ct` is not system traffic: neither WAHA's control chat nor SYSTEM_WHATSAPP_NUMBER, matched by its phone
+     * (digits only) or its WAHA user id. Same rule as the backend's settle (helpers/$systemContacts.ts).
+     */
+    public const NOT_SYSTEM_CONTACT_SQL = "AND COALESCE(ct.identifier, '') <> 'whatsapp.integration' "
+        . "AND REGEXP_REPLACE(COALESCE(ct.phone_number, ''), '[^0-9]', '') <> '" . self::SYSTEM_WHATSAPP_NUMBER . "' "
+        . "AND COALESCE(ct.identifier, '') NOT IN ('" . self::SYSTEM_WHATSAPP_NUMBER . "@c.us', '" . self::SYSTEM_WHATSAPP_NUMBER . "@s.whatsapp.net') ";
     private const WAITING = 'c.last_message_received_at IS NOT NULL AND (c.last_message_sent_at IS NULL OR c.last_message_received_at > c.last_message_sent_at)';
     /** Waiting on us for up to Feed::WAITING_FIRST_DAYS: these come first, longest wait first. */
     private const RECENT_WAIT = self::WAITING . ' AND c.last_message_received_at >= UTC_TIMESTAMP() - INTERVAL ' . Feed::WAITING_FIRST_DAYS . ' DAY';
@@ -295,7 +307,7 @@ class ServiceFeed
             . 'WHERE c.deleted = 0 AND c.chatwoot_account_id = :account '
             . 'AND c.last_activity_at >= UTC_TIMESTAMP() - INTERVAL ' . self::WINDOW_DAYS . ' DAY '
             . 'AND c.last_activity_at <= UTC_TIMESTAMP() - INTERVAL ' . Feed::SETTLE_MINUTES . ' MINUTE '
-            . "AND COALESCE(ct.identifier, '') <> 'whatsapp.integration' "
+            . self::NOT_SYSTEM_CONTACT_SQL
             . "AND (p.party_class IS NULL OR p.party_class IN ('customer', 'partner')) "
             . 'AND NOT EXISTS (' . self::OPEN_DEAL_SQL . ') '
             . 'AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '

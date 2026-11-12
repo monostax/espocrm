@@ -167,6 +167,8 @@ class ServiceFeedTest extends TestCase
         foreach ([
             'c.chatwoot_account_id = :account', 'INTERVAL 30 MINUTE', 'INTERVAL 30 DAY', "<> 'whatsapp.integration'",
             "p.party_class IN ('customer', 'partner')", 'NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ')',
+            "REGEXP_REPLACE(COALESCE(ct.phone_number, ''), '[^0-9]', '') <> '559140403376'",
+            "COALESCE(ct.identifier, '') NOT IN ('559140403376@c.us', '559140403376@s.whatsapp.net')",
             "z.target_type = 'ChatwootConversation'", ' AND OWNER = :deckOwner',
         ] as $part) self::assertStringContainsString($part, $sql);
         self::assertStringContainsString('c.last_message_received_at >= UTC_TIMESTAMP() - INTERVAL 7 DAY THEN 0 WHEN c.last_message_received_at IS NOT NULL',

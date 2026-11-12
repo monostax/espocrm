@@ -114,6 +114,12 @@ class SelfService
         return $this->call(fn () => $this->signups->verify((string) $request->getRouteParam('id'), $this->token($request), $code));
     }
 
+    /** A new code for the signup's WhatsApp check. */
+    public function postActionPhone(Request $request): object
+    {
+        return $this->call(fn () => $this->signups->phoneCode((string) $request->getRouteParam('id'), $this->token($request)));
+    }
+
     public function postActionStatus(Request $request): object
     {
         return $this->call(fn () => $this->signups->status((string) $request->getRouteParam('id'), $this->token($request)));

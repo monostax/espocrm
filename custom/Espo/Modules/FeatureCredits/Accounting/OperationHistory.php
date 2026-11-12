@@ -67,7 +67,7 @@ final class OperationHistory
             $zero = Amount::fromString('0');
             foreach ($rows as $index => $row) {
                 if ($row['deleted'] || $row['reservation_id'] === null || $row['reservation_deleted'] ||
-                    !in_array($row['operation_type'], ['ai', 'apollo', 'enrichment', 'verification'], true) ||
+                    !in_array($row['operation_type'], ['ai', 'apollo', 'enrichment', 'verification', 'messaging'], true) ||
                     $row['billing_regime'] !== 'unified-prepaid-v1' ||
                     !preg_match('/^(0|[1-9][0-9]*)(\.[0-9]+)?$/D', $row['accrued_credits_exact'])) {
                     throw new LogicException('Invalid operation or reservation projection.');

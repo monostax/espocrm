@@ -19,6 +19,8 @@ class ReservationInputTest extends TestCase
         $this->assertNotSame($make('0.1')->hash, $make('0.2')->hash);
         $this->assertSame('0.0001', (new ReservationInput('tenant', 'apollo', 'op', 'exec', 'rate', '0.0001'))->credits);
         $this->assertSame('8.0000', (new ReservationInput('tenant', 'verification', 'verification:op', 'verification:op', 'rate', '8', new \Espo\Modules\FeatureCredits\Accounting\SourceReference('Contact', 'contact')))->credits);
+        // A WhatsApp message Meta billed: no AI minimum.
+        $this->assertSame('0.0702', (new ReservationInput('tenant', 'messaging', 'messaging:log', 'messaging:log', 'rate', '0.0702'))->credits);
     }
 
     public static function invalidInputs(): iterable

@@ -1,0 +1,34 @@
+{
+    "fields": {
+        "subscription": { "type": "link" },
+        "userId": { "type": "varchar", "maxLength": 24 },
+        "tenantId": { "type": "varchar", "maxLength": 24 },
+        "direction": { "type": "varchar", "maxLength": 3, "default": "out" },
+        "kind": { "type": "varchar", "maxLength": 20 },
+        "sendKey": { "type": "varchar", "maxLength": 190 },
+        "mode": { "type": "varchar", "maxLength": 10 },
+        "template": { "type": "varchar", "maxLength": 64 },
+        "card": { "type": "link" },
+        "phone": { "type": "varchar", "maxLength": 20 },
+        "chatwootMessageId": { "type": "int" },
+        "status": { "type": "varchar", "maxLength": 12 },
+        "error": { "type": "varchar", "maxLength": 255 },
+        "pricingCategory": { "type": "varchar", "maxLength": 20 },
+        "billable": { "type": "bool" },
+        "credits": { "type": "varchar", "maxLength": 20 },
+        "chargedAt": { "type": "datetime" },
+        "tappedAt": { "type": "datetime" },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "subscription": { "type": "belongsTo", "entity": "WhatsAppNotificationSubscription" },
+        "card": { "type": "belongsTo", "entity": "WhatsAppDeckCard" }
+    },
+    "indexes": {
+        "sendKey": { "columns": ["sendKey", "deleted"], "unique": true },
+        "message": { "columns": ["chatwootMessageId"] },
+        "subscriptionKind": { "columns": ["subscriptionId", "kind", "createdAt"] },
+        "phoneKind": { "columns": ["phone", "kind", "createdAt"] }
+    }
+}

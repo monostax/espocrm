@@ -405,7 +405,7 @@ class Verdicts
     private const CONVERSATION_FILTERS_SQL = 'LEFT JOIN chatwoot_contact ct ON ct.id = c.chatwoot_contact_id AND ct.deleted = 0 '
         . 'LEFT JOIN catch_up_party p ON p.chatwoot_account_id = c.chatwoot_account_id AND p.chatwoot_contact_id = ct.chatwoot_contact_id AND p.deleted = 0 ';
     /** Conversation `c` belongs in the reader's Atendimento deck (ServiceFeed::candidates()), minus the settle wait and the owner rule. */
-    private const CONVERSATION_DECK_SQL = "AND COALESCE(ct.identifier, '') <> 'whatsapp.integration' "
+    private const CONVERSATION_DECK_SQL = ServiceFeed::NOT_SYSTEM_CONTACT_SQL
         . "AND (p.party_class IS NULL OR p.party_class IN ('customer', 'partner')) "
         . 'AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
         . 'AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '

@@ -53,7 +53,17 @@
         "continueWithMicrosoft": "Continue with Microsoft",
         "detailsTitle": "Almost there",
         "detailsSignedInAs": "Your account will be created with {email}.",
-        "back": "Back"
+        "back": "Back",
+        "phoneTitle": "Confirm your WhatsApp",
+        "phoneIntro": "Send the message below from your WhatsApp to Monostax. That's where Em dia will tell you about customers waiting for a reply. You can turn it off anytime.",
+        "phoneOpen": "Open WhatsApp",
+        "phoneManual": "Or send {text} to {number}.",
+        "phoneScan": "On a computer? Point your phone's camera at the code.",
+        "phoneWaiting": "Waiting for your message…",
+        "phoneVerified": "WhatsApp confirmed. Creating your workspace…",
+        "phoneTaken": "This WhatsApp already has a Monostax workspace. Log in with your email or send from another number.",
+        "phoneNewCode": "Create another code",
+        "phoneExpired": "The code expired. Create another one."
     },
     "selfServiceErrors": {
         "GENERIC": "Something went wrong. Try again.",

@@ -11,7 +11,8 @@
 /**
  * The login page plus self-service signup (clientDefs.App.loginView).
  *
- * Signup: form → emailed code → workspace creation → login with a one-time
+ * Signup: form → emailed code → WhatsApp check (the person sends a code from
+ * their WhatsApp; status `phone`) → workspace creation → login with a one-time
  * ticket through the normal login request, then the usual Chatwoot redirect.
  * Shown only while the server reports self-service as enabled. Open it
  * directly with `?signup` or `#signup`.
@@ -579,7 +580,12 @@ export default class extends LoginView {
             return;
         }
 
-        if (polls === 0) {
+        if (result.status === 'phone') {
+            this.selfServiceShowPhone(result.phone || {});
+            // The "slow" hint counts from the end of this step.
+            polls = -1;
+        } else if (polls === 0 || this.selfServicePhoneKey) {
+            this.selfServicePhoneKey = null;
             this.selfServiceRender(
                 `<div class="login-form">
                     ${this.selfServiceHeader('creating')}
@@ -609,9 +615,89 @@ export default class extends LoginView {
                         xhr.errorIsHandled = true;
                     }
 
-                    this.selfServiceProgress({status: 'provisioning'}, polls + 1);
+                    // A failed poll keeps the step on screen.
+                    this.selfServiceProgress(this.selfServicePhoneKey ?
+                        {status: 'phone', phone: this.selfServicePhoneLast} : {status: 'provisioning'}, polls + 1);
                 });
         }, POLL_MS);
+    }
+
+    /**
+     * The WhatsApp check: a QR code (on a computer) and a link (on the phone)
+     * that open WhatsApp with the code ready to send to the Avisos number.
+     * Drawn again only when the code or its state changes, so polling doesn't
+     * redraw the QR code.
+     */
+    selfServiceShowPhone(phone) {
+        const key = [phone.code, phone.taken, phone.verified].join('|');
+
+        this.selfServicePhoneLast = phone;
+
+        if (this.selfServicePhoneKey === key) {
+            return;
+        }
+
+        this.selfServicePhoneKey = key;
+
+        const manual = escape(this.selfServiceText('phoneManual'))
+            .replace('{text}', () => `<strong>${escape(phone.text)}</strong>`)
+            .replace('{number}', () => `<strong>${escape(phone.number)}</strong>`);
+
+        this.selfServiceRender(
+            `<div class="login-form" data-role="self-service-phone">
+                ${this.selfServiceHeader('phoneTitle', escape(this.selfServiceText('phoneIntro')))}
+                <div class="login-qrcode" data-role="phone-qr" aria-hidden="true"></div>
+                <p class="login-hint login-qrcode-hint">${escape(this.selfServiceText('phoneScan'))}</p>
+                <a class="login-button login-button-primary" href="${escape(phone.link)}" target="_blank"
+                    rel="noopener">${escape(this.selfServiceText('phoneOpen'))}</a>
+                <p class="login-hint">${manual}</p>
+                <p class="login-status" aria-live="polite">
+                    <span class="login-spinner" aria-hidden="true"></span>
+                    <span>${escape(this.selfServiceText(phone.verified ? 'phoneVerified' : 'phoneWaiting'))}</span>
+                </p>
+                <p class="login-error" role="alert" ${phone.taken ? '' : 'hidden'}>${escape(this.selfServiceText('phoneTaken'))}</p>
+                <div class="login-links">
+                    <button type="button" class="login-text-link" data-action="phoneNewCode">${escape(this.selfServiceText('phoneNewCode'))}</button>
+                </div>
+            </div>`
+        );
+
+        const box = this.selfServiceContainer.querySelector('[data-role="phone-qr"]');
+
+        Espo.loader.requirePromise('lib!qrcodejs').then(QRCode => {
+            if (!box.isConnected || !phone.link) {
+                return;
+            }
+
+            new QRCode(box, {
+                text: phone.link,
+                width: 176,
+                height: 176,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M,
+            });
+        });
+
+        const newCode = this.selfServiceContainer.querySelector('[data-action="phoneNewCode"]');
+
+        newCode.addEventListener('click', () => {
+            const state = this.selfServiceState();
+
+            newCode.disabled = true;
+
+            Espo.Ajax.postRequest(`SelfService/signup/${encodeURIComponent(state.signupId)}/phone`, {token: state.token})
+                .then(result => {
+                    if (result.status === 'phone') {
+                        this.selfServicePhoneKey = null;
+                        this.selfServiceShowPhone(result.phone || {});
+                    }
+                })
+                .catch(xhr => {
+                    newCode.disabled = false;
+                    this.selfServiceError(xhr);
+                });
+        });
     }
 
     selfServiceLogin(ticket) {

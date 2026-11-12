@@ -4,6 +4,7 @@
     {"route": "/SelfService/signup/:id/resend", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "resend"}},
     {"route": "/SelfService/signup/:id/verify", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "verify"}},
     {"route": "/SelfService/signup/:id/status", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "status"}},
+    {"route": "/SelfService/signup/:id/phone", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "phone"}},
     {"route": "/SelfService/oauth/start", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "oauthStart"}},
     {"route": "/SelfService/oauth/finish", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "oauthFinish"}},
     {"route": "/SelfService/oauth/complete", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "oauthComplete"}},

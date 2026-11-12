@@ -1,0 +1,36 @@
+{
+    "fields": {
+        "name": { "type": "varchar", "maxLength": 150 },
+        "user": { "type": "link", "required": true },
+        "tenantId": { "type": "varchar", "maxLength": 24 },
+        "chatwootAccount": { "type": "link", "required": true },
+        "accountNumber": { "type": "int" },
+        "phone": { "type": "varchar", "maxLength": 20 },
+        "status": { "type": "enum", "options": ["active", "stopped"], "default": "active" },
+        "source": { "type": "enum", "options": ["settings", "signup"], "default": "settings" },
+        "verifiedAt": { "type": "datetime" },
+        "morningEnabled": { "type": "bool", "default": true },
+        "morningTime": { "type": "varchar", "maxLength": 5, "default": "08:00" },
+        "lastMorningOn": { "type": "date" },
+        "hotLeadsEnabled": { "type": "bool", "default": true },
+        "alertStart": { "type": "varchar", "maxLength": 5, "default": "08:00" },
+        "alertEnd": { "type": "varchar", "maxLength": 5, "default": "20:00" },
+        "stoppedAt": { "type": "datetime" },
+        "stopReason": { "type": "varchar", "maxLength": 20 },
+        "lastInboundAt": { "type": "datetime" },
+        "avisosContactId": { "type": "int" },
+        "avisosConversationId": { "type": "int" },
+        "session": { "type": "jsonObject" },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "user": { "type": "belongsTo", "entity": "User" },
+        "chatwootAccount": { "type": "belongsTo", "entity": "ChatwootAccount" }
+    },
+    "indexes": {
+        "userAccount": { "columns": ["userId", "chatwootAccountId", "deleted"], "unique": true },
+        "phoneStatus": { "columns": ["phone", "status"] },
+        "statusMorning": { "columns": ["status", "morningEnabled"] }
+    }
+}

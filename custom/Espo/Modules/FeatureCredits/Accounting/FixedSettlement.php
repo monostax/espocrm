@@ -120,7 +120,7 @@ final class FixedSettlement
 
     private function applyLocked(PDO $pdo, array $wallet, string $now, array $usage, array $reservation, Amount $charge, ?string $purchaseId): void
     {
-        if (!$pdo->inTransaction() || !in_array($usage['operation_type'], ['enrichment', 'verification'], true) || $usage['state'] !== 'admitted' ||
+        if (!$pdo->inTransaction() || !in_array($usage['operation_type'], ['enrichment', 'verification', 'messaging'], true) || $usage['state'] !== 'admitted' ||
             $usage['tenant_id'] !== $wallet['tenant_id'] || $reservation['usage_id'] !== $usage['id'] ||
             $reservation['tenant_id'] !== $usage['tenant_id'] || $reservation['state'] !== 'held' ||
             $reservation['execution_id'] !== $usage['execution_id'] || $usage['deleted'] || $reservation['deleted'] ||
@@ -254,8 +254,17 @@ final class FixedSettlement
     {
         if ((string) $amount === '0.0000') return null;
         $id = RecordId::generate(); $key = 'settle:' . $allocation['id'];
-        $formula = $operationType === 'verification' ? 'verification-fixed-v1' : 'enrichment-fixed-v1';
-        $debitReason = $operationType === 'verification' ? $verificationKind . '_verification' : 'requested_product_purchase';
+        $formula = match ($operationType) {
+            'verification' => 'verification-fixed-v1',
+            // A WhatsApp message Meta billed (FeatureWhatsAppNotifications\Tools\Charges): Meta's rate by category.
+            'messaging' => 'messaging-fixed-v1',
+            default => 'enrichment-fixed-v1',
+        };
+        $debitReason = match ($operationType) {
+            'verification' => $verificationKind . '_verification',
+            'messaging' => 'whatsapp_notification',
+            default => 'requested_product_purchase',
+        };
         $pdo->prepare('INSERT INTO credit_transaction
             (id, tenant_id, type, idempotency_key, input_hash, credits, usage_id, grant_id, allocation_id, occurred_at, posted_at, evidence)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')->execute([$id, $tenant, $type, $key,

@@ -106,6 +106,14 @@ class DeliveryWebhook
             }
         }
 
+        // The "Monostax - Avisos" inbox (Em dia no WhatsApp) belongs to FeatureWhatsAppNotifications, and only signed
+        // events may act there: a tap can send a reply to a customer as the person who tapped.
+        if ($webhookSecrets !== [] && $this->isAvisosEvent($data, $account->getId())) {
+            $this->injectableFactory->create(\Espo\Modules\FeatureWhatsAppNotifications\Tools\Inbound::class)->handle($data, $account->getId());
+
+            return (object) ['success' => true];
+        }
+
         if ($event === 'message_created') {
             // Only authenticated webhooks may create timeline events. Unlike campaign
             // reply tracking, every incoming public message is an independent event.
@@ -402,6 +410,16 @@ class DeliveryWebhook
         ]);
 
         $this->entityManager->saveEntity($campaign);
+    }
+
+    private function isAvisosEvent(object $data, string $espoAccountId): bool
+    {
+        if (!$this->injectableFactory->create(\Espo\Modules\FeatureWhatsAppNotifications\Tools\Settings::class)->enabled()) {
+            return false;
+        }
+
+        return $this->injectableFactory->create(\Espo\Modules\FeatureWhatsAppNotifications\Tools\Avisos::class)
+            ->isAvisos($espoAccountId, (int) ($data->inbox->id ?? 0));
     }
 
     /**

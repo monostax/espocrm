@@ -1,0 +1,30 @@
+{
+    "fields": {
+        "subscription": { "type": "link", "required": true },
+        "lane": { "type": "varchar", "maxLength": 10 },
+        "subjectId": { "type": "varchar", "maxLength": 24 },
+        "revision": { "type": "varchar", "maxLength": 64 },
+        "snapshotToken": { "type": "varchar", "maxLength": 64 },
+        "verdict": { "type": "varchar", "maxLength": 24 },
+        "contactName": { "type": "varchar", "maxLength": 150 },
+        "headline": { "type": "varchar", "maxLength": 255 },
+        "context": { "type": "text" },
+        "draft": { "type": "text" },
+        "editText": { "type": "text" },
+        "waitSince": { "type": "datetime" },
+        "conversationAccountId": { "type": "int" },
+        "conversationId": { "type": "int" },
+        "status": { "type": "varchar", "maxLength": 12, "default": "shown" },
+        "remindAt": { "type": "datetime" },
+        "remindedAt": { "type": "datetime" },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "subscription": { "type": "belongsTo", "entity": "WhatsAppNotificationSubscription" }
+    },
+    "indexes": {
+        "subscriptionStatus": { "columns": ["subscriptionId", "status", "createdAt"] },
+        "remind": { "columns": ["status", "remindAt"] }
+    }
+}

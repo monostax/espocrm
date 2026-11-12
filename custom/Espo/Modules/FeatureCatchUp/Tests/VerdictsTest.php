@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureCatchUp\Tests;
 
+use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
 use Espo\Modules\FeatureCatchUp\Services\Verdicts;
 use Espo\ORM\EntityManager;
 use PHPUnit\Framework\TestCase;
@@ -136,6 +137,7 @@ class VerdictsTest extends TestCase
         self::assertStringContainsString('ORDER BY v.created_at DESC', $sql);
         self::assertStringNotContainsString('INTERVAL 24 HOUR', $sql, 'a card counts until something moves it, not for a day');
         self::assertStringContainsString('c.last_message_received_at', $sql, 'a message overtakes a verdict, activity does not');
+        self::assertStringContainsString(ServiceFeed::NOT_SYSTEM_CONTACT_SQL, $sql, 'no control chat or Avisos number in the counts');
     }
 
     public function testAnAnalysisReplacesACardMarkedForANewDraft(): void

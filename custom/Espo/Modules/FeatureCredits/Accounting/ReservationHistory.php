@@ -75,7 +75,7 @@ final class ReservationHistory
                 }
                 $closed = in_array($row['state'], ['settled', 'released'], true);
                 if ($row['deleted'] || $row['parent_id'] === null || $row['parent_deleted'] ||
-                    !in_array($row['operation_type'], ['ai', 'apollo', 'enrichment', 'verification'], true) ||
+                    !in_array($row['operation_type'], ['ai', 'apollo', 'enrichment', 'verification', 'messaging'], true) ||
                     $reserved->compareTo($zero) < 0 ||
                     (!$closed && ($row['state'] !== 'held' || $row['usage_state'] !== 'admitted' ||
                         $row['settled_at'] !== null || $row['usage_settled_at'] !== null || ($settled !== null && $purchased === null) ||

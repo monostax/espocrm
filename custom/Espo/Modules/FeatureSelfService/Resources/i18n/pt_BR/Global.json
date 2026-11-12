@@ -53,7 +53,17 @@
         "continueWithMicrosoft": "Continuar com Microsoft",
         "detailsTitle": "Falta pouco",
         "detailsSignedInAs": "Sua conta será criada com {email}.",
-        "back": "Voltar"
+        "back": "Voltar",
+        "phoneTitle": "Confirme seu WhatsApp",
+        "phoneIntro": "Envie a mensagem abaixo do seu WhatsApp para o Monostax. É por ele que o Em dia vai te avisar dos clientes esperando resposta. Você pode desligar quando quiser.",
+        "phoneOpen": "Abrir o WhatsApp",
+        "phoneManual": "Ou envie {text} para {number}.",
+        "phoneScan": "No computador? Aponte a câmera do celular para o código.",
+        "phoneWaiting": "Esperando sua mensagem…",
+        "phoneVerified": "WhatsApp confirmado. Criando seu espaço…",
+        "phoneTaken": "Este WhatsApp já tem um espaço no Monostax. Entre com seu e-mail ou envie de outro número.",
+        "phoneNewCode": "Gerar outro código",
+        "phoneExpired": "O código expirou. Gere outro."
     },
     "selfServiceErrors": {
         "GENERIC": "Algo deu errado. Tente de novo.",

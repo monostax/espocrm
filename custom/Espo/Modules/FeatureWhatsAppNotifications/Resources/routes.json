@@ -1,0 +1,7 @@
+[
+    {"route": "/WhatsAppNotifications/me", "method": "get", "params": {"controller": "WhatsAppNotifications", "action": "me"}},
+    {"route": "/WhatsAppNotifications/me", "method": "put", "params": {"controller": "WhatsAppNotifications", "action": "update"}},
+    {"route": "/WhatsAppNotifications/code", "method": "post", "params": {"controller": "WhatsAppNotifications", "action": "code"}},
+    {"route": "/WhatsAppNotifications/stop", "method": "post", "params": {"controller": "WhatsAppNotifications", "action": "stop"}},
+    {"route": "/WhatsAppNotifications/test", "method": "post", "params": {"controller": "WhatsAppNotifications", "action": "test"}}
+]

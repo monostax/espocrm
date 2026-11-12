@@ -1,0 +1,20 @@
+{
+    "SendWhatsAppMorningCards": {
+        "name": "Em dia no WhatsApp: morning cards",
+        "scheduling": "*/5 * * * *",
+        "isSystem": false,
+        "jobClassName": "Espo\\Modules\\FeatureWhatsAppNotifications\\Jobs\\SendMorning"
+    },
+    "SendWhatsAppReminders": {
+        "name": "Em dia no WhatsApp: reminders",
+        "scheduling": "*/5 * * * *",
+        "isSystem": false,
+        "jobClassName": "Espo\\Modules\\FeatureWhatsAppNotifications\\Jobs\\SendReminders"
+    },
+    "SendWhatsAppHotLeads": {
+        "name": "Em dia no WhatsApp: hot leads",
+        "scheduling": "*/10 * * * *",
+        "isSystem": false,
+        "jobClassName": "Espo\\Modules\\FeatureWhatsAppNotifications\\Jobs\\SendHotLeads"
+    }
+}
