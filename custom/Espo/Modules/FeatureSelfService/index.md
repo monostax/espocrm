@@ -187,16 +187,16 @@ Ferraz Veloso's private offer.
 
 When a workspace's onboarding opens (`Tenant.onboardingStep` becomes `done`:
 its newest history is in, or the number brings none), the
-`Hooks/Tenant/ScheduleFirstRead` hook schedules `Jobs/RunFirstRead` for two
-minutes later. `Tools/Onboarding/FirstRead` then:
+`Hooks/Tenant/ScheduleFirstRead` hook schedules `Jobs/RunFirstRead` right away
+(it was two minutes later until 2026-11-12). `Tools/Onboarding/FirstRead` then:
 
-- waits, a minute at a time and 15 minutes at most, until the CRM has the
-  imported conversations (no `ChatwootAccount.conversationBackfillPage` left
-  and at least one conversation);
+- waits, 15 seconds at a time and 15 minutes at most, until the CRM has at
+  least one imported conversation; it doesn't wait for the older pages
+  (`ChatwootAccount.conversationBackfillPage`) to finish copying;
 - runs `FeatureCatchUp/Services/Prefetch` as the owner (`ActorScope`): Em dia
   analyses the first 15 cards of the owner's deck, deals first, through the
   deck's own feeds, snapshots and analysis. The job only queues the analyses,
-  then comes back every 30 seconds (at most 6 times) to store the ones that
+  then comes back every 10 seconds (for up to 3 minutes) to store the ones that
   completed, so it never sleeps in one of the daemon's 4 job slots; the console
   (`self-service first-read`) waits in place. The deck finds each verdict
   stored and opens at once; deals found in conversations (`new_deal`) are

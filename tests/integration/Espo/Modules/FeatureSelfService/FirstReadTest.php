@@ -74,7 +74,7 @@ class FirstReadTest extends TestCase
         $this->em->saveEntity($tenant, ['silent' => true, 'skipHooks' => true]);
         $firstRead = $this->app->getInjectableFactory()->create(FirstRead::class);
 
-        // No conversation synced yet: the job looks again in a minute.
+        // No conversation synced yet: the job looks again in 15 seconds.
         self::assertNull($firstRead->run($tenant->getId(), 3));
         self::assertSame([4], $this->jobs($tenant));
 

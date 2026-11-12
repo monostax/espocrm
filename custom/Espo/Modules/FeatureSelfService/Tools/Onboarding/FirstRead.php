@@ -37,12 +37,17 @@ class FirstRead
 {
     /** Cards analysed at most, like the deck's own cap per open. */
     public const LIMIT = 15;
-    /** The first check, after onboarding opened: the backfill request and the first sync land within a minute or two. */
-    public const FIRST_DELAY_SECONDS = 120;
-    private const RECHECK_SECONDS = 60;
+    /**
+     * Right when onboarding opens (decided 2026-11-12: start the analysis as soon as possible). The CRM copies the
+     * newest conversations within a minute, often before the import's first window ends; until then it looks again
+     * every RECHECK_SECONDS.
+     */
+    public const FIRST_DELAY_SECONDS = 0;
+    private const RECHECK_SECONDS = 15;
     private const MAX_WAIT_SECONDS = 900;
-    private const POLL_SECONDS = 30;
-    private const POLL_ROUNDS = 6;
+    /** Analyses take about 9 s (p50); stored every POLL_SECONDS for up to 3 minutes. */
+    private const POLL_SECONDS = 10;
+    private const POLL_ROUNDS = 18;
     /** The console's wait for the analyses it queued. */
     private const CONSOLE_WAIT_SECONDS = 150;
 
@@ -108,13 +113,12 @@ class FirstRead
         return $result;
     }
 
-    /** The CRM has the imported conversations: no backfill left, and at least one conversation. */
+    /**
+     * The CRM has some of the imported conversations. The older pages may still be copying (backfill): the first read
+     * starts with the newest ones rather than wait for the whole history, and the deck reads the rest as it opens.
+     */
     private function conversationsSynced(Entity $account): bool
     {
-        if ((int) $account->get('conversationBackfillPage') > 0) {
-            return false;
-        }
-
         return $this->entityManager
             ->getRDBRepository('ChatwootConversation')
             ->where(['chatwootAccountId' => $account->getId()])
