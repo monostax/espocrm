@@ -16,6 +16,8 @@ use Espo\Modules\Global\Tools\CustomField\TemplateBridge;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Repositories\PhoneNumber as PhoneNumberRepository;
+use libphonenumber\PhoneNumberType;
+use libphonenumber\PhoneNumberUtil;
 use Throwable;
 
 /**
@@ -147,6 +149,9 @@ class JourneyWhatsAppOutbound
      * - Non-empty override → that number only (semicolon/comma/whitespace separated list allowed).
      * - Otherwise: phoneNumberData (skip opted-out / invalid / Fax), then primary field fallbacks,
      *   then ContactChannelIdentity whatsapp sourceIds when available.
+     * - Only mobile numbers ({@see isMobile}), judged by the number rather than its CRM type
+     *   label. WhatsApp channel identities are kept as they are: that number already uses
+     *   WhatsApp, even if it is a landline on WhatsApp Business.
      *
      * Matches WhatsAppCampaign multi-number enrollment semantics.
      *
@@ -161,12 +166,15 @@ class JourneyWhatsAppOutbound
         $phones = [];
         $seen = [];
 
-        $append = function (?string $raw) use (&$phones, &$seen): void {
+        $append = function (?string $raw, bool $mobileOnly = true) use (&$phones, &$seen): void {
             if ($raw === null || trim($raw) === '') {
                 return;
             }
             $n = PhoneNormalizer::normalize(trim($raw));
             if ($n === null || isset($seen[$n])) {
+                return;
+            }
+            if ($mobileOnly && !$this->isMobile($n)) {
                 return;
             }
             $seen[$n] = true;
@@ -215,7 +223,7 @@ class JourneyWhatsAppOutbound
                     ->find();
 
                 foreach ($identities as $identity) {
-                    $append((string) ($identity->get('sourceId') ?? ''));
+                    $append((string) ($identity->get('sourceId') ?? ''), false);
                 }
             } catch (Throwable $e) {
                 $this->log->debug('JourneyWhatsApp: channel identities: ' . $e->getMessage());
@@ -223,6 +231,24 @@ class JourneyWhatsAppOutbound
         }
 
         return $phones;
+    }
+
+    /**
+     * Whether an E.164 number is a mobile line (libphonenumber: MOBILE, or
+     * FIXED_LINE_OR_MOBILE where a country doesn't tell them apart, as in the US).
+     * Brazil: +55 11 9xxxx-xxxx is mobile, +55 11 4xxx-xxxx a landline. Numbers it
+     * can't parse or classify count as not mobile.
+     */
+    public function isMobile(string $e164): bool
+    {
+        try {
+            $util = PhoneNumberUtil::getInstance();
+            $type = $util->getNumberType($util->parse($e164, null));
+        } catch (Throwable) {
+            return false;
+        }
+
+        return in_array($type, [PhoneNumberType::MOBILE, PhoneNumberType::FIXED_LINE_OR_MOBILE], true);
     }
 
     /**
