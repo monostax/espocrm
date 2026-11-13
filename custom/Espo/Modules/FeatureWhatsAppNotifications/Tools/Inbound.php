@@ -227,9 +227,8 @@ class Inbound
         $vars = ['name' => (string) ($user?->get('firstName') ?: $user?->get('name') ?: ''), 'workspace' => $workspace['name'],
             'time' => (string) $subscription->get('morningTime')];
         $text = Copy::t($workspace['language'], $subscription->get('morningEnabled') ? 'welcome.morning' : 'welcome', $vars);
-        $this->avisos->buttons($subscription, 'welcome', $text, [
-            [Copy::t($workspace['language'], 'btn.see'), $this->tokens->subscription($subscription->getId(), 'n')],
-        ]);
+        // No buttons (2026-11-13): the welcome says to write "em dia" for the cards.
+        $this->avisos->text($subscription, 'welcome', $text);
     }
 
     /**

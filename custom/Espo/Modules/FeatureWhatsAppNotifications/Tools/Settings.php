@@ -13,6 +13,8 @@ use Espo\Core\Utils\Config;
  *   inboxId              the CRM ChatwootInbox of "Monostax - Avisos" (default: inbox 74 in account 6)
  *   number               that inbox's number, E.164
  *   cardTemplate         Meta template for a card outside the 24h window (monostax_catchup_card)
+ *   cardImage            the card template has an IMAGE header: the rendered card goes there and the body takes
+ *                        {{1}} who, {{2}} how long, {{3}} the card link (monostax_catchup_card_link); default false
  *   digestTemplate       Meta template for the morning digest; null sends the first card instead
  *   templateLanguage     pt_BR
  *   hotLeadMinutes       minimum wait before a hot-lead alert (60)
@@ -63,6 +65,11 @@ class Settings
     public function cardTemplate(): string
     {
         return (string) ($this->all()['cardTemplate'] ?? 'monostax_catchup_card');
+    }
+
+    public function cardImage(): bool
+    {
+        return ($this->all()['cardImage'] ?? false) === true;
     }
 
     public function digestTemplate(): ?string

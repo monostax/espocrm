@@ -143,11 +143,17 @@ class Subscriptions
             ->where(['userId' => $userId, 'chatwootAccountId' => $accountId])->findOne();
     }
 
-    /** @return list<Entity> */
+    /**
+     * The number's live subscriptions, latest used first. One left behind by a removed workspace is passed over, so it
+     * can't block the number's other workspaces (offboarding removes them; this covers any other way a workspace goes).
+     *
+     * @return list<Entity>
+     */
     public function activeForPhone(string $phone): array
     {
-        return iterator_to_array($this->em->getRDBRepository('WhatsAppNotificationSubscription')
+        $subscriptions = iterator_to_array($this->em->getRDBRepository('WhatsAppNotificationSubscription')
             ->where(['phone' => $phone, 'status' => 'active'])->order('lastInboundAt', 'DESC')->find());
+        return array_values(array_filter($subscriptions, fn (Entity $subscription) => $this->workspaces->exists($subscription)));
     }
 
     private function available(Entity $account): bool

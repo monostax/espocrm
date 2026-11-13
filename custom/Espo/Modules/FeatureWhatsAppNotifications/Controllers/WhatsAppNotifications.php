@@ -6,6 +6,7 @@ namespace Espo\Modules\FeatureWhatsAppNotifications\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
+use Espo\Modules\FeatureWhatsAppNotifications\Tools\CardImages;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Settings;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Subscriptions;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Taps;
@@ -19,6 +20,7 @@ class WhatsAppNotifications
         private Taps $taps,
         private Settings $settings,
         private Workspaces $workspaces,
+        private CardImages $images,
     ) {}
 
     public function getActionMe(Request $request): object
@@ -50,5 +52,21 @@ class WhatsAppNotifications
             return (object) ['reason' => 'noCards'];
         }
         return (object) ['sent' => true];
+    }
+
+    /** The card picture in a template's header. No login: Meta fetches it by the signed link (CardImages::url). */
+    public function getActionCardImage(Request $request, Response $response): void
+    {
+        $cardId = $this->settings->enabled() ? $this->images->cardId((string) $request->getRouteParam('token')) : null;
+        $png = $cardId !== null ? $this->images->render($cardId) : null;
+        if ($png === null) {
+            $response->setStatus(404);
+            return;
+        }
+        $response->setHeader('Content-Type', 'image/png')
+            ->setHeader('Cache-Control', 'private, no-store')
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setHeader('Content-Length', (string) strlen($png))
+            ->writeBody($png);
     }
 }

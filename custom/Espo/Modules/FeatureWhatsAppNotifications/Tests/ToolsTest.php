@@ -7,7 +7,9 @@ namespace Espo\Modules\FeatureWhatsAppNotifications\Tests;
 use DateTimeImmutable;
 use DateTimeZone;
 use Espo\Core\Utils\Config;
+use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Avisos;
+use Espo\Modules\FeatureWhatsAppNotifications\Tools\CardImages;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Charges;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Copy;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Inbound;
@@ -16,6 +18,9 @@ use Espo\Modules\FeatureWhatsAppNotifications\Tools\Pushes;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Settings;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Taps;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Tokens;
+use Espo\Modules\FeatureWhatsAppNotifications\Tools\Workspaces;
+use Espo\ORM\Entity;
+use Espo\ORM\EntityManager;
 use PHPUnit\Framework\TestCase;
 
 class ToolsTest extends TestCase
@@ -38,6 +43,61 @@ class ToolsTest extends TestCase
         $this->assertLessThanOrEqual(200, strlen($payload));
         $this->assertSame(['kind' => 'c', 'id' => '6a67d0d1a74fd5632', 'action' => 's'], $tokens->parse($payload));
         $this->assertSame(['kind' => 's', 'id' => 'abc', 'action' => 'q'], $tokens->parse($tokens->subscription('abc', 'q')));
+    }
+
+    public function testTheFunnelIconReachesTheRendererAsTheCrmStoresIt(): void
+    {
+        $this->assertSame(['type' => 'icon', 'value' => 'ti ti-stethoscope'], CardImages::funnelIcon('{"type":"icon","value":"ti ti-stethoscope"}'));
+        $this->assertSame(['type' => 'emoji', 'value' => '🎯'], CardImages::funnelIcon((object) ['type' => 'emoji', 'value' => '🎯']));
+        $this->assertNull(CardImages::funnelIcon(null));
+        $this->assertNull(CardImages::funnelIcon('{"type":"image","value":"x"}'));
+        $this->assertNull(CardImages::funnelIcon('not json'));
+    }
+
+    public function testALinkGoesIntoATemplateAsItIs(): void
+    {
+        $this->assertSame('utmsource', Avisos::parameter('utm_source'));
+        $this->assertSame(1, preg_match('#^https://\\S+$#', 'https://chat.app.monostax.ai/app/accounts/6/catch-up?card=service:x&utm_source=whatsapp'));
+    }
+
+    public function testCardImageLinksAreSignedPerCardAndExpire(): void
+    {
+        $config = $this->createMock(Config::class);
+        $config->method('get')->willReturnCallback(fn (string $name) => match ($name) {
+            'cryptKey' => 'test-crypt-key', 'siteUrl' => 'https://app.monostax.ai/', 'whatsAppNotifications' => [],
+            default => null,
+        });
+        $images = new CardImages($this->createMock(EntityManager::class), new Settings($config), $config,
+            $this->createMock(Workspaces::class), $this->createMock(Log::class));
+        $card = $this->createMock(Entity::class);
+        $card->method('getId')->willReturn('6af6edb9e363654f1');
+        $now = 1794600000;
+        $url = $images->url($card, $now);
+        $this->assertStringStartsWith('https://app.monostax.ai/api/v1/WhatsAppNotifications/cardImage/6af6edb9e363654f1.', $url);
+        $token = basename($url);
+        $this->assertSame('6af6edb9e363654f1', $images->cardId($token, $now));
+        $this->assertSame('6af6edb9e363654f1', $images->cardId($token, $now + CardImages::TTL));
+        // Expired, another card, a later expiry we never signed, or no extension.
+        $this->assertNull($images->cardId($token, $now + CardImages::TTL + 1));
+        $this->assertNull($images->cardId(str_replace('6af6edb9e363654f1', '6af6edb9e363654f2', $token), $now));
+        $this->assertNull($images->cardId((string) preg_replace('/\.\d{10}\./', '.' . ($now + 10 * CardImages::TTL) . '.', $token), $now));
+        $this->assertNull($images->cardId(substr($token, 0, -4), $now));
+        $this->assertNull($images->cardId('../../etc/passwd', $now));
+    }
+
+    public function testCardImageAmountsReadAsEmDiaShowsThem(): void
+    {
+        $this->assertSame('R$ 0', CardImages::amount(0, 'BRL', 'pt_BR'));
+        $this->assertSame('R$ 1.200', CardImages::amount('1200.00', 'BRL', 'pt_BR'));
+        $this->assertSame('R$ 1.234,50', CardImages::amount(1234.5, '', 'pt_BR'));
+        $this->assertSame('US$ 1,234.50', CardImages::amount(1234.5, 'USD', 'en_US'));
+        $this->assertNull(CardImages::amount(null, 'BRL', 'pt_BR'));
+    }
+
+    public function testCardImageFollowsConfig(): void
+    {
+        $this->assertFalse($this->settings()->cardImage());
+        $this->assertTrue($this->settings(['cardImage' => true])->cardImage());
     }
 
     public function testATamperedOrForeignPayloadNeverActs(): void

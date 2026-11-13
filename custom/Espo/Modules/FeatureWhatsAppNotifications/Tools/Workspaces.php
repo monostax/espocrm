@@ -19,6 +19,17 @@ class Workspaces
 
     public function __construct(private EntityManager $em) {}
 
+    /** Whether the subscription's Chatwoot account and tenant still exist (a removed workspace leaves neither). */
+    public function exists(Entity $subscription): bool
+    {
+        try {
+            $this->of($subscription);
+            return true;
+        } catch (Error) {
+            return false;
+        }
+    }
+
     /**
      * @return array{tenant: Entity, account: Entity, platform: ?Entity, accountNumber: int, timeZone: string, language: string,
      *     name: string, frozen: bool}
@@ -47,6 +58,20 @@ class Workspaces
         $workspace = $this->of($subscription);
         $base = rtrim((string) ($workspace['platform']?->get('frontendUrl') ?: 'https://chat.app.monostax.ai'), '/');
         return "{$base}/app/accounts/{$workspace['accountNumber']}/conversations/{$conversationId}";
+    }
+
+    /** Em dia in the app. */
+    public function deckLink(Entity $subscription): string
+    {
+        $workspace = $this->of($subscription);
+        $base = rtrim((string) ($workspace['platform']?->get('frontendUrl') ?: 'https://chat.app.monostax.ai'), '/');
+        return "{$base}/app/accounts/{$workspace['accountNumber']}/catch-up";
+    }
+
+    /** Em dia opened on this card: Chatwoot's CatchUpView reads `?card=<lane>:<id>` and shows that card first. */
+    public function cardLink(Entity $subscription, Entity $card): string
+    {
+        return $this->deckLink($subscription) . '?card=' . $card->get('lane') . ':' . $card->get('subjectId');
     }
 
     /** The person's AI chat in the app. */

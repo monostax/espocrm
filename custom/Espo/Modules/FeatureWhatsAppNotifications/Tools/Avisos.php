@@ -95,24 +95,30 @@ class Avisos
 
     /**
      * An approved template. $params are the body's {{1}}, {{2}}… in order; $payloads are the quick-reply buttons'
-     * payloads in the template's button order. $content is what Chatwoot shows in the thread.
+     * payloads in the template's button order; $imageUrl fills an IMAGE header (Meta fetches it when it sends). $content
+     * is what Chatwoot shows in the thread.
      *
      * @param list<string> $params
      * @param list<string> $payloads
      */
     public function template(Entity $subscription, string $kind, string $name, string $content, array $params, array $payloads,
-        ?Entity $card = null, ?string $key = null): ?Entity
+        ?Entity $card = null, ?string $key = null, ?string $imageUrl = null): ?Entity
     {
         $body = [];
-        foreach (array_values($params) as $index => $value) $body[(string) ($index + 1)] = self::parameter($value);
+        // A link goes as it is: stripping formatting characters would break it (utm_source).
+        foreach (array_values($params) as $index => $value) {
+            $body[(string) ($index + 1)] = preg_match('#^https://\S+$#', $value) ? $value : self::parameter($value);
+        }
+        $processed = [
+            'body' => $body ?: new \stdClass(),
+            'buttons' => array_map(fn (string $payload) => ['type' => 'quick_reply', 'parameter' => $payload], $payloads),
+        ];
+        if ($imageUrl !== null) $processed['header'] = ['media_url' => $imageUrl, 'media_type' => 'image'];
         return $this->send($subscription, $kind, [
             'content' => $content,
             'template_params' => [
                 'name' => $name, 'category' => 'utility', 'language' => $this->settings->templateLanguage(),
-                'processed_params' => [
-                    'body' => $body ?: new \stdClass(),
-                    'buttons' => array_map(fn (string $payload) => ['type' => 'quick_reply', 'parameter' => $payload], $payloads),
-                ],
+                'processed_params' => $processed,
             ],
         ], $card, $key, $name);
     }
@@ -173,7 +179,17 @@ class Avisos
     }
 
     /** @param array<string, mixed> $body */
-    private function send(Entity $subscription, string $kind, array $body, ?Entity $card, ?string $key, ?string $template = null): ?Entity
+    /**
+     * A picture with a caption (WhatsApp shows up to 1024 characters under it): the card inside the 24h window. Chatwoot
+     * takes the PNG as the message's attachment and sends it to WhatsApp as an image.
+     */
+    public function image(Entity $subscription, string $kind, string $caption, string $png, ?Entity $card = null, ?string $key = null): ?Entity
+    {
+        return $this->send($subscription, $kind, ['content' => self::cut($caption, 1024)], $card, $key, null, $png);
+    }
+
+    private function send(Entity $subscription, string $kind, array $body, ?Entity $card, ?string $key, ?string $template = null,
+        ?string $png = null): ?Entity
     {
         $key ??= $kind . ':' . bin2hex(random_bytes(10));
         if ($this->em->getRDBRepository('WhatsAppNotification')->where(['sendKey' => $key])->findOne()) return null;
@@ -189,11 +205,11 @@ class Avisos
             return null;
         }
         try {
-            $response = $this->post($subscription, $body);
+            $response = $this->post($subscription, $body, $png);
             if ($response['code'] === 404) {
                 // The thread is gone (deleted in Chatwoot): start a new one once.
                 $subscription->set('avisosConversationId', null);
-                $response = $this->post($subscription, $body);
+                $response = $this->post($subscription, $body, $png);
             }
             if ($response['code'] >= 200 && $response['code'] < 300 && isset($response['body']['id'])) {
                 $log->set('chatwootMessageId', (int) $response['body']['id']);
@@ -212,13 +228,28 @@ class Avisos
      * @param array<string, mixed> $body
      * @return array{code: int, body: array<string, mixed>}
      */
-    private function post(Entity $subscription, array $body): array
+    private function post(Entity $subscription, array $body, ?string $png = null): array
     {
         $connection = $this->connection();
         $conversationId = $this->conversation($subscription);
-        return $this->api->accountRequest($connection['platformUrl'], $connection['apiKey'], 'POST',
-            "/api/v1/accounts/{$connection['accountNumber']}/conversations/{$conversationId}/messages",
-            ['message_type' => 'outgoing', 'private' => false, ...$body]);
+        $path = "/api/v1/accounts/{$connection['accountNumber']}/conversations/{$conversationId}/messages";
+        if ($png === null) {
+            return $this->api->accountRequest($connection['platformUrl'], $connection['apiKey'], 'POST', $path,
+                ['message_type' => 'outgoing', 'private' => false, ...$body]);
+        }
+        // The account API client speaks JSON only; an attachment goes as multipart.
+        $curl = curl_init(rtrim($connection['platformUrl'], '/') . $path);
+        curl_setopt_array($curl, [
+            CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => ['api_access_token: ' . $connection['apiKey']],
+            CURLOPT_POSTFIELDS => ['message_type' => 'outgoing', 'private' => 'false', 'content' => (string) ($body['content'] ?? ''),
+                'attachments[]' => new \CURLStringFile($png, 'card.png', 'image/png')],
+        ]);
+        $raw = curl_exec($curl);
+        $code = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+        $decoded = is_string($raw) ? json_decode($raw, true) : null;
+        return ['code' => $code, 'body' => is_array($decoded) ? $decoded : []];
     }
 
     /** The person's thread in the Avisos inbox: the one they last wrote in, an open one, or a new one. */

@@ -80,14 +80,12 @@ class Pushes
         $name = (string) ($user?->get('firstName') ?: $user?->get('name') ?: '');
         $language = $workspace['language'];
         $text = Copy::t($language, 'digest', ['name' => $name, ...$counts]);
-        $see = $this->tokens->subscription($subscription->getId(), 'n');
-        $stop = $this->tokens->subscription($subscription->getId(), 'q');
         if (Avisos::windowOpen($subscription)) {
-            $this->avisos->buttons($subscription, 'digest', $text, [[Copy::t($language, 'btn.see'), $see], [Copy::t($language, 'btn.stop'), $stop]], null, $key);
+            $this->avisos->text($subscription, 'digest', $text . "\n\n" . Copy::t($language, 'digest.open', ['link' => $this->workspaces->deckLink($subscription)]), null, $key);
             return;
         }
         $this->avisos->template($subscription, 'digest', (string) $this->settings->digestTemplate(), $text,
-            [Avisos::parameter($name ?: '—', 60), (string) $counts['waiting'], (string) $counts['found'], (string) $counts['today']], [$see, $stop], null, $key);
+            [Avisos::parameter($name ?: '—', 60), (string) $counts['waiting'], (string) $counts['found'], (string) $counts['today']], [], null, $key);
     }
 
     /** A card put off with "Me lembre mais tarde" whose time has come: sent again when it still is a card. */

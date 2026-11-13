@@ -4,5 +4,6 @@
     {"route": "/WhatsAppNotifications/code", "method": "post", "params": {"controller": "WhatsAppNotifications", "action": "code"}},
     {"route": "/WhatsAppNotifications/stop", "method": "post", "params": {"controller": "WhatsAppNotifications", "action": "stop"}},
     {"route": "/WhatsAppNotifications/test", "method": "post", "params": {"controller": "WhatsAppNotifications", "action": "test"}},
-    {"route": "/WhatsAppNotifications/switchWorkspace", "method": "post", "params": {"controller": "WhatsAppAssistant", "action": "switchWorkspace"}}
+    {"route": "/WhatsAppNotifications/switchWorkspace", "method": "post", "params": {"controller": "WhatsAppAssistant", "action": "switchWorkspace"}},
+    {"route": "/WhatsAppNotifications/cardImage/:token", "method": "get", "params": {"controller": "WhatsAppNotifications", "action": "cardImage", "token": ":token"}, "noAuth": true}
 ]

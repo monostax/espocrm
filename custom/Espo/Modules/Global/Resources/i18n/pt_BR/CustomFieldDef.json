@@ -79,7 +79,7 @@
         "entityType": {
             "Contact": "Contato",
             "Lead": "Lead",
-            "Account": "Conta",
+            "Account": "Empresa",
             "Opportunity": "Oportunidade",
             "Initiative": "Iniciativa"
         },

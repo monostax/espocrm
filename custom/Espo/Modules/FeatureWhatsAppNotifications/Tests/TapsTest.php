@@ -130,7 +130,8 @@ class TapsTest extends TestCase
         $this->assertSame(array_fill(0, 4, 'Esse card já foi tratado.'), $this->told);
     }
 
-    public function testEditarTakesTheNextTextAndStillAsksBeforeSending(): void
+    /** No buttons to confirm with (2026-11-13): an edit from an older message's Editar is sent from the card in Em dia. */
+    public function testEditarTakesTheNextTextAndPointsToTheCard(): void
     {
         $taps = $this->taps();
         $card = $this->card();
@@ -139,16 +140,12 @@ class TapsTest extends TestCase
         $this->assertSame('card1', Sessions::editing($subscription));
         $this->assertStringContainsString('Escreva aqui a resposta para *Gelsa*', $this->told[0]);
 
-        $buttons = null;
-        $this->avisos->method('buttons')->willReturnCallback(function ($s, $kind, $text, array $items) use (&$buttons) {
-            $buttons = $items;
-            return null;
-        });
+        $this->avisos->expects($this->never())->method('buttons');
         $this->acting->expects($this->never())->method('send');
         $taps->edited($subscription, $card, 'Oi Gelsa, a Sabrina te chama hoje.');
         $this->assertSame('Oi Gelsa, a Sabrina te chama hoje.', $card->get('editText'));
-        $actions = array_map(fn (array $item) => $this->tokens()->parse($item[1])['action'], $buttons);
-        $this->assertSame(['c', 'x'], $actions);
+        $this->assertNull(Sessions::editing($subscription));
+        $this->assertStringContainsString('Para editar e enviar, abra o card', (string) end($this->told));
     }
 
     public function testConfirmingAnEditSendsThePersonsText(): void

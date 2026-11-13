@@ -124,12 +124,10 @@ class Taps
         }
         $card->set('editText', $text);
         $this->em->saveEntity($card);
-        $confirm = Copy::t($language, 'edit.confirm', ['name' => (string) $card->get('contactName'), 'text' => $text]);
-        if (mb_strlen($confirm) > Avisos::BODY_LIMIT) $confirm = Copy::t($language, 'edit.confirm', ['name' => (string) $card->get('contactName'), 'text' => '(↑)']);
-        $this->avisos->buttons($subscription, 'reply', $confirm, [
-            [Copy::t($language, 'btn.send'), $this->tokens->card($card->getId(), 'c')],
-            [Copy::t($language, 'btn.cancel'), $this->tokens->card($card->getId(), 'x')],
-        ], $card);
+        // No buttons to confirm with (2026-11-13): the edit is sent from the card in Em dia.
+        Sessions::setEditing($subscription, null);
+        $this->save($subscription, $card);
+        $this->avisos->text($subscription, 'reply', Copy::t($language, 'edit.open', ['link' => $this->workspaces->cardLink($subscription, $card)]), $card);
     }
 
     private function suggestion(Entity $subscription, Entity $card): void

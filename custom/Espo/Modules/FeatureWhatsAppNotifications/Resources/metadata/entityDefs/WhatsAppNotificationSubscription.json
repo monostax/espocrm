@@ -2,7 +2,7 @@
     "fields": {
         "name": { "type": "varchar", "maxLength": 150 },
         "user": { "type": "link", "required": true },
-        "tenantId": { "type": "varchar", "maxLength": 24 },
+        "tenant": { "type": "link" },
         "chatwootAccount": { "type": "link", "required": true },
         "accountNumber": { "type": "int" },
         "phone": { "type": "varchar", "maxLength": 20 },
@@ -26,6 +26,7 @@
     },
     "links": {
         "user": { "type": "belongsTo", "entity": "User" },
+        "tenant": { "type": "belongsTo", "entity": "Tenant" },
         "chatwootAccount": { "type": "belongsTo", "entity": "ChatwootAccount" }
     },
     "indexes": {
