@@ -6,6 +6,7 @@
         "sendEmail",
         "sendWhatsAppMessage",
         "sendWhatsAppTemplate",
+        "openConversationWithNote",
         "notifyUser",
         "makeFollowed",
         "executeFormula",
@@ -161,6 +162,41 @@
                     "type": "varchar",
                     "label": "Phone override (optional)",
                     "placeholder": "Leave empty = all target phones; or list"
+                }
+            ]
+        },
+        "openConversationWithNote": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\OpenConversationWithNote",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "chatwootInboxId",
+                    "type": "link",
+                    "entity": "ChatwootInbox",
+                    "label": "WhatsApp Inbox",
+                    "nameKey": "chatwootInboxName",
+                    "primaryFilter": "whatsappAll",
+                    "required": true
+                },
+                {
+                    "name": "aiAgentId",
+                    "type": "link",
+                    "entity": "ChatwootAccountUserMembership",
+                    "label": "Mention AI agent (optional)",
+                    "nameKey": "aiAgentName",
+                    "primaryFilter": "aiOnly"
+                },
+                {
+                    "name": "note",
+                    "type": "text",
+                    "label": "Private note (the customer never sees it)",
+                    "required": true
+                },
+                {
+                    "name": "assignToOwner",
+                    "type": "bool",
+                    "label": "Assign a new conversation to the record's owner",
+                    "default": false
                 }
             ]
         },

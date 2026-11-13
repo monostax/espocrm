@@ -800,6 +800,25 @@ class AutomationDefinitionValidator
                 }
             }
 
+            if ($type === 'openConversationWithNote') {
+                $inboxId = trim((string) ($params['chatwootInboxId'] ?? ''));
+                $note = trim((string) ($params['note'] ?? ''));
+
+                if ($inboxId === '') {
+                    throw new Error("Action {$i} openConversationWithNote requires chatwootInboxId (WhatsApp Inbox).");
+                }
+
+                if ($note === '' && $this->paramFormulaScript($paramFormulas, 'note') === '') {
+                    throw new Error("Action {$i} openConversationWithNote requires note (static text or dynamic/fx formula).");
+                }
+
+                $this->assertWhatsAppInboxChannel(
+                    $inboxId,
+                    JourneyWhatsAppOutbound::CHANNELS_MESSAGE,
+                    "Action {$i} openConversationWithNote"
+                );
+            }
+
             if ($type === 'sendWhatsAppTemplate') {
                 $inboxId = trim((string) ($params['chatwootInboxId'] ?? ''));
                 $inboxFormula = $this->paramFormulaScript($paramFormulas, 'chatwootInboxId');

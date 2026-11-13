@@ -156,6 +156,7 @@
         "sendEmail": "Send email",
         "sendWhatsAppMessage": "Send WhatsApp message",
         "sendWhatsAppTemplate": "Send WhatsApp template",
+        "openConversationWithNote": "Open WhatsApp conversation with private note",
         "executeFormula": "Run formula",
         "updateTarget": "Update target",
         "updateRelatedRecord": "Update related record",
