@@ -103,7 +103,13 @@ class RouteProcessor
     ): Psr7Response {
         // Only the internal native-socket projection runner calls this after
         // validating the token and setting the actual viewer in a fresh process.
-        if ($request->getMethod() !== 'GET' || $processData->getRoute()->noAuth()) {
+        // 10.1: routes that forbid API (key/OAuth) auth stay closed on this path too,
+        // in case the runner ever accepts identities other than session tokens.
+        if (
+            $request->getMethod() !== 'GET' ||
+            $processData->getRoute()->noAuth() ||
+            $processData->getRoute()->apiAuthForbidden()
+        ) {
             return $response->withStatus(403);
         }
         $wrapped = new ResponseWrapper($response);

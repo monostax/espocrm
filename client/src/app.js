@@ -1356,11 +1356,15 @@ class App {
      * Only EspoCRM admins may use the standalone CRM after authentication.
      * Regular users access CRM routes through the Chatwoot shell's iframes.
      *
+     * Single-purpose server-rendered pages (ActionRenderer, `useRouter: false`),
+     * e.g. the OAuth 2.0 consent page an MCP client opens, are not the standalone
+     * CRM: there is no router, only that page. Users must be able to sign in there.
+     *
      * @private
      * @return {boolean}
      */
     redirectNonAdminToChatwoot() {
-        if (!this.auth || this.user.isAdmin() || window.self !== window.top) {
+        if (!this.auth || this.user.isAdmin() || window.self !== window.top || !this.useRouter) {
             return false;
         }
 

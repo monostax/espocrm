@@ -48,6 +48,8 @@ class AuthorizationServerMetadata implements EntryPoint
     {
         $data = $this->provider->get();
 
+        // Monostax: RFC 8414 / RFC 9728 metadata is application/json; strict MCP clients check it.
+        $response->setHeader('Content-Type', 'application/json');
         $response->writeBody(Json::encode($data, JSON_PRETTY_PRINT));
     }
 }
