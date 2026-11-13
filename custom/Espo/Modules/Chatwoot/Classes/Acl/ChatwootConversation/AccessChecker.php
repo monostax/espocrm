@@ -36,7 +36,7 @@ class AccessChecker implements AccessEntityCREDSChecker
             return false;
         }
 
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 

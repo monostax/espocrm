@@ -69,7 +69,7 @@ class AccessChecker implements AccessEntityCREDSChecker
         }
 
         // Admin bypass
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return $this->defaultAccessChecker->checkEntityCreate($user, $entity, $data);
         }
 
@@ -85,7 +85,7 @@ class AccessChecker implements AccessEntityCREDSChecker
     public function checkEntityRead(User $user, Entity $entity, ScopeData $data): bool
     {
         // Non-admins cannot read inactive users
-        if (!$user->isAdmin() && !$entity->isActive()) {
+        if (!$user->isEffectiveAdmin() && !$entity->isActive()) {
             return false;
         }
 
@@ -105,7 +105,7 @@ class AccessChecker implements AccessEntityCREDSChecker
         }
 
         // Admin bypass
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 
@@ -131,7 +131,7 @@ class AccessChecker implements AccessEntityCREDSChecker
         }
 
         // Admin bypass
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return $this->defaultAccessChecker->checkEntityEdit($user, $entity, $data);
         }
 
@@ -171,7 +171,7 @@ class AccessChecker implements AccessEntityCREDSChecker
         }
 
         // Admin bypass
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return $this->defaultAccessChecker->checkEntityDelete($user, $entity, $data);
         }
 

@@ -54,6 +54,6 @@ class AccessChecker implements AccessEntityCREDSChecker
                 $this->tenants->canActForTenant($user, (string) $entity->get('tenantId'));
         }
 
-        return $user->isAdmin() || $this->teams->userSharesTeam($user, $entity);
+        return $user->isEffectiveAdmin() || $this->teams->userSharesTeam($user, $entity);
     }
 }

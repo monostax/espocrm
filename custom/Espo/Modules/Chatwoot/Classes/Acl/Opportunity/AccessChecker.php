@@ -23,7 +23,7 @@ class AccessChecker implements AccessEntityCREDSChecker
 
     public function checkEntityRead(User $user, Entity $entity, ScopeData $data): bool
     {
-        return ($user->isAdmin() || $this->tenants->canActForTenant($user, (string) $entity->get('tenantId'))) &&
+        return ($user->isEffectiveAdmin() || $this->tenants->canActForTenant($user, (string) $entity->get('tenantId'))) &&
             $this->defaultAccessChecker->checkEntityRead($user, $entity, $data);
     }
 

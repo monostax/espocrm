@@ -28,7 +28,7 @@ final class HasLinkedin implements ItemConverter
         }
         $where = ['channelType' => 'linkedin', 'deleted' => false];
         // Scope the identity scan to the user's tenants so the (tenantId, channelType, ...) index applies.
-        if (!$this->user->isAdmin()) $where['tenantId'] = $this->tenants->resolveTenantIds($this->user);
+        if (!$this->user->isEffectiveAdmin()) $where['tenantId'] = $this->tenants->resolveTenantIds($this->user);
         $linked = SelectBuilder::create()
             ->from('ContactChannelIdentity')
             ->select('contactId')

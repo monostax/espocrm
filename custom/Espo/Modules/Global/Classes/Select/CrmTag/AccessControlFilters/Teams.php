@@ -22,7 +22,7 @@ class Teams implements Filter
             'tenantId' => $this->tenants->resolveTenantIds($this->user),
         ];
         $shared = ['OR' => [['visibility' => 'team'], ['visibility' => null]]];
-        if ($this->user->isAdmin()) {
+        if ($this->user->isEffectiveAdmin()) {
             $queryBuilder->where(['OR' => [$personal, $shared]]);
             return;
         }

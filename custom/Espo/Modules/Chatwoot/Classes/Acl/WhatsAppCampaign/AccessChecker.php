@@ -49,7 +49,7 @@ class AccessChecker implements AccessEntityCREDSChecker
 
     private function inTenant(User $user, Entity $entity): bool
     {
-        return !$entity->get('managedByChatwoot') || $user->isAdmin() ||
+        return !$entity->get('managedByChatwoot') || $user->isEffectiveAdmin() ||
             ($user->isRegular() && $user->isActive() && $this->tenants->canActForTenant($user, (string) $entity->get('tenantId')));
     }
 }

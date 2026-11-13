@@ -61,7 +61,7 @@ class AccessChecker implements AccessEntityCREDSChecker
 
     private function withinInitiativeType(User $user, Entity $entity, string $action): bool
     {
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 

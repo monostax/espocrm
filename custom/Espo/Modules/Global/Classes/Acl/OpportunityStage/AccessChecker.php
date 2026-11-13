@@ -49,7 +49,7 @@ class AccessChecker implements AccessEntityCREDSChecker
     public function checkEntityRead(User $user, Entity $entity, ScopeData $data): bool
     {
         // Admin bypass
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 
@@ -65,7 +65,7 @@ class AccessChecker implements AccessEntityCREDSChecker
     public function checkEntityEdit(User $user, Entity $entity, ScopeData $data): bool
     {
         // Admin bypass
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 
@@ -80,7 +80,7 @@ class AccessChecker implements AccessEntityCREDSChecker
     public function checkEntityDelete(User $user, Entity $entity, ScopeData $data): bool
     {
         // Admin bypass
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 

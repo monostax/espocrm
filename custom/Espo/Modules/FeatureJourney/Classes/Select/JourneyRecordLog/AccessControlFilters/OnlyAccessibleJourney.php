@@ -23,7 +23,7 @@ class OnlyAccessibleJourney implements Filter
 
     public function apply(QueryBuilder $queryBuilder): void
     {
-        if ($this->user->isAdmin()) {
+        if ($this->user->isEffectiveAdmin()) {
             return;
         }
 

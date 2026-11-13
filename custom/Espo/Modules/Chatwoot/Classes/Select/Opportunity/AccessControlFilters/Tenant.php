@@ -15,7 +15,7 @@ class Tenant implements Filter
 
     public function apply(SelectBuilder $queryBuilder): void
     {
-        if (!$this->user->isAdmin()) {
+        if (!$this->user->isEffectiveAdmin()) {
             $queryBuilder->where(['tenantId' => $this->tenants->resolveTenantIds($this->user)]);
         }
     }

@@ -15,7 +15,7 @@ class Mandatory implements Filter
 
     public function apply(SelectBuilder $queryBuilder): void
     {
-        if ($this->user->isAdmin()) return;
+        if ($this->user->isEffectiveAdmin()) return;
         $ids = $this->user->isRegular() && $this->user->isActive() ? $this->tenants->resolveTenantIds($this->user) : [];
         $queryBuilder->where(['OR' => [['managedByChatwoot' => false], ['tenantId' => $ids]]]);
     }

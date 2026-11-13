@@ -44,7 +44,7 @@ class AccessChecker implements AccessEntityCREDChecker
 
     public function check(User $user, ScopeData $data): bool
     {
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 
@@ -61,7 +61,7 @@ class AccessChecker implements AccessEntityCREDChecker
             return false;
         }
 
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 
@@ -78,7 +78,7 @@ class AccessChecker implements AccessEntityCREDChecker
             return false;
         }
 
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 
@@ -95,7 +95,7 @@ class AccessChecker implements AccessEntityCREDChecker
             return false;
         }
 
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 
@@ -112,7 +112,7 @@ class AccessChecker implements AccessEntityCREDChecker
             return false;
         }
 
-        if ($user->isAdmin()) {
+        if ($user->isEffectiveAdmin()) {
             return true;
         }
 
