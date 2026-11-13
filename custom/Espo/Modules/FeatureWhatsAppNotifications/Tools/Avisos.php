@@ -139,6 +139,24 @@ class Avisos
     }
 
     /**
+     * "digitando…" on the person's WhatsApp while the AI works, and their last message marked read: Chatwoot relays a
+     * user's typing to WhatsApp Cloud (WhatsappTypingListener) for about a minute, or until our next message.
+     */
+    public function typing(Entity $subscription): void
+    {
+        $conversationId = (int) $subscription->get('avisosConversationId');
+        if ($conversationId <= 0) return;
+        try {
+            $connection = $this->connection();
+            $this->api->accountRequest($connection['platformUrl'], $connection['apiKey'], 'POST',
+                "/api/v1/accounts/{$connection['accountNumber']}/conversations/{$conversationId}/toggle_typing_status",
+                ['typing_status' => 'on']);
+        } catch (Throwable $e) {
+            $this->log->info("WhatsApp notifications: typing for subscription {$subscription->getId()} failed: " . $e->getMessage());
+        }
+    }
+
+    /**
      * A template parameter as Meta accepts it: no line breaks, tabs or runs of 4+ spaces, no WhatsApp formatting
      * characters (the template wraps it in * or _ itself), never empty.
      */

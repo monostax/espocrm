@@ -49,6 +49,14 @@ class Workspaces
         return "{$base}/app/accounts/{$workspace['accountNumber']}/conversations/{$conversationId}";
     }
 
+    /** The person's AI chat in the app. */
+    public function sessionLink(Entity $subscription, string $sessionId): string
+    {
+        $workspace = $this->of($subscription);
+        $base = rtrim((string) ($workspace['platform']?->get('frontendUrl') ?: 'https://chat.app.monostax.ai'), '/');
+        return "{$base}/app/accounts/{$workspace['accountNumber']}/ai-sessions/{$sessionId}";
+    }
+
     public function now(Entity $subscription): DateTimeImmutable
     {
         return new DateTimeImmutable('now', new DateTimeZone($this->of($subscription)['timeZone']));

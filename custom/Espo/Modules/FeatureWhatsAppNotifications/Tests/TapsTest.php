@@ -10,6 +10,7 @@ use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureSelfService\Tools\Signup\Signups;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Acting;
+use Espo\Modules\FeatureWhatsAppNotifications\Tools\Assistant;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Avisos;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Cards;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Charges;
@@ -22,6 +23,7 @@ use Espo\Modules\FeatureWhatsAppNotifications\Tools\Subscriptions;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Taps;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Tokens;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Workspaces;
+use Espo\ORM\BaseEntity;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -36,11 +38,11 @@ class TapsTest extends TestCase
     /** @var list<string> what the person was told (Cards::then and Avisos::text) */
     private array $told = [];
 
-    /** An entity backed by an array, enough for get/set/getId. */
+    /** An entity backed by an array, enough for get/set/getId. BaseEntity, whose set() takes one array like the code does. */
     private function entity(string $id, array $values): Entity
     {
         $data = ['id' => $id, ...$values];
-        $entity = $this->createMock(Entity::class);
+        $entity = $this->createMock(BaseEntity::class);
         $entity->method('getId')->willReturn($id);
         $entity->method('get')->willReturnCallback(function (string $name) use (&$data) {
             return $data[$name] ?? null;
@@ -87,9 +89,9 @@ class TapsTest extends TestCase
             'verdict' => 'customer_waiting', 'contactName' => 'Gelsa', 'draft' => 'Oi Gelsa! Já te mando os horários.', ...$values]);
     }
 
-    private function subscription(): Entity
+    private function subscription(string $id = 'sub1', array $values = []): Entity
     {
-        return $this->entity('sub1', ['status' => 'active', 'phone' => '+5591999990000', 'morningEnabled' => true, 'morningTime' => '08:00']);
+        return $this->entity($id, ['status' => 'active', 'phone' => '+5591999990000', 'morningEnabled' => true, 'morningTime' => '08:00', ...$values]);
     }
 
     public function testEnviarSendsTheStoredDraftAsThePerson(): void
@@ -187,7 +189,7 @@ class TapsTest extends TestCase
         $taps->expects($this->never())->method('cardTap');
         $taps->expects($this->never())->method('next');
         $inbound = new Inbound($em, $avisos, $tokens, $this->createMock(PhoneCodes::class), $subscriptions, $taps,
-            $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Log::class));
+            $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class));
         $handled = $inbound->handle((object) [
             'event' => 'message_created', 'message_type' => 'incoming', 'id' => 501, 'inbox' => (object) ['id' => 74],
             'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5511988887777'],
@@ -213,7 +215,7 @@ class TapsTest extends TestCase
         $taps = $this->createMock(Taps::class);
         $taps->expects($this->once())->method('cardTap')->with($subscription, $card, ['kind' => 'c', 'id' => 'card1', 'action' => 's']);
         $inbound = new Inbound($em, $avisos, $tokens, $this->createMock(PhoneCodes::class), $subscriptions, $taps,
-            $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Log::class));
+            $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class));
         $inbound->handle((object) [
             'event' => 'message_created', 'message_type' => 'incoming', 'id' => 502, 'inbox' => (object) ['id' => 74],
             'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5591999990000'],
@@ -236,7 +238,7 @@ class TapsTest extends TestCase
             $taps = $this->createMock(Taps::class);
             $taps->expects($this->never())->method('next');
             $inbound = new Inbound($em, $avisos, $this->tokens(), $this->createMock(PhoneCodes::class), $subscriptions, $taps,
-                $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Log::class));
+                $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class));
             $inbound->handle((object) [
                 'event' => 'message_created', 'message_type' => 'incoming', 'id' => 600 + $index, 'inbox' => (object) ['id' => 74],
                 'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5591999990000'], 'content' => $text,
@@ -244,22 +246,101 @@ class TapsTest extends TestCase
         }
     }
 
-    public function testAnyOtherTextFromASubscriberSendsTheNextCard(): void
+    public function testTheDeckWordSendsTheNextCard(): void
     {
-        $em = $this->createMock(EntityManager::class);
-        $em->method('createEntity')->willReturn($this->entity('log', []));
+        foreach (['em dia', 'Próximo', 'EM DIA!'] as $index => $text) {
+            $subscription = $this->subscription();
+            $taps = $this->createMock(Taps::class);
+            $taps->expects($this->once())->method('next')->with($subscription);
+            $assistant = $this->createMock(Assistant::class);
+            $assistant->expects($this->never())->method('ask');
+            $this->inbound([$subscription], $taps, $assistant)->handle($this->incoming(700 + $index, $text), 'acct6');
+        }
+    }
+
+    public function testAnyOtherTextFromASubscriberGoesToTheirAi(): void
+    {
+        $subscription = $this->subscription();
+        $taps = $this->createMock(Taps::class);
+        $taps->expects($this->never())->method('next');
+        $assistant = $this->createMock(Assistant::class);
+        $assistant->expects($this->once())->method('ask')->with($subscription, 'Quem está esperando resposta?', 710);
+        $this->inbound([$subscription], $taps, $assistant)->handle($this->incoming(710, 'Quem está esperando resposta?'), 'acct6');
+    }
+
+    public function testSeveralWorkspacesAskWhichOneAndTheTextWaits(): void
+    {
+        $first = $this->subscription('sub1');
+        $second = $this->subscription('sub2');
+        $assistant = $this->createMock(Assistant::class);
+        $assistant->expects($this->never())->method('ask');
         $avisos = $this->createMock(Avisos::class);
         $avisos->method('isAvisos')->willReturn(true);
-        $subscription = $this->subscription();
-        $subscriptions = $this->createMock(Subscriptions::class);
-        $subscriptions->method('activeForPhone')->willReturn([$subscription]);
+        $avisos->expects($this->once())->method('buttons')->with($first, 'reply', 'Em qual espaço eu procuro?');
+        $workspaces = $this->createMock(Workspaces::class);
+        $workspaces->method('of')->willReturn(['language' => 'pt_BR', 'frozen' => false, 'name' => 'Clínica']);
+        $this->inbound([$first, $second], $this->createMock(Taps::class), $assistant, $avisos, $workspaces)
+            ->handle($this->incoming(720, 'Como foi a reunião de ontem?'), 'acct6');
+        $this->assertSame(['text' => 'Como foi a reunião de ontem?', 'messageId' => 720], Sessions::pending($first));
+        $this->assertSame(['text' => 'Como foi a reunião de ontem?', 'messageId' => 720], Sessions::pending($second));
+    }
+
+    public function testTheWorkspaceLastTalkedToGetsTheText(): void
+    {
+        $first = $this->subscription('sub1', ['session' => (object) ['aiAt' => time() - 600]]);
+        $second = $this->subscription('sub2', ['session' => (object) ['aiAt' => time() - 60]]);
+        $assistant = $this->createMock(Assistant::class);
+        $assistant->expects($this->once())->method('ask')->with($second, 'E o funil?', 730);
+        $this->inbound([$first, $second], $this->createMock(Taps::class), $assistant)->handle($this->incoming(730, 'E o funil?'), 'acct6');
+    }
+
+    public function testChoosingAWorkspaceSendsTheWaitingTextThere(): void
+    {
+        $tokens = $this->tokens();
+        $subscription = $this->subscription('sub2');
+        Sessions::setPending($subscription, 'Como foi a reunião de ontem?', 720);
         $taps = $this->createMock(Taps::class);
-        $taps->expects($this->once())->method('next')->with($subscription);
-        $inbound = new Inbound($em, $avisos, $this->tokens(), $this->createMock(PhoneCodes::class), $subscriptions, $taps,
-            $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Log::class));
-        $inbound->handle((object) [
-            'event' => 'message_created', 'message_type' => 'incoming', 'id' => 700, 'inbox' => (object) ['id' => 74],
-            'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5591999990000'], 'content' => 'em dia',
-        ], 'acct6');
+        $taps->expects($this->never())->method('subscriptionTap');
+        $assistant = $this->createMock(Assistant::class);
+        $assistant->expects($this->once())->method('ask')->with($subscription, 'Como foi a reunião de ontem?', 720);
+        $this->inbound([$subscription], $taps, $assistant, null, null, $tokens)->handle($this->incoming(740, 'Clínica', [
+            'content_attributes' => (object) ['reply_payload' => $tokens->subscription('sub2', 'w')],
+        ]), 'acct6');
+        $this->assertNull(Sessions::pending($subscription));
+    }
+
+    public function testDeckAndSwitchWordsAreExactCommandsOnly(): void
+    {
+        $this->assertSame('deck', Inbound::command('Em dia'));
+        $this->assertSame('deck', Inbound::command('próximo 👉'));
+        $this->assertSame('switch', Inbound::command('Trocar espaço'));
+        $this->assertNull(Inbound::command('o que tem em dia hoje?'));
+        $this->assertNull(Inbound::command('próximo passo com a Gelsa?'));
+    }
+
+    /** @param list<Entity> $subscriptions */
+    private function inbound(array $subscriptions, Taps $taps, Assistant $assistant, ?Avisos $avisos = null, ?Workspaces $workspaces = null,
+        ?Tokens $tokens = null): Inbound
+    {
+        $byId = [];
+        foreach ($subscriptions as $subscription) $byId[$subscription->getId()] = $subscription;
+        $em = $this->createMock(EntityManager::class);
+        $em->method('createEntity')->willReturn($this->entity('log', []));
+        $em->method('getEntityById')->willReturnCallback(fn (string $type, string $id) => $type === 'WhatsAppNotificationSubscription' ? ($byId[$id] ?? null) : null);
+        if (!$avisos) {
+            $avisos = $this->createMock(Avisos::class);
+            $avisos->method('isAvisos')->willReturn(true);
+        }
+        $list = $this->createMock(Subscriptions::class);
+        $list->method('activeForPhone')->willReturn($subscriptions);
+        return new Inbound($em, $avisos, $tokens ?? $this->tokens(), $this->createMock(PhoneCodes::class), $list, $taps,
+            $workspaces ?? $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $assistant,
+            $this->createMock(Log::class));
+    }
+
+    private function incoming(int $id, string $text, array $extra = []): object
+    {
+        return (object) ['event' => 'message_created', 'message_type' => 'incoming', 'id' => $id, 'inbox' => (object) ['id' => 74],
+            'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5591999990000'], 'content' => $text, ...$extra];
     }
 }

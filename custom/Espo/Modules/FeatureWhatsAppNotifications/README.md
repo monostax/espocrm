@@ -32,6 +32,17 @@ Every button payload is signed (`Tokens`: kind, id, action, HMAC from `cryptKey`
 
 Inside the 24h window a card is a free message with three buttons and the link in its text. Outside it only `monostax_catchup_card` goes out (`Cards`), and only for a card the template can say (the customer waits on us: `customer_waiting`, `promise_due`).
 
+## The AI in WhatsApp
+
+Any other text from a subscriber is a question for their AI (`Assistant`). It becomes the person's own post in their **main AI chat** of that workspace (FeatureAiSession `Primary`), submitted as them through `ActorScope`: their CRM ACL, Chatwoot access (the agent's Chat tools open conversations as the human), agents, model and credits, as if they typed it in the app. The post carries `aiSessionChannel = whatsapp`, so the agent answers briefly without tables or headings, and the app shows it "pelo WhatsApp". Right after the submit, Chatwoot shows "digitando…" on their WhatsApp (`Avisos::typing`, Chatwoot's `toggle_typing_status`, which also marks the message read).
+
+When the agent's reply finishes (completed, failed, or blocked for credits), the Note hook `MirrorAssistantReply` queues `SendAssistantReply`, and `Assistant::reply` sends it as free text inside the 24h window: Markdown turned into WhatsApp formatting (`WhatsAppText`), at most 3 messages of 3,900 characters, the last ending with the chat's link when there is more. It goes only to the active subscription that asked, only while that person still owns the chat in the same workspace, once per reply and part (send key `ai:{reply}:{n}`). A cancelled turn says nothing; a closed window sends nothing (the answer stays in the app). Messages typed in the app never go to WhatsApp.
+
+- "em dia", "próximo" (and "cards") still open the deck; these and "trocar" are the only command words, matched exactly (`Inbound::command`).
+- With one number in several workspaces, text goes to the workspace the person last talked to (`session.aiAt`). The first time, or after "trocar", they choose one and the waiting text (`session.pending`, 1 hour) goes there.
+- Voice notes and pictures without a caption get "por enquanto só entendo texto".
+- A frozen workspace answers that the AI is paused; a person without an AI agent gets `ai.unavailable`.
+
 ## Pushes
 
 Few, because Meta blocked 247 per-event alerts from this number in Jul–Aug 2026 (131049). Each has a send key, so a retry never sends twice.
@@ -62,6 +73,7 @@ Few, because Meta blocked 247 per-event alerts from this number in Jul–Aug 202
 3. CRM with `php rebuild.php` (new entities, `SelfServiceSignup` fields, scheduled jobs) and a cache clear.
 4. Sync the templates of the Avisos inbox in Chatwoot so the approved `monostax_catchup_card` is there.
 5. Set `whatsAppNotifications.enabled` (a prod config write). Signup verification follows it unless `signupVerification` is false.
+6. The AI in WhatsApp needs FeatureAiSession's `primarySlot` (same CRM rebuild) and the backend's `channel` on stream posts (either order works: unknown fields are dropped on both sides).
 
 ## Checks
 

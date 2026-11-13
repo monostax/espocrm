@@ -101,6 +101,8 @@ class Execution
             'createdAt' => $owner instanceof User && $this->acl->checkField($owner, 'Note', 'createdAt') ? $post->get('createdAt') : '',
             'createdById' => $owner instanceof User && $this->acl->checkField($owner, 'Note', 'createdBy') ? $post->getCreatedById() : null,
             'createdByName' => $owner instanceof User && $this->acl->checkField($owner, 'Note', 'createdBy') ? $author?->get('name') : null,
-            'attachments' => $attachments];
+            'attachments' => $attachments,
+            // Where the human wrote this turn ("whatsapp"); the reply goes back there too.
+            ...(is_string($post->getData()->aiSessionChannel ?? null) ? ['channel' => $post->getData()->aiSessionChannel] : [])];
     }
 }

@@ -8,6 +8,7 @@
         "titleInitialized": { "type": "bool", "default": false, "readOnly": true },
         "isPinned": { "type": "bool", "default": false },
         "aiModel": { "type": "varchar", "maxLength": 200 },
+        "primarySlot": { "type": "varchar", "maxLength": 16, "readOnly": true },
         "createdAt": { "type": "datetime", "readOnly": true },
         "modifiedAt": { "type": "datetime", "readOnly": true },
         "createdBy": { "type": "link", "readOnly": true },
@@ -22,5 +23,8 @@
         "modifiedBy": { "type": "belongsTo", "entity": "User" }
     },
     "collection": { "orderBy": "modifiedAt", "order": "desc" },
-    "indexes": { "ownerAccount": { "columns": ["assignedUserId", "chatwootAccountId", "deleted", "modifiedAt"] } }
+    "indexes": {
+        "ownerAccount": { "columns": ["assignedUserId", "chatwootAccountId", "deleted", "modifiedAt"] },
+        "ownerPrimary": { "columns": ["assignedUserId", "chatwootAccountId", "primarySlot", "deleted"], "unique": true }
+    }
 }

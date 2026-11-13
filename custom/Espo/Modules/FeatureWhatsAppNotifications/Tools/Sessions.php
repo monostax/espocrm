@@ -44,6 +44,35 @@ class Sessions
         $subscription->set('session', (object) $session);
     }
 
+    /** When the person last talked to the AI through this subscription: with one number in several workspaces, the
+     * latest one is where their next text goes. */
+    public static function aiAt(Entity $subscription): int
+    {
+        return (int) (self::read($subscription)['aiAt'] ?? 0);
+    }
+
+    public static function markAi(Entity $subscription): void
+    {
+        $session = self::read($subscription);
+        $session['aiAt'] = time();
+        $subscription->set('session', (object) $session);
+    }
+
+    /** @return ?array{text: string, messageId: int} a text that waits for the person to choose a workspace (1 hour) */
+    public static function pending(Entity $subscription): ?array
+    {
+        $pending = self::read($subscription)['pending'] ?? null;
+        if (!is_array($pending) || !is_string($pending['text'] ?? null) || (int) ($pending['at'] ?? 0) < time() - 3600) return null;
+        return ['text' => $pending['text'], 'messageId' => (int) ($pending['messageId'] ?? 0)];
+    }
+
+    public static function setPending(Entity $subscription, ?string $text, int $messageId = 0): void
+    {
+        $session = self::read($subscription);
+        $session['pending'] = $text === null ? null : ['text' => $text, 'messageId' => $messageId, 'at' => time()];
+        $subscription->set('session', (object) $session);
+    }
+
     /** @return array<string, mixed> */
     private static function read(Entity $subscription): array
     {

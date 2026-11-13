@@ -15,15 +15,20 @@ use Throwable;
  * signature checked out):
  *
  * - `message_created`, incoming: a tap (a payload we signed, from the number of the subscription it names), a code
- *   (signup or Settings), a stop word, the reply after "Editar", or anything else from a subscriber, which sends their
- *   next card ("person asks"). Every incoming message opens Meta's 24h window for that number. Messages from numbers
- *   with no subscription stay in the inbox for the Monostax team.
+ *   (signup or Settings), a stop word, the reply after "Editar", "em dia"/"próximo" (the next card), or anything else
+ *   from a subscriber, which goes to their AI (Assistant: their main AI chat, answered back here). With one number in
+ *   several workspaces the text goes to the workspace they last talked to, or waits until they choose one ("trocar"
+ *   asks again). Every incoming message opens Meta's 24h window for that number. Messages from numbers with no
+ *   subscription stay in the inbox for the Monostax team.
  * - `message_updated`: Meta's status for one of our messages (sent, delivered, read, failed) and whether Meta billed
  *   it, onto the delivery log; a billed delivery is charged in credits (Charges).
  */
 class Inbound
 {
     private const STOP_WORDS = ['parar', 'sair', 'stop', 'parar avisos', 'cancelar avisos'];
+    /** What the Avisos copy tells people to type for their cards ("Escreva *em dia*…"). */
+    private const DECK_WORDS = ['em dia', 'emdia', 'proximo', 'cards', 'ver cards', 'next'];
+    private const SWITCH_WORDS = ['trocar', 'trocar espaco', 'mudar espaco', 'trocar de espaco', 'switch', 'switch workspace'];
     private const STATUS_ORDER = ['queued' => 0, 'sent' => 1, 'delivered' => 2, 'read' => 3];
 
     public function __construct(
@@ -36,6 +41,7 @@ class Inbound
         private Workspaces $workspaces,
         private Signups $signups,
         private Charges $charges,
+        private Assistant $assistant,
         private Log $log,
     ) {}
 
@@ -108,11 +114,51 @@ class Inbound
                 return;
             }
         }
+        $command = self::command($text);
+        $subscription = $subscriptions[0];
         if (count($subscriptions) > 1) {
-            $this->choose($subscriptions);
+            $active = $command === 'switch' ? null : self::latestAi($subscriptions);
+            if (!$active) {
+                // The text waits for the choice; a deck word or "trocar" just asks which workspace.
+                foreach ($subscriptions as $each) {
+                    Sessions::setPending($each, $command === null && $text !== '' ? $text : null, $messageId);
+                    $this->em->saveEntity($each, ['silent' => true]);
+                }
+                $this->choose($subscriptions, $command === 'deck' ? 'choose' : 'choose.ai');
+                return;
+            }
+            $subscription = $active;
+        }
+        if ($command === 'deck') {
+            $this->taps->next($subscription);
             return;
         }
-        $this->taps->next($subscriptions[0]);
+        if ($text === '') {
+            $this->avisos->text($subscription, 'assistant', Copy::t($this->workspaces->of($subscription)['language'], 'ai.textOnly'));
+            return;
+        }
+        $this->assistant->ask($subscription, $text, $messageId);
+    }
+
+    /** "deck", "switch" or null (a request for the AI): only the exact words the Avisos copy teaches. */
+    public static function command(string $text): ?string
+    {
+        $plain = strtr(mb_strtolower($text), ['á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'é' => 'e', 'ê' => 'e', 'í' => 'i',
+            'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ú' => 'u', 'ç' => 'c']);
+        $plain = trim((string) preg_replace('/\s+/u', ' ', (string) preg_replace('/[^\p{L}\p{N} ]+/u', '', $plain)));
+        if (in_array($plain, self::DECK_WORDS, true)) return 'deck';
+        if (in_array($plain, self::SWITCH_WORDS, true)) return 'switch';
+        return null;
+    }
+
+    /** @param list<Entity> $subscriptions */
+    private static function latestAi(array $subscriptions): ?Entity
+    {
+        $latest = null;
+        foreach ($subscriptions as $subscription) {
+            if (Sessions::aiAt($subscription) > ($latest ? Sessions::aiAt($latest) : 0)) $latest = $subscription;
+        }
+        return $latest;
     }
 
     /** @param array{kind: string, id: string, action: string} $token */
@@ -125,6 +171,17 @@ class Inbound
         if (!$subscription || $subscription->get('status') !== 'active' || $subscription->get('phone') !== $phone) return;
         if ($token['kind'] === 'c' && !$card) return;
         $this->markTapped($subscription, $card);
+        // A workspace chosen for a text that was waiting: that text goes to this workspace's AI.
+        $pending = $token['kind'] === 's' && $token['action'] === 'w' ? Sessions::pending($subscription) : null;
+        foreach ($token['action'] === 'w' ? $this->subscriptions->activeForPhone($phone) : [] as $each) {
+            Sessions::setPending($each, null);
+            $this->em->saveEntity($each, ['silent' => true]);
+        }
+        if ($pending) {
+            $this->assistant->ask($this->em->getEntityById('WhatsAppNotificationSubscription', $subscription->getId()), $pending['text'],
+                $pending['messageId']);
+            return;
+        }
         $token['kind'] === 'c' ? $this->taps->cardTap($subscription, $card, $token) : $this->taps->subscriptionTap($subscription, $token);
     }
 
@@ -159,8 +216,8 @@ class Inbound
         ]);
     }
 
-    /** @param list<Entity> $subscriptions one number in several workspaces: which deck? */
-    private function choose(array $subscriptions): void
+    /** @param list<Entity> $subscriptions one number in several workspaces: which deck, or which AI? */
+    private function choose(array $subscriptions, string $copy = 'choose'): void
     {
         $first = $subscriptions[0];
         $language = $this->workspaces->of($first)['language'];
@@ -169,7 +226,7 @@ class Inbound
             $items[] = [$this->workspaces->of($subscription)['name'] ?: '—', $this->tokens->subscription($subscription->getId(), 'w')];
         }
         // Two or three workspaces fit reply buttons; more become a list.
-        $this->avisos->buttons($first, 'reply', Copy::t($language, 'choose'), $items);
+        $this->avisos->buttons($first, 'reply', Copy::t($language, $copy), $items);
     }
 
     private function markTapped(Entity $subscription, ?Entity $card): void

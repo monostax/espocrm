@@ -1,0 +1,107 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Espo\Modules\FeatureWhatsAppNotifications\Tools;
+
+use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Error;
+use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\Exceptions\NotFound;
+use Espo\Core\Utils\Log;
+use Espo\Entities\Note;
+use Espo\Modules\FeatureAiSession\Services\Primary;
+use Espo\Modules\FeatureCredits\Enrichment\ActorScope;
+use Espo\ORM\Entity;
+use Espo\ORM\EntityManager;
+use Throwable;
+
+/**
+ * The AI in WhatsApp. A subscriber's text becomes their own post in their main AI chat of that workspace
+ * (FeatureAiSession Primary), submitted as them (ActorScope): their CRM ACL, Chatwoot access, agents, model and credits,
+ * exactly as if they typed it in the app. The agent's answer comes back here (`reply`, from the Note hook
+ * MirrorAssistantReply), only to the verified number of the active subscription that sent the turn, and only when the
+ * session still belongs to that person.
+ */
+class Assistant
+{
+    public const CHANNEL = 'whatsapp';
+    /** Statuses of a finished turn; "cancelled" (replaced or withdrawn) says nothing. */
+    public const ANSWERED = ['completed', 'failed', 'blocked'];
+
+    public function __construct(
+        private EntityManager $em,
+        private ActorScope $actors,
+        private Avisos $avisos,
+        private Workspaces $workspaces,
+        private Log $log,
+    ) {}
+
+    public function ask(Entity $subscription, string $text, int $messageId): void
+    {
+        $workspace = $this->workspaces->of($subscription);
+        $language = $workspace['language'];
+        if ($workspace['frozen']) {
+            $this->avisos->text($subscription, 'assistant', Copy::t($language, 'ai.frozen'));
+            return;
+        }
+        Sessions::markAi($subscription);
+        Sessions::setPending($subscription, null);
+        $this->em->saveEntity($subscription, ['silent' => true]);
+        try {
+            $this->actors->run((string) $subscription->get('userId'), fn (callable $make) => $make(Primary::class)->ask($workspace['account'], $text, [
+                'aiSessionChannel' => self::CHANNEL, 'whatsAppSubscriptionId' => $subscription->getId(), 'whatsAppMessageId' => $messageId,
+            ]));
+        } catch (Forbidden|NotFound|BadRequest $e) {
+            $this->log->info("WhatsApp notifications: AI turn refused for subscription {$subscription->getId()}: " . $e->getMessage());
+            $this->avisos->text($subscription, 'assistant', Copy::t($language, 'ai.unavailable'));
+            return;
+        } catch (Throwable $e) {
+            $this->log->warning("WhatsApp notifications: AI turn for subscription {$subscription->getId()} failed: " . $e->getMessage());
+            $this->avisos->text($subscription, 'assistant', Copy::t($language, 'ai.failed'));
+            return;
+        }
+        $this->avisos->typing($subscription);
+    }
+
+    /** The agent's finished answer to a WhatsApp turn, back to the number that asked. */
+    public function reply(Note $reply): void
+    {
+        $progress = $reply->getData()->opportunityStreamAgent ?? null;
+        $status = (string) ($progress->status ?? '');
+        if ($reply->getParentType() !== 'AiSession' || !in_array($status, self::ANSWERED, true)) return;
+        $source = $this->em->getEntityById('Note', (string) ($progress->sourceNoteId ?? ''));
+        $session = $this->em->getEntityById('AiSession', (string) $reply->getParentId());
+        $origin = $source instanceof Note ? $source->getData() : null;
+        if (!$source instanceof Note || !$session || ($origin->aiSessionChannel ?? null) !== self::CHANNEL ||
+            $source->getParentId() !== $session->getId()) return;
+        $subscription = $this->em->getEntityById('WhatsAppNotificationSubscription', (string) ($origin->whatsAppSubscriptionId ?? ''));
+        // The person who asked still owns the chat and still holds this number, in this workspace.
+        if (!$subscription || $subscription->get('status') !== 'active' ||
+            $subscription->get('userId') !== $source->getCreatedById() || $session->get('assignedUserId') !== $source->getCreatedById() ||
+            $subscription->get('chatwootAccountId') !== $session->get('chatwootAccountId')) return;
+        try {
+            $language = $this->workspaces->of($subscription)['language'];
+        } catch (Error) {
+            return; // the workspace is gone
+        }
+        if (!Avisos::windowOpen($subscription)) {
+            $this->log->info("WhatsApp notifications: AI answer {$reply->getId()} not sent, the 24h window closed.");
+            return;
+        }
+        $link = $this->workspaces->sessionLink($subscription, $session->getId());
+        $chunks = match ($status) {
+            'completed' => WhatsAppText::chunks(WhatsAppText::fromMarkdown((string) $reply->getPost())),
+            'blocked' => [Copy::t($language, 'ai.blocked')],
+            default => [Copy::t($language, 'ai.failed')],
+        };
+        if (!$chunks) $chunks = [Copy::t($language, 'ai.empty', ['link' => $link])];
+        if (count($chunks) > WhatsAppText::MAX_CHUNKS) {
+            $chunks = array_slice($chunks, 0, WhatsAppText::MAX_CHUNKS);
+            $chunks[WhatsAppText::MAX_CHUNKS - 1] .= "\n\n" . Copy::t($language, 'ai.more', ['link' => $link]);
+        }
+        foreach ($chunks as $index => $chunk) {
+            $this->avisos->text($subscription, 'assistant', $chunk, null, "ai:{$reply->getId()}:{$index}");
+        }
+    }
+}

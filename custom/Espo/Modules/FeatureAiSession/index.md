@@ -8,6 +8,12 @@
 
 Sessions are private to their human owner in Chatwoot. CRM instance administrators retain stock administrative access; these records are not inaccessible to administrators. AI users receive no general record or collection grant: only a validated submitted execution can obtain context or publish through StreamAgent. Code Mode retains tenant-plus-human workspace isolation.
 
+## Main chat
+
+Each person has one main chat per workspace (`primarySlot = "main"`, unique with owner and Chatwoot account; `Services/Primary`). It is made on first use: when the session list loads, or when the person writes to Monostax on WhatsApp. Its agent is the one of the person's latest chat, else the first AI of the workspace they may use; without one there is no main chat. It is an ordinary private session (same owner, ACL, agent, model and credit rules), except that it can't be deleted, renamed or pinned, and Chatwoot lists it first as "Principal".
+
+Turns submitted from WhatsApp (FeatureWhatsAppNotifications `Assistant`, as the person through `ActorScope`) carry `data.aiSessionChannel = "whatsapp"`, the subscription and the Chatwoot message id. `Execution::post` passes the channel to the agent, which keeps such answers short; the finished reply is mirrored back to the person's verified number (the Note hook `MirrorAssistantReply`). Composer and WhatsApp submissions share `Services/Submissions`.
+
 ## Runtime contract
 
 - Explicit `AiSession/:id/posts` submissions capture one exact membership; ordinary Note imports and edits never enqueue turns.
@@ -19,7 +25,7 @@ Sessions are private to their human owner in Chatwoot. CRM instance administrato
 
 ## Deployment
 
-- Rebuild CRM metadata/schema and seeded roles for the new entity.
+- Rebuild CRM metadata/schema and seeded roles for the new entity (and the `primarySlot` column + unique `ownerPrimary` index).
 - Deploy Chatwoot with short Rails routes and private invalidation handling, plus backend API/worker registration for `chatwoot-agent-on-ai-session`.
 - Reuse the existing signed stream-agent webhook configuration and AI credential provisioning.
 - Personal execution uses Code Mode and its configured service origins and workspace infrastructure. Missing or revoked human delegation blocks the turn; private chats never fall back to AI-credential tools. Agent membership grants control writes, execution and sending.

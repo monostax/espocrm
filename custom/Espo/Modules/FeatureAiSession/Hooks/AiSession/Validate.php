@@ -25,7 +25,7 @@ class Validate implements BeforeSave
             $entity->set('tenantId', $account?->get('tenantId'));
             $entity->set('titleInitialized', $entity->get('name') !== 'New chat');
         } else {
-            foreach (['assignedUserId', 'tenantId', 'chatwootAccountId'] as $field) {
+            foreach (['assignedUserId', 'tenantId', 'chatwootAccountId', 'primarySlot'] as $field) {
                 if ($entity->isAttributeChanged($field)) throw new Forbidden('Session ownership and workspace are immutable.');
             }
             if ($entity->isAttributeChanged('name')) $entity->set('titleInitialized', true);

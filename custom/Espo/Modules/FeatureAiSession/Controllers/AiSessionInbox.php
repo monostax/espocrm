@@ -9,13 +9,14 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Select\SearchParams;
-use Espo\Entities\Note;
+use Espo\Core\Utils\Log;
 use Espo\Entities\User;
-use Espo\Modules\Chatwoot\Hooks\Note\QueueOpportunityStreamAgent;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\Modules\Chatwoot\Services\OpportunityBulkPostAccess;
 use Espo\Modules\FeatureAiSession\Services\Access;
+use Espo\Modules\FeatureAiSession\Services\Primary;
 use Espo\Modules\FeatureAiSession\Services\Recipient;
+use Espo\Modules\FeatureAiSession\Services\Submissions;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Tools\Stream\MassNotePreparator;
@@ -25,7 +26,8 @@ class AiSessionInbox
     public function __construct(
         private EntityManager $em, private User $user, private Acl $acl, private ServiceContainer $records,
         private OpportunityBulkPostAccess $workspaces, private Access $access, private Recipient $recipient,
-        private ActivityDiscussion $discussion, private MassNotePreparator $preparator, private QueueOpportunityStreamAgent $queue,
+        private ActivityDiscussion $discussion, private MassNotePreparator $preparator, private Submissions $submissions,
+        private Primary $primary, private Log $log,
     ) {}
 
     private function workspace(Request $request): Entity
@@ -48,6 +50,12 @@ class AiSessionInbox
     public function getActionList(Request $request): object
     {
         $account = $this->workspace($request);
+        // Everyone has a main chat (the one WhatsApp talks to); a failure here must not hide the others.
+        try {
+            $this->primary->ensure($account);
+        } catch (\Throwable $e) {
+            $this->log->warning('AI sessions: main chat unavailable: ' . $e->getMessage());
+        }
         $result = $this->records->get('AiSession')->find(SearchParams::fromRaw([
             'maxSize' => 100, 'offset' => max(0, (int) $request->getQueryParam('offset')), 'orderBy' => 'modifiedAt', 'order' => 'desc',
             'where' => [
@@ -105,7 +113,8 @@ class AiSessionInbox
     public function putActionUpdate(Request $request): object
     {
         $session = $this->record($request);
-        $patch = (object) array_intersect_key((array) $request->getParsedBody(), array_flip(['name', 'aiAgentMembershipId', 'isPinned', 'aiModel']));
+        $editable = Primary::is($session) ? ['aiAgentMembershipId', 'aiModel'] : ['name', 'aiAgentMembershipId', 'isPinned', 'aiModel'];
+        $patch = (object) array_intersect_key((array) $request->getParsedBody(), array_flip($editable));
         $params = (new \Espo\Core\Record\UpdateParamsFetcher())->fetch($request);
         return $this->em->getTransactionManager()->run(function () use ($session, $patch, $params): object {
             $this->em->getRDBRepository('AiSession')->where(['id' => $session->getId()])->forUpdate()->findOne();
@@ -116,6 +125,7 @@ class AiSessionInbox
     public function deleteActionDelete(Request $request): bool
     {
         $session = $this->record($request);
+        if (Primary::is($session)) throw new Forbidden('The main chat cannot be deleted.');
         $this->records->get('AiSession')->delete($session->getId());
         return true;
     }
@@ -149,50 +159,7 @@ class AiSessionInbox
 
     private function createPost(Entity $session, object $body): object
     {
-        if (!$this->acl->checkScope('Note', 'read') || !$this->acl->checkField('Note', 'post')) throw new Forbidden();
-        $fields = ['post', ...(!empty($body->postEditorState) ? ['postEditorState'] : []), ...(!empty($body->attachmentsIds) ? ['attachments'] : [])];
-        foreach ($fields as $field) {
-            if (!$this->acl->checkField('Note', $field, 'edit')) throw new Forbidden('No permission to compose this post.');
-        }
-        if (!is_array($body->attachmentsIds ?? []) || !is_string($body->post ?? null) ||
-            (trim($body->post) === '' && empty($body->attachmentsIds))) throw new BadRequest('A post or attachment is required.');
-        return $this->em->getTransactionManager()->run(function () use ($session, $body): object {
-            $session = $this->em->getRDBRepository('AiSession')->where(['id' => $session->getId()])->forUpdate()->findOne();
-            $agent = $this->recipient->resolve($this->user, $session, $body->post);
-            if (!$session->get('titleInitialized')) {
-                $title = preg_replace('/\s+/u', ' ', trim(strip_tags(preg_replace('~\[([^\]]+)\]\([^)]*\)~', '$1', $body->post))));
-                if ($this->acl->checkEntityEdit($session) && $this->acl->checkField('AiSession', 'name', 'edit')) {
-                    $session->set('name', mb_substr($title ?: 'New chat', 0, 100));
-                }
-                $session->set('titleInitialized', true);
-            }
-            $this->em->saveEntity($session);
-            if (!empty($body->rootId)) $this->discussion->root($session, $body->rootId);
-            $account = $this->em->getEntityById('ChatwootAccount', $session->get('chatwootAccountId'));
-            $note = $this->records->get('Note')->create((object) [
-                'type' => 'Post', 'parentType' => 'AiSession', 'parentId' => $session->getId(), 'isInternal' => true,
-                'post' => $body->post, 'postEditorState' => $body->postEditorState ?? null,
-                'attachmentsIds' => $body->attachmentsIds ?? [], 'opportunityThreadRootId' => $body->rootId ?? null,
-                'opportunityChatwootAccountId' => (int) $account->get('chatwootAccountId'),
-            ])->getEntity();
-            // Record services strip forbidden output attributes. Reload server-owned
-            // execution inputs instead of using that presentation as trusted state.
-            $note = $this->em->getRDBRepository('Note')->where(['id' => $note->getId()])->forUpdate()->findOne();
-            assert($note instanceof Note);
-            $data = $note->getData();
-            $data->opportunityAiInitiatorUserId = $this->user->getId();
-            $data->opportunityAiMentionTargets = [(object) [
-                'aiAgentMembershipId' => $agent->getId(), 'chatwootAccountCrmId' => $account->getId(), 'crmTenantId' => $session->get('tenantId'),
-            ]];
-            $data->aiSessionSubmission = true;
-            // The model chosen when this turn was sent; a later switch never reroutes it.
-            if (is_string($session->get('aiModel')) && $session->get('aiModel') !== '') $data->aiSessionModel = $session->get('aiModel');
-            $note->setData($data);
-            $this->em->saveEntity($note);
-            $this->queue->enqueue($note);
-            $this->records->get('Note')->prepareEntityForOutput($note);
-            return $note->getValueMap();
-        });
+        return $this->submissions->post($session, $body);
     }
 
     public function postActionReadState(Request $request): object
@@ -208,13 +175,17 @@ class AiSessionInbox
         $this->records->get('AiSession')->prepareEntityForOutput($output);
         $data = $output->getValueMap();
         $data->entityType = 'AiSession';
+        // The main chat keeps its place and name: first in the list, and what WhatsApp writes to.
+        $primary = Primary::is($session);
+        $data->isPrimary = $primary;
+        unset($data->primarySlot);
         $data->canStream = $canStream;
         $data->canPost = $canStream && $this->acl->checkScope('Note', 'create') &&
             $this->acl->checkField('Note', 'post') && $this->acl->checkField('Note', 'post', 'edit') &&
             $this->acl->checkField('AiSession', 'aiAgentMembership');
-        $data->canEdit = $canEdit && $this->acl->checkField('AiSession', 'name', 'edit');
-        $data->canDelete = $this->acl->checkEntityDelete($session);
-        $data->canPin = $canEdit && $this->acl->checkField('AiSession', 'isPinned') &&
+        $data->canEdit = !$primary && $canEdit && $this->acl->checkField('AiSession', 'name', 'edit');
+        $data->canDelete = !$primary && $this->acl->checkEntityDelete($session);
+        $data->canPin = !$primary && $canEdit && $this->acl->checkField('AiSession', 'isPinned') &&
             $this->acl->checkField('AiSession', 'isPinned', 'edit');
         $data->canChangeAgent = $canEdit && $this->acl->checkField('AiSession', 'aiAgentMembership') &&
             $this->acl->checkField('AiSession', 'aiAgentMembership', 'edit');
