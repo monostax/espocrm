@@ -45,7 +45,14 @@ class AssistantTest extends TestCase
     public function testACompletedWhatsAppTurnGoesBackToTheNumberThatAsked(): void
     {
         $this->assistant($this->world())->reply($this->reply('completed', '**Oi!** Tudo certo.'));
-        $this->assertSame([['*Oi!* Tudo certo.', 'ai:reply1:0']], $this->sent);
+        $this->assertSame([["*Oi!* Tudo certo.\n\n*✦ IA - Kibu / Clínica*", 'ai:reply1:0']], $this->sent);
+    }
+
+    public function testWithoutAMembershipNameTheAiUsersNameSignsWithTheWorkspace(): void
+    {
+        $this->assistant($this->world(['agentName' => '', 'aiUserName' => 'IA *Kibu*']))->reply($this->reply('completed', 'Oi'));
+        $this->assistant($this->world(['agentName' => '', 'aiUserName' => '']))->reply($this->reply('completed', 'Oi'));
+        $this->assertSame([["Oi\n\n*IA Kibu / Clínica*", 'ai:reply1:0'], ["Oi\n\n*Clínica*", 'ai:reply1:0']], $this->sent);
     }
 
     public function testATurnTypedInTheAppStaysInTheApp(): void
@@ -75,8 +82,8 @@ class AssistantTest extends TestCase
         $this->assistant($this->world())->reply($this->reply('cancelled', 'This request was stopped or replaced by a newer mention.'));
         $this->assistant($this->world())->reply($this->reply('failed', 'This request could not finish.'));
         $this->assertSame([
-            ['⚠️ Os créditos de IA deste espaço acabaram. Peça a um administrador para recarregar no Monostax.', 'ai:reply1:0'],
-            ['⚠️ Não consegui terminar esse pedido. Tente de novo daqui a pouco.', 'ai:reply1:0'],
+            ["⚠️ Os créditos de IA deste espaço acabaram. Peça a um administrador para recarregar no Monostax.\n\n*✦ IA - Kibu / Clínica*", 'ai:reply1:0'],
+            ["⚠️ Não consegui terminar esse pedido. Tente de novo daqui a pouco.\n\n*✦ IA - Kibu / Clínica*", 'ai:reply1:0'],
         ], $this->sent);
     }
 
@@ -85,7 +92,10 @@ class AssistantTest extends TestCase
         $long = implode("\n\n", array_fill(0, 5, str_repeat('a', 3000)));
         $this->assistant($this->world())->reply($this->reply('completed', $long));
         $this->assertCount(3, $this->sent);
-        $this->assertStringEndsWith('👉 A resposta continua no Monostax: https://chat.test/app/accounts/7/ai-sessions/session1', $this->sent[2][0]);
+        $this->assertStringEndsWith("👉 A resposta continua no Monostax: https://chat.test/app/accounts/7/ai-sessions/session1\n\n*✦ IA - Kibu / Clínica*",
+            $this->sent[2][0]);
+        $this->assertStringEndsWith("\n\n*✦ IA - Kibu / Clínica*", $this->sent[0][0]);
+        foreach ($this->sent as [$text]) $this->assertLessThanOrEqual(4096, mb_strlen($text));
         $this->assertSame('ai:reply1:2', $this->sent[2][1]);
     }
 
@@ -112,8 +122,9 @@ class AssistantTest extends TestCase
 
     private function reply(string $status, string $post): Note
     {
-        return $this->note('reply1', 'session1', (object) ['opportunityStreamAgent' => (object) ['status' => $status, 'sourceNoteId' => 'source1']],
-            $post, 'aiUser');
+        return $this->note('reply1', 'session1', (object) ['opportunityStreamAgent' => (object) [
+            'status' => $status, 'sourceNoteId' => 'source1', 'aiAgentMembershipId' => 'kibu',
+        ]], $post, 'aiUser');
     }
 
     /** @param array<string, mixed> $overrides */
@@ -124,6 +135,8 @@ class AssistantTest extends TestCase
         ]);
         return [
             'Note' => $source,
+            'ChatwootAccountUserMembership' => $this->entity('kibu', ['name' => $overrides['agentName'] ?? '✦ IA - Kibu']),
+            'User' => $this->entity('aiUser', ['name' => $overrides['aiUserName'] ?? 'IA - Kibu']),
             'AiSession' => $this->entity('session1', ['assignedUserId' => $overrides['sessionOwner'] ?? 'user1', 'chatwootAccountId' => 'account1']),
             'WhatsAppNotificationSubscription' => $this->entity('sub1', [
                 'status' => $overrides['subscriptionStatus'] ?? 'active', 'userId' => $overrides['subscriptionUser'] ?? 'user1',

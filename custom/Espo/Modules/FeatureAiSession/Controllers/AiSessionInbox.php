@@ -9,7 +9,10 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Select\SearchParams;
+use Espo\Core\ORM\Repository\Option\SaveOption;
+use Espo\Core\Record\UpdateParams;
 use Espo\Core\Utils\Log;
+use Espo\Entities\Note;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ActivityDiscussion;
 use Espo\Modules\Chatwoot\Services\OpportunityBulkPostAccess;
@@ -160,6 +163,44 @@ class AiSessionInbox
     private function createPost(Entity $session, object $body): object
     {
         return $this->submissions->post($session, $body);
+    }
+
+    /**
+     * The main chat's agent switch (the AI's switch_agent, when the person asks): the session moves to the new agent,
+     * and the person's message that asked is posted again for that agent, as the person, with its WhatsApp origin, so
+     * the new agent answers it. Once per message, and never for a message that was itself handed over.
+     */
+    public function postActionHandoff(Request $request): object
+    {
+        $session = $this->record($request);
+        if (!Primary::is($session)) throw new Forbidden('Only the main chat hands over to another agent.');
+        $body = $request->getParsedBody();
+        $agentId = is_string($body->aiAgentMembershipId ?? null) ? $body->aiAgentMembershipId : '';
+        $source = $this->em->getEntityById('Note', is_string($body->sourceNoteId ?? null) ? $body->sourceNoteId : '');
+        if (!$source instanceof Note || $source->getParentType() !== 'AiSession' || $source->getParentId() !== $session->getId() ||
+            $source->getCreatedById() !== $this->user->getId() || !($source->getData()->aiSessionSubmission ?? false) ||
+            $source->get('opportunityPostDeleted')) throw new NotFound();
+        return $this->em->getTransactionManager()->run(function () use ($session, $source, $agentId): object {
+            $this->em->getRDBRepository('AiSession')->where(['id' => $session->getId()])->forUpdate()->findOne();
+            $this->records->get('AiSession')->update($session->getId(), (object) ['aiAgentMembershipId' => $agentId], UpdateParams::create());
+            $source = $this->em->getRDBRepository('Note')->where(['id' => $source->getId()])->forUpdate()->findOne();
+            assert($source instanceof Note);
+            $data = $source->getData();
+            $text = (string) $source->getPost();
+            if (trim($text) === '' || isset($data->aiSessionHandoffFrom) || isset($data->aiSessionHandedOffTo)) {
+                return (object) ['switched' => true, 'resent' => false];
+            }
+            $origin = ['aiSessionHandoffFrom' => $source->getId()];
+            foreach (['aiSessionChannel', 'whatsAppSubscriptionId', 'whatsAppMessageId'] as $key) {
+                if (is_scalar($data->$key ?? null)) $origin[$key] = $data->$key;
+            }
+            $post = $this->submissions->post($this->em->getEntityById('AiSession', $session->getId()), (object) ['post' => $text], $origin, $agentId);
+            $data->aiSessionHandedOffTo = $post->id;
+            $source->setData($data);
+            // Bookkeeping on the person's message, not an edit by them.
+            $this->em->saveEntity($source, [SaveOption::SKIP_MODIFIED_BY => true, SaveOption::SKIP_HOOKS => true]);
+            return (object) ['switched' => true, 'resent' => true, 'postId' => $post->id];
+        });
     }
 
     public function postActionReadState(Request $request): object

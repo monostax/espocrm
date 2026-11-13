@@ -26,6 +26,8 @@ use Espo\Modules\FeatureWhatsAppNotifications\Tools\Workspaces;
 use Espo\ORM\BaseEntity;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Repository\RDBRepository;
+use Espo\ORM\Repository\RDBSelectBuilder;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -294,6 +296,16 @@ class TapsTest extends TestCase
         $this->inbound([$first, $second], $this->createMock(Taps::class), $assistant)->handle($this->incoming(730, 'E o funil?'), 'acct6');
     }
 
+    public function testOurLastMessageWithinHalfAnHourDecidesTheWorkspace(): void
+    {
+        $first = $this->subscription('sub1');
+        $second = $this->subscription('sub2', ['session' => (object) ['aiAt' => time() - 60]]);
+        $assistant = $this->createMock(Assistant::class);
+        $assistant->expects($this->once())->method('ask')->with($first, 'E esse aí?', 735);
+        $this->inbound([$first, $second], $this->createMock(Taps::class), $assistant, lastSentBy: 'sub1')
+            ->handle($this->incoming(735, 'E esse aí?'), 'acct6');
+    }
+
     public function testChoosingAWorkspaceSendsTheWaitingTextThere(): void
     {
         $tokens = $this->tokens();
@@ -320,13 +332,20 @@ class TapsTest extends TestCase
 
     /** @param list<Entity> $subscriptions */
     private function inbound(array $subscriptions, Taps $taps, Assistant $assistant, ?Avisos $avisos = null, ?Workspaces $workspaces = null,
-        ?Tokens $tokens = null): Inbound
+        ?Tokens $tokens = null, ?string $lastSentBy = null): Inbound
     {
         $byId = [];
         foreach ($subscriptions as $subscription) $byId[$subscription->getId()] = $subscription;
         $em = $this->createMock(EntityManager::class);
         $em->method('createEntity')->willReturn($this->entity('log', []));
         $em->method('getEntityById')->willReturnCallback(fn (string $type, string $id) => $type === 'WhatsAppNotificationSubscription' ? ($byId[$id] ?? null) : null);
+        // The delivery log: the latest message we sent in the last 30 minutes, if any.
+        $builder = $this->createMock(RDBSelectBuilder::class);
+        $builder->method('order')->willReturnSelf();
+        $builder->method('findOne')->willReturn($lastSentBy ? $this->entity('log', ['subscriptionId' => $lastSentBy]) : null);
+        $repository = $this->createMock(RDBRepository::class);
+        $repository->method('where')->willReturn($builder);
+        $em->method('getRDBRepository')->willReturn($repository);
         if (!$avisos) {
             $avisos = $this->createMock(Avisos::class);
             $avisos->method('isAvisos')->willReturn(true);

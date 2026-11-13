@@ -64,7 +64,9 @@ class Execution
         }
         $model = $source->getData()->aiSessionModel ?? null;
         return ['sessionRecord' => (object) ['id' => $session->getId(),
-            'name' => $this->acl->checkField($owner, 'AiSession', 'name') ? $session->get('name') : null], 'sessionPosts' => $posts,
+            'name' => $this->acl->checkField($owner, 'AiSession', 'name') ? $session->get('name') : null,
+            // The main chat (WhatsApp's): its agent may switch who answers when the person asks.
+            'mainChat' => Primary::is($session)], 'sessionPosts' => $posts,
             // The model saved with this submission; absent means the agreement default.
             ...(is_string($model) && $model !== '' ? ['model' => $model] : [])];
     }

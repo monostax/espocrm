@@ -17,9 +17,10 @@ use Throwable;
  * - `message_created`, incoming: a tap (a payload we signed, from the number of the subscription it names), a code
  *   (signup or Settings), a stop word, the reply after "Editar", "em dia"/"próximo" (the next card), or anything else
  *   from a subscriber, which goes to their AI (Assistant: their main AI chat, answered back here). With one number in
- *   several workspaces the text goes to the workspace they last talked to, or waits until they choose one ("trocar"
- *   asks again). Every incoming message opens Meta's 24h window for that number. Messages from numbers with no
- *   subscription stay in the inbox for the Monostax team.
+ *   several workspaces the text goes to the workspace of our last message to them (within 30 minutes), else the one
+ *   whose AI they last talked to, or waits until they choose one ("trocar" asks again). Every incoming message opens
+ *   Meta's 24h window for that number. Messages from numbers with no subscription stay in the inbox for the Monostax
+ *   team.
  * - `message_updated`: Meta's status for one of our messages (sent, delivered, read, failed) and whether Meta billed
  *   it, onto the delivery log; a billed delivery is charged in credits (Charges).
  */
@@ -30,6 +31,8 @@ class Inbound
     private const DECK_WORDS = ['em dia', 'emdia', 'proximo', 'cards', 'ver cards', 'next'];
     private const SWITCH_WORDS = ['trocar', 'trocar espaco', 'mudar espaco', 'trocar de espaco', 'switch', 'switch workspace'];
     private const STATUS_ORDER = ['queued' => 0, 'sent' => 1, 'delivered' => 2, 'read' => 3];
+    /** A reply within this long of our last message to the person belongs to that message's workspace. */
+    public const RECENT_SECONDS = 1800;
 
     public function __construct(
         private EntityManager $em,
@@ -117,7 +120,8 @@ class Inbound
         $command = self::command($text);
         $subscription = $subscriptions[0];
         if (count($subscriptions) > 1) {
-            $active = $command === 'switch' ? null : self::latestAi($subscriptions);
+            // What we sent last (a card, a question, an answer) explains the text; else the AI they last talked to.
+            $active = $command === 'switch' ? null : ($this->lastMessaged($subscriptions) ?? self::latestAi($subscriptions));
             if (!$active) {
                 // The text waits for the choice; a deck word or "trocar" just asks which workspace.
                 foreach ($subscriptions as $each) {
@@ -149,6 +153,18 @@ class Inbound
         if (in_array($plain, self::DECK_WORDS, true)) return 'deck';
         if (in_array($plain, self::SWITCH_WORDS, true)) return 'switch';
         return null;
+    }
+
+    /** @param list<Entity> $subscriptions the one whose workspace sent the person our latest message, in the last 30 minutes */
+    private function lastMessaged(array $subscriptions): ?Entity
+    {
+        $byId = [];
+        foreach ($subscriptions as $subscription) $byId[$subscription->getId()] = $subscription;
+        $last = $this->em->getRDBRepository('WhatsAppNotification')->where([
+            'subscriptionId' => array_keys($byId), 'direction' => 'out', 'status!=' => 'failed',
+            'createdAt>=' => gmdate('Y-m-d H:i:s', time() - self::RECENT_SECONDS),
+        ])->order('createdAt', 'DESC')->findOne();
+        return $last ? ($byId[(string) $last->get('subscriptionId')] ?? null) : null;
     }
 
     /** @param list<Entity> $subscriptions */

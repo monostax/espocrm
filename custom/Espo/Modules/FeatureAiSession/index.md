@@ -14,6 +14,8 @@ Each person has one main chat per workspace (`primarySlot = "main"`, unique with
 
 Turns submitted from WhatsApp (FeatureWhatsAppNotifications `Assistant`, as the person through `ActorScope`) carry `data.aiSessionChannel = "whatsapp"`, the subscription and the Chatwoot message id. `Execution::post` passes the channel to the agent, which keeps such answers short; the finished reply is mirrored back to the person's verified number (the Note hook `MirrorAssistantReply`). Composer and WhatsApp submissions share `Services/Submissions`.
 
+In the main chat only, the agent has a `switch_agent` tool (backend `code-mode/session-agent.ts`, offered when the run context's `sessionRecord.mainChat` is true), for when the person asks for another agent. It lists the app picker's agents (`AiSession/action/agents`), then calls `POST AiSession/:id/handoff` as the person. The handoff moves the session to that agent (record update: owner, ACL and agent access are checked again) and posts the person's message once more for the new agent (`Submissions::post` with an explicit agent, so mentions in the text can't redirect it). The new post keeps the WhatsApp origin and `aiSessionHandoffFrom`. It happens once per message (`aiSessionHandedOffTo` on the original) and never for a post that was itself handed over, so agents can't ping-pong. Its run queues behind the old agent's short confirmation. Changing the agent in the app's picker never re-sends anything.
+
 ## Runtime contract
 
 - Explicit `AiSession/:id/posts` submissions capture one exact membership; ordinary Note imports and edits never enqueue turns.

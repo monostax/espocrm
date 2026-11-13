@@ -8,5 +8,6 @@
     { "route": "/AiSession/:id/discussion", "method": "get", "params": { "controller": "AiSessionInbox", "action": "stream" } },
     { "route": "/AiSession/:id/posts", "method": "post", "params": { "controller": "AiSessionInbox", "action": "post" } },
     { "route": "/AiSession/:id/recipient", "method": "post", "params": { "controller": "AiSessionInbox", "action": "recipient" } },
+    { "route": "/AiSession/:id/handoff", "method": "post", "params": { "controller": "AiSessionInbox", "action": "handoff" } },
     { "route": "/AiSession/:id/readState", "method": "post", "params": { "controller": "AiSessionInbox", "action": "readState" } }
 ]

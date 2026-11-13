@@ -81,7 +81,8 @@ class Assistant
             $subscription->get('userId') !== $source->getCreatedById() || $session->get('assignedUserId') !== $source->getCreatedById() ||
             $subscription->get('chatwootAccountId') !== $session->get('chatwootAccountId')) return;
         try {
-            $language = $this->workspaces->of($subscription)['language'];
+            $workspace = $this->workspaces->of($subscription);
+            $language = $workspace['language'];
         } catch (Error) {
             return; // the workspace is gone
         }
@@ -100,8 +101,25 @@ class Assistant
             $chunks = array_slice($chunks, 0, WhatsAppText::MAX_CHUNKS);
             $chunks[WhatsAppText::MAX_CHUNKS - 1] .= "\n\n" . Copy::t($language, 'ai.more', ['link' => $link]);
         }
+        // Every WhatsApp message ends with who answered and for which workspace (one number may be in several); the app
+        // shows the author already.
+        $signature = $this->signature($reply, (string) ($workspace['name'] ?? ''));
         foreach ($chunks as $index => $chunk) {
-            $this->avisos->text($subscription, 'assistant', $chunk, null, "ai:{$reply->getId()}:{$index}");
+            $this->avisos->text($subscription, 'assistant', $signature !== null ? "{$chunk}\n\n*{$signature}*" : $chunk, null,
+                "ai:{$reply->getId()}:{$index}");
         }
+    }
+
+    /** "Agent / Workspace" as WhatsApp can bold it: the agent's membership name (else its CRM user's) and the workspace. */
+    private function signature(Note $reply, string $workspace): ?string
+    {
+        $membershipId = (string) ($reply->getData()->opportunityStreamAgent->aiAgentMembershipId ?? '');
+        $name = $membershipId !== '' ? $this->em->getEntityById('ChatwootAccountUserMembership', $membershipId)?->get('name') : null;
+        if (!is_string($name) || trim($name) === '') {
+            $name = $this->em->getEntityById('User', (string) $reply->getCreatedById())?->get('name');
+        }
+        $parts = array_filter(array_map(fn ($part) => trim((string) preg_replace('/\s+/u', ' ', str_replace(['*', '_', '~', '`'], '', (string) $part))),
+            [$name, $workspace]), fn (string $part) => $part !== '');
+        return $parts ? implode(' / ', $parts) : null;
     }
 }

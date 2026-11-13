@@ -23,10 +23,14 @@ class Submissions
     public function __construct(
         private EntityManager $em, private User $user, private Acl $acl, private ServiceContainer $records,
         private Recipient $recipient, private ActivityDiscussion $discussion, private QueueOpportunityStreamAgent $queue,
+        private Access $access,
     ) {}
 
-    /** @param array<string, scalar> $origin server-owned facts about where the turn came from (e.g. its channel) */
-    public function post(Entity $session, object $body, array $origin = []): object
+    /**
+     * @param array<string, scalar> $origin server-owned facts about where the turn came from (e.g. its channel)
+     * @param ?string $agentId the agent this turn goes to regardless of mentions in the text (a handoff), checked like a pick
+     */
+    public function post(Entity $session, object $body, array $origin = [], ?string $agentId = null): object
     {
         if (!$this->acl->checkScope('Note', 'read') || !$this->acl->checkField('Note', 'post')) throw new Forbidden();
         $fields = ['post', ...(!empty($body->postEditorState) ? ['postEditorState'] : []), ...(!empty($body->attachmentsIds) ? ['attachments'] : [])];
@@ -35,9 +39,10 @@ class Submissions
         }
         if (!is_array($body->attachmentsIds ?? []) || !is_string($body->post ?? null) ||
             (trim($body->post) === '' && empty($body->attachmentsIds))) throw new BadRequest('A post or attachment is required.');
-        return $this->em->getTransactionManager()->run(function () use ($session, $body, $origin): object {
+        return $this->em->getTransactionManager()->run(function () use ($session, $body, $origin, $agentId): object {
             $session = $this->em->getRDBRepository('AiSession')->where(['id' => $session->getId()])->forUpdate()->findOne();
-            $agent = $this->recipient->resolve($this->user, $session, $body->post);
+            $agent = $agentId !== null ? $this->access->agent($this->user, $session, $agentId)
+                : $this->recipient->resolve($this->user, $session, $body->post);
             if (!$session->get('titleInitialized')) {
                 $title = preg_replace('/\s+/u', ' ', trim(strip_tags(preg_replace('~\[([^\]]+)\]\([^)]*\)~', '$1', $body->post))));
                 if ($this->acl->checkEntityEdit($session) && $this->acl->checkField('AiSession', 'name', 'edit')) {
