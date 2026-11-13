@@ -1,0 +1,26 @@
+[
+    {
+        "rows": [
+            [
+                {
+                    "name": "endpoint"
+                },
+                {
+                    "name": "status"
+                }
+            ],
+            [
+                {
+                    "name": "type"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "data",
+                    "noLabel": true
+                }
+            ]
+        ]
+    }
+]

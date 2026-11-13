@@ -1,0 +1,250 @@
+{
+    "fieldTypes": {
+        "id": {
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\IdSchemaProvider"
+        },
+        "foreign": {},
+        "varchar": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\VarcharSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\VarcharSchemaProvider"
+        },
+        "number": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\VarcharSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\NumberSchemaProvider"
+        },
+        "url": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\VarcharSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\UrlSchemaProvider"
+        },
+        "personName": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\VarcharSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\PersonNameSchemaProvider"
+        },
+        "text": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\VarcharSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\TextSchemaProvider"
+        },
+        "wysiwyg": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\VarcharSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\WysiwygSchemaProvider"
+        },
+        "enum": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\EnumSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\EnumSchemaProvider"
+        },
+        "array": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\ArraySchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\ArraySchemaProvider"
+        },
+        "multiEnum": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\ArraySchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\ArraySchemaProvider"
+        },
+        "checklist": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\ArraySchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\ArraySchemaProvider"
+        },
+        "urlMultiple": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\ArraySchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\UrlMultipleSchemaProvider"
+        },
+        "phone": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\VarcharSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\PhoneSchemaProvider"
+        },
+        "email": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\EmailSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\EmailSchemaProvider"
+        },
+        "int": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\IntSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\IntSchemaProvider"
+        },
+        "autoincrement": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\IntSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\AutoincrementSchemaProvider"
+        },
+        "float": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\NumericSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\FloatSchemaProvider"
+        },
+        "decimal": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\NumericSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\DecimalSchemaProvider"
+        },
+        "currencyConverted": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\NumericSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\CurrencyConvertedSchemaProvider"
+        },
+        "currency": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\NumericSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\CurrencySchemaProvider"
+        },
+        "bool": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\BoolSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\BoolSchemaProvider"
+        },
+        "date": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\DateSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\DateSchemaProvider"
+        },
+        "datetime": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\DatetimeSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\DatetimeSchemaProvider"
+        },
+        "datetimeOptional": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\DatetimeSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\DatetimeOptionalSchemaProvider"
+        },
+        "duration": {
+            "select": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\DurationSchemaProvider"
+        },
+        "link": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\LinkSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\LinkSchemaProvider"
+        },
+        "linkOne": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\LinkSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\LinkSchemaProvider"
+        },
+        "linkParent": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\LinkParentSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\LinkParentSchemaProvider"
+        },
+        "linkMultiple": {
+            "select": true,
+            "filter": true,
+            "read": true,
+            "create": true,
+            "update": true,
+            "filterSchemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\FieldFilter\\Types\\LinkMultipleSchemaProvider",
+            "schemaProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Schema\\Field\\Types\\LinkMultipleSchemaProvider"
+        }
+    }
+}

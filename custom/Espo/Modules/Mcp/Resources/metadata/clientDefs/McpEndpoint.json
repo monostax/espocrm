@@ -1,0 +1,22 @@
+{
+    "controller": "controllers/record",
+    "mergeDisabled": true,
+    "filterList": [
+        "active"
+    ],
+    "relationshipPanels": {
+        "features": {
+            "filterList": [
+                "all",
+                "active"
+            ],
+            "layout": "listForEndpoint"
+        },
+        "users": {
+            "selectPrimaryFilterName": "activeApi",
+            "createDisabled": true,
+            "removeDisabled": true,
+            "editDisabled": true
+        }
+    }
+}

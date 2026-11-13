@@ -1,0 +1,18 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "type",
+        "width": 25
+    },
+    {
+        "name": "text",
+        "width": 25
+    },
+    {
+        "name": "status",
+        "width": 17
+    }
+]

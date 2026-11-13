@@ -1,0 +1,7 @@
+{
+    "entity": true,
+    "module": "Mcp",
+    "duplicateCheckFieldList": [
+        "slug"
+    ]
+}

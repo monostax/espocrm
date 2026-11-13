@@ -99,6 +99,10 @@ class SeedRole implements RebuildAction
                 // DMD discovers CRM contracts using the initiating tenant user's identity.
                 // This grants schema documentation access; record operations retain their own ACL.
                 'OpenApi' => true,
+                // MCP server (Mcp module). Boolean scope; a user also has to be added to an
+                // MCP endpoint by an instance admin, and every tool call runs with this
+                // user's own record ACL.
+                'Mcp' => true,
                 'Import' => true,
                 'ExternalAccount' => true,
                 'Activities' => true,

@@ -1,0 +1,113 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 100,
+            "required": true,
+            "duplicateIgnore": true
+        },
+        "slug": {
+            "type": "varchar",
+            "maxLength": 32,
+            "required": true,
+            "pattern": "[a-z]{1}[A-Za-z0-9]+",
+            "index": true,
+            "tooltip": true,
+            "audited": true,
+            "duplicateIgnore": true
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "Active",
+                "Inactive"
+            ],
+            "default": "Active",
+            "maxLength": 8,
+            "style": {
+                "Inactive": "info"
+            },
+            "audited": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "publicDescription": {
+            "type": "text",
+            "maxLength": 512,
+            "tooltip": true
+        },
+        "url": {
+            "type": "url",
+            "notStorable": true,
+            "readOnly": true,
+            "copyToClipboard": true,
+            "loaderClassName": "Espo\\Modules\\Mcp\\Classes\\FieldLoaders\\Endpoint\\Url"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "fieldManagerParamList": []
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "fieldManagerParamList": []
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user",
+            "fieldManagerParamList": []
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user",
+            "fieldManagerParamList": []
+        }
+    },
+    "links": {
+        "features": {
+            "type": "hasMany",
+            "entity": "McpFeature",
+            "foreign": "endpoint",
+            "readOnly": true,
+            "cascadeRemoval": true
+        },
+        "users": {
+            "type": "hasMany",
+            "entity": "User",
+            "foreign": "mcpEndpoints"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "textFilterFields": [
+            "name",
+            "slug"
+        ],
+        "orderBy": "slug",
+        "order": "asc"
+    },
+    "indexes": {
+        "slugStatus": {
+            "unique": true,
+            "columns": [
+                "slug",
+                "status",
+                "deleteId"
+            ]
+        }
+    },
+    "entityClassName": "Espo\\Modules\\Mcp\\Entities\\Endpoint",
+    "transactionalSave": true,
+    "deleteId": true
+}

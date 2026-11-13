@@ -1,0 +1,16 @@
+{
+    "massActions": {
+        "update": {
+            "allowed": true
+        },
+        "delete": {
+            "allowed": true
+        }
+    },
+    "beforeCreateHookClassNameList": [
+        "Espo\\Modules\\Mcp\\Classes\\RecordHooks\\Feature\\BeforeSaveValidation"
+    ],
+    "beforeUpdateHookClassNameList": [
+        "Espo\\Modules\\Mcp\\Classes\\RecordHooks\\Feature\\BeforeSaveValidation"
+    ]
+}

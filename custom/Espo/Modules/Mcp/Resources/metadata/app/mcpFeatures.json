@@ -1,0 +1,508 @@
+{
+    "Find": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Find\\FindToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Find\\FindToolProcessor"
+        },
+        "record": {
+            "client": {
+                "viewSetupHandler": "modules/mcp/handlers/feature-record/setup-find",
+                "dynamicLogic": {
+                    "fields": {
+                        "entityType": {
+                            "readOnly": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "or",
+                                        "value": [
+                                            {
+                                                "type": "isNotEmpty",
+                                                "attribute": "selectFields"
+                                            },
+                                            {
+                                                "type": "isNotEmpty",
+                                                "attribute": "filterFields"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        "textFilter": {
+                            "visible": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "isNotEmpty",
+                                        "attribute": "entityType"
+                                    }
+                                ]
+                            }
+                        },
+                        "primaryFilters": {
+                            "visible": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "isNotEmpty",
+                                        "attribute": "entityType"
+                                    }
+                                ]
+                            }
+                        },
+                        "boolFilters": {
+                            "visible": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "isNotEmpty",
+                                        "attribute": "entityType"
+                                    }
+                                ]
+                            }
+                        },
+                        "selectFields": {
+                            "visible": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "isNotEmpty",
+                                        "attribute": "entityType"
+                                    }
+                                ]
+                            }
+                        },
+                        "filterFields": {
+                            "visible": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "isNotEmpty",
+                                        "attribute": "entityType"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "dataClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Find\\FindData",
+            "textComposerClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Find\\FindTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Find\\FindDataValidator",
+            "fields": {
+                "entityType": {
+                    "type": "enum",
+                    "required": true,
+                    "view": "modules/mcp/views/feature-record/fields/entity-type-read"
+                },
+                "textFilter": {
+                    "type": "bool"
+                },
+                "primaryFilters": {
+                    "type": "checklist",
+                    "view": "modules/mcp/views/feature-record/fields/primary-filters"
+                },
+                "boolFilters": {
+                    "type": "checklist",
+                    "view": "modules/mcp/views/feature-record/fields/bool-filters"
+                },
+                "selectFields": {
+                    "type": "jsonArray",
+                    "view": "modules/mcp/views/feature-record/fields/fields",
+                    "tooltip": "McpFeature.findSelectFields"
+                },
+                "filterFields": {
+                    "type": "multiEnum",
+                    "view": "modules/mcp/views/feature-record/fields/find/filter-fields"
+                }
+            },
+            "defaults": {
+                "textFilter": true,
+                "primaryFilters": [],
+                "boolFilters": [],
+                "selectFields": [],
+                "filterFields": []
+            },
+            "layout": [
+                {
+                    "rows": [
+                        [
+                            {
+                                "name": "entityType",
+                                "labelTranslation": "McpFeature.dataFields.entityType"
+                            },
+                            false
+                        ],
+                        [
+                            {
+                                "name": "primaryFilters",
+                                "labelTranslation": "McpFeature.dataFields.primaryFilters"
+                            },
+                            {
+                                "name": "boolFilters",
+                                "labelTranslation": "McpFeature.dataFields.boolFilters"
+                            }
+                        ],
+                        [
+                            {
+                                "name": "textFilter",
+                                "labelTranslation": "McpFeature.dataFields.textFilter"
+                            },
+                            false
+                        ],
+                        [
+                            {
+                                "name": "selectFields",
+                                "labelTranslation": "McpFeature.dataFields.selectFields"
+                            }
+                        ],
+                        [
+                            {
+                                "name": "filterFields",
+                                "labelTranslation": "McpFeature.dataFields.filterFields"
+                            }
+                        ]
+                    ]
+                }
+            ]
+        }
+    },
+    "Read": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Read\\ReadToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Read\\ReadToolProcessor"
+        },
+        "record": {
+            "client": {
+                "viewSetupHandler": "modules/mcp/handlers/feature-record/setup-read",
+                "dynamicLogic": {
+                    "fields": {
+                        "entityType": {
+                            "readOnly": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "or",
+                                        "value": [
+                                            {
+                                                "type": "isNotEmpty",
+                                                "attribute": "selectFields"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        "selectFields": {
+                            "visible": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "isNotEmpty",
+                                        "attribute": "entityType"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "dataClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Read\\ReadData",
+            "textComposerClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Read\\ReadTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Read\\ReadDataValidator",
+            "fields": {
+                "entityType": {
+                    "type": "enum",
+                    "required": true,
+                    "view": "modules/mcp/views/feature-record/fields/entity-type-read"
+                },
+                "selectFields": {
+                    "type": "jsonArray",
+                    "view": "modules/mcp/views/feature-record/fields/fields",
+                    "tooltip": "McpFeature.findSelectFields"
+                }
+            },
+            "defaults": {
+                "selectFields": []
+            },
+            "layout": [
+                {
+                    "rows": [
+                        [
+                            {
+                                "name": "entityType",
+                                "labelTranslation": "McpFeature.dataFields.entityType"
+                            },
+                            false
+                        ],
+                        [
+                            {
+                                "name": "selectFields",
+                                "labelTranslation": "McpFeature.dataFields.selectFields"
+                            }
+                        ]
+                    ]
+                }
+            ]
+        }
+    },
+    "Create": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Create\\CreateToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Create\\CreateToolProcessor"
+        },
+        "record": {
+            "client": {
+                "viewSetupHandler": "modules/mcp/handlers/feature-record/setup-create",
+                "dynamicLogic": {
+                    "fields": {
+                        "entityType": {
+                            "readOnly": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "or",
+                                        "value": [
+                                            {
+                                                "type": "isNotEmpty",
+                                                "attribute": "writeFields"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        "writeFields": {
+                            "visible": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "isNotEmpty",
+                                        "attribute": "entityType"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "dataClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Create\\CreateData",
+            "textComposerClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Create\\CreateTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Create\\CreateDataValidator",
+            "fields": {
+                "entityType": {
+                    "type": "enum",
+                    "required": true,
+                    "view": "modules/mcp/views/feature-record/fields/entity-type"
+                },
+                "writeFields": {
+                    "type": "jsonArray",
+                    "view": "modules/mcp/views/feature-record/fields/create-write-fields",
+                    "tooltip": "McpFeature.createWriteFields"
+                }
+            },
+            "defaults": {},
+            "layout": [
+                {
+                    "rows": [
+                        [
+                            {
+                                "name": "entityType",
+                                "labelTranslation": "McpFeature.dataFields.entityType"
+                            },
+                            false
+                        ],
+                        [
+                            {
+                                "name": "writeFields",
+                                "labelTranslation": "McpFeature.dataFields.writeFields"
+                            }
+                        ]
+                    ]
+                }
+            ]
+        }
+    },
+    "Update": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Update\\UpdateToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Update\\UpdateToolProcessor"
+        },
+        "record": {
+            "client": {
+                "viewSetupHandler": "modules/mcp/handlers/feature-record/setup-update",
+                "dynamicLogic": {
+                    "fields": {
+                        "entityType": {
+                            "readOnly": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "or",
+                                        "value": [
+                                            {
+                                                "type": "isNotEmpty",
+                                                "attribute": "writeFields"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        "writeFields": {
+                            "visible": {
+                                "conditionGroup": [
+                                    {
+                                        "type": "isNotEmpty",
+                                        "attribute": "entityType"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "dataClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Update\\UpdateData",
+            "textComposerClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Update\\UpdateTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Update\\UpdateDataValidator",
+            "fields": {
+                "entityType": {
+                    "type": "enum",
+                    "required": true,
+                    "view": "modules/mcp/views/feature-record/fields/entity-type"
+                },
+                "writeFields": {
+                    "type": "jsonArray",
+                    "view": "modules/mcp/views/feature-record/fields/update-write-fields",
+                    "tooltip": "McpFeature.updateWriteFields"
+                }
+            },
+            "defaults": {},
+            "layout": [
+                {
+                    "rows": [
+                        [
+                            {
+                                "name": "entityType",
+                                "labelTranslation": "McpFeature.dataFields.entityType"
+                            },
+                            false
+                        ],
+                        [
+                            {
+                                "name": "writeFields",
+                                "labelTranslation": "McpFeature.dataFields.writeFields"
+                            }
+                        ]
+                    ]
+                }
+            ]
+        }
+    },
+    "Delete": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Delete\\DeleteToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Delete\\DeleteToolProcessor"
+        },
+        "record": {
+            "client": {
+                "viewSetupHandler": "modules/mcp/handlers/feature-record/setup-delete",
+                "dynamicLogic": {
+                    "fields": {}
+                }
+            },
+            "dataClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Delete\\DeleteData",
+            "textComposerClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Delete\\DeleteTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\Delete\\DeleteDataValidator",
+            "fields": {
+                "entityType": {
+                    "type": "enum",
+                    "required": true,
+                    "view": "modules/mcp/views/feature-record/fields/entity-type"
+                }
+            },
+            "defaults": {},
+            "layout": [
+                {
+                    "rows": [
+                        [
+                            {
+                                "name": "entityType",
+                                "labelTranslation": "McpFeature.dataFields.entityType"
+                            },
+                            false
+                        ]
+                    ]
+                }
+            ]
+        }
+    },
+    "RecordStream": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\RecordStream\\RecordStreamToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\RecordStream\\RecordStreamToolProcessor"
+        },
+        "record": {
+            "client": {
+                "viewSetupHandler": "modules/mcp/handlers/feature-record/setup-record-stream"
+            },
+            "dataClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\RecordStream\\RecordStreamData",
+            "textComposerClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\RecordStream\\RecordStreamTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\RecordStream\\RecordStreamDataValidator",
+            "fields": {
+                "entityTypes": {
+                    "type": "array",
+                    "required": true,
+                    "displayAsList": true,
+                    "tooltip": "McpFeature.recordStreamEntityTypes",
+                    "view": "modules/mcp/views/feature-record/fields/record-stream/entity-types"
+                }
+            },
+            "defaults": {
+                "entityTypes": []
+            },
+            "layout": [
+                {
+                    "rows": [
+                        [
+                            {
+                                "name": "entityTypes",
+                                "labelTranslation": "McpFeature.dataFields.entityTypes"
+                            },
+                            false
+                        ]
+                    ]
+                }
+            ]
+        }
+    },
+    "CreatePost": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\CreatePost\\CreatePostToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\CreatePost\\CreatePostToolProcessor"
+        },
+        "record": {
+            "client": {
+                "viewSetupHandler": "modules/mcp/handlers/feature-record/setup-create-post"
+            },
+            "dataClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\CreatePost\\CreatePostData",
+            "textComposerClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\CreatePost\\CreatePostTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\Mcp\\Tools\\Feature\\Features\\CreatePost\\CreatePostDataValidator",
+            "fields": {
+                "entityTypes": {
+                    "type": "array",
+                    "required": true,
+                    "displayAsList": true,
+                    "tooltip": "McpFeature.createPostEntityTypes",
+                    "view": "modules/mcp/views/feature-record/fields/record-stream/entity-types"
+                }
+            },
+            "defaults": {
+                "entityTypes": []
+            },
+            "layout": [
+                {
+                    "rows": [
+                        [
+                            {
+                                "name": "entityTypes",
+                                "labelTranslation": "McpFeature.dataFields.entityTypes"
+                            },
+                            false
+                        ]
+                    ]
+                }
+            ]
+        }
+    }
+}

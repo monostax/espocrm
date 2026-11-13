@@ -1,0 +1,94 @@
+{
+    "fields": {
+        "name": {
+            "type": "varchar",
+            "maxLength": 128,
+            "readOnly": true
+        },
+        "text": {
+            "type": "varchar",
+            "notStorable": true,
+            "readOnly": true,
+            "loaderClassName": "Espo\\Modules\\Mcp\\Classes\\FieldLoaders\\Feature\\TextLoader",
+            "orderDisabled": true
+        },
+        "status": {
+            "type": "enum",
+            "options": [
+                "Active",
+                "Inactive"
+            ],
+            "default": "Active",
+            "maxLength": 8,
+            "style": {
+                "Inactive": "info"
+            },
+            "audited": true
+        },
+        "type": {
+            "type": "enum",
+            "required": true,
+            "maxLength": 64,
+            "readOnlyAfterCreate": true,
+            "isSorted": true,
+            "view": "modules/mcp/views/feature/fields/type",
+            "validatorClassNameList": [
+                "Espo\\Modules\\Mcp\\Classes\\FieldValidators\\Feature\\Type\\Valid"
+            ]
+        },
+        "endpoint": {
+            "type": "link",
+            "readOnlyAfterCreate": true
+        },
+        "data": {
+            "type": "jsonObject",
+            "validatorClassNameList": [
+                "Espo\\Modules\\Mcp\\Classes\\FieldValidators\\Feature\\Data\\Valid"
+            ],
+            "inlineEditDisabled": true,
+            "view": "modules/mcp/views/feature/fields/data"
+        },
+        "createdAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "fieldManagerParamList": []
+        },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "fieldManagerParamList": []
+        },
+        "createdBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user",
+            "fieldManagerParamList": []
+        },
+        "modifiedBy": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/user",
+            "fieldManagerParamList": []
+        }
+    },
+    "links": {
+        "endpoint": {
+            "type": "belongsTo",
+            "entity": "McpEndpoint",
+            "foreign": "features"
+        },
+        "createdBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        },
+        "modifiedBy": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "collection": {
+        "orderBy": "name",
+        "order": "asc"
+    },
+    "entityClassName": "Espo\\Modules\\Mcp\\Entities\\Feature"
+}
