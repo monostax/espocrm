@@ -7,14 +7,18 @@ namespace Espo\Modules\FeatureJourney\Classes\JourneyActions;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureJourney\Services\ActionContext;
+use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
 use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\ORM\Entity;
 use Throwable;
 
 /**
  * Free-text WhatsApp via Chatwoot inbox (WAHA QR / Cloud / Coexistence).
  *
- * Sends to every sendable phone on the target (or phone override list).
+ * Sends to every sendable phone of each person on the target: the target itself,
+ * or each contact in an Account's Contatos ({@see JourneyTargetPeople}). A phone
+ * override sends once, against the target.
  * Cloud/Coexistence: when the 24h session window is closed, optional fallback
  * Meta template (name + mapping) is sent instead of failing hard.
  */
@@ -23,6 +27,7 @@ class SendWhatsAppMessage implements Action
     public function __construct(
         private JourneyWhatsAppOutbound $outbound,
         private TenantGuard $tenantGuard,
+        private JourneyTargetPeople $people,
         private Log $log,
     ) {}
 
@@ -48,18 +53,16 @@ class SendWhatsAppMessage implements Action
             throw new Error('SendWhatsAppMessage: body is required.');
         }
 
-        if ($this->outbound->isOptedOut($context->target)) {
+        // A phone override is one fixed recipient; otherwise every person on the target
+        // (an Account's Contatos) gets the message on their own phones.
+        $hasOverride = $phoneOverride !== null && trim($phoneOverride) !== '';
+        $people = $hasOverride ? [$context->target] : $this->people->forTarget($context->target, $tenantId);
+
+        if ($people === []) {
             $this->log->warning(
-                'SendWhatsAppMessage: target opted out of WhatsApp, skipping. ' .
-                $context->target->getEntityType() . '/' . $context->target->getId()
+                'SendWhatsAppMessage: no contacts on ' . $context->target->getEntityType() . '/' .
+                $context->target->getId() . ', skipping.'
             );
-
-            return;
-        }
-
-        $phones = $this->outbound->resolvePhones($context->target, $phoneOverride);
-        if ($phones === []) {
-            $this->log->warning('SendWhatsAppMessage: no phone on target, skipping.');
 
             return;
         }
@@ -71,7 +74,6 @@ class SendWhatsAppMessage implements Action
             $context->actor,
         );
 
-        $name = $this->outbound->displayName($context->target);
         $journeyContext = [
             'journeyId' => $context->journey->getId(),
             'journeyRecordId' => $context->record->getId(),
@@ -79,17 +81,49 @@ class SendWhatsAppMessage implements Action
 
         $errors = [];
         $sent = 0;
+        $attempted = 0;
 
-        foreach ($phones as $phone) {
-            try {
-                $this->sendOne($conn, $phone, $name, $body, $params, $context, $journeyContext);
-                $sent++;
-            } catch (Throwable $e) {
-                $errors[] = $phone . ': ' . $e->getMessage();
-                $this->log->error(
-                    'SendWhatsAppMessage failed for ' . $phone . ': ' . $e->getMessage()
+        foreach ($people as $person) {
+            if ($this->outbound->isOptedOut($person)) {
+                $this->log->warning(
+                    'SendWhatsAppMessage: opted out of WhatsApp, skipping ' .
+                    $person->getEntityType() . '/' . $person->getId()
                 );
+
+                continue;
             }
+
+            $phones = $this->outbound->resolvePhones($person, $phoneOverride);
+
+            if ($phones === []) {
+                $this->log->info(
+                    'SendWhatsAppMessage: no phone on ' . $person->getEntityType() . '/' . $person->getId()
+                );
+
+                continue;
+            }
+
+            $attempted += count($phones);
+            $name = $this->outbound->displayName($person);
+            $templatePerson = $person === $context->target ? null : $person;
+
+            foreach ($phones as $phone) {
+                try {
+                    $this->sendOne($conn, $phone, $name, $body, $params, $context, $journeyContext, $templatePerson);
+                    $sent++;
+                } catch (Throwable $e) {
+                    $errors[] = $name . ' ' . $phone . ': ' . $e->getMessage();
+                    $this->log->error(
+                        'SendWhatsAppMessage failed for ' . $phone . ': ' . $e->getMessage()
+                    );
+                }
+            }
+        }
+
+        if ($attempted === 0) {
+            $this->log->warning('SendWhatsAppMessage: no phone on any recipient, skipping.');
+
+            return;
         }
 
         if ($sent === 0 && $errors !== []) {
@@ -98,7 +132,7 @@ class SendWhatsAppMessage implements Action
 
         if ($errors !== []) {
             throw new Error(
-                'SendWhatsAppMessage: sent ' . $sent . '/' . count($phones) .
+                'SendWhatsAppMessage: sent ' . $sent . '/' . $attempted .
                 ' failed: ' . implode('; ', $errors)
             );
         }
@@ -117,6 +151,7 @@ class SendWhatsAppMessage implements Action
         array $params,
         ActionContext $context,
         array $journeyContext,
+        ?Entity $person,
     ): void {
         try {
             $this->outbound->sendFreeText($conn, $phone, $name, $body, $journeyContext);
@@ -153,7 +188,7 @@ class SendWhatsAppMessage implements Action
             : 'UTILITY';
 
         $mapping = $params['fallbackParameterMapping'] ?? [];
-        $resolved = $this->outbound->resolveParameterMapping($mapping, $context->target);
+        $resolved = $this->outbound->resolveParameterMapping($mapping, $context->target, $person);
 
         $headerUrl = isset($params['fallbackHeaderMediaUrl'])
             ? (string) $params['fallbackHeaderMediaUrl']

@@ -468,11 +468,19 @@ class JourneyWhatsAppOutbound
     /**
      * Resolve WhatsAppCampaign-style handlebars mapping against the journey target.
      *
+     * `$person` is who this message goes to (see {@see JourneyTargetPeople}); it is
+     * exposed as `{{Contact.*}}` (its own type) and `{{Person.*}}`. A Contact, Lead or
+     * User target is its own person.
+     *
      * @param array<string, mixed>|object $parameterMapping
      * @return array<string, string>
      */
-    public function resolveParameterMapping($parameterMapping, Entity $target): array
+    public function resolveParameterMapping($parameterMapping, Entity $target, ?Entity $person = null): array
     {
+        if ($person === null && in_array($target->getEntityType(), ['Contact', 'Lead', 'User'], true)) {
+            $person = $target;
+        }
+
         if ($parameterMapping instanceof \stdClass) {
             $parameterMapping = (array) $parameterMapping;
         }
@@ -541,6 +549,15 @@ class JourneyWhatsAppOutbound
 
                     $this->templateBridge->expandInPlace($related);
                     $extraData[$relation] = $this->entityToTemplateArray($related);
+                }
+            }
+
+            if ($person !== null) {
+                $this->templateBridge->expandInPlace($person);
+                $personData = $this->entityToTemplateArray($person);
+
+                foreach (array_keys(JourneyTargetPeople::templateEntities($person)) as $key) {
+                    $extraData[$key] = $personData;
                 }
             }
 

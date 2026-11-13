@@ -12,7 +12,9 @@
  * JourneyStageAction params: Meta template picker (by inbox account) +
  * parameter mapping + dry-run render preview (no send).
  *
- * Extends the WhatsApp Campaign templateName field.
+ * Extends the WhatsApp Campaign templateName field. The sample record has the
+ * journey's target type; an Account previews once per contact in its Contatos
+ * (the people the action sends to), with a tab per person.
  */
 define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
     "chatwoot:views/whatsapp-campaign/fields/template-name",
@@ -45,10 +47,25 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
                 '{{/if}}' +
                 '{{#if hasRenderResult}}' +
                 '<div class="journey-wa-render-result" style="margin-top:10px">' +
+                    '{{#if hasPeople}}' +
+                    '<div style="margin-bottom:8px">' +
+                        '<span class="text-muted small" style="margin-right:6px">{{peopleLabel}}</span>' +
+                        '{{#each people}}' +
+                        '<button type="button" class="btn btn-xs {{#if selected}}btn-primary{{else}}btn-default{{/if}} journey-preview-person" ' +
+                            'data-index="{{index}}" style="margin:0 4px 4px 0">' +
+                            '{{#if error}}<span class="fas fa-exclamation-triangle"></span> {{/if}}{{label}}' +
+                        '</button>' +
+                        '{{/each}}' +
+                    '</div>' +
+                    '{{/if}}' +
                     '<div class="text-muted small" style="margin-bottom:4px">{{previewLabel}}</div>' +
+                    '{{#if personError}}' +
+                    '<div class="text-danger small"><span class="fas fa-exclamation-triangle"></span> {{personError}}</div>' +
+                    '{{else}}' +
                     '<div class="journey-wa-bubble" style="background:#dcf8c6;border-radius:8px;padding:10px 12px;white-space:pre-wrap;font-size:13px;max-width:420px">' +
                         '<strong>{{renderedHeader}}</strong>\n{{renderedBody}}' +
                     '</div>' +
+                    '{{/if}}' +
                     '{{#if headerMediaUrl}}' +
                     '<div class="text-muted small" style="margin-top:6px">' +
                         'Header ({{headerMediaType}}): <code>{{headerMediaUrl}}</code>' +
@@ -68,6 +85,8 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
         isRendering: false,
         renderError: null,
         renderResult: null,
+        previewIndex: 0,
+        testScope: "Contact",
         _testModel: null,
 
         data: function () {
@@ -118,17 +137,32 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
             data.hasRenderResult = !!result;
 
             if (result) {
-                data.renderedBody = result.renderedBody || "";
-                data.renderedHeader = result.renderedHeader || "";
+                const people = result.people || [];
+                const current = people[this.previewIndex] || result;
+
+                data.peopleLabel = this.translate("previewPeople", "labels", "JourneyStageAction");
+                data.hasPeople = people.length > 1 ||
+                    (people.length === 1 && people[0].personType !== result.targetEntityType);
+                data.people = people.map((person, index) => ({
+                    index: index,
+                    label: person.personName || person.personId,
+                    selected: index === this.previewIndex,
+                    error: !!person.error,
+                }));
+                data.personError = current.error || null;
+                data.renderedBody = current.renderedBody || "";
+                data.renderedHeader = current.renderedHeader || "";
                 data.headerMediaUrl = result.headerMediaUrl || "";
                 data.headerMediaType = result.headerMediaType || "";
                 data.previewTemplateName = result.templateName || "";
                 data.previewLanguage = result.templateLanguage || "";
                 data.previewCategory = result.templateCategory || "";
-                data.hasResolvedParams = Object.keys(result.resolvedParams || {}).length > 0 ||
-                    Object.keys(result.resolvedHeaderParams || {}).length > 0;
+                data.hasResolvedParams = !current.error && (
+                    Object.keys(current.resolvedParams || {}).length > 0 ||
+                    Object.keys(current.resolvedHeaderParams || {}).length > 0
+                );
                 data.resolvedParamsJson = data.hasResolvedParams
-                    ? JSON.stringify({body: result.resolvedParams, header: result.resolvedHeaderParams}, null, 2)
+                    ? JSON.stringify({body: current.resolvedParams, header: current.resolvedHeaderParams}, null, 2)
                     : "";
             }
 
@@ -147,6 +181,25 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
                 testTargetId: null,
                 testTargetName: null,
             });
+
+            const resolve = this.options.resolveTargetEntityType;
+
+            if (resolve) {
+                resolve().then((entityType) => {
+                    if (!entityType || entityType === this.testScope ||
+                        !this.getMetadata().get(["scopes", entityType, "entity"])) {
+                        return;
+                    }
+
+                    this.testScope = entityType;
+                    this.renderResult = null;
+                    this._testModel.set({testTargetId: null, testTargetName: null});
+
+                    if (this.isRendered()) {
+                        this.reRender();
+                    }
+                }).catch(() => {});
+            }
         },
 
         afterRender: function () {
@@ -166,7 +219,7 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
                 {
                     model: this._testModel,
                     name: "testTarget",
-                    foreignScope: "Contact",
+                    foreignScope: this.testScope,
                     el: this.getSelector() + " .journey-wa-test-target",
                     mode: "edit",
                     defs: {
@@ -183,6 +236,12 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
             this.$el.find(".journey-wa-render-btn").off("click.waRender").on("click.waRender", (e) => {
                 e.preventDefault();
                 this.runRenderTest();
+            });
+
+            this.$el.find(".journey-preview-person").off("click.waPerson").on("click.waPerson", (e) => {
+                e.preventDefault();
+                this.previewIndex = parseInt($(e.currentTarget).attr("data-index"), 10) || 0;
+                this.reRender();
             });
         },
 
@@ -226,7 +285,7 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
             this.reRender();
 
             const payload = {
-                targetEntityType: "Contact",
+                targetEntityType: this.testScope,
                 targetId: targetId,
                 templateName: templateName,
                 templateLanguage: templateLanguage,
@@ -247,6 +306,10 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
                     this.isRendering = false;
                     this.renderError = null;
                     this.renderResult = result || null;
+                    this.previewIndex = Math.max(
+                        0,
+                        ((result && result.people) || []).findIndex((person) => !person.error)
+                    );
                     this.reRender();
                 })
                 .catch((xhr) => {

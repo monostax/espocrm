@@ -7,20 +7,27 @@ namespace Espo\Modules\FeatureJourney\Classes\JourneyActions;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureJourney\Services\ActionContext;
+use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
 use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters;
 use Throwable;
 
 /**
  * Meta template WhatsApp via Chatwoot (Cloud API / Coexistence only).
  * Parameter mapping matches WhatsAppCampaign (Handlebars {{field}}).
- * Sends to every sendable phone on the target (or phone override list).
+ *
+ * Sends to every sendable phone of each person on the target: the target
+ * itself, or each contact in an Account's Contatos ({@see JourneyTargetPeople}),
+ * rendered per person (`{{Contact.firstName}}`). A phone override sends once,
+ * against the target.
  */
 class SendWhatsAppTemplate implements Action
 {
     public function __construct(
         private JourneyWhatsAppOutbound $outbound,
         private TenantGuard $tenantGuard,
+        private JourneyTargetPeople $people,
         private Log $log,
     ) {}
 
@@ -57,18 +64,16 @@ class SendWhatsAppTemplate implements Action
             $language = 'pt_BR';
         }
 
-        if ($this->outbound->isOptedOut($target)) {
+        // A phone override is one fixed recipient; otherwise every person on the target
+        // (an Account's Contatos) gets their own message on their own phones.
+        $hasOverride = $phoneOverride !== null && trim($phoneOverride) !== '';
+        $people = $hasOverride ? [$target] : $this->people->forTarget($target, $tenantId);
+
+        if ($people === []) {
             $this->log->warning(
-                'SendWhatsAppTemplate: target opted out of WhatsApp, skipping. ' .
-                $target->getEntityType() . '/' . $target->getId()
+                'SendWhatsAppTemplate: no contacts on ' . $target->getEntityType() . '/' .
+                $target->getId() . ', skipping.'
             );
-
-            return;
-        }
-
-        $phones = $this->outbound->resolvePhones($target, $phoneOverride);
-        if ($phones === []) {
-            $this->log->warning('SendWhatsAppTemplate: no phone on target, skipping.');
 
             return;
         }
@@ -81,13 +86,9 @@ class SendWhatsAppTemplate implements Action
         );
 
         $mapping = $params['parameterMapping'] ?? [];
-        // Exactly once per action, before iterating over recipient phone numbers.
+        // Exactly once per action, before iterating over people and phone numbers.
         $liveTemplate = $this->outbound->preflightTemplate($conn, $templateName, $language, $params);
         $category = $liveTemplate['category'];
-        $resolved = $this->outbound->resolveParameterMapping($mapping, $target);
-        $resolvedHeader = $this->outbound->resolveParameterMapping($params['headerParameterMapping'] ?? [], $target);
-        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved($resolved, true);
-        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved($resolvedHeader, true);
 
         $headerUrl = isset($params['headerMediaUrl']) ? (string) $params['headerMediaUrl'] : null;
         $headerType = isset($params['headerMediaType']) ? (string) $params['headerMediaType'] : null;
@@ -99,14 +100,6 @@ class SendWhatsAppTemplate implements Action
         }
 
         $templateBody = isset($params['templateBody']) ? (string) $params['templateBody'] : '';
-        $content = $templateBody;
-        if ($content !== '' && $resolved !== []) {
-            foreach ($resolved as $num => $value) {
-                $content = str_replace('{{' . $num . '}}', $value, $content);
-            }
-        }
-
-        $name = $this->outbound->displayName($target);
         $journeyContext = [
             'journeyId' => $context->journey->getId(),
             'journeyRecordId' => $context->record->getId(),
@@ -114,30 +107,83 @@ class SendWhatsAppTemplate implements Action
 
         $errors = [];
         $sent = 0;
+        $attempted = 0;
 
-        foreach ($phones as $phone) {
-            try {
-                $this->outbound->sendTemplate(
-                    $conn,
-                    $phone,
-                    $name,
-                    $templateName,
-                    $language,
-                    $resolved,
-                    $category !== '' ? $category : 'UTILITY',
-                    $content,
-                    $headerUrl,
-                    $headerType,
-                    $journeyContext,
-                    $resolvedHeader,
+        foreach ($people as $person) {
+            $name = $this->outbound->displayName($person);
+
+            if ($this->outbound->isOptedOut($person)) {
+                $this->log->warning(
+                    'SendWhatsAppTemplate: opted out of WhatsApp, skipping ' .
+                    $person->getEntityType() . '/' . $person->getId()
                 );
-                $sent++;
-            } catch (Throwable $e) {
-                $errors[] = $phone . ': ' . $e->getMessage();
-                $this->log->error(
-                    'SendWhatsAppTemplate failed for ' . $phone . ': ' . $e->getMessage()
-                );
+
+                continue;
             }
+
+            $phones = $this->outbound->resolvePhones($person, $phoneOverride);
+
+            if ($phones === []) {
+                $this->log->info(
+                    'SendWhatsAppTemplate: no phone on ' . $person->getEntityType() . '/' . $person->getId()
+                );
+
+                continue;
+            }
+
+            $attempted += count($phones);
+            $templatePerson = $person === $target ? null : $person;
+
+            try {
+                $resolved = $this->outbound->resolveParameterMapping($mapping, $target, $templatePerson);
+                $resolvedHeader = $this->outbound->resolveParameterMapping(
+                    $params['headerParameterMapping'] ?? [],
+                    $target,
+                    $templatePerson,
+                );
+                TemplateParameters::assertResolved($resolved, true);
+                TemplateParameters::assertResolved($resolvedHeader, true);
+            } catch (Throwable $e) {
+                $errors[] = $name . ': ' . $e->getMessage();
+
+                continue;
+            }
+
+            $content = $templateBody;
+            foreach ($resolved as $num => $value) {
+                $content = str_replace('{{' . $num . '}}', $value, $content);
+            }
+
+            foreach ($phones as $phone) {
+                try {
+                    $this->outbound->sendTemplate(
+                        $conn,
+                        $phone,
+                        $name,
+                        $templateName,
+                        $language,
+                        $resolved,
+                        $category !== '' ? $category : 'UTILITY',
+                        $content,
+                        $headerUrl,
+                        $headerType,
+                        $journeyContext,
+                        $resolvedHeader,
+                    );
+                    $sent++;
+                } catch (Throwable $e) {
+                    $errors[] = $name . ' ' . $phone . ': ' . $e->getMessage();
+                    $this->log->error(
+                        'SendWhatsAppTemplate failed for ' . $phone . ': ' . $e->getMessage()
+                    );
+                }
+            }
+        }
+
+        if ($attempted === 0) {
+            $this->log->warning('SendWhatsAppTemplate: no phone on any recipient, skipping.');
+
+            return;
         }
 
         if ($sent === 0 && $errors !== []) {
@@ -146,7 +192,7 @@ class SendWhatsAppTemplate implements Action
 
         if ($errors !== []) {
             throw new Error(
-                'SendWhatsAppTemplate: sent ' . $sent . '/' . count($phones) .
+                'SendWhatsAppTemplate: sent ' . $sent . '/' . $attempted .
                 ' failed: ' . implode('; ', $errors)
             );
         }

@@ -17,21 +17,28 @@ use Espo\Entities\Email as EmailEntity;
 use Espo\Entities\EmailAddress;
 use Espo\Modules\FeatureJourney\Services\ActionContext;
 use Espo\Modules\FeatureJourney\Services\JourneyEmailToken;
+use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Repositories\EmailAddress as EmailAddressRepository;
-use Espo\Tools\EmailTemplate\Data as EmailTemplateData;
 use Espo\Tools\EmailTemplate\Params as EmailTemplateParams;
 use Espo\Tools\EmailTemplate\Service as EmailTemplateService;
 use Throwable;
 
+/**
+ * Sends the email to every sendable address of each person on the target: the
+ * target itself, or each contact in an Account's Contatos ({@see JourneyTargetPeople}),
+ * rendered per person (`{Contact.firstName}`, `{Account.name}`). A `to` override sends
+ * once, against the target.
+ */
 class SendEmail implements Action
 {
     public function __construct(
         private EntityManager $entityManager,
         private EmailSender $emailSender,
         private TenantGuard $tenantGuard,
+        private JourneyTargetPeople $people,
         private EmailTemplateService $emailTemplateService,
         private RecordServiceContainer $recordServiceContainer,
         private GroupAccountFactory $groupAccountFactory,
@@ -67,13 +74,27 @@ class SendEmail implements Action
             );
         }
 
-        /** @var list<Attachment> $attachmentList */
-        $attachmentList = [];
+        // A `to` override is one fixed delivery; otherwise every person on the target
+        // (an Account's Contatos) gets their own email, rendered for them.
+        $hasOverride = $toOverride !== null && trim($toOverride) !== '';
+        $people = $hasOverride ? [$context->target] : $this->people->forTarget($context->target, $tenantId);
 
-        $recipients = $this->resolveRecipients($context->target, $toOverride);
+        /** @var list<array{0: Entity, 1: list<string>}> $deliveries */
+        $deliveries = [];
 
-        if ($recipients === []) {
-            $this->log->warning('SendEmail action: no recipient on target');
+        foreach ($people as $person) {
+            $recipients = $this->resolveRecipients($person, $hasOverride ? $toOverride : null);
+
+            if ($recipients !== []) {
+                $deliveries[] = [$person, $recipients];
+            }
+        }
+
+        if ($deliveries === []) {
+            $this->log->warning(
+                'SendEmail action: no recipient on ' . $context->target->getEntityType() . '/' .
+                $context->target->getId()
+            );
 
             return;
         }
@@ -84,41 +105,61 @@ class SendEmail implements Action
             $tenantId,
         );
 
-        $templateSubject = $subject;
-        $templateBody = $body;
-        $templateIsHtml = $isHtml;
-
         if ($emailTemplateId) {
             $this->tenantGuard->assertEmailTemplateInTenant($emailTemplateId, $tenantId);
 
             try {
-                try {
-                    $this->recordServiceContainer
-                        ->get($context->target->getEntityType())
-                        ->loadAdditionalFields($context->target);
-                } catch (Throwable $e) {
-                    $this->log->warning(
-                        'SendEmail: loadAdditionalFields skipped: ' . $e->getMessage()
-                    );
-                }
-
-                // Render once against primary/first recipient for shared body/subject.
-                $data = EmailTemplateData::create()
-                    ->withParent($context->target)
-                    ->withParentId($context->target->getId())
-                    ->withParentType($context->target->getEntityType())
-                    ->withEmailAddress($recipients[0])
-                    ->withEntityHash([
-                        $context->target->getEntityType() => $context->target,
-                    ]);
-
-                $result = $this->emailTemplateService->process(
-                    $emailTemplateId,
-                    $data,
-                    EmailTemplateParams::create()
-                        ->withApplyAcl(false)
-                        ->withCopyAttachments(true)
+                $this->recordServiceContainer
+                    ->get($context->target->getEntityType())
+                    ->loadAdditionalFields($context->target);
+            } catch (Throwable $e) {
+                $this->log->warning(
+                    'SendEmail: loadAdditionalFields skipped: ' . $e->getMessage()
                 );
+            }
+        }
+
+        /** @var list<Attachment> $paramAttachments */
+        $paramAttachments = [];
+
+        if (!empty($params['attachmentsIds']) && is_array($params['attachmentsIds'])) {
+            foreach ($params['attachmentsIds'] as $attId) {
+                if (!is_string($attId) || $attId === '') {
+                    continue;
+                }
+                $att = $this->entityManager->getEntityById(Attachment::ENTITY_TYPE, $attId);
+                if ($att instanceof Attachment) {
+                    $paramAttachments[] = $att;
+                }
+            }
+        }
+
+        $errors = [];
+        $sent = 0;
+        $total = 0;
+
+        foreach ($deliveries as [$person, $recipients]) {
+            $total += count($recipients);
+            $templateSubject = $subject;
+            $templateBody = $body;
+            $templateIsHtml = $isHtml;
+            $attachmentList = [];
+
+            if ($emailTemplateId) {
+                try {
+                    $result = $this->emailTemplateService->process(
+                        $emailTemplateId,
+                        JourneyTargetPeople::emailTemplateData($context->target, $person, $recipients[0]),
+                        EmailTemplateParams::create()
+                            ->withApplyAcl(false)
+                            ->withCopyAttachments(true)
+                    );
+                } catch (Throwable $e) {
+                    $errors[] = $person->get('name') . ': ' . $e->getMessage();
+                    $this->log->error('SendEmail: template process failed: ' . $e->getMessage());
+
+                    continue;
+                }
 
                 if ($result->getSubject() !== '') {
                     $templateSubject = $result->getSubject();
@@ -128,44 +169,28 @@ class SendEmail implements Action
                 }
                 $templateIsHtml = $result->isHtml();
                 $attachmentList = $result->getAttachmentList();
-            } catch (Throwable $e) {
-                $this->log->error('SendEmail: template process failed: ' . $e->getMessage());
-                throw $e;
             }
-        }
 
-        if (!empty($params['attachmentsIds']) && is_array($params['attachmentsIds'])) {
-            foreach ($params['attachmentsIds'] as $attId) {
-                if (!is_string($attId) || $attId === '') {
-                    continue;
+            $attachmentList = [...$attachmentList, ...$paramAttachments];
+
+            foreach ($recipients as $to) {
+                try {
+                    $this->sendOne(
+                        $context,
+                        $to,
+                        $fromAddress,
+                        $templateSubject,
+                        $templateBody,
+                        $templateIsHtml,
+                        $attachmentList,
+                        $smtpParams,
+                        $senderParams,
+                    );
+                    $sent++;
+                } catch (Throwable $e) {
+                    $errors[] = $to . ': ' . $e->getMessage();
+                    $this->log->error('SendEmail action failed for ' . $to . ': ' . $e->getMessage());
                 }
-                $att = $this->entityManager->getEntityById(Attachment::ENTITY_TYPE, $attId);
-                if ($att instanceof Attachment) {
-                    $attachmentList[] = $att;
-                }
-            }
-        }
-
-        $errors = [];
-        $sent = 0;
-
-        foreach ($recipients as $to) {
-            try {
-                $this->sendOne(
-                    $context,
-                    $to,
-                    $fromAddress,
-                    $templateSubject,
-                    $templateBody,
-                    $templateIsHtml,
-                    $attachmentList,
-                    $smtpParams,
-                    $senderParams,
-                );
-                $sent++;
-            } catch (Throwable $e) {
-                $errors[] = $to . ': ' . $e->getMessage();
-                $this->log->error('SendEmail action failed for ' . $to . ': ' . $e->getMessage());
             }
         }
 
@@ -175,7 +200,7 @@ class SendEmail implements Action
 
         if ($errors !== []) {
             throw new Error(
-                'SendEmail: sent ' . $sent . '/' . count($recipients) .
+                'SendEmail: sent ' . $sent . '/' . $total .
                 ' failed: ' . implode('; ', $errors)
             );
         }

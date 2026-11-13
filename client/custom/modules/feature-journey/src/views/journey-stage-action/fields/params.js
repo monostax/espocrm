@@ -776,6 +776,9 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                 {
                     model: this._helperModel,
                     name: name,
+                    resolveTargetEntityType: () => this.cfHelper
+                        .resolveContext()
+                        .then((ctx) => (ctx && ctx.entityType) || null),
                     el:
                         this.getSelector() +
                         ' [data-param="' +
@@ -851,6 +854,9 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                 {
                     model: this._helperModel,
                     name: name,
+                    resolveTargetEntityType: () => this.cfHelper
+                        .resolveContext()
+                        .then((ctx) => (ctx && ctx.entityType) || null),
                     el:
                         this.getSelector() +
                         ' [data-param="' +

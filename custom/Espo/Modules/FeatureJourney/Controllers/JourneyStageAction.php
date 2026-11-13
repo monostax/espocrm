@@ -11,8 +11,10 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Record\ServiceContainer as RecordServiceContainer;
 use Espo\Core\Templates\Controllers\Base;
+use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
 use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
-use Espo\Tools\EmailTemplate\Data as EmailTemplateData;
+use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters;
 use Espo\Tools\EmailTemplate\Params as EmailTemplateParams;
 use Espo\Tools\EmailTemplate\Service as EmailTemplateService;
 use stdClass;
@@ -50,26 +52,26 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
 
         /** @var JourneyWhatsAppOutbound $outbound */
         $outbound = $this->injectableFactory->create(JourneyWhatsAppOutbound::class);
-        $resolved = $outbound->resolveParameterMapping($mapping, $target);
-        $resolvedHeader = $outbound->resolveParameterMapping($data->headerParameterMapping ?? [], $target);
-        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved($resolved, true);
-        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved($resolvedHeader, true);
-        $renderedHeader = (string) ($data->templateHeader ?? '');
-        foreach ($resolvedHeader as $num => $value) {
-            $renderedHeader = str_replace('{{' . $num . '}}', $value, $renderedHeader);
-        }
 
-        $renderedBody = $templateBody;
+        $previews = [];
+        $firstError = null;
 
-        if ($renderedBody !== '' && $resolved !== []) {
-            foreach ($resolved as $num => $value) {
-                $renderedBody = str_replace('{{' . $num . '}}', $value, $renderedBody);
+        foreach ($this->previewPeople($target) as $person) {
+            try {
+                $previews[] = $this->renderWhatsAppFor($outbound, $data, $mapping, $templateBody, $target, $person);
+            } catch (Throwable $e) {
+                $firstError ??= $e;
+                $previews[] = $this->personRef($outbound, $person) + ['error' => $e->getMessage()];
             }
         }
 
-        \Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters::assertResolved(
-            array_filter([$renderedHeader, $renderedBody], static fn ($text) => $text !== ''), true
-        );
+        $ok = array_values(array_filter($previews, static fn (array $p) => !isset($p['error'])));
+
+        if ($ok === []) {
+            throw $firstError ?? new BadRequest('Nothing to render.');
+        }
+
+        $first = $ok[0];
 
         $headerUrl = isset($data->headerMediaUrl) ? trim((string) $data->headerMediaUrl) : '';
         $headerType = isset($data->headerMediaType) ? trim((string) $data->headerMediaType) : '';
@@ -83,10 +85,11 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
                 ? (string) $data->templateCategory
                 : null,
             'templateBody' => $templateBody,
-            'resolvedParams' => (object) $resolved,
-            'resolvedHeaderParams' => (object) $resolvedHeader,
-            'renderedHeader' => $renderedHeader,
-            'renderedBody' => $renderedBody,
+            'resolvedParams' => $first['resolvedParams'],
+            'resolvedHeaderParams' => $first['resolvedHeaderParams'],
+            'renderedHeader' => $first['renderedHeader'],
+            'renderedBody' => $first['renderedBody'],
+            'people' => $previews,
             'headerMediaUrl' => $headerUrl !== '' ? $headerUrl : null,
             'headerMediaType' => $headerType !== '' ? $headerType : null,
             'targetEntityType' => $target->getEntityType(),
@@ -150,43 +153,147 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
             $emailAddress = is_string($raw) ? trim($raw) : '';
         }
 
-        $templateData = EmailTemplateData::create()
-            ->withParent($target)
-            ->withParentId($target->getId())
-            ->withParentType($target->getEntityType())
-            ->withEntityHash([
-                $target->getEntityType() => $target,
-            ]);
-
-        if ($emailAddress !== '') {
-            $templateData = $templateData->withEmailAddress($emailAddress);
-        }
-
         /** @var EmailTemplateService $service */
         $service = $this->injectableFactory->create(EmailTemplateService::class);
+        /** @var JourneyWhatsAppOutbound $outbound */
+        $outbound = $this->injectableFactory->create(JourneyWhatsAppOutbound::class);
 
-        $result = $service->process(
-            $emailTemplateId,
-            $templateData,
-            EmailTemplateParams::create()
-                ->withApplyAcl(true)
-                ->withCopyAttachments(false)
-        );
+        $previews = [];
+        $firstError = null;
 
-        $map = $result->getValueMap();
+        foreach ($this->previewPeople($target) as $person) {
+            $address = $person === $target ? $emailAddress : '';
+
+            try {
+                $map = $service->process(
+                    $emailTemplateId,
+                    JourneyTargetPeople::emailTemplateData($target, $person, $address !== '' ? $address : null),
+                    EmailTemplateParams::create()
+                        ->withApplyAcl(true)
+                        ->withCopyAttachments(false)
+                )->getValueMap();
+            } catch (Throwable $e) {
+                $firstError ??= $e;
+                $previews[] = $this->personRef($outbound, $person) + ['error' => $e->getMessage()];
+
+                continue;
+            }
+
+            $previews[] = $this->personRef($outbound, $person) + [
+                'subject' => $map->subject ?? null,
+                'body' => $map->body ?? null,
+                'isHtml' => (bool) ($map->isHtml ?? true),
+                'attachmentsIds' => $map->attachmentsIds ?? [],
+                'attachmentsNames' => $map->attachmentsNames ?? (object) [],
+            ];
+        }
+
+        $ok = array_values(array_filter($previews, static fn (array $p) => !isset($p['error'])));
+
+        if ($ok === []) {
+            throw $firstError ?? new BadRequest('Nothing to render.');
+        }
+
+        $first = $ok[0];
 
         return (object) [
             'emailTemplateId' => $emailTemplateId,
             'emailTemplateName' => (string) ($template->get('name') ?? ''),
-            'subject' => $map->subject ?? null,
-            'body' => $map->body ?? null,
-            'isHtml' => (bool) ($map->isHtml ?? true),
-            'attachmentsIds' => $map->attachmentsIds ?? [],
-            'attachmentsNames' => $map->attachmentsNames ?? (object) [],
+            'subject' => $first['subject'],
+            'body' => $first['body'],
+            'isHtml' => $first['isHtml'],
+            'attachmentsIds' => $first['attachmentsIds'],
+            'attachmentsNames' => $first['attachmentsNames'],
+            'people' => $previews,
             'targetEntityType' => $target->getEntityType(),
             'targetId' => $target->getId(),
             'targetName' => (string) ($target->get('name') ?? ''),
             'sent' => false,
+        ];
+    }
+
+    /**
+     * Who a preview renders for: the target, or the readable contacts in an
+     * Account's Contatos (the same people the action sends to).
+     *
+     * @return list<\Espo\ORM\Entity>
+     */
+    private function previewPeople(\Espo\ORM\Entity $target): array
+    {
+        /** @var JourneyTargetPeople $people */
+        $people = $this->injectableFactory->create(JourneyTargetPeople::class);
+
+        if (!$people->fansOut($target)) {
+            return [$target];
+        }
+
+        /** @var TenantGuard $tenantGuard */
+        $tenantGuard = $this->injectableFactory->create(TenantGuard::class);
+        $list = array_values(array_filter(
+            $people->forTarget($target, $tenantGuard->requireTenantId($target, 'target')),
+            fn (\Espo\ORM\Entity $person) => $this->acl->check($person, 'read')
+        ));
+
+        if ($list === []) {
+            throw new BadRequest('This ' . $target->getEntityType() . ' has no contacts to send to.');
+        }
+
+        return $list;
+    }
+
+    /**
+     * @return array{personType: string, personId: string, personName: string}
+     */
+    private function personRef(JourneyWhatsAppOutbound $outbound, \Espo\ORM\Entity $person): array
+    {
+        return [
+            'personType' => $person->getEntityType(),
+            'personId' => (string) $person->getId(),
+            'personName' => $outbound->displayName($person),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $mapping
+     * @return array<string, mixed>
+     */
+    private function renderWhatsAppFor(
+        JourneyWhatsAppOutbound $outbound,
+        object $data,
+        array $mapping,
+        string $templateBody,
+        \Espo\ORM\Entity $target,
+        \Espo\ORM\Entity $person,
+    ): array {
+        $templatePerson = $person === $target ? null : $person;
+        $resolved = $outbound->resolveParameterMapping($mapping, $target, $templatePerson);
+        $resolvedHeader = $outbound->resolveParameterMapping(
+            $data->headerParameterMapping ?? [],
+            $target,
+            $templatePerson,
+        );
+        TemplateParameters::assertResolved($resolved, true);
+        TemplateParameters::assertResolved($resolvedHeader, true);
+
+        $renderedHeader = (string) ($data->templateHeader ?? '');
+        foreach ($resolvedHeader as $num => $value) {
+            $renderedHeader = str_replace('{{' . $num . '}}', $value, $renderedHeader);
+        }
+
+        $renderedBody = $templateBody;
+        foreach ($resolved as $num => $value) {
+            $renderedBody = str_replace('{{' . $num . '}}', $value, $renderedBody);
+        }
+
+        TemplateParameters::assertResolved(
+            array_filter([$renderedHeader, $renderedBody], static fn ($text) => $text !== ''), true
+        );
+
+        return $this->personRef($outbound, $person) + [
+            'resolvedParams' => (object) $resolved,
+            'resolvedHeaderParams' => (object) $resolvedHeader,
+            'renderedHeader' => $renderedHeader,
+            'renderedBody' => $renderedBody,
         ];
     }
 

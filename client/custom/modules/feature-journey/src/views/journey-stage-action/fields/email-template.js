@@ -10,7 +10,9 @@
 
 /**
  * JourneyStageAction sendEmail: EmailTemplate link (actual filter) +
- * dry-run render preview against a sample Contact (no send).
+ * dry-run render preview against a sample record of the journey's target type
+ * (no send). An Account previews once per contact in its Contatos (the people
+ * the action sends to), with a tab per person.
  */
 define("feature-journey:views/journey-stage-action/fields/email-template", [
     "views/fields/base",
@@ -44,6 +46,20 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                     '{{/if}}' +
                     '{{#if hasRenderResult}}' +
                     '<div class="journey-email-render-result" style="margin-top:10px">' +
+                        '{{#if hasPeople}}' +
+                        '<div style="margin-bottom:8px">' +
+                            '<span class="text-muted small" style="margin-right:6px">{{peopleLabel}}</span>' +
+                            '{{#each people}}' +
+                            '<button type="button" class="btn btn-xs {{#if selected}}btn-primary{{else}}btn-default{{/if}} journey-preview-person" ' +
+                                'data-index="{{index}}" style="margin:0 4px 4px 0">' +
+                                '{{#if error}}<span class="fas fa-exclamation-triangle"></span> {{/if}}{{label}}' +
+                            '</button>' +
+                            '{{/each}}' +
+                        '</div>' +
+                        '{{/if}}' +
+                        '{{#if personError}}' +
+                        '<div class="text-danger small"><span class="fas fa-exclamation-triangle"></span> {{personError}}</div>' +
+                        '{{else}}' +
                         '<div class="text-muted small" style="margin-bottom:4px">{{subjectLabel}}</div>' +
                         '<div style="font-weight:600;margin-bottom:8px">{{renderedSubject}}</div>' +
                         '<div class="text-muted small" style="margin-bottom:4px">{{previewLabel}}</div>' +
@@ -56,6 +72,7 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                         '{{#if hasAttachments}}' +
                         '<div class="text-muted small" style="margin-top:8px">{{attachmentsLabel}}: {{attachmentsSummary}}</div>' +
                         '{{/if}}' +
+                        '{{/if}}' +
                         '<div class="text-muted small" style="margin-top:6px">' +
                             '{{templateMetaLabel}}: <code>{{previewTemplateName}}</code>' +
                         '</div>' +
@@ -67,6 +84,8 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
         isRendering: false,
         renderError: null,
         renderResult: null,
+        previewIndex: 0,
+        testScope: "Contact",
         _testModel: null,
         _htmlBody: null,
 
@@ -123,15 +142,28 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
             data.hasRenderResult = !!result;
 
             if (result) {
-                data.renderedSubject = result.subject || "";
-                data.renderedBody = result.body || "";
-                data.isHtml = !!result.isHtml;
+                const people = result.people || [];
+                const current = this.currentPreview();
+
+                data.peopleLabel = this.translate("previewPeople", "labels", "JourneyStageAction");
+                data.hasPeople = people.length > 1 ||
+                    (people.length === 1 && people[0].personType !== result.targetEntityType);
+                data.people = people.map((person, index) => ({
+                    index: index,
+                    label: person.personName || person.personId,
+                    selected: index === this.previewIndex,
+                    error: !!person.error,
+                }));
+                data.personError = current.error || null;
+                data.renderedSubject = current.subject || "";
+                data.renderedBody = current.body || "";
+                data.isHtml = !!current.isHtml;
                 data.previewTemplateName =
                     result.emailTemplateName ||
                     this.model.get("emailTemplateName") ||
                     "";
-                const ids = result.attachmentsIds || [];
-                const names = result.attachmentsNames || {};
+                const ids = current.attachmentsIds || [];
+                const names = current.attachmentsNames || {};
                 data.hasAttachments = ids.length > 0;
                 data.attachmentsSummary = ids
                     .map((id) => names[id] || id)
@@ -154,6 +186,33 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                 testTargetId: null,
                 testTargetName: null,
             });
+
+            const resolve = this.options.resolveTargetEntityType;
+
+            if (resolve) {
+                resolve().then((entityType) => {
+                    if (!entityType || entityType === this.testScope ||
+                        !this.getMetadata().get(["scopes", entityType, "entity"])) {
+                        return;
+                    }
+
+                    this.testScope = entityType;
+                    this.renderResult = null;
+                    this._htmlBody = null;
+                    this._testModel.set({testTargetId: null, testTargetName: null});
+
+                    if (this.isRendered()) {
+                        this.reRender();
+                    }
+                }).catch(() => {});
+            }
+        },
+
+        currentPreview: function () {
+            const result = this.renderResult || {};
+            const people = result.people || [];
+
+            return people[this.previewIndex] || result;
         },
 
         afterRender: function () {
@@ -206,7 +265,7 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                 {
                     model: this._testModel,
                     name: "testTarget",
-                    foreignScope: "Contact",
+                    foreignScope: this.testScope,
                     el: this.getSelector() + " .journey-email-test-target",
                     mode: "edit",
                     defs: {
@@ -226,6 +285,17 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                 .on("click.emailRender", (e) => {
                     e.preventDefault();
                     this.runRenderTest();
+                });
+
+            this.$el
+                .find(".journey-preview-person")
+                .off("click.emailPerson")
+                .on("click.emailPerson", (e) => {
+                    e.preventDefault();
+                    this.previewIndex = parseInt($(e.currentTarget).attr("data-index"), 10) || 0;
+                    const current = this.currentPreview();
+                    this._htmlBody = current.isHtml ? current.body || "" : null;
+                    this.reRender();
                 });
 
             if (this.renderResult && this.renderResult.isHtml && this._htmlBody != null) {
@@ -299,7 +369,7 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                 "JourneyStageAction/action/renderEmailTemplate",
                 {
                     emailTemplateId: templateId,
-                    targetEntityType: "Contact",
+                    targetEntityType: this.testScope,
                     targetId: targetId,
                 }
             )
@@ -307,8 +377,12 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                     this.isRendering = false;
                     this.renderError = null;
                     this.renderResult = result || null;
-                    this._htmlBody =
-                        result && result.isHtml ? result.body || "" : null;
+                    this.previewIndex = Math.max(
+                        0,
+                        ((result && result.people) || []).findIndex((person) => !person.error)
+                    );
+                    const current = this.currentPreview();
+                    this._htmlBody = current.isHtml ? current.body || "" : null;
                     this.reRender();
                 })
                 .catch((xhr) => {
