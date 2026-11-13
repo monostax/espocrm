@@ -56,18 +56,23 @@ final class AdmissionConfiguration
             $max = (int) ($rate['ai_max_requests'] ?? 0);
             if (!$rate['ai_model_credit_rate_id'] || $max < 1 || $max > 100) throw new ServiceUnavailable('CRM agreement has no approved AI execution policy.');
             $query = $pdo->prepare('SELECT policy_id FROM ai_model_credit_rate WHERE id=? AND deleted=FALSE');
-            // The main model, or the agreement's optional stream-agent model (mural
-            // mentions and AI Session), whichever the caller asks for.
-            $policyId = null;
-            foreach (array_filter([$rate['ai_model_credit_rate_id'], $rate['ai_stream_model_credit_rate_id'] ?? null]) as $rateId) {
+            // The main model, the agreement's optional stream-agent model (mural
+            // mentions and AI Session) or a model users may pick, whichever the caller asks for.
+            $policyId = $main = $selected = null;
+            foreach (array_filter([$rate['ai_model_credit_rate_id'], $rate['ai_stream_model_credit_rate_id'] ?? null,
+                ...AgreementModels::selectableFromColumn($rate['ai_selectable_model_credit_rate_ids'] ?? null)]) as $rateId) {
                 $query->execute([$rateId]);
                 $candidate = $query->fetchColumn();
                 if (!is_string($candidate)) throw new ServiceUnavailable('Approved model rate is unavailable.');
                 $policy = $this->catalog->resolve($candidate);
-                if ($policy->rate->provider === $input->provider && $policy->rate->model === $input->model) { $policyId = $candidate; break; }
+                $main ??= $policy;
+                if ($policy->rate->provider === $input->provider && $policy->rate->model === $input->model) { $policyId = $candidate; $selected = $policy; break; }
             }
             if ($policyId === null) throw Conflict::createWithBody('Configured model does not match this caller.', '{"reason":"agreement_required"}');
             $result = ['billingRateId' => $rate['id'], 'modelRateId' => $policyId, 'maxRequests' => $max];
+            // A model from another provider still reads attachments with the main model, at
+            // its rate. Same-provider selections keep the exact response deployed callers parse.
+            if ($selected->rate->provider !== $main->rate->provider) $result['helperPolicy'] = $main->receipt();
             if ($rate['ai_native_search_model_credit_rate_id'] ?? null) {
                 $query->execute([$rate['ai_native_search_model_credit_rate_id']]);
                 $nativePolicyId = $query->fetchColumn();

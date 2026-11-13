@@ -85,6 +85,7 @@ class AiSessionInbox
             $session = $this->records->get('AiSession')->create((object) [
                 'name' => 'New chat', 'chatwootAccountId' => $account->getId(),
                 'aiAgentMembershipId' => $body->aiAgentMembershipId ?? null,
+                ...(isset($body->aiModel) ? ['aiModel' => $body->aiModel] : []),
             ])->getEntity();
             if (!property_exists($body, 'post')) return $this->present($session);
             // Reload server-owned fields stripped by the record service's output ACL.
@@ -104,7 +105,7 @@ class AiSessionInbox
     public function putActionUpdate(Request $request): object
     {
         $session = $this->record($request);
-        $patch = (object) array_intersect_key((array) $request->getParsedBody(), array_flip(['name', 'aiAgentMembershipId', 'isPinned']));
+        $patch = (object) array_intersect_key((array) $request->getParsedBody(), array_flip(['name', 'aiAgentMembershipId', 'isPinned', 'aiModel']));
         $params = (new \Espo\Core\Record\UpdateParamsFetcher())->fetch($request);
         return $this->em->getTransactionManager()->run(function () use ($session, $patch, $params): object {
             $this->em->getRDBRepository('AiSession')->where(['id' => $session->getId()])->forUpdate()->findOne();
@@ -184,6 +185,8 @@ class AiSessionInbox
                 'aiAgentMembershipId' => $agent->getId(), 'chatwootAccountCrmId' => $account->getId(), 'crmTenantId' => $session->get('tenantId'),
             ]];
             $data->aiSessionSubmission = true;
+            // The model chosen when this turn was sent; a later switch never reroutes it.
+            if (is_string($session->get('aiModel')) && $session->get('aiModel') !== '') $data->aiSessionModel = $session->get('aiModel');
             $note->setData($data);
             $this->em->saveEntity($note);
             $this->queue->enqueue($note);
@@ -215,6 +218,8 @@ class AiSessionInbox
             $this->acl->checkField('AiSession', 'isPinned', 'edit');
         $data->canChangeAgent = $canEdit && $this->acl->checkField('AiSession', 'aiAgentMembership') &&
             $this->acl->checkField('AiSession', 'aiAgentMembership', 'edit');
+        $data->canChangeModel = $canEdit && $this->acl->checkField('AiSession', 'aiModel') &&
+            $this->acl->checkField('AiSession', 'aiModel', 'edit');
         return $data;
     }
 }

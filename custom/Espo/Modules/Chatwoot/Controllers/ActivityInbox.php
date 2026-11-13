@@ -157,6 +157,7 @@ class ActivityInbox
             'opportunityChatwootAccountId' => (int) $request->getQueryParam('accountId'),
             'attachmentsIds' => $attachmentsIds,
             'postEditorState' => $body->postEditorState ?? null,
+            ...(isset($body->aiModel) ? ['opportunityAiModel' => $body->aiModel] : []),
         ])->getEntity();
         return $note->getValueMap();
     }

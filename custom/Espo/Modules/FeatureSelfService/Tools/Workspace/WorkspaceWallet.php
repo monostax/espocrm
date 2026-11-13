@@ -39,6 +39,8 @@ use Throwable;
  *    "aiMaxRequests": 100, "trialCredits": "100"}
  * `aiStreamModelCreditRateId` (optional) is the stream agent's model: mural
  * mentions and AI Session (Gemini 4 Hydrogen since 2026-11-13).
+ * `aiSelectableModelCreditRateIds` (optional) lists the models users may pick
+ * per AI Session or mention (decided 2026-11-13).
  * Without it, new workspaces keep the legacy run cap.
  */
 class WorkspaceWallet
@@ -92,6 +94,10 @@ class WorkspaceWallet
         }
         if (!empty($settings['aiStreamModelCreditRateId'])) {
             $agreement->aiStreamModelCreditRateId = (string) $settings['aiStreamModelCreditRateId'];
+        }
+        // Models users may pick per AI Session or mention, in picker order.
+        if (!empty($settings['aiSelectableModelCreditRateIds']) && is_array($settings['aiSelectableModelCreditRateIds'])) {
+            $agreement->aiSelectableModelCreditRateIds = array_values(array_map('strval', $settings['aiSelectableModelCreditRateIds']));
         }
 
         try {

@@ -8,6 +8,7 @@ use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Modules\FeatureCredits\Accounting\AgreementModels;
 use Espo\Modules\FeatureCredits\Accounting\ExecutionRouting;
 use Espo\Modules\FeatureCredits\Accounting\AuthorizationInput;
 use Espo\Modules\FeatureCredits\Accounting\AdmissionConfiguration;
@@ -56,6 +57,18 @@ final class CreditExecution
         $execution = $input->execution;
         if ($input instanceof AuthorizationInput) {
             $policy = $this->catalog->resolve($input->modelRateId);
+            // A globally published policy grants nothing by itself: the operation's agreement
+            // must price it (main, stream, selectable or native search). Links are insert-only.
+            $pdo = $this->entityManager->getPDO();
+            if ($input->operation === 'admit') {
+                AgreementModels::requireLinked($pdo, $input->tenantId, (string) $input->billingRateId, $input->modelRateId);
+            } else {
+                $usage = $pdo->prepare('SELECT billing_rate_id FROM credit_usage WHERE id=? AND tenant_id=? AND deleted=FALSE');
+                $usage->execute([$input->usageId, $input->tenantId]);
+                $agreementId = $usage->fetchColumn();
+                // An unknown operation keeps its existing NotFound from request authorization.
+                if (is_string($agreementId)) AgreementModels::requireLinked($pdo, $input->tenantId, $agreementId, $input->modelRateId);
+            }
             if ($input->operation === 'admit') {
                 // A frozen self-service workspace (trial over, invoice overdue) starts no
                 // new AI work. Legacy admission already refuses it before routing here;

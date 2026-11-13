@@ -61,6 +61,7 @@ class ContactInbox
             'isInternal' => true, 'opportunityThreadRootId' => $body->rootId ?? null,
             'opportunityChatwootAccountId' => (int) $request->getQueryParam('accountId'),
             'attachmentsIds' => $attachments, 'postEditorState' => $body->postEditorState ?? null,
+            ...(isset($body->aiModel) ? ['opportunityAiModel' => $body->aiModel] : []),
         ])->getEntity()->getValueMap();
     }
 

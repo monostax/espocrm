@@ -138,7 +138,20 @@ trait ExecutionRoutingCases
             $pdo->prepare('INSERT INTO ai_model_credit_rate (id, name, policy_id, definition, created_at) VALUES (?,?,?,?,?)')
                 ->execute([substr($id, 0, 17), 'fixture', $id, json_encode($definition), $this->now]);
         }
+        $this->priceFixtureCatalog($pdo);
         return $this->entityCommand($pdo, $input);
+    }
+
+    /** Signed admission/authorization only uses models an agreement prices (2026-11-13). These
+     * transport fixtures predate that rule: their agreements price the fixture catalog. */
+    private function priceFixtureCatalog(PDO $pdo): void
+    {
+        $rates = array_map('strval', $pdo->query('SELECT id FROM ai_model_credit_rate')->fetchAll(PDO::FETCH_COLUMN));
+        $update = $pdo->prepare('UPDATE tenant_credit_billing_rate SET ai_selectable_model_credit_rate_ids = ? WHERE id = ?');
+        foreach ($pdo->query('SELECT id, ai_selectable_model_credit_rate_ids FROM tenant_credit_billing_rate')->fetchAll(PDO::FETCH_ASSOC) as $agreement) {
+            $ids = array_values(array_unique([...json_decode($agreement['ai_selectable_model_credit_rate_ids'] ?: '[]', true), ...$rates]));
+            $update->execute([json_encode($ids), $agreement['id']]);
+        }
     }
 
     private function entityCommand(PDO $pdo, object $input): array

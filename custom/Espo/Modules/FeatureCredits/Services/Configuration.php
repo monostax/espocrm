@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureCredits\Services;
 use Brick\Math\BigDecimal;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Modules\FeatureCredits\Accounting\AgreementModels;
 use Espo\Modules\FeatureCredits\Accounting\Amount;
 use Espo\Modules\FeatureCredits\Accounting\Clock;
 use Espo\Modules\FeatureCredits\Accounting\GrantInput;
@@ -40,21 +41,24 @@ final class Configuration
         }
         $pdo = $this->entityManager->getPDO();
         if ($kind === 'model') {
-            $q = $pdo->prepare('SELECT policy_id FROM ai_model_credit_rate WHERE id=? AND deleted=FALSE');
+            $q = $pdo->prepare('SELECT policy_id, display_name, image_input FROM ai_model_credit_rate WHERE id=? AND deleted=FALSE');
             $q->execute([$id]);
-            $policyId = $q->fetchColumn();
-            if (!is_string($policyId)) throw new NotFound('Unknown model policy.');
-            $policy = $this->catalog->resolve($policyId);
+            $row = $q->fetch(PDO::FETCH_ASSOC);
+            if (!$row) throw new NotFound('Unknown model policy.');
+            $policy = $this->catalog->resolve($row['policy_id']);
             return ['kind' => $kind, 'id' => $id, 'data' => [
                 'provider' => $policy->rate->provider, 'model' => $policy->rate->model,
                 'multiplier' => (string) $policy->rate->multiplier,
                 'inputTokenBound' => $policy->inputTokenBound, 'outputTokenLimit' => $policy->outputTokenLimit,
                 'boundProfile' => $policy->boundProfile, 'formula' => $policy->rate->formula,
+                // Picker metadata, outside the priced policy; shown only once set.
+                ...(is_string($row['display_name']) ? ['displayName' => $row['display_name']] : []),
+                ...($row['image_input'] ? ['imageInput' => true] : []),
             ]];
         }
         $q = $pdo->prepare('SELECT r.version, r.effective_from, r.effective_until, r.currency,
             r.credit_unit_price, r.monthly_credits, r.ai_model_credit_rate_id,
-            r.ai_native_search_model_credit_rate_id, r.ai_stream_model_credit_rate_id, r.ai_max_requests FROM tenant_credit_billing_rate r
+            r.ai_native_search_model_credit_rate_id, r.ai_stream_model_credit_rate_id, r.ai_max_requests, r.id FROM tenant_credit_billing_rate r
             INNER JOIN tenant t ON t.id=r.tenant_id AND t.deleted=FALSE
             WHERE r.id=? AND r.tenant_id=? AND r.deleted=FALSE');
         $q->execute([$id, $tenantId]);
@@ -68,12 +72,22 @@ final class Configuration
             'aiModelCreditRateId' => $row['ai_model_credit_rate_id'],
             'aiNativeSearchModelCreditRateId' => $row['ai_native_search_model_credit_rate_id'],
             'aiStreamModelCreditRateId' => $row['ai_stream_model_credit_rate_id'],
+            'aiSelectableModelCreditRateIds' => AgreementModels::selectableRateIds($pdo, $row['id']),
             'aiMaxRequests' => (int) $row['ai_max_requests'],
         ]];
     }
 
     public function publishModel(stdClass $definition, ?string $actorId = null): array
     {
+        // Picker metadata travels beside the priced definition and never enters its policy id.
+        $definition = clone $definition;
+        $display = property_exists($definition, 'displayName') ? $definition->displayName : null;
+        $imageInput = property_exists($definition, 'imageInput') ? $definition->imageInput : null;
+        unset($definition->displayName, $definition->imageInput);
+        if (($display !== null && (!is_string($display) || trim($display) === '' || mb_strlen($display) > 200)) ||
+            ($imageInput !== null && !is_bool($imageInput))) {
+            throw new InvalidArgumentException('Invalid model display name or image-input flag.');
+        }
         $policy = new AiModelPolicy(get_object_vars($definition));
         $pdo = $this->entityManager->getPDO();
         if ($pdo->inTransaction()) throw new LogicException('Policy publication requires its own write boundary.');
@@ -85,9 +99,10 @@ final class Configuration
         };
         if (!$row = $read()) {
             try {
-                $pdo->prepare('INSERT INTO ai_model_credit_rate (id, name, policy_id, definition, created_at, created_by_id)
-                    VALUES (?,?,?,?,?,?)')->execute([RecordId::generate(), $policy->rate->model, $policy->rate->id,
-                        json_encode(GrantInput::canonical($definition), JSON_THROW_ON_ERROR), $this->clock->now(), $actorId]);
+                $pdo->prepare('INSERT INTO ai_model_credit_rate (id, name, policy_id, definition, created_at, created_by_id, display_name, image_input)
+                    VALUES (?,?,?,?,?,?,?,?)')->execute([RecordId::generate(), $policy->rate->model, $policy->rate->id,
+                        json_encode(GrantInput::canonical($definition), JSON_THROW_ON_ERROR), $this->clock->now(), $actorId,
+                        $display, $imageInput ? 1 : 0]);
             } catch (PDOException $e) {
                 // The unique policy hash serializes simultaneous publication of
                 // identical definitions without a separate mutable catalog lock.
@@ -97,14 +112,18 @@ final class Configuration
         }
         if (!$row || $row['deleted']) throw new Conflict('Deleted model policy cannot be republished.');
         $this->catalog->resolve($policy->rate->id); // Detect a corrupt/edited definition.
+        // Republishing the same priced policy may relabel it; prices stay immutable.
+        if ($display !== null) $pdo->prepare('UPDATE ai_model_credit_rate SET display_name=? WHERE id=?')->execute([$display, $row['id']]);
+        if ($imageInput !== null) $pdo->prepare('UPDATE ai_model_credit_rate SET image_input=? WHERE id=?')->execute([$imageInput ? 1 : 0, $row['id']]);
         return ['id' => $row['id'], 'policyId' => $policy->rate->id, 'policy' => $policy->receipt()];
     }
 
     public function publishAgreement(stdClass $input, ?string $actorId = null, ?string $replacesId = null): array
     {
+        $input = clone $input;
         $fields = ['tenantId', 'version', 'effectiveFrom', 'effectiveUntil', 'currency', 'creditUnitPrice',
             'monthlyCredits', 'aiModelCreditRateId', 'aiMaxRequests'];
-        if (array_diff(array_keys(get_object_vars($input)), [...$fields, 'aiNativeSearchModelCreditRateId', 'aiStreamModelCreditRateId']) || array_diff($fields, array_keys(get_object_vars($input)))) {
+        if (array_diff(array_keys(get_object_vars($input)), [...$fields, 'aiNativeSearchModelCreditRateId', 'aiStreamModelCreditRateId', 'aiSelectableModelCreditRateIds']) || array_diff($fields, array_keys(get_object_vars($input)))) {
             throw new InvalidArgumentException('Complete agreement required.');
         }
         foreach (['tenantId', 'aiModelCreditRateId'] as $field) {
@@ -124,6 +143,18 @@ final class Configuration
             if (!is_string($streamId)) throw new InvalidArgumentException('Invalid stream-agent policy identity.');
             GrantInput::identity($streamId);
         }
+        // Optional models users may pick per AI Session or mention (decided 2026-11-13).
+        // An empty list is the same agreement as none, so it hashes as absent.
+        $selectableIds = $input->aiSelectableModelCreditRateIds ?? [];
+        if (!is_array($selectableIds) || !array_is_list($selectableIds) || count($selectableIds) > 20 ||
+            count(array_unique($selectableIds, SORT_REGULAR)) !== count($selectableIds)) {
+            throw new InvalidArgumentException('Invalid selectable model list.');
+        }
+        foreach ($selectableIds as $selectableId) {
+            if (!is_string($selectableId)) throw new InvalidArgumentException('Invalid selectable model identity.');
+            GrantInput::identity($selectableId);
+        }
+        if (!$selectableIds) unset($input->aiSelectableModelCreditRateIds);
         if ($actorId !== null) GrantInput::identity($actorId);
         if ($replacesId !== null) GrantInput::identity($replacesId);
         if (!is_string($input->version) || !preg_match('/^[a-zA-Z0-9._:-]{1,64}$/D', $input->version) ||
@@ -180,6 +211,21 @@ final class Configuration
                     throw new Conflict('The stream-agent policy must be a different, non-native model.');
                 }
             }
+            // Selection is by caller model: every selectable model must be a distinct,
+            // non-native provider/model, different from the main and stream models.
+            $taken = [$main->rate->provider . '/' . $main->rate->model => true];
+            if ($streamId !== null) $taken[$stream->rate->provider . '/' . $stream->rate->model] = true;
+            foreach ($selectableIds as $selectableId) {
+                $q->execute([$selectableId]);
+                $selectablePolicyId = $q->fetchColumn();
+                if (!is_string($selectablePolicyId)) throw new NotFound('Unknown selectable model policy.');
+                $selectable = $this->catalog->resolve($selectablePolicyId);
+                $key = $selectable->rate->provider . '/' . $selectable->rate->model;
+                if (NativeSearchDebt::permitted($selectable->receipt()) || isset($taken[$key])) {
+                    throw new Conflict('Selectable models must be distinct, non-native models.');
+                }
+                $taken[$key] = true;
+            }
             if ($nativeId !== null) {
                 $q->execute([$nativeId]);
                 $nativePolicyId = $q->fetchColumn();
@@ -208,10 +254,11 @@ final class Configuration
             $pdo->prepare('INSERT INTO tenant_credit_billing_rate
                 (id, tenant_id, version, effective_from, effective_until, currency, credit_unit_price, monthly_credits,
                   ai_model_credit_rate_id, ai_max_requests, configuration_hash, created_at, created_by_id, ai_native_search_model_credit_rate_id,
-                  ai_stream_model_credit_rate_id)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute([$id, $input->tenantId, $input->version, $input->effectiveFrom,
+                  ai_stream_model_credit_rate_id, ai_selectable_model_credit_rate_ids)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute([$id, $input->tenantId, $input->version, $input->effectiveFrom,
                     $input->effectiveUntil, $input->currency, (string) $price, (string) $monthly, $input->aiModelCreditRateId,
-                    $input->aiMaxRequests, $hash, $this->clock->now(), $actorId, $nativeId, $streamId]);
+                    $input->aiMaxRequests, $hash, $this->clock->now(), $actorId, $nativeId, $streamId,
+                    $selectableIds ? json_encode($selectableIds, JSON_THROW_ON_ERROR) : null]);
             $pdo->commit();
             return ['id' => $id, 'version' => $input->version];
         } catch (Throwable $e) {

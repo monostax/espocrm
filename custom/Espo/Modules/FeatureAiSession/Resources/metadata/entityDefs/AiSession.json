@@ -7,6 +7,7 @@
         "aiAgentMembership": { "type": "link", "required": true },
         "titleInitialized": { "type": "bool", "default": false, "readOnly": true },
         "isPinned": { "type": "bool", "default": false },
+        "aiModel": { "type": "varchar", "maxLength": 200 },
         "createdAt": { "type": "datetime", "readOnly": true },
         "modifiedAt": { "type": "datetime", "readOnly": true },
         "createdBy": { "type": "link", "readOnly": true },

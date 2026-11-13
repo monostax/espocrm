@@ -9,7 +9,8 @@ use Espo\Core\Api\{Request, Response};
 use Espo\Core\Exceptions\{BadRequest, Conflict, Forbidden};
 use Espo\Entities\User;
 use Espo\Modules\FeatureAiUsage\Services\Access;
-use Espo\Modules\FeatureCredits\Accounting\{BalanceStatus, Clock, ExecutionRouting, GrantInput};
+use Espo\Modules\FeatureCredits\Accounting\{AgreementModels, BalanceStatus, Clock, ExecutionRouting, GrantInput};
+use Espo\Modules\FeatureCredits\Pricing\AiCatalog;
 use Espo\Modules\FeatureCredits\Accounting\{OperationHistory, OperationHistoryQuery};
 use Espo\ORM\Entity;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
@@ -58,6 +59,29 @@ class CreditWorkspace
             'availableCredits' => $status['availableCredits'],
             'reservedCredits' => $status['reservedCredits'],
             'observedAt' => $status['observedAt'],
+        ];
+    }
+
+    /**
+     * Models any workspace user may pick per AI Session or mention, from the active
+     * agreement. A legacy-billed workspace (or one without an agreement) gets none.
+     */
+    public function getActionModels(Request $request, Response $response): object
+    {
+        $response->setHeader('Cache-Control', 'private, no-store');
+        $params = $request->getQueryParams();
+        $accountId = $params['accountId'] ?? null;
+        if (array_diff(array_keys($params), ['accountId']) || !is_string($accountId) ||
+            !preg_match('/\A[1-9][0-9]{0,14}\z/', $accountId)) {
+            throw new BadRequest('An explicit Chatwoot account is required.');
+        }
+        $tenantId = $this->account($accountId)->get('tenantId');
+        $models = (new AgreementModels($this->em, $this->clock, new AiCatalog($this->em)))->forTenant($tenantId);
+        return (object) [
+            'accountId' => $accountId,
+            'tenantId' => $tenantId,
+            'default' => $models['default'] ?? null,
+            'models' => $models['models'] ?? [],
         ];
     }
 

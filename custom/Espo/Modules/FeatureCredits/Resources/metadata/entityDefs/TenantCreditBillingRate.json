@@ -14,6 +14,7 @@
         "aiModelCreditRate": {"type": "link"},
         "aiNativeSearchModelCreditRate": {"type": "link"},
         "aiStreamModelCreditRate": {"type": "link"},
+        "aiSelectableModelCreditRateIds": {"type": "jsonArray", "readOnly": true},
         "aiMaxRequests": {"type": "int", "min": 1, "max": 100},
         "configurationHash": {"type": "varchar", "maxLength": 64, "readOnly": true},
         "createdAt": {"type": "datetime", "notNull": true},

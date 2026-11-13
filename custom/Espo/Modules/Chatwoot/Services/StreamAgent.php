@@ -122,6 +122,8 @@ class StreamAgent
             'chatwootAccountCrmId' => $target->chatwootAccountCrmId,
             'executionRunId' => $note->getData()->opportunityAiExecutions->{$membershipId} ?? null,
             'initiatorUserId' => $this->delegatedInitiator($note, $target),
+            // The model picked for this AI on a mural post; AI Session's comes from its submission.
+            ...($note->getParentType() !== 'AiSession' && is_string($target->model ?? null) && $target->model !== '' ? ['model' => $target->model] : []),
             ...($note->getParentType() === 'AiSession' ? $this->sessions->context($note) : []),
             'trigger' => $note->getParentType() === 'AiSession' ? $this->sessions->post($note) : (object) [
                 'id' => $note->getId(),

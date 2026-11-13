@@ -26,7 +26,7 @@ class PrivateResponseTest extends TestCase
     {
         return [['CreditBalance', 'status'], ['CreditHistory', 'list'], ['CreditGrants', 'list'], ['CreditReservations', 'list'],
             ['CreditRequests', 'list'], ['CreditOperations', 'list'], ['CreditOperationSource', 'read'], ['Credits', 'context'],
-            ['CreditWorkspace', 'read'], ['CreditWorkspace', 'conversation'],
+            ['CreditWorkspace', 'read'], ['CreditWorkspace', 'conversation'], ['CreditWorkspace', 'models'],
             ['CreditExecution', 'execute'], ['CreditDispatch', 'execute'], ['CreditAsaasEvents', 'receive'], ['CreditReversals', 'reverse'],
             ['CreditBillingConfiguration', 'read'], ['CreditBillingConfiguration', 'publish'],
             ['CreditConfiguration', 'read'], ['CreditConfiguration', 'publish'],

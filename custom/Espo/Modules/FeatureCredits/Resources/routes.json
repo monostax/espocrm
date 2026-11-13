@@ -16,6 +16,7 @@
     {"route": "/CreditEnrichmentPreview", "method": "get", "params": {"controller": "CreditEnrichmentPreview", "action": "read"}},
     {"route": "/CreditWorkspace", "method": "get", "params": {"controller": "CreditWorkspace", "action": "read"}},
     {"route": "/CreditWorkspace/conversation", "method": "get", "params": {"controller": "CreditWorkspace", "action": "conversation"}},
+    {"route": "/CreditWorkspace/models", "method": "get", "params": {"controller": "CreditWorkspace", "action": "models"}},
     {"route": "/CreditMigration", "method": "post", "params": {"controller": "CreditMigration", "action": "grant"}},
     {"route": "/CreditCheckout/context", "method": "get", "params": {"controller": "CreditCheckout", "action": "context"}},
     {"route": "/CreditCheckout", "method": "get", "params": {"controller": "CreditCheckout", "action": "read"}},

@@ -4,6 +4,8 @@
         "name": {"type": "varchar", "maxLength": 200, "notNull": true},
         "policyId": {"type": "varchar", "maxLength": 64, "notNull": true, "readOnly": true},
         "definition": {"type": "jsonObject", "notNull": true},
+        "displayName": {"type": "varchar", "maxLength": 200},
+        "imageInput": {"type": "bool", "default": false},
         "createdAt": {"type": "datetime", "notNull": true},
         "createdBy": {"type": "link"}
     },

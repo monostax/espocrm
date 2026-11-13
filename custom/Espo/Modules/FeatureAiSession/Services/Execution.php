@@ -62,8 +62,11 @@ class Execution
                 ($post->getData()->opportunityStreamAgent->status ?? null) !== 'completed') continue;
             $posts[] = $this->post($post);
         }
+        $model = $source->getData()->aiSessionModel ?? null;
         return ['sessionRecord' => (object) ['id' => $session->getId(),
-            'name' => $this->acl->checkField($owner, 'AiSession', 'name') ? $session->get('name') : null], 'sessionPosts' => $posts];
+            'name' => $this->acl->checkField($owner, 'AiSession', 'name') ? $session->get('name') : null], 'sessionPosts' => $posts,
+            // The model saved with this submission; absent means the agreement default.
+            ...(is_string($model) && $model !== '' ? ['model' => $model] : [])];
     }
 
     public function post(Note $post): object

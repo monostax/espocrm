@@ -40,6 +40,7 @@
         "aiModelCreditRateId": "ID da entidade do modelo principal",
         "aiNativeSearchModelCreditRateId": "ID da entidade do modelo de excedente da busca nativa (opcional)",
         "aiStreamModelCreditRateId": "ID da entidade do modelo do agente do mural: menções e Sessão de IA (opcional)",
+        "aiSelectableModelCreditRateIds": "IDs das entidades dos modelos que cada usuário pode escolher por Sessão de IA ou menção (opcional, na ordem do seletor)",
         "aiMaxRequests": "Máximo de requisições por operação (1–100)",
         "replacesId": "ID da entidade do contrato original substituído"
     }

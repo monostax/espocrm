@@ -44,6 +44,13 @@
             "readOnlyAfterCreate": true,
             "utility": true
         },
+        "opportunityAiModel": {
+            "type": "varchar",
+            "maxLength": 200,
+            "notStorable": true,
+            "utility": true,
+            "customizationDisabled": true
+        },
         "opportunityMentionUserIds": {
             "type": "jsonArray",
             "readOnly": true,
