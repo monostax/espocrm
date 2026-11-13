@@ -87,6 +87,7 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
         renderResult: null,
         previewIndex: 0,
         testScope: "Contact",
+        testTenantId: null,
         _testModel: null,
 
         data: function () {
@@ -182,10 +183,13 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
                 testTargetName: null,
             });
 
-            const resolve = this.options.resolveTargetEntityType;
+            const resolve = this.options.resolveJourneyContext;
 
             if (resolve) {
-                resolve().then((entityType) => {
+                resolve().then((ctx) => {
+                    const entityType = (ctx && ctx.entityType) || null;
+                    this.testTenantId = (ctx && ctx.tenantId) || null;
+
                     if (!entityType || entityType === this.testScope ||
                         !this.getMetadata().get(["scopes", entityType, "entity"])) {
                         return;
@@ -286,6 +290,7 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
 
             const payload = {
                 targetEntityType: this.testScope,
+                tenantId: this.testTenantId,
                 targetId: targetId,
                 templateName: templateName,
                 templateLanguage: templateLanguage,
@@ -316,17 +321,10 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
                     this.isRendering = false;
                     this.renderResult = null;
 
-                    let msg = this.translate(
-                        "whatsappTemplateRenderFailed",
-                        "messages",
-                        "JourneyStageAction"
+                    this.renderError = this.previewErrorMessage(
+                        xhr,
+                        this.translate("whatsappTemplateRenderFailed", "messages", "JourneyStageAction")
                     );
-
-                    if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
-                        msg = xhr.responseJSON.message;
-                    }
-
-                    this.renderError = msg;
                     this.reRender();
                 });
         },
@@ -351,6 +349,32 @@ define("feature-journey:views/journey-stage-action/fields/whatsapp-template", [
         /**
          * Parent fetch already gathers template + mapping + media keys.
          */
+        /**
+         * Server message for a failed preview: JSON body, then the status-reason
+         * header, then the generic label.
+         */
+        previewErrorMessage: function (xhr, fallback) {
+            if (!xhr) {
+                return fallback;
+            }
+
+            xhr.errorIsHandled = true;
+
+            let data = xhr.responseJSON || null;
+
+            if (!data && xhr.responseText && xhr.responseText[0] === "{") {
+                try {
+                    data = JSON.parse(xhr.responseText);
+                } catch (e) {}
+            }
+
+            if (data && data.message) {
+                return data.message;
+            }
+
+            return (xhr.getResponseHeader && xhr.getResponseHeader("X-Status-Reason")) || fallback;
+        },
+
         fetch: function () {
             return Dep.prototype.fetch.call(this);
         },

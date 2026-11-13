@@ -58,6 +58,7 @@
         "matchAny": "Match any (OR)",
         "whatsappTemplateTestSection": "Test / render (no send)",
         "whatsappTemplateTestTarget": "Sample record",
+        "emailTemplateUnresolved": "No value on this record (the email would contain this text):",
         "previewPeople": "Preview for",
         "whatsappTemplateTestRender": "Render preview",
         "whatsappTemplateRendering": "Rendering…",

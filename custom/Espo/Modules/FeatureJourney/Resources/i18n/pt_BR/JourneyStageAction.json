@@ -58,6 +58,7 @@
         "matchAny": "Atender qualquer uma (OU)",
         "whatsappTemplateTestSection": "Testar / renderizar (sem enviar)",
         "whatsappTemplateTestTarget": "Registro de exemplo",
+        "emailTemplateUnresolved": "Sem valor neste registro (o email sairia com este texto):",
         "previewPeople": "Prévia para",
         "whatsappTemplateTestRender": "Renderizar prévia",
         "whatsappTemplateRendering": "Renderizando…",

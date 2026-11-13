@@ -14,7 +14,6 @@ use Espo\Core\Templates\Controllers\Base;
 use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
 use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
-use Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters;
 use Espo\Tools\EmailTemplate\Params as EmailTemplateParams;
 use Espo\Tools\EmailTemplate\Service as EmailTemplateService;
 use stdClass;
@@ -68,7 +67,7 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
         $ok = array_values(array_filter($previews, static fn (array $p) => !isset($p['error'])));
 
         if ($ok === []) {
-            throw $firstError ?? new BadRequest('Nothing to render.');
+            throw $this->previewError($firstError?->getMessage() ?? 'Nada para renderizar.');
         }
 
         $first = $ok[0];
@@ -180,6 +179,7 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
             }
 
             $previews[] = $this->personRef($outbound, $person) + [
+                'unresolved' => $this->unresolvedPlaceholders(($map->subject ?? '') . ' ' . ($map->body ?? '')),
                 'subject' => $map->subject ?? null,
                 'body' => $map->body ?? null,
                 'isHtml' => (bool) ($map->isHtml ?? true),
@@ -191,7 +191,7 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
         $ok = array_values(array_filter($previews, static fn (array $p) => !isset($p['error'])));
 
         if ($ok === []) {
-            throw $firstError ?? new BadRequest('Nothing to render.');
+            throw $this->previewError($firstError?->getMessage() ?? 'Nada para renderizar.');
         }
 
         $first = $ok[0];
@@ -204,6 +204,7 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
             'isHtml' => $first['isHtml'],
             'attachmentsIds' => $first['attachmentsIds'],
             'attachmentsNames' => $first['attachmentsNames'],
+            'unresolved' => $first['unresolved'],
             'people' => $previews,
             'targetEntityType' => $target->getEntityType(),
             'targetId' => $target->getId(),
@@ -242,6 +243,49 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
     }
 
     /**
+     * A 400 whose message the preview shows as is (JSON body; the status-reason
+     * header can't carry accents).
+     */
+    private function previewError(string $message): BadRequest
+    {
+        return BadRequest::createWithBody(
+            $message,
+            (string) json_encode(['message' => $message], JSON_UNESCAPED_UNICODE)
+        );
+    }
+
+    /**
+     * @param array<string, string> $resolved
+     * @param array<string, mixed> $mapping
+     * @return list<string> e.g. `{{2}} = {{customFields.x}}`
+     */
+    private function emptyParameters(array $resolved, array $mapping, string $prefix): array
+    {
+        $out = [];
+
+        foreach ($resolved as $num => $value) {
+            if (trim($value) === '' || str_contains($value, '{{') || str_contains($value, '}}')) {
+                $out[] = $prefix . '{{' . $num . '}} = ' . (string) ($mapping[$num] ?? '');
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Email placeholders the template left as text, e.g. `{Account.customFields.x}`
+     * when the record has no value or no such related record.
+     *
+     * @return list<string>
+     */
+    private function unresolvedPlaceholders(string $text): array
+    {
+        preg_match_all('/\{[A-Z][A-Za-z]*\.[A-Za-z0-9_.]+\}/', $text, $matches);
+
+        return array_values(array_unique($matches[0]));
+    }
+
+    /**
      * @return array{personType: string, personId: string, personName: string}
      */
     private function personRef(JourneyWhatsAppOutbound $outbound, \Espo\ORM\Entity $person): array
@@ -272,8 +316,18 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
             $target,
             $templatePerson,
         );
-        TemplateParameters::assertResolved($resolved, true);
-        TemplateParameters::assertResolved($resolvedHeader, true);
+        $headerMapping = $data->headerParameterMapping ?? [];
+        $headerMapping = $headerMapping instanceof stdClass ? (array) $headerMapping : (array) $headerMapping;
+        $empty = [
+            ...$this->emptyParameters($resolved, $mapping, ''),
+            ...$this->emptyParameters($resolvedHeader, $headerMapping, 'cabeçalho '),
+        ];
+
+        if ($empty !== []) {
+            throw $this->previewError(
+                'Sem valor para ' . $outbound->displayName($person) . ': ' . implode('; ', $empty) . '.'
+            );
+        }
 
         $renderedHeader = (string) ($data->templateHeader ?? '');
         foreach ($resolvedHeader as $num => $value) {
@@ -285,9 +339,14 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
             $renderedBody = str_replace('{{' . $num . '}}', $value, $renderedBody);
         }
 
-        TemplateParameters::assertResolved(
-            array_filter([$renderedHeader, $renderedBody], static fn ($text) => $text !== ''), true
-        );
+        preg_match_all('/\{\{\s*\d+\s*\}\}/', $renderedHeader . ' ' . $renderedBody, $left);
+
+        if ($left[0] !== []) {
+            throw $this->previewError(
+                'O template usa ' . implode(', ', array_unique($left[0])) .
+                ' sem mapeamento. Adicione esses parâmetros.'
+            );
+        }
 
         return $this->personRef($outbound, $person) + [
             'resolvedParams' => (object) $resolved,
@@ -327,6 +386,19 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
 
         if (!$this->acl->check($target, 'read')) {
             throw new Forbidden("No read access to {$targetEntityType} {$targetId}.");
+        }
+
+        $tenantId = isset($data->tenantId) ? trim((string) $data->tenantId) : '';
+
+        if ($tenantId !== '') {
+            /** @var TenantGuard $tenantGuard */
+            $tenantGuard = $this->injectableFactory->create(TenantGuard::class);
+
+            if (!$tenantGuard->entityBelongsToTenant($target, $tenantId)) {
+                throw $this->previewError(
+                    'Este registro é de outro ambiente. Escolha um registro do ambiente da jornada.'
+                );
+            }
         }
 
         return $target;

@@ -69,6 +69,11 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                         '{{else}}' +
                         '<pre class="small" style="margin:0;padding:10px;background:#f7f8fa;border-radius:6px;white-space:pre-wrap;max-height:280px;overflow:auto">{{renderedBody}}</pre>' +
                         '{{/if}}' +
+                        '{{#if unresolvedList}}' +
+                        '<div class="text-warning small" style="margin-top:8px">' +
+                            '<span class="fas fa-exclamation-triangle"></span> {{unresolvedLabel}} <code>{{unresolvedList}}</code>' +
+                        '</div>' +
+                        '{{/if}}' +
                         '{{#if hasAttachments}}' +
                         '<div class="text-muted small" style="margin-top:8px">{{attachmentsLabel}}: {{attachmentsSummary}}</div>' +
                         '{{/if}}' +
@@ -86,6 +91,7 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
         renderResult: null,
         previewIndex: 0,
         testScope: "Contact",
+        testTenantId: null,
         _testModel: null,
         _htmlBody: null,
 
@@ -155,6 +161,8 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                     error: !!person.error,
                 }));
                 data.personError = current.error || null;
+                data.unresolvedLabel = this.translate("emailTemplateUnresolved", "labels", "JourneyStageAction");
+                data.unresolvedList = (current.unresolved || []).join(", ");
                 data.renderedSubject = current.subject || "";
                 data.renderedBody = current.body || "";
                 data.isHtml = !!current.isHtml;
@@ -187,10 +195,13 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                 testTargetName: null,
             });
 
-            const resolve = this.options.resolveTargetEntityType;
+            const resolve = this.options.resolveJourneyContext;
 
             if (resolve) {
-                resolve().then((entityType) => {
+                resolve().then((ctx) => {
+                    const entityType = (ctx && ctx.entityType) || null;
+                    this.testTenantId = (ctx && ctx.tenantId) || null;
+
                     if (!entityType || entityType === this.testScope ||
                         !this.getMetadata().get(["scopes", entityType, "entity"])) {
                         return;
@@ -370,6 +381,7 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                 {
                     emailTemplateId: templateId,
                     targetEntityType: this.testScope,
+                    tenantId: this.testTenantId,
                     targetId: targetId,
                 }
             )
@@ -390,19 +402,38 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                     this.renderResult = null;
                     this._htmlBody = null;
 
-                    let msg = this.translate(
-                        "emailTemplateRenderFailed",
-                        "messages",
-                        "JourneyStageAction"
+                    this.renderError = this.previewErrorMessage(
+                        xhr,
+                        this.translate("emailTemplateRenderFailed", "messages", "JourneyStageAction")
                     );
-
-                    if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
-                        msg = xhr.responseJSON.message;
-                    }
-
-                    this.renderError = msg;
                     this.reRender();
                 });
+        },
+
+        /**
+         * Server message for a failed preview: JSON body, then the status-reason
+         * header, then the generic label.
+         */
+        previewErrorMessage: function (xhr, fallback) {
+            if (!xhr) {
+                return fallback;
+            }
+
+            xhr.errorIsHandled = true;
+
+            let data = xhr.responseJSON || null;
+
+            if (!data && xhr.responseText && xhr.responseText[0] === "{") {
+                try {
+                    data = JSON.parse(xhr.responseText);
+                } catch (e) {}
+            }
+
+            if (data && data.message) {
+                return data.message;
+            }
+
+            return (xhr.getResponseHeader && xhr.getResponseHeader("X-Status-Reason")) || fallback;
         },
 
         fetch: function () {
