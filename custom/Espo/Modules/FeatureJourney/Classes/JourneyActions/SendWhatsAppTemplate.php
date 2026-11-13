@@ -106,6 +106,8 @@ class SendWhatsAppTemplate implements Action
         ];
 
         $errors = [];
+        /** @var array<string, list<string>> $missing person name => empty parameters */
+        $missing = [];
         $sent = 0;
         $attempted = 0;
 
@@ -131,7 +133,6 @@ class SendWhatsAppTemplate implements Action
                 continue;
             }
 
-            $attempted += count($phones);
             $templatePerson = $person === $target ? null : $person;
 
             try {
@@ -141,13 +142,26 @@ class SendWhatsAppTemplate implements Action
                     $target,
                     $templatePerson,
                 );
-                TemplateParameters::assertResolved($resolved, true);
-                TemplateParameters::assertResolved($resolvedHeader, true);
             } catch (Throwable $e) {
+                $attempted += count($phones);
                 $errors[] = $name . ': ' . $e->getMessage();
 
                 continue;
             }
+
+            // A Meta template can't go out with an empty parameter: leave this person out.
+            $empty = [
+                ...$this->emptyParameters($resolved, $mapping),
+                ...$this->emptyParameters($resolvedHeader, $params['headerParameterMapping'] ?? []),
+            ];
+
+            if ($empty !== []) {
+                $missing[$name] = $empty;
+
+                continue;
+            }
+
+            $attempted += count($phones);
 
             $content = $templateBody;
             foreach ($resolved as $num => $value) {
@@ -180,6 +194,17 @@ class SendWhatsAppTemplate implements Action
             }
         }
 
+        if ($missing !== []) {
+            $summary = JourneyTargetPeople::missingSummary($missing);
+
+            // Nobody got it: fail so the journey record shows what is missing.
+            if ($attempted === 0) {
+                throw new Error($summary);
+            }
+
+            $this->log->warning('SendWhatsAppTemplate: skipped. ' . $summary);
+        }
+
         if ($attempted === 0) {
             $this->log->warning('SendWhatsAppTemplate: no phone on any recipient, skipping.');
 
@@ -196,5 +221,26 @@ class SendWhatsAppTemplate implements Action
                 ' failed: ' . implode('; ', $errors)
             );
         }
+    }
+
+    /**
+     * @param array<string, string> $resolved
+     * @param mixed $mapping
+     * @return list<string> e.g. `{{2}}={{customFields.x}}`
+     */
+    private function emptyParameters(array $resolved, mixed $mapping): array
+    {
+        $mapping = is_object($mapping) ? (array) $mapping : (is_array($mapping) ? $mapping : []);
+        $out = [];
+
+        foreach ($resolved as $num => $value) {
+            try {
+                TemplateParameters::assertResolved([$value], true);
+            } catch (Throwable) {
+                $out[] = '{{' . $num . '}}=' . (string) ($mapping[$num] ?? '');
+            }
+        }
+
+        return $out;
     }
 }

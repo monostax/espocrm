@@ -165,4 +165,30 @@ class JourneyTargetPeople
             ...self::templateEntities($person),
         ]);
     }
+
+    /**
+     * Email placeholders a template left as text, e.g. `{Account.customFields.x}`
+     * when the record has no value or no such related record.
+     *
+     * @return list<string>
+     */
+    public static function unresolvedPlaceholders(string $text): array
+    {
+        preg_match_all('/\{[A-Z][A-Za-z]*\.[A-Za-z0-9_.]+\}/', $text, $matches);
+
+        return array_values(array_unique($matches[0]));
+    }
+
+    /**
+     * One action outcome line for people left out because a value was missing,
+     * missing fields first so it survives the 100-character exitReason.
+     *
+     * @param array<string, list<string>> $missingByPerson person name => placeholders
+     */
+    public static function missingSummary(array $missingByPerson): string
+    {
+        $fields = array_values(array_unique(array_merge(...array_values($missingByPerson))));
+
+        return 'Sem valor: ' . implode(', ', $fields) . ' (' . implode(', ', array_keys($missingByPerson)) . ')';
+    }
 }

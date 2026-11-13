@@ -135,6 +135,8 @@ class SendEmail implements Action
         }
 
         $errors = [];
+        /** @var array<string, list<string>> $missing person name => unfilled placeholders */
+        $missing = [];
         $sent = 0;
         $total = 0;
 
@@ -169,6 +171,16 @@ class SendEmail implements Action
                 }
                 $templateIsHtml = $result->isHtml();
                 $attachmentList = $result->getAttachmentList();
+
+                // Never send "{Account.customFields.x}" as text: leave this person out.
+                $unfilled = JourneyTargetPeople::unresolvedPlaceholders($templateSubject . ' ' . $templateBody);
+
+                if ($unfilled !== []) {
+                    $missing[(string) ($person->get('name') ?: $person->getId())] = $unfilled;
+                    $total -= count($recipients);
+
+                    continue;
+                }
             }
 
             $attachmentList = [...$attachmentList, ...$paramAttachments];
@@ -192,6 +204,17 @@ class SendEmail implements Action
                     $this->log->error('SendEmail action failed for ' . $to . ': ' . $e->getMessage());
                 }
             }
+        }
+
+        if ($missing !== []) {
+            $summary = JourneyTargetPeople::missingSummary($missing);
+
+            // Nobody got it: fail so the journey record shows what is missing.
+            if ($sent === 0 && $errors === []) {
+                throw new Error($summary);
+            }
+
+            $this->log->warning('SendEmail: skipped. ' . $summary);
         }
 
         if ($sent === 0 && $errors !== []) {

@@ -62,7 +62,7 @@ class SendWhatsAppTemplateFanOutTest extends TestCase
         $this->assertSame(['+5511900000003'], array_column($this->sent, 'phone'));
     }
 
-    public function testAContactWithAnUnresolvedParameterDoesNotBlockTheOthers(): void
+    public function testAContactWithAnEmptyParameterIsSkippedAndTheOthersStillGetIt(): void
     {
         $account = $this->entity('Account', 'acc1', ['name' => 'Elite']);
         $blank = $this->entity('Contact', 'c1', ['name' => 'Sem nome', 'firstName' => '']);
@@ -73,15 +73,29 @@ class SendWhatsAppTemplateFanOutTest extends TestCase
 
         $outbound = $this->outbound(['c1' => ['+5511900000001'], 'c2' => ['+5511900000003']]);
 
-        try {
-            $this->action($outbound, $people)->run($this->context($account, []));
-            $this->fail('Expected a partial-failure error.');
-        } catch (Error $e) {
-            $this->assertStringContainsString('sent 1/2', $e->getMessage());
-            $this->assertStringContainsString('Sem nome', $e->getMessage());
-        }
+        $this->action($outbound, $people)->run($this->context($account, []));
 
         $this->assertSame(['+5511900000003'], array_column($this->sent, 'phone'));
+    }
+
+    public function testWhenNobodyHasTheValueTheActionFailsNamingTheField(): void
+    {
+        $account = $this->entity('Account', 'acc1', ['name' => 'Elite']);
+        $blank = $this->entity('Contact', 'c1', ['name' => 'Sem nome', 'firstName' => '']);
+
+        $people = $this->createStub(JourneyTargetPeople::class);
+        $people->method('forTarget')->willReturn([$blank]);
+
+        $outbound = $this->outbound(['c1' => ['+5511900000001']]);
+
+        try {
+            $this->action($outbound, $people)->run($this->context($account, []));
+            $this->fail('Expected the action to fail.');
+        } catch (Error $e) {
+            $this->assertSame('Sem valor: {{1}}={{Contact.firstName}} (Sem nome)', $e->getMessage());
+        }
+
+        $this->assertSame([], $this->sent);
     }
 
     public function testPhoneOverrideSendsOnceAgainstTheTarget(): void
@@ -124,7 +138,7 @@ class SendWhatsAppTemplateFanOutTest extends TestCase
         // Stand-in for Handlebars: {{1}} = the person's first name (or the target's
         // name when there is no person), {{2}} = the target's name.
         $outbound->method('resolveParameterMapping')->willReturnCallback(
-            fn ($mapping, Entity $target, ?Entity $person = null) => [
+            fn ($mapping, Entity $target, ?Entity $person = null) => empty($mapping) ? [] : [
                 '1' => $person ? (string) $person->get('firstName') : (string) $target->get('name'),
                 '2' => (string) $target->get('name'),
             ]

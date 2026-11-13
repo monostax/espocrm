@@ -280,9 +280,7 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
      */
     private function unresolvedPlaceholders(string $text): array
     {
-        preg_match_all('/\{[A-Z][A-Za-z]*\.[A-Za-z0-9_.]+\}/', $text, $matches);
-
-        return array_values(array_unique($matches[0]));
+        return JourneyTargetPeople::unresolvedPlaceholders($text);
     }
 
     /**
