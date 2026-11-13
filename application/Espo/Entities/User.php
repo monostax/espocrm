@@ -29,11 +29,13 @@
 
 namespace Espo\Entities;
 
+use Espo\Core\Acl\Scope;
 use Espo\Core\Entities\Person;
 use Espo\Core\Field\Link;
 use Espo\Core\Field\LinkMultiple;
 use Espo\Core\Name\Field;
 use Espo\Modules\Crm\Entities\Contact;
+use LogicException;
 use RuntimeException;
 
 class User extends Person
@@ -43,6 +45,27 @@ class User extends Person
     public const ATTR_TYPE = 'type';
     public const ATTR_IS_ACTIVE = 'isActive';
 
+    /**
+     * @internal
+     * @since 10.1.0
+     */
+    public const string ATTR_PORTAL_ID = 'portalId';
+
+    /**
+     * @internal
+     * @since 10.1.0
+     */
+    public const string ATTR_AUTH_TOKEN_ID = 'authTokenId';
+
+    /**
+     * @internal
+     * @since 10.1.0
+     */
+    public const string ATTR_AUTH_LOG_RECORD_ID = 'authLogRecordId';
+
+    /** @since 10.1.0 */
+    public const string FIELD_IS_ACTIVE= 'isActive';
+
     /** @since 10.0.0 */
     public const string FIELD_USER_NAME = 'userName';
     /** @since 10.0.0 */
@@ -51,6 +74,30 @@ class User extends Person
     public const string FIELD_PASSWORD_VERSION = 'passwordVersion';
     /** @since 10.0.0 */
     public const string FIELD_TYPE = 'type';
+    /** @since 10.0.4 */
+    public const string FIELD_API_KEY = 'apiKey';
+    /** @since 10.1.0 */
+    public const string FIELD_SECRET_KEY = 'secretKey';
+    /** @since 10.0.4 */
+    public const string FIELD_AUTH_METHOD = 'authMethod';
+
+    /**
+     * @internal
+     * @since 10.1.0
+     */
+    public const string FIELD_SCOPES = 'scopes';
+
+    /**
+     * @internal
+     * @since 10.1.0
+     */
+    public const string FIELD_TOKEN = 'token';
+
+    /**
+     * @internal
+     * @since 10.1.0
+     */
+    public const string FIELD_IP_ADDRESS = 'ipAddress';
 
     public const LINK_ACCOUNTS = 'accounts';
     public const LINK_CONTACT = 'contact';
@@ -70,7 +117,8 @@ class User extends Person
     public const RELATIONSHIP_ENTITY_USER = 'EntityUser';
     public const RELATIONSHIP_ENTITY_COLLABORATOR = 'EntityCollaborator';
 
-
+    /** @since 10.0.4 */
+    public const string AUTH_METHOD_API_KEY = 'ApiKey';
 
     public function get(string $attribute): mixed
     {
@@ -132,12 +180,38 @@ class User extends Person
 
     /**
      * Is admin, super-admin or system user.
+     *
+     * Do not use for access check for the current user. Use Acl::checkAdmin instead.
      */
     public function isAdmin(): bool
     {
         return $this->getType() === self::TYPE_ADMIN ||
             $this->isSystem() ||
             $this->isSuperAdmin();
+    }
+
+    /**
+     * Is admin and is not stripped of admin capabilities.
+     *
+     * Prefer using Acl::checkAdmin instead.
+     *
+     * @since 10.1.0
+     */
+    public function isEffectiveAdmin(): bool
+    {
+        if (!$this->isAdmin()) {
+            return false;
+        }
+
+        if ($this->getScopes() === null) {
+            return true;
+        }
+
+        if (!in_array(Scope::ADMIN, $this->getScopes())) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -328,6 +402,46 @@ class User extends Person
         return $this->get(self::FIELD_PASSWORD) ?? '';
     }
 
+    /**
+     * @since 10.1.0
+     */
+    public function setAuthMethod(?string $method): self
+    {
+        return $this->set(self::FIELD_AUTH_METHOD, $method);
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function getApiKey(): ?string
+    {
+        return $this->get(self::FIELD_API_KEY);
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function setApiKey(?string $apiKey): self
+    {
+        return $this->set(self::FIELD_API_KEY, $apiKey);
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function getSecretKey(): ?string
+    {
+        return $this->get(self::FIELD_SECRET_KEY);
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function setSecretKey(?string $secretKey): self
+    {
+        return $this->set(self::FIELD_SECRET_KEY, $secretKey);
+    }
+
     private function getNameInternal(): ?string
     {
         if (!$this->hasInContainer(Field::NAME) || !$this->getFromContainer(Field::NAME)) {
@@ -359,5 +473,31 @@ class User extends Person
     public function getPasswordVersion(): ?int
     {
         return $this->get(self::FIELD_PASSWORD_VERSION);
+    }
+
+    /**
+     * @internal
+     * @param string[] $scopes
+     * @since 10.1.0
+     */
+    public function setScopes(array $scopes): self
+    {
+        if ($this->get(self::FIELD_SCOPES) !== null) {
+            throw new LogicException("Scopes are already set.");
+        }
+
+        return $this->set(self::FIELD_SCOPES, $scopes);
+    }
+
+    /**
+     * Get access scopes. If not set, no additional restrictions.
+     * Only for the current user.
+     *
+     * @return ?string[]
+     * @since 10.1.0
+     */
+    public function getScopes(): ?array
+    {
+        return $this->get(self::FIELD_SCOPES);
     }
 }

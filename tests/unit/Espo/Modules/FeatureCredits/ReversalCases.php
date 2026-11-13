@@ -172,7 +172,7 @@ trait ReversalCases
             [$service, $debit] = $this->reversalFixture($pdo, '2026-10-11 00:00:00');
             $this->now = '2026-10-11 00:00:00';
             $user = $this->createStub(\Espo\Entities\User::class);
-            $user->method('isAdmin')->willReturn(true);
+            $user->method('isAdmin')->willReturn(true); $user->method('isEffectiveAdmin')->willReturn(true);
             $user->method('getId')->willReturn('trusted-admin');
             $request = $this->createStub(\Espo\Core\Api\Request::class);
             $request->method('getBodyContents')->willReturn(json_encode(['tenantId' => 'tenant', 'transactionId' => $debit['id'],

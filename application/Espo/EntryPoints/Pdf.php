@@ -73,13 +73,14 @@ class Pdf implements EntryPoint
         $result = $this->service->generate($entityType, $entityId, $templateId);
 
         $fileName = $result->getFilename() ?? $this->composeFileName($entity);
+        $fileName = Util::sanitizeFileName($fileName);
 
         $response
             ->setHeader('Content-Type', 'application/pdf')
             ->setHeader('Cache-Control', 'private, must-revalidate, post-check=0, pre-check=0, max-age=1')
             ->setHeader('Expires', 'Sat, 26 Jul 1997 05:00:00 GMT')
             ->setHeader('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT')
-            ->setHeader('Content-Disposition', 'inline; filename="' . basename($fileName) . '"');
+            ->setHeader('Content-Disposition', 'inline; filename="' . $fileName . '"');
 
         if (!$request->getServerParam('HTTP_ACCEPT_ENCODING')) {
             $response->setHeader('Content-Length', (string) $result->getStream()->getSize());
@@ -90,8 +91,8 @@ class Pdf implements EntryPoint
 
     private function composeFileName(Entity $entity): string
     {
-        $defaultName = $entity->get(Field::NAME) ?? $entity->getId();
+        $name = $entity->get(Field::NAME) ?? $entity->getId();
 
-        return Util::sanitizeFileName($defaultName) . '.pdf';
+        return $name . '.pdf';
     }
 }

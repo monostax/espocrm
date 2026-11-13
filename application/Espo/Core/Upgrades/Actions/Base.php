@@ -83,7 +83,7 @@ abstract class Base
 
     public function __construct(
         private Container $container,
-        private ActionManager $actionManager
+        private ActionManager $actionManager,
     ) {
         $this->params = $actionManager->getParams();
 
@@ -433,11 +433,12 @@ abstract class Base
      *
      * @throws Error
      */
-    protected function getPath(string $name = 'packagePath', bool $isPackage = false): string
+    protected function getPath(string $name, bool $isPackage = false): string
     {
         $postfix = $isPackage ? $this->packagePostfix : '';
 
-        $processId = $this->getProcessId();
+        $processId = basename($this->getProcessId());
+
         $path = Util::concatPath($this->getParam($name), $processId);
 
         return $path . $postfix;
@@ -1007,9 +1008,8 @@ abstract class Base
         }
 
         $actualParams = [
-            'maintenanceMode' => $config->get('maintenanceMode'),
-            'cronDisabled' => $config->get('cronDisabled'),
-            'useCache' => $config->get('useCache'),
+            'maintenanceMode' => $this->getSystemConfig()->isMaintenanceMode(),
+            'useCache' => $this->getSystemConfig()->useCache(),
         ];
 
         if ($configParamName) {
@@ -1021,12 +1021,6 @@ abstract class Base
 
         if (!$actualParams['maintenanceMode']) {
             $configWriter->set('maintenanceMode', true);
-
-            $save = true;
-        }
-
-        if (!$actualParams['cronDisabled']) {
-            $configWriter->set('cronDisabled', true);
 
             $save = true;
         }

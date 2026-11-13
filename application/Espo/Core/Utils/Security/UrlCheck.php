@@ -43,9 +43,9 @@ class UrlCheck
     /**
      * Checks whether it's a URL, and it does not follow to an internal host.
      *
-     * @since 9.3.4
+     * @since 10.0.8
      */
-    public function isUrlAndNotIternal(string $url): bool
+    public function isUrlAndNotInternal(string $url): bool
     {
         if (!$this->isUrl($url)) {
             return false;

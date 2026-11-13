@@ -120,6 +120,7 @@ class MasterSiteView extends View {
             body.dataset[param] = this.getThemeManager().getParam(param);
         }
 
+        body.dataset.direction = this.getThemeManager().getDirection();
         body.dataset.isDark =
             this.getThemeManager().getParam("isDark") ?? false;
         body.dataset.themeName = this.getThemeManager().getName();

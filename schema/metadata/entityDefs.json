@@ -261,7 +261,9 @@
                         "properties": {
                             "type": {
                                 "anyOf": [
-                                    {"const": "array"}
+                                    {"const": "array"},
+                                    {"const": "multiEnum"},
+                                    {"const": "urlMultiple"}
                                 ]
                             }
                         }
@@ -341,10 +343,51 @@
                                 "type": "integer",
                                 "minimum": 1,
                                 "description": "A text higher then a specified value will be cut with a 'show more' button displayed."
-                            },
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "anyOf": [
+                                    {
+                                        "const": "text"
+                                    },
+                                    {
+                                        "const": "wysiwyg"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
                             "attachmentField": {
                                 "type": "string",
                                 "description": "An attachment-multiple field to connect with. As of v9.0."
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "anyOf": [
+                                    {
+                                        "const": "wysiwyg"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "useIframe": {
+                                "type": "string",
+                                "description": "Use IFRAME in read mode."
                             }
                         }
                     }
@@ -495,7 +538,23 @@
                             "copyToClipboard": {
                                 "type": "boolean",
                                 "description": "Display 'Copy to Clipboard' button."
-                            },
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "anyOf": [
+                                    {"const": "url"},
+                                    {"const": "urlMultiple"}
+                                ]
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
                             "protocolRequired": {
                                 "type": "boolean",
                                 "description": "Require protocol. As of v10.0."
@@ -1211,6 +1270,10 @@
                     "type": "boolean",
                     "description": "Disables the ability perform mass-update on the field. As of v8.4."
                 },
+                "aclDisabled": {
+                    "type": "boolean",
+                    "description": "Disables field-level ACL for the field. As of v10.1."
+                },
                 "apiSpecDisabled": {
                     "type": "boolean",
                     "description": "Do not print the field in the API specification. As of v9.3."
@@ -1218,6 +1281,10 @@
                 "isPersonalData": {
                     "type": "boolean",
                     "description": "Whether the field may contain personal data."
+                },
+                "noOptimisticConcurrencyControlResolution": {
+                    "type": "boolean",
+                    "description": "Disables optimistic concurrency control resolution. As of v10.1."
                 },
                 "valueFactoryClassName": {
                     "type": "string",
@@ -1525,6 +1592,10 @@
                 "apiSpecDisabled": {
                     "type": "boolean",
                     "description": "Do not print the link in the API specification. As of v9.3."
+                },
+                "customizationDisabled": {
+                    "type": "boolean",
+                    "description": "Disables the ability to customize the link in the Entity Manager tool."
                 }
             },
             "allOf": [

@@ -1,4 +1,5 @@
 /************************************************************************
+/************************************************************************
  * This file is part of EspoCRM.
  *
  * EspoCRM – Open Source CRM application.
@@ -28,16 +29,40 @@
 
 import ModalView from 'views/modal';
 import Model from 'model';
+import Utils from 'utils';
+import Ajax from 'ajax';
+import Ui from 'ui';
 
 class UserSecurityModalView extends ModalView {
 
-    templateContent = '<div class="record no-side-margin">{{{record}}}</div>'
+    // language=Handlebars
+    templateContent = `
+        <div class="record no-side-margin">{{{record}}}</div>
+    `
 
     className = 'dialog dialog-record'
 
     shortcutKeys = {
         'Control+Enter': 'apply',
     }
+
+    /**
+     * @private
+     * @type {boolean}
+     */
+    auth2FAIsSystemEnabled
+
+    /**
+     * @private
+     * @type {import('views/record/edit').default}
+     */
+    recordView
+
+    /**
+     * @private
+     * @type {import('models/user').default}
+     */
+    userModel
 
     setup() {
         this.buttonList = [
@@ -51,7 +76,7 @@ class UserSecurityModalView extends ModalView {
             {
                 name: 'cancel',
                 label: 'Close',
-            }
+            },
         ];
 
         this.dropdownItemList = [
@@ -63,13 +88,29 @@ class UserSecurityModalView extends ModalView {
             },
         ];
 
+        this.addButton({
+            name: 'revokeAllTokens',
+            labelTranslation: 'User.strings.revokeAllAuthenticationTokens',
+            position: 'right',
+            onClick: () => this.processRevokeAllTokens(),
+        });
+
         this.userModel = this.options.userModel;
 
-        this.$header = $('<span>').append(
-            $('<span>').text(this.translate('Security')),
-            ' <span class="chevron-right"></span> ',
-            $('<span>').text(this.userModel.get('userName'))
-        );
+        this.headerHtml =
+            (() => {
+                const span = document.createElement('span');
+                span.textContent = this.translate('Security');
+
+                return span.outerHTML;
+            })() +
+            ` <span class="chevron-right"></span> ` +
+            (() => {
+                const span = document.createElement('span');
+                span.textContent = this.userModel.get('userName');
+
+                return span.outerHTML;
+            })();
 
         const model = this.model = new Model();
 
@@ -77,33 +118,37 @@ class UserSecurityModalView extends ModalView {
         model.id = this.userModel.id;
         model.url = 'UserSecurity/' + this.userModel.id;
 
-        const auth2FAMethodList = this.getConfig().get('auth2FAMethodList') || [];
+        const auth2FAMethodList = this.getConfig().get('auth2FAMethodList') ?? [];
+
+        this.auth2FAIsSystemEnabled = this.userModel.isPortal() ?
+            (this.getConfig().get('auth2FAInPortal') ?? false) :
+            (this.getConfig().get('auth2FA') ?? false);
 
         model.setDefs({
             fields: {
-                'auth2FA': {
+                auth2FA: {
                     type: 'bool',
                     labelText: this.translate('auth2FAEnable', 'fields', 'User'),
                 },
-                'auth2FAMethod': {
+                auth2FAMethod: {
                     type: 'enum',
                     options: auth2FAMethodList,
                     translation: 'Settings.options.auth2FAMethodList',
                 },
-            }
-        });
+            }}
+        );
 
         this.wait(
-            model.fetch().then(() => {
-                this.initialAttributes = Espo.Utils.cloneDeep(model.attributes);
+            (async () => {
+                await model.fetch();
 
-                if (model.get('auth2FA')) {
-                    this.showActionItem('reset');
+                this.initialAttributes = Utils.cloneDeep(model.attributes);
+
+                if (model.attributes.auth2FA && this.auth2FAIsSystemEnabled) {
+                    await this.showActionItem('reset');
                 }
 
-                this.createView('record', 'views/record/edit-for-modal', {
-                    scope: 'None',
-                    selector: '.record',
+                this.recordView = await this.createView('record', 'views/record/edit-for-modal', {
                     model: this.model,
                     detailLayout: [
                         {
@@ -121,14 +166,11 @@ class UserSecurityModalView extends ModalView {
                             ]
                         }
                     ],
-                }, (view) => {
-                    this.controlFieldsVisibility(view);
-
-                    this.listenTo(this.model, 'change:auth2FA', () => {
-                        this.controlFieldsVisibility(view);
-                    });
                 });
-            })
+
+                this.controlFieldsVisibility();
+                this.listenTo(this.model, 'change:auth2FA', () => this.controlFieldsVisibility());
+            })()
         );
 
         this.listenTo(this.model, 'change', () => {
@@ -140,20 +182,32 @@ class UserSecurityModalView extends ModalView {
         });
     }
 
-    controlFieldsVisibility(view) {
-        if (this.model.get('auth2FA')) {
-            view.showField('auth2FAMethod');
-            view.setFieldRequired('auth2FAMethod');
+    /**
+     * @private
+     */
+    controlFieldsVisibility() {
+        if (this.model.attributes.auth2FA) {
+            this.recordView.showField('auth2FAMethod');
+            this.recordView.setFieldRequired('auth2FAMethod');
+        } else {
+            this.recordView.hideField('auth2FAMethod');
+            this.recordView.setFieldNotRequired('auth2FAMethod');
         }
-        else {
-            view.hideField('auth2FAMethod');
-            view.setFieldNotRequired('auth2FAMethod');
+
+        if (!this.auth2FAIsSystemEnabled) {
+            if (!this.model.attributes.auth2FA) {
+                this.recordView.setFieldReadOnly('auth2FA');
+                this.recordView.hideField('auth2FA');
+            }
+
+            this.recordView.setFieldReadOnly('auth2FAMethod');
+            this.recordView.setFieldNotRequired('auth2FAMethod');
         }
     }
 
     isChanged() {
-        return this.initialAttributes.auth2FA !== this.model.get('auth2FA') ||
-            this.initialAttributes.auth2FAMethod !== this.model.get('auth2FAMethod')
+        return this.initialAttributes.auth2FA !== this.model.attributes.auth2FA ||
+            this.initialAttributes.auth2FAMethod !== this.model.attributes.attributes
     }
 
     reset() {
@@ -163,13 +217,17 @@ class UserSecurityModalView extends ModalView {
     }
 
     /**
-     * @return {module:views/record/edit}
+     * @return {import('views/record/edit').default}
      */
     getRecordView() {
-        return this.getView('record');
+        return /** @type {import('views/record/edit').default} */this.getView('record');
     }
 
-    apply(reset) {
+    /**
+     * @private
+     * @param {boolean} reset
+     */
+    apply(reset = false) {
         const data = this.getRecordView().processFetch();
 
         if (!data) {
@@ -195,7 +253,11 @@ class UserSecurityModalView extends ModalView {
         }).then(() => this.processApply(reset));
     }
 
-    processApply(reset) {
+    /**
+     * @private
+     * @param {boolean} reset
+     */
+    processApply(reset = false) {
         if (this.model.get('auth2FA')) {
             const auth2FAMethod = this.model.get('auth2FAMethod');
 
@@ -246,6 +308,9 @@ class UserSecurityModalView extends ModalView {
         this.processSave();
     }
 
+    /**
+     * @private
+     */
     processSave() {
         this.hideActionItem('apply');
 
@@ -257,6 +322,27 @@ class UserSecurityModalView extends ModalView {
                 Espo.Ui.success(this.translate('Done'));
             })
             .catch(() => this.showActionItem('apply'));
+    }
+
+    /**
+     * @private
+     */
+    async processRevokeAllTokens() {
+        await this.confirm({
+            message: this.translate('confirmation', 'messages'),
+        });
+
+        await this.disableButton('revokeAllTokens');
+
+        try {
+            await Ajax.postRequest(`User/${this.userModel.id}/revokeAllAuthenticationTokens`);
+        } catch (e) {
+            await this.enableButton('revokeAllTokens');
+
+            return;
+        }
+
+        Ui.success(this.translate('Done'));
     }
 }
 

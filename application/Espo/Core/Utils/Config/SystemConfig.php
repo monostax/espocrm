@@ -68,4 +68,14 @@ class SystemConfig
     {
         return !$this->config->get('cronDisabled');
     }
+
+    /**
+     * A maintenance mode. Only admin can log in.
+     *
+     * @since 10.1.0
+     */
+    public function isMaintenanceMode(): bool
+    {
+        return (bool) $this->config->get('maintenanceMode');
+    }
 }

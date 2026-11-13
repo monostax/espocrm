@@ -89,7 +89,7 @@ interface Entity
      * @param string|stdClass|array<string, mixed> $attribute
      * @param mixed $value
      */
-    public function set($attribute, $value = null): static;
+    public function set($attribute, $value): static;
 
     /**
      * Set multiple attributes.

@@ -192,7 +192,7 @@ class Processor
             return false;
         }
 
-        $entity->set($values);
+        $entity->setMultiple($values);
 
         try {
             $service->processValidation($entity, $values);

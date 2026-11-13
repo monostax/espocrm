@@ -454,8 +454,11 @@ class NavbarSiteView extends View {
                 .all(this.itemList.map(item => this.createItemView(item)));
         };
 
-        const update = () => {
-            setup().then(() => this.reRender());
+        const update = async () => {
+            await setup();
+            await this.reRender({
+                keep: [this.composeItemKey('notificationBadge')],
+            });
         };
 
         setup();
@@ -511,7 +514,7 @@ class NavbarSiteView extends View {
                     return false;
                 }
 
-                const view = this.getView(name + 'Item');
+                const view = this.getView(this.composeItemKey(name));
 
                 if ('isAvailable' in view) {
                     return view.isAvailable();
@@ -521,11 +524,20 @@ class NavbarSiteView extends View {
             })
             .map(name => {
                 return {
-                    key: name + 'Item',
+                    key: this.composeItemKey(name),
                     name: name,
                     class: defsMap[name].class || '',
                 };
             });
+    }
+
+    /**
+     * @private
+     * @param {string} name
+     * @return {string}
+     */
+    composeItemKey(name) {
+        return name + 'Item';
     }
 
     /**
@@ -552,7 +564,11 @@ class NavbarSiteView extends View {
             return Promise.resolve();
         }
 
-        const key = name + 'Item';
+        const key = this.composeItemKey(name);
+
+        if (defs.view === 'views/notification/badge' && this.hasView(key)) {
+            return Promise.resolve();
+        }
 
         return this.createView(key, defs.view, {selector: `[data-item="${name}"]`});
     }
@@ -632,6 +648,7 @@ class NavbarSiteView extends View {
         };
 
         const $navbar = $('#navbar .navbar');
+        const navbarRightElement = this.$navbarRight.get(0);
 
         if (window.innerWidth >= smallScreenWidth) {
             $tabs.children('li').each(() => {
@@ -641,8 +658,6 @@ class NavbarSiteView extends View {
             $navbar.css('max-height', 'unset');
             $navbar.css('overflow', 'visible');
         }
-
-        const navbarBaseWidth = this.navbarHeaderElement.clientWidth + this.$navbarRight.width();
 
         const tabCount = this.tabList.length;
 
@@ -656,6 +671,7 @@ class NavbarSiteView extends View {
         const updateWidth = () => {
             const windowWidth = window.innerWidth;
             const moreWidth = $moreLi.width();
+            const navbarRightWidth = navbarRightElement.offsetWidth;
 
             $more.children('li.not-in-more').each(() => {
                 unhideOneTab();
@@ -671,6 +687,8 @@ class NavbarSiteView extends View {
             $more.parent().addClass('hidden');
 
             const headerWidth = this.$el.width();
+            const navbarBaseWidth =
+                this.navbarHeaderElement.clientWidth + navbarRightWidth;
 
             const maxWidth = headerWidth - navbarBaseWidth - moreWidth;
             let width = $tabs.width();

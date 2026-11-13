@@ -128,7 +128,7 @@ class SchemaTest extends TestCase
                 $this->assertTrue($table->getColumn('tenant_id')->getNotnull(), $table->getName());
             }
             $this->assertSame(17, $table->getColumn('id')->getLength());
-            $this->assertTrue($table->hasPrimaryKey());
+            $this->assertNotNull($table->getPrimaryKeyConstraint());
         }
         $wallet = $schema->getTable('tenant_credit_balance');
         $this->assertSame(14, $wallet->getColumn('balance')->getPrecision());

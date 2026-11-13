@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace tests\unit\Espo\Modules\FeatureJourney\Rebuild;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Platforms\MariaDb1043Platform;
+use Doctrine\DBAL\Platforms\MariaDBPlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Espo\Core\Utils\Database\Helper;
 use Espo\Core\Utils\Log;
@@ -21,7 +21,7 @@ class EnsureTransitionScopeColumnTest extends TestCase
         $queries = [];
 
         $connection = $this->createStub(Connection::class);
-        $connection->method('getDatabasePlatform')->willReturn(new MariaDb1043Platform());
+        $connection->method('getDatabasePlatform')->willReturn(new MariaDBPlatform());
         $connection->method('executeStatement')->willReturnCallback(
             static function (string $sql) use (&$queries): int {
                 $queries[] = $sql;
@@ -55,7 +55,7 @@ class EnsureTransitionScopeColumnTest extends TestCase
         $queries = [];
 
         $connection = $this->createStub(Connection::class);
-        $connection->method('getDatabasePlatform')->willReturn(new MariaDb1043Platform());
+        $connection->method('getDatabasePlatform')->willReturn(new MariaDBPlatform());
         $connection->method('executeStatement')->willReturnCallback(
             static function (string $sql) use (&$queries): int {
                 $queries[] = $sql;

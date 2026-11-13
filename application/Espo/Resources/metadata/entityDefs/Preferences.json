@@ -70,7 +70,10 @@
         },
         "language": {
             "type": "enum",
-            "view": "views/preferences/fields/language"
+            "view": "views/preferences/fields/language",
+            "validatorClassNameList": [
+                "Espo\\Classes\\FieldValidators\\Preferences\\Language\\Valid"
+            ]
         },
         "exportDelimiter": {
             "type": "varchar",
@@ -132,7 +135,8 @@
         },
         "signature": {
             "type": "wysiwyg",
-            "view": "views/preferences/fields/signature"
+            "view": "views/preferences/fields/signature",
+            "useIframe": true
         },
         "defaultReminders": {
             "type": "jsonArray",
@@ -164,8 +168,21 @@
             "type": "enum",
             "options": [
                 "",
-                "Wide"
-            ]
+                "Wide",
+                "Full"
+            ],
+            "default": null,
+            "tooltip": true
+        },
+        "recordContentWidth": {
+            "type": "enum",
+            "options": [
+                "",
+                "Wide",
+                "Full"
+            ],
+            "default": null,
+            "tooltip": true
         },
         "useCustomTabList": {
             "type": "bool",

@@ -29,6 +29,7 @@
 
 namespace Espo\ORM\Executor;
 
+use Espo\ORM\Exceptions\DeadlockException;
 use Espo\ORM\PDO\PDOProvider;
 use Espo\ORM\TransactionManager;
 use Psr\Log\LoggerInterface;
@@ -41,7 +42,7 @@ use RuntimeException;
 
 class DefaultSqlExecutor implements SqlExecutor
 {
-    private const MAX_ATTEMPT_COUNT = 4;
+    private const int MAX_ATTEMPT_COUNT = 4;
 
     private PDO $pdo;
     private ?TransactionManager $transactionManager = null;
@@ -73,27 +74,44 @@ class DefaultSqlExecutor implements SqlExecutor
             $this->logger?->info("SQL: " . $sql, ['isSql' => true]);
         }
 
-        // InnoDB rolls back the entire transaction on a deadlock. Retrying only
-        // this statement would persist a fragment of the original operation.
-        if (!$rerunIfDeadlock || $this->pdo->inTransaction()) {
+        if (!$rerunIfDeadlock) {
             return $this->executeSqlWithDeadlockHandling($sql, 1);
         }
+
+        // Inside a transaction a deadlock is never retried per statement (InnoDB rolled
+        // back the whole transaction); executeSqlWithDeadlockHandling() throws
+        // DeadlockException and TransactionManager::run() retries the whole closure.
 
         return $this->executeSqlWithDeadlockHandling($sql);
     }
 
+    /**
+     * @throws DeadlockException
+     */
     private function executeSqlWithDeadlockHandling(string $sql, ?int $counter = null): PDOStatement
     {
         $counter = $counter ?? self::MAX_ATTEMPT_COUNT;
+
+        $inTransaction = $this->pdo->inTransaction();
 
         try {
             $sth = $this->pdo->query($sql);
         } catch (Exception $e) {
             $counter--;
 
-            if ($counter === 0 || !$this->isExceptionIsDeadlock($e)) {
+            $isDeadlock = $this->isExceptionIsDeadlock($e);
+
+            if (
+                $counter === 0 ||
+                !$isDeadlock ||
+                $inTransaction
+            ) {
                 if ($this->logFailed) {
                     $this->logger?->error("SQL failed: " . $sql, ['isSql' => true]);
+                }
+
+                if ($isDeadlock) {
+                    throw new DeadlockException($e->getMessage(), previous: $e);
                 }
 
                 /** @var PDOException $e */
@@ -112,10 +130,20 @@ class DefaultSqlExecutor implements SqlExecutor
 
     private function isExceptionIsDeadlock(Exception $e): bool
     {
-        if (!$e instanceof PDOException) {
+        if (!$e instanceof PDOException || !$e->errorInfo) {
             return false;
         }
 
-        return isset($e->errorInfo) && $e->errorInfo[0] == 40001 && $e->errorInfo[1] == 1213;
+        $state = $e->errorInfo[0] ?? null;
+
+        if ($state === '40P01') {
+            return true;
+        }
+
+        if ($state === 'HY000' && (int) $e->errorInfo[1] === 1020) {
+            return true;
+        }
+
+        return $state === '40001' && (int) $e->errorInfo[1] === 1213;
     }
 }

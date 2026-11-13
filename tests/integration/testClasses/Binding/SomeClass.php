@@ -31,7 +31,7 @@ namespace tests\integration\testClasses\Binding;
 
 class SomeClass
 {
-    private $someImplementation;
+    private SomeInterface $someImplementation;
 
     public function __construct(SomeInterface $someImplementation)
     {

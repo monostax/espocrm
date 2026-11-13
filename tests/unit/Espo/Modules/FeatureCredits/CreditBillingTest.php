@@ -48,7 +48,7 @@ final class CreditBillingTest extends TestCase
     {
         $user = $this->createStub(User::class);
         $user->method('isPortal')->willReturn($kind === 'portal'); $user->method('isApi')->willReturn($kind === 'api');
-        $user->method('isAdmin')->willReturn(in_array($kind, ['portal', 'api', 'missing-tenant'], true));
+        $user->method('isAdmin')->willReturn(in_array($kind, ['portal', 'api', 'missing-tenant'], true)); $user->method('isEffectiveAdmin')->willReturn(in_array($kind, ['portal', 'api', 'missing-tenant'], true));
         $user->method('getLinkMultipleIdList')->willReturn($kind === 'foreign-admin' ? [md5('tenant-admin')] : []);
         $memberships = $this->createStub(UserTenantResolver::class); $memberships->method('resolveTenantIds')->willReturn(['other']);
         $manager = $this->createMock(EntityManager::class); $manager->expects($this->never())->method('getPDO');
@@ -87,7 +87,7 @@ final class CreditBillingTest extends TestCase
     #[DataProvider('invalidCommands')]
     public function testMalformedCommandsFailBeforeAuthorizationOrPersistence(string $action, array $input): void
     {
-        $user = $this->createStub(User::class); $user->method('isAdmin')->willReturn(true);
+        $user = $this->createStub(User::class); $user->method('isAdmin')->willReturn(true); $user->method('isEffectiveAdmin')->willReturn(true);
         $manager = $this->createMock(EntityManager::class); $manager->expects($this->never())->method('getPDO');
         $access = $this->createMock(Access::class); $access->expects($this->never())->method('assertTenant');
         $this->expectException(BadRequest::class);

@@ -33,7 +33,7 @@ use Espo\Core\Container\Loader as BaseLoader;
 
 /**
  * @deprecated Since v6.2.0. Use `Espo\Core\Container\Loader`.
+ * @todo Remove in v11.0.
  */
 interface Loader extends BaseLoader
-{
-}
+{}

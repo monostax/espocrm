@@ -141,7 +141,6 @@ class ExampleLoader implements Loader
         $siteUrl = $this->getSiteUrl();
 
         if (!$entity->hasFormEnabled() || !$formId) {
-            /** @noinspection PhpRedundantOptionalArgumentInspection */
             $entity->set('formUrl', null);
 
             return;

@@ -29,6 +29,7 @@
 import {inject} from 'di';
 import Settings from 'models/settings';
 import User from 'models/user';
+import Ui from 'ui';
 
 /**
  * A mass-action helper.
@@ -50,14 +51,37 @@ class MassActionHelper {
     user
 
     /**
-     * @param {module:view} view A view.
+     * A view.
+     *
+     * @private
+     * @type {import('view').default}}
      */
-    constructor(view) {
-        /**
-         * @private
-         * @type {module:view}
-         */
+    view
+
+    /**
+     * @private
+     * @type {string}
+     */
+    entityType
+
+    /**
+     * @param {import('view').default} view A view.
+     * @param {{entityType?: string}} [options] Options.
+     */
+    constructor(view, options = {}) {
         this.view = view;
+
+        let entityType = options.entityType;
+
+        if (!entityType) {
+            if ('entityType' in view) {
+                entityType = view.entityType;
+            } else if ('scope' in view) {
+                entityType = view.scope;
+            }
+        }
+
+        this.entityType = entityType;
     }
 
     /**
@@ -87,34 +111,30 @@ class MassActionHelper {
      *
      * @param {string} id An ID.
      * @param {string} action An action.
-     * @returns {Promise<module:view>} Resolves with a dialog view.
+     * @returns {Promise<import('view').default>} Resolves with a dialog view.
      *   The view emits the 'close:success' event.
      */
     process(id, action) {
-        Espo.Ui.notify(false);
+        Ui.notify();
 
-        return new Promise(resolve => {
-            const entityType = this.view.scope || this.view.entityType;
+        return new Promise(async resolve => {
+            const view = await this.view.createView('dialog', 'views/modals/mass-action', {
+                id: id,
+                action: action,
+                scope: this.entityType,
+            })
 
-            this.view
-                .createView('dialog', 'views/modals/mass-action', {
-                    id: id,
-                    action: action,
-                    scope: entityType,
-                })
-                .then(view => {
-                    view.render();
+            view.render().then(() => {});
 
-                    resolve(view);
+            resolve(view);
 
-                    this.view.listenToOnce(view, 'success', data => {
-                        resolve(data);
+            this.view.listenToOnce(view, 'success', data => {
+                resolve(data);
 
-                        this.view.listenToOnce(view, 'close', () => {
-                            view.trigger('close:success', data);
-                        });
-                    });
+                this.view.listenToOnce(view, 'close', () => {
+                    view.trigger('close:success', data);
                 });
+            });
         });
     }
 }

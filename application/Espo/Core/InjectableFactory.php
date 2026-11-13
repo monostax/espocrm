@@ -34,8 +34,9 @@ use Psr\Container\NotFoundExceptionInterface;
 use Espo\Core\Binding\BindingContainer;
 use Espo\Core\Binding\Binding;
 use Espo\Core\Binding\Factory;
-
+use Espo\Core\Container\Container;
 use ReflectionClass;
+use ReflectionException;
 use ReflectionParameter;
 use ReflectionFunction;
 use ReflectionNamedType;
@@ -114,6 +115,7 @@ class InjectableFactory
             null;
 
         if (!$binding) {
+            /** @noinspection PhpUnhandledExceptionInspection */
             $class = new ReflectionClass($interfaceName);
 
             if ($class->isInterface()) {
@@ -145,6 +147,7 @@ class InjectableFactory
             throw new RuntimeException("Class `$interfaceName` resolved to another type.");
         }
 
+        /** @noinspection PhpIncompatibleReturnTypeInspection */
         return $obj;
     }
 
@@ -157,18 +160,22 @@ class InjectableFactory
     private function createInternal(
         string $className,
         ?array $with = null,
-        ?BindingContainer $bindingContainer = null
+        ?BindingContainer $bindingContainer = null,
     ): object {
 
         if (!class_exists($className)) {
-            throw new RuntimeException("InjectableFactory: Class '$className' does not exist.");
+            throw new RuntimeException("Class '$className' does not exist.");
         }
 
         $class = new ReflectionClass($className);
 
         $injectionList = $this->getConstructorInjectionList($class, $with, $bindingContainer);
 
-        $obj = $class->newInstanceArgs($injectionList);
+        try {
+            $obj = $class->newInstanceArgs($injectionList);
+        } catch (ReflectionException $e) {
+            throw new RuntimeException("Reflection error.", previous: $e);
+        }
 
         $this->applyAwareInjections($class, $obj);
 
@@ -178,7 +185,7 @@ class InjectableFactory
     /**
      * @param ReflectionClass<object> $class
      * @param ?array<string, mixed> $with
-     * @return mixed[]
+     * @return array<int, mixed>[]
      */
     private function getConstructorInjectionList(
         ReflectionClass $class,
@@ -225,6 +232,7 @@ class InjectableFactory
 
         $type = $param->getType();
 
+        /** @noinspection PhpConditionCheckedByNextConditionInspection */
         if (
             $type &&
             $type instanceof ReflectionNamedType &&
@@ -290,17 +298,21 @@ class InjectableFactory
     }
 
     /**
-     * @return mixed[]
+     * @return array<int, mixed>[]
      */
     private function getCallbackInjectionList(callable $callback): array
     {
         $injectionList = [];
 
         if (!$callback instanceof Closure) {
-            $callback = Closure::fromCallable($callback);
+            $callback = $callback(...);
         }
 
-        $function = new ReflectionFunction($callback);
+        try {
+            $function = new ReflectionFunction($callback);
+        } catch (ReflectionException $e) {
+            throw new RuntimeException("Reflection error.", previous: $e);
+        }
 
         foreach ($function->getParameters() as $param) {
             $injectionList[] = $this->getMethodParamInjection(null, $param);
@@ -372,9 +384,8 @@ class InjectableFactory
 
     /**
      * @param ReflectionClass<object> $class
-     * @param string[] $ignoreList
      */
-    private function applyAwareInjections(ReflectionClass $class, object $obj, array $ignoreList = []): void
+    private function applyAwareInjections(ReflectionClass $class, object $obj): void
     {
         foreach ($class->getInterfaces() as $interface) {
             $interfaceName = $interface->getShortName();
@@ -384,10 +395,6 @@ class InjectableFactory
             }
 
             $name = lcfirst(substr($interfaceName, 0, -5));
-
-            if (in_array($name, $ignoreList)) {
-                continue;
-            }
 
             if (!$this->classHasDependencySetter($class, $name, true)) {
                 continue;
@@ -432,6 +439,7 @@ class InjectableFactory
 
         $type = $params[0]->getType();
 
+        /** @noinspection PhpConditionCheckedByNextConditionInspection */
         if (
             $type &&
             $type instanceof ReflectionNamedType &&

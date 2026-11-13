@@ -40,22 +40,30 @@ use Espo\ORM\Defs\AttributeDefs;
 use Espo\ORM\Defs\Params\AttributeParam;
 use Espo\ORM\Entity;
 
+/**
+ * @noinspection PhpUnused
+ */
 class MysqlColumnPreparator implements ColumnPreparator
 {
-    private const PARAM_DB_TYPE = AttributeParam::DB_TYPE;
-    private const PARAM_DEFAULT = AttributeParam::DEFAULT;
-    private const PARAM_NOT_NULL = AttributeParam::NOT_NULL;
-    private const PARAM_AUTOINCREMENT = 'autoincrement';
-    private const PARAM_PRECISION = 'precision';
-    private const PARAM_SCALE = 'scale';
-    private const PARAM_BINARY = 'binary';
+    private const string PARAM_DB_TYPE = AttributeParam::DB_TYPE;
+    private const string PARAM_DEFAULT = AttributeParam::DEFAULT;
+    private const string PARAM_NOT_NULL = AttributeParam::NOT_NULL;
+    private const string PARAM_AUTOINCREMENT = 'autoincrement';
+    private const string PARAM_PRECISION = 'precision';
+    private const string PARAM_SCALE = 'scale';
+    private const string PARAM_BINARY = 'binary';
     private const string PARAM_STORE_ARRAY_VALUES = 'storeArrayValues';
 
-    public const TYPE_MYSQL = 'MySQL';
-    public const TYPE_MARIADB = 'MariaDB';
+    public const string TYPE_MYSQL = 'MySQL';
+    public const string TYPE_MARIADB = 'MariaDB';
 
-    private const MB4_INDEX_LENGTH_LIMIT = 3072;
-    private const DEFAULT_INDEX_LIMIT = 1000;
+    private const int MB4_INDEX_LENGTH_LIMIT = 3072;
+    private const int DEFAULT_INDEX_LIMIT = 1000;
+
+    private const int DEFAULT_STRING_MAX_LENGTH = 255;
+    private const int DEFAULT_PRECISION = 13;
+    private const int DEFAULT_SCALE = 4;
+    private const int DEFAULT_FLOAT_PRECISION = 22;
 
     /** @var string[] */
     private array $mediumTextTypeList = [
@@ -74,7 +82,7 @@ class MysqlColumnPreparator implements ColumnPreparator
     private ?int $maxIndexLength = null;
 
     public function __construct(
-        private Helper $helper
+        private Helper $helper,
     ) {}
 
     public function prepare(AttributeDefs $defs): Column
@@ -101,6 +109,10 @@ class MysqlColumnPreparator implements ColumnPreparator
 
         $column = Column::create($columnName, strtolower($columnType));
 
+        if ($columnType === Types::STRING) {
+            $length ??= self::DEFAULT_STRING_MAX_LENGTH;
+        }
+
         if ($length !== null) {
             $column = $column->withLength($length);
         }
@@ -115,6 +127,15 @@ class MysqlColumnPreparator implements ColumnPreparator
 
         if ($autoincrement !== null) {
             $column = $column->withAutoincrement($autoincrement);
+        }
+
+        if ($columnType === Types::DECIMAL) {
+            $precision ??= self::DEFAULT_PRECISION;
+            $scale ??= self::DEFAULT_SCALE;
+        }
+
+        if ($columnType === Types::FLOAT) {
+            $precision = self::DEFAULT_FLOAT_PRECISION;
         }
 
         if ($precision !== null) {
@@ -173,7 +194,9 @@ class MysqlColumnPreparator implements ColumnPreparator
                 LongtextType::NAME,
             ])
         ) {
-            return $column;
+            return $column
+                ->withCollation(null)
+                ->withCharset(null);
         }
 
         $collation = $binary ?

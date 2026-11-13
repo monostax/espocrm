@@ -29,9 +29,9 @@
 
 namespace tests\integration\Core;
 
+use Composer\Autoload\ClassLoader;
 use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\Schema\SchemaException;
-use Doctrine\DBAL\Schema\Table;
 use Espo\Core\Authentication\Authentication;
 use Espo\Core\Authentication\AuthenticationData;
 use Espo\Core\Application;
@@ -198,6 +198,7 @@ class Tester
         ?string $portalId = null,
         ?BindingProcessor $binding = null,
         bool $reuse = false,
+        bool $noUser = false,
     ): Application {
 
         if ($this->application && !$reload) {
@@ -226,10 +227,12 @@ class Tester
             $this->application = new Application($applicationParams);
         }
 
-        if (isset($this->userName) || $this->authenticationMethod) {
-            $this->login();
-        } else {
-            $this->application->setupSystemUser();
+        if (!$noUser) {
+            if (isset($this->userName) || $this->authenticationMethod) {
+                $this->login();
+            } else {
+                $this->application->setupSystemUser();
+            }
         }
 
         return $this->application;
@@ -335,6 +338,10 @@ class Tester
         $installer->setSuccess();
 
         Registry::$isCleanAndReady = true;
+
+        if (!Registry::$isNamespaceConfigured) {
+            $this->configureNamespace();
+        }
     }
 
     // PDO can't be instantiated as dbname is set but database does not exist.
@@ -358,7 +365,7 @@ class Tester
             throw new RuntimeException('No "dbname" in database config.');
         }
 
-        $params = $params->withName(null);
+        //$params = $params->withName(null);
 
         $pdo = $databaseHelper->createPDO($params);
 
@@ -367,13 +374,16 @@ class Tester
             ->create($params);
 
         $schemaManager = $connection->createSchemaManager();
-        $platform = $connection->getDatabasePlatform();
 
-        if (in_array($dbname, $schemaManager->listDatabases())) {
-            return;
+        foreach ($schemaManager->introspectDatabaseNames() as $databaseName) {
+            if ($dbname === $databaseName->getIdentifier()->getValue()) {
+                return;
+            }
         }
 
-        $schemaManager->createDatabase($platform->quoteIdentifier($dbname));
+        $platform = $connection->getDatabasePlatform();
+
+        $schemaManager->createDatabase($platform->quoteSingleIdentifier($dbname));
     }
 
     /**
@@ -395,10 +405,12 @@ class Tester
 
         $pdo = $databaseHelper->getPDO();
 
-        $tables = $schemaManager->listTableNames();
+        $tables = $schemaManager->introspectTables();
 
         foreach ($tables as $table) {
-            $sql = $platform->getDropTableSQL(new Table($table));
+            $tableQuoted = $table->getObjectName()->toSQL($platform);
+
+            $sql = $platform->getDropTableSQL($tableQuoted);
 
             $pdo->query($sql);
         }
@@ -635,5 +647,18 @@ class Tester
         }
 
         return $services;
+    }
+
+    /**
+     * Called after cwd if set to the install-path.
+     */
+    private function configureNamespace(): void
+    {
+        $classLoader = new ClassLoader();
+
+        $classLoader->setPsr4("Espo\\Custom\\", "custom/Espo/Custom");
+        $classLoader->register();
+
+        Registry::$isNamespaceConfigured = true;
     }
 }

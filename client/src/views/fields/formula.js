@@ -27,6 +27,8 @@
  ************************************************************************/
 
 import TextFieldView from 'views/fields/text';
+import Ajax from 'ajax';
+import Ui from 'ui';
 
 /**
  * @type {{
@@ -468,20 +470,16 @@ class FormulaFieldView extends TextFieldView {
         const expression = this.editor.getValue();
 
         if (!expression) {
-            Espo.Ui.success(
-                this.translate('checkSyntaxSuccess', 'messages', 'Formula')
-            );
+            Ui.success(this.translate('checkSyntaxSuccess', 'messages', 'Formula'));
 
             return;
         }
 
-        Espo.Ajax
+        Ajax
             .postRequest('Formula/action/checkSyntax', {expression: expression})
             .then(/** Record */response => {
                 if (response.isSuccess) {
-                    Espo.Ui.success(
-                        this.translate('checkSyntaxSuccess', 'messages', 'Formula')
-                    );
+                    Ui.success(this.translate('checkSyntaxSuccess', 'messages', 'Formula'));
 
                     return;
                 }
@@ -492,7 +490,16 @@ class FormulaFieldView extends TextFieldView {
                     message += ' ' + response.message;
                 }
 
-                Espo.Ui.error(message);
+                if (response.line != null && response.column != null) {
+                    message += "\n\n" +
+                        this.translate('checkSyntaxErrorPosition', 'messages', 'Formula')
+                            .replace('{line}', response.line)
+                            .replace('{column}', response.column);
+                }
+
+                Ui.error(message, {
+                    closeButton: true,
+                });
             });
     }
 }

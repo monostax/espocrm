@@ -82,13 +82,19 @@ class OnlyTeam implements Filter
             $key1 = $relationDefs->getMidKey();
             $key2 = $relationDefs->getForeignMidKey();
 
+            $assignedUsersWhere = [
+                $key2 => $this->user->getId(),
+                'deleted' => false,
+            ];
+
+            foreach ($relationDefs->getConditions() as $key => $value) {
+                $assignedUsersWhere[$key] = $value;
+            }
+
             $assignedUsersSubQuery = SelectBuilder::create()
                 ->select($key1)
                 ->from($middleEntityType)
-                ->where([
-                    $key2 => $this->user->getId(),
-                    'deleted' => false,
-                ])
+                ->where($assignedUsersWhere)
                 ->build();
 
             $orGroup[] = [Attribute::ID . '=s' => $assignedUsersSubQuery];
@@ -107,13 +113,19 @@ class OnlyTeam implements Filter
             $key1 = $relationDefs->getMidKey();
             $key2 = $relationDefs->getForeignMidKey();
 
+            $collaboratorsWhere = [
+                $key2 => $this->user->getId(),
+                'deleted' => false,
+            ];
+
+            foreach ($relationDefs->getConditions() as $key => $value) {
+                $collaboratorsWhere[$key] = $value;
+            }
+
             $collaboratorsSubQuery = SelectBuilder::create()
                 ->select($key1)
                 ->from($middleEntityType)
-                ->where([
-                    $key2 => $this->user->getId(),
-                    'deleted' => false,
-                ])
+                ->where($collaboratorsWhere)
                 ->build();
 
             $orGroup[] = [Attribute::ID . '=s' => $collaboratorsSubQuery];

@@ -29,6 +29,7 @@
 
 namespace Espo\ORM;
 
+use Espo\Core\Utils\Database\Platform;
 use Espo\ORM\Defs\Defs;
 use Espo\ORM\Executor\DefaultQueryExecutor;
 use Espo\ORM\Executor\DefaultSqlExecutor;
@@ -144,7 +145,7 @@ class EntityManager
 
         $className = BaseLocker::class;
 
-        if ($platform === 'Mysql') {
+        if ($platform === Platform::MYSQL) {
             $className = MysqlLocker::class;
         }
 
@@ -307,7 +308,7 @@ class EntityManager
             }
         }
 
-        $entity->set($fetchedMap);
+        $entity->setMultiple($fetchedMap);
         $entity->setAsFetched();
     }
 
@@ -320,7 +321,7 @@ class EntityManager
     public function createEntity(string $entityType, $data = [], array $options = []): Entity
     {
         $entity = $this->getNewEntity($entityType);
-        $entity->set($data);
+        $entity->setMultiple($data);
         $this->saveEntity($entity, $options);
 
         return $entity;

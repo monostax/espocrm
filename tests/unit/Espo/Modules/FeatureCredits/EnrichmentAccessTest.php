@@ -63,7 +63,7 @@ class EnrichmentAccessTest extends TestCase
         $user = $this->createStub(User::class);
         $user->method('getId')->willReturn('user');
         $user->method('isPortal')->willReturn($denial === 'portal');
-        $user->method('isAdmin')->willReturn($denial === 'admin-nonmember');
+        $user->method('isAdmin')->willReturn($denial === 'admin-nonmember'); $user->method('isEffectiveAdmin')->willReturn($denial === 'admin-nonmember');
         $acl = $this->createStub(Acl::class);
         $acl->method('getPermissionLevel')->with('useEnrichmentCredits')->willReturn($denial === 'permission' ? 'no' : 'yes');
         $acl->method('checkScope')->with('Contact', 'read')->willReturn($denial !== 'scope');

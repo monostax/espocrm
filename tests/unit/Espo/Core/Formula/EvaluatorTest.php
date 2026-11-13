@@ -34,6 +34,7 @@ use Espo\Core\Binding\BindingContainerBuilder;
 use Espo\Core\FieldProcessing\SpecificFieldLoader;
 use Espo\Core\Formula\Evaluator;
 use Espo\Core\Formula\Exceptions\Error;
+use Espo\Core\Formula\Exceptions\GeneralError;
 use Espo\Core\Formula\Exceptions\UndefinedKey;
 use Espo\Core\Formula\Exceptions\UnsafeFunction;
 use Espo\Core\Formula\Utils\EntityUtil;
@@ -48,10 +49,9 @@ use tests\unit\ContainerMocker;
 
 class EvaluatorTest extends TestCase
 {
-    /**
-     * @var Evaluator
-     */
-    private $evaluator;
+    private ?Evaluator $evaluator = null;
+
+    private ?Log $log = null;
 
     protected function setUp(): void
     {
@@ -81,7 +81,14 @@ class EvaluatorTest extends TestCase
 
         $injectableFactory = new InjectableFactory($container, $bindingContainer);
 
-        $this->evaluator = new Evaluator($injectableFactory, [], ['test\\unsafe']);
+        $this->log = $this->createMock(Log::class);
+
+        $this->evaluator = new Evaluator(
+            injectableFactory: $injectableFactory,
+            functionClassNameMap: [],
+            unsafeFunctionList: ['test\\unsafe'],
+            log: $this->log,
+        );
     }
 
     protected function tearDown() : void
@@ -266,6 +273,17 @@ class EvaluatorTest extends TestCase
         $this->assertEquals('0110', $actual);
     }
 
+    public function testStringPadMultibyte()
+    {
+        $expression = "string\\pad('Zoé', 5, '0', 'left')";
+        $actual = $this->evaluator->process($expression);
+        $this->assertEquals('00Zoé', $actual);
+
+        $expression = "string\\pad('1', 3, '€')";
+        $actual = $this->evaluator->process($expression);
+        $this->assertEquals('1€€', $actual);
+    }
+
     public function testStringMatchAll()
     {
         $expression = "string\\matchAll('{token1} foo {token2} bar', '/{[^}]*}/')";
@@ -311,11 +329,89 @@ class EvaluatorTest extends TestCase
         $this->assertEquals(['1000', '2000'], $actual);
     }
 
+    public function testDatetimeDiffMonths(): void
+    {
+        $expression = "datetime\\diff('2022-03-01', '2020-01-01', 'months')";
+        $this->assertEquals(26, $this->evaluator->process($expression));
+
+        $expression = "datetime\\diff('2020-01-01', '2022-03-01', 'months')";
+        $this->assertEquals(-26, $this->evaluator->process($expression));
+
+        $expression = "datetime\\diff('2020-01-01', '2021-01-01', 'months')";
+        $this->assertEquals(-12, $this->evaluator->process($expression));
+    }
+
+    public function testDatetimeDiffReturnsInt(): void
+    {
+        $expression = "datetime\\diff('2022-01-04', '2022-01-01', 'days')";
+        $this->assertSame(3, $this->evaluator->process($expression));
+
+        $expression = "datetime\\diff('2022-01-01 10:30:00', '2022-01-01 08:00:00', 'hours')";
+        $this->assertSame(2, $this->evaluator->process($expression));
+
+        $expression = "datetime\\diff('2022-01-01 10:30:00', '2022-01-01 10:00:00', 'minutes')";
+        $this->assertSame(30, $this->evaluator->process($expression));
+
+        $expression = "datetime\\diff('2022-01-04', '2022-01-01', 'days') == 3";
+        $this->assertTrue($this->evaluator->process($expression));
+    }
+
     public function testStringReplace()
     {
         $expression = "string\\replace('hello {test} hello', '{test}', 'hello')";
         $actual = $this->evaluator->process($expression);
         $this->assertEquals('hello hello hello', $actual);
+    }
+
+    public function testStringReplaceMany(): void
+    {
+        $expression = <<<EOF
+            \$map = object\\create();
+            \$map['{one}'] = 'one';
+            \$map['{two}'] = 'two';
+            \$map['3'] = 'three';
+            \$map['0'] = 'zero';
+            \$map['true'] = 'TRUE';
+            \$map['false'] = 'FALSE';
+            \$map['{scalarInt}'] = 1;
+            \$map['{scalarTrue}'] = true;
+            \$map['{scalarFalse}'] = false;
+            \$map['{scalarNull}'] = null;
+
+            \$input = "Test {one} {two} 3 0 true false {scalarInt} {scalarTrue} {scalarFalse} {scalarNull}.";
+
+            string\\replaceMany(\$input, \$map);
+            EOF;
+
+        $actual = $this->evaluator->process($expression);
+
+        $this->assertEquals('Test one two three zero TRUE FALSE 1 true false null.', $actual);
+    }
+
+    public function testStringReplaceManyError1(): void
+    {
+        $expression = <<<EOF
+            \$input = "Test {one} {two}.";
+
+            string\\replaceMany("Test");
+            EOF;
+
+        $this->expectException(GeneralError::class);
+
+        $this->evaluator->process($expression);
+    }
+
+    public function testStringReplaceManyError2(): void
+    {
+        $expression = <<<EOF
+            \$input = "Test {one} {two}.";
+
+            string\\replaceMany("Test", list());
+            EOF;
+
+        $this->expectException(GeneralError::class);
+
+        $this->evaluator->process($expression);
     }
 
     public function testArrayAt()
@@ -718,6 +814,31 @@ class EvaluatorTest extends TestCase
         ]);
 
         $this->assertEquals($value, $result);
+    }
+
+    public function testJsonRetrieveNonNumericKeyOnArray(): void
+    {
+        $value = (object) [
+            'items' => [
+                (object) ['id' => 'test'],
+            ],
+        ];
+
+        $expression = "json\\retrieve(\$value, 'items.id')";
+
+        $result = $this->evaluator->process($expression, null, (object) [
+            'value' => json_encode($value),
+        ]);
+
+        $this->assertNull($result);
+
+        $expression = "json\\retrieve(\$value, 'items.1a')";
+
+        $result = $this->evaluator->process($expression, null, (object) [
+            'value' => json_encode($value),
+        ]);
+
+        $this->assertNull($result);
     }
 
     public function testNegate1()
@@ -2137,5 +2258,58 @@ class EvaluatorTest extends TestCase
         $this->assertEquals([0, 1], $vars->a);
         $this->assertEquals([0, 1], $vars->b);
         $this->assertEquals([0, 1], $vars->c);
+    }
+
+    public function testLoggingBadFunction(): void
+    {
+        $expression = <<<EOF
+            \$a = 1;
+
+            test();
+            EOF;
+
+        $this->log->expects(self::once())
+            ->method('info')
+            ->with(
+                $this->anything(),
+                [
+                    'excerpt' => 'test();',
+                    'line' => 3,
+                    'column' => 1,
+                    'position' => 11,
+                ],
+            );
+
+        try {
+            $this->evaluator->process($expression);
+        } catch (Error) {}
+    }
+
+    public function testLoggingError(): void
+    {
+        $expression = <<<EOF
+            \$a = 'a';
+            if (1) {
+                string\contains(\$a);
+                \$b = 'b';
+            }
+
+            EOF;
+
+        $this->log->expects(self::once())
+            ->method('info')
+            ->with(
+                $this->anything(),
+                [
+                    'excerpt' => "string\contains(\$a);\r\n    \$b = 'b';\r\n}\r\n",
+                    'line' => 3,
+                    'column' => 5,
+                    'position' => 25,
+                ],
+            );
+
+        try {
+            $this->evaluator->process($expression);
+        } catch (Error) {}
     }
 }

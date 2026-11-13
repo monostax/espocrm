@@ -111,20 +111,11 @@
         "amdId": "autonumeric"
     },
     {
-        "src": "node_modules/intl-tel-input/build/js/intlTelInput.js",
-        "bundle": true,
+        "src": "node_modules/intl-tel-input/dist/js/intlTelInputWithUtils.js",
+        "dest": "client/lib/intl-tel-input.js",
+        "minify": true,
         "amdId": "intl-tel-input",
         "suppressAmd": true
-    },
-    {
-        "src": "node_modules/intl-tel-input/build/js/utils.js",
-        "dest": "client/lib/intl-tel-input-utils.js",
-        "minify": true,
-        "amdId": "intl-tel-input-utils"
-    },
-    {
-        "bundle": true,
-        "amdId": "intl-tel-input-globals"
     },
     {
         "src": "client/lib/original/shopify-draggable.js",

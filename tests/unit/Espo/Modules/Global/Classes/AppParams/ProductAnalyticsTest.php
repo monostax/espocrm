@@ -23,7 +23,7 @@ class ProductAnalyticsTest extends TestCase
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn('crm1');
         $user->method('isRegular')->willReturn($type === 'regular');
-        $user->method('isAdmin')->willReturn($type === 'admin');
+        $user->method('isAdmin')->willReturn($type === 'admin'); $user->method('isEffectiveAdmin')->willReturn($type === 'admin');
 
         $settings = $this->createMock(Config::class);
         $settings->method('get')->willReturnCallback(fn (string $key) => $config[$key] ?? null);

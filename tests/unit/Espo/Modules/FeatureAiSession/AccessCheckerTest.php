@@ -24,7 +24,7 @@ class AccessCheckerTest extends TestCase
         $actor = $this->createMock(User::class);
         $actor->method('isActive')->willReturn(true);
         $instanceAdmin = false;
-        $actor->method('isAdmin')->willReturnCallback(function () use (&$instanceAdmin) { return $instanceAdmin; });
+        $actor->method('isAdmin')->willReturnCallback(function () use (&$instanceAdmin) { return $instanceAdmin; }); $actor->method('isEffectiveAdmin')->willReturnCallback(function () use (&$instanceAdmin) { return $instanceAdmin; });
         $entity = $this->createMock(Entity::class);
         $data = $this->createMock(ScopeData::class);
         self::assertFalse($checker->checkEntityRead($actor, $entity, $data));

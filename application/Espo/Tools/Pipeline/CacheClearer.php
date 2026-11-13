@@ -30,7 +30,9 @@
 namespace Espo\Tools\Pipeline;
 
 use Espo\Core\Utils\DataCache;
+use Espo\Core\Utils\Event\EventDispatcher;
 use Espo\Core\WebSocket\Submission;
+use Espo\Tools\Pipeline\Events\UpdateGlobal;
 
 class CacheClearer
 {
@@ -39,11 +41,13 @@ class CacheClearer
     public function __construct(
         private DataCache $dataCache,
         private Submission $submission,
+        private EventDispatcher $eventDispatcher,
     ) {}
 
     public function clear(): void
     {
         $this->dataCache->clear(self::CACHE_KEY);
+        $this->eventDispatcher->dispatch(new UpdateGlobal());
         $this->submission->submit('appParamsUpdate');
     }
 }

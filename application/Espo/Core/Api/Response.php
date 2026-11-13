@@ -29,6 +29,7 @@
 
 namespace Espo\Core\Api;
 
+use Psr\Http\Message\ResponseInterface as Psr7Response;
 use Psr\Http\Message\StreamInterface;
 
 /**
@@ -99,4 +100,18 @@ interface Response
      * Get a body.
      */
     public function getBody(): StreamInterface;
+
+    /**
+     * Apply a PSR-7 response.
+     *
+     * @since 10.1.0
+     */
+    public function applyPsr7(Psr7Response $psr7Response): self;
+
+    /**
+     * Get the PSR-7 response.
+     *
+     * @since 10.1.0
+     */
+    public function toPsr7(): Psr7Response;
 }

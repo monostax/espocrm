@@ -148,9 +148,11 @@ class UrlFieldView<
         }
 
         try {
-            if (value === decodeURI(value)) {
-                value = encodeURI(value);
+            if (decodeURIComponent(value) !== value) {
+                return value;
             }
+
+            value = encodeURI(value);
         } catch (e) {
             console.warn(`Malformed URI ${value}.`);
 
@@ -213,6 +215,12 @@ class UrlFieldView<
                 return false;
             }
         }
+
+        try {
+            new URL(value);
+
+            return true;
+        } catch (e) {}
 
         const pattern = this.getMetadata().get(['app', 'regExpPatterns', 'uriOptionalProtocol', 'pattern']) as string;
 

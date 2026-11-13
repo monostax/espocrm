@@ -36,25 +36,15 @@ use stdClass;
 
 class Result
 {
-    private $subject;
-    private $body;
-    private $isHtml = false;
-    private $attachmentList = [];
-
     /**
      * @param Attachment[] $attachmentList
      */
     public function __construct(
-        string $subject,
-        string $body,
-        bool $isHtml,
-        array $attachmentList
-    ) {
-        $this->subject = $subject;
-        $this->body = $body;
-        $this->isHtml = $isHtml;
-        $this->attachmentList = $attachmentList;
-    }
+        private string $subject,
+        private string $body,
+        private bool $isHtml,
+        private array $attachmentList = [],
+    ) {}
 
     public function getSubject(): string
     {

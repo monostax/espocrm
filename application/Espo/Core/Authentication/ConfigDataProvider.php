@@ -43,8 +43,11 @@ class ConfigDataProvider
     private const string USERNAME_FAILED_ATTEMPTS_PERIOD =  '60 seconds';
     private const int USERNAME_FAILED_ATTEMPT_DELAY = 2;
 
-    public function __construct(private Config $config, private Metadata $metadata)
-    {}
+    public function __construct(
+        private Config $config,
+        private Metadata $metadata,
+        private Config\SystemConfig $systemConfig,
+    ) {}
 
     /**
      * A period for max failed attempts checking.
@@ -111,7 +114,7 @@ class ConfigDataProvider
      */
     public function isMaintenanceMode(): bool
     {
-        return (bool) $this->config->get('maintenanceMode');
+        return $this->systemConfig->isMaintenanceMode();
     }
 
     /**
@@ -120,6 +123,16 @@ class ConfigDataProvider
     public function isTwoFactorEnabled(): bool
     {
         return (bool) $this->config->get('auth2FA');
+    }
+
+    /**
+     * Whether 2FA is enabled in portals.
+     *
+     * @since 10.0.4
+     */
+    public function isTwoFactorInPortalEnabled(): bool
+    {
+        return (bool) $this->config->get('auth2FAInPortal');
     }
 
     /**

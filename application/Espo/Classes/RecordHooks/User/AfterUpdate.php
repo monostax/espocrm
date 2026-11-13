@@ -30,7 +30,6 @@
 namespace Espo\Classes\RecordHooks\User;
 
 use Espo\Core\Acl\Cache\Clearer;
-use Espo\Core\DataManager;
 use Espo\Core\Record\Hook\SaveHook;
 use Espo\Modules\Crm\Entities\Contact;
 use Espo\ORM\Entity;
@@ -46,7 +45,6 @@ class AfterUpdate implements SaveHook
     public function __construct(
         private EntityManager $entityManager,
         private Clearer $clearer,
-        private DataManager $dataManager
     ) {}
 
     public function process(Entity $entity): void
@@ -62,20 +60,11 @@ class AfterUpdate implements SaveHook
             $entity->isAttributeChanged('teamsIds') ||
             $entity->isAttributeChanged('type') ||
             $entity->isAttributeChanged('portalRolesIds') ||
-            $entity->isAttributeChanged('portalsIds')
-        ) {
-            $this->clearer->clearForUser($entity);
-            $this->dataManager->updateCacheTimestamp();
-        }
-
-        if (
-            $entity->isAttributeChanged('portalRolesIds') ||
             $entity->isAttributeChanged('portalsIds') ||
             $entity->isAttributeChanged('contactId') ||
             $entity->isAttributeChanged('accountsIds')
         ) {
-            $this->clearer->clearForAllPortalUsers();
-            $this->dataManager->updateCacheTimestamp();
+            $this->clearer->clearForUser($entity);
         }
     }
 

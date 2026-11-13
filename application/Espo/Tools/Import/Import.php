@@ -42,6 +42,7 @@ use Espo\ORM\Defs\Params\AttributeParam;
 use Espo\ORM\Defs\Params\FieldParam;
 use Espo\ORM\Defs\Params\RelationParam;
 use Espo\ORM\Name\Attribute;
+use Espo\ORM\Type\AttributeType;
 use Espo\Tools\Import\Jobs\RunIdle;
 use Espo\ORM\Entity;
 use Espo\Core\ORM\Entity as CoreEntity;
@@ -81,6 +82,8 @@ class Import
     private const string DEFAULT_DECIMAL_MARK = '.';
     private const string DEFAULT_DATE_FORMAT = 'YYYY-MM-DD';
     private const string DEFAULT_TIME_FORMAT = 'HH:mm';
+
+    public const string FILE_ROLE = 'Import File';
 
     /** @var string[] */
     private array $attributeList = [];
@@ -207,11 +210,7 @@ class Import
         assert(is_string($this->entityType));
         assert(is_string($this->attachmentId));
 
-        $attachment = $this->entityManager->getRepositoryByClass(Attachment::class)->getById($this->attachmentId);
-
-        if (!$attachment) {
-            throw new Error('Attachment not found.');
-        }
+        $attachment = $this->getAttachment();
 
         $contents = $this->fileStorageManager->getContents($attachment);
 
@@ -275,6 +274,7 @@ class Import
                     'importAttributeList' => $attributeList,
                     'importId' => $import->getId(),
                     'userId' => $this->user->getId(),
+                    RunIdle::PARAM_USER_SCOPES => $this->user->getScopes(),
                 ])
                 ->schedule();
 
@@ -508,7 +508,7 @@ class Import
 
         $isNew = $entity->isNew();
 
-        $entity->setMultiple($params->getDefaultValues());
+        $entity->setMultiple($this->filterValuesMap($params->getDefaultValues()));
 
         // Values are not supposed to be sanitized with the field Sanitizer.
         $failureList = [];
@@ -530,13 +530,17 @@ class Import
             }
         }
 
-        $this->processAdditionalAccessCheck(
-            entity: $entity,
-            import: $import,
-            row: $row,
-            index: $index,
-            errorIndex: $errorIndex,
-        );
+        try {
+            $this->processAdditionalAccessCheck(
+                entity: $entity,
+                import: $import,
+                row: $row,
+                index: $index,
+                errorIndex: $errorIndex,
+            );
+        } catch (Forbidden) {
+            return ['isError' => true];
+        }
 
         $defaultCurrency = $params->getCurrency() ?? $this->currencyConfig->getDefaultCurrency();
 
@@ -1530,6 +1534,7 @@ class Import
 
     /**
      * @param string[] $row
+     * @throws Forbidden
      */
     private function processAdditionalAccessCheck(
         CoreEntity $entity,
@@ -1559,6 +1564,8 @@ class Import
             import: $import,
             errorIndex: $errorIndex,
         );
+
+        throw new Forbidden();
     }
 
     /**
@@ -1569,13 +1576,27 @@ class Import
     {
         $entityType = $this->entityType ?? throw new LogicException();
 
+        $entityDefs = $this->entityManager->getDefs()->getEntity($entityType);
+
         $forbiddenAttributeList =
             $this->aclManager->getScopeForbiddenAttributeList($this->user, $entityType, Table::ACTION_EDIT);
 
         foreach ($attributeList as $k => $attribute) {
-            if (in_array($attribute, $forbiddenAttributeList)) {
-                unset($attributeList[$k]);
+            if (!in_array($attribute, $forbiddenAttributeList)) {
+                continue;
             }
+
+            $attributeDefs = $entityDefs->tryGetAttribute($attribute);
+
+            if (
+                $attributeDefs?->getType() === AttributeType::FOREIGN &&
+                $entityDefs->tryGetField($attribute)?->getParam('relateOnImport') &&
+                $this->aclManager->checkField($this->user, $entityType, $attribute)
+            ) {
+                continue;
+            }
+
+            unset($attributeList[$k]);
         }
 
         if ($entityType === User::ENTITY_TYPE) {
@@ -1608,5 +1629,61 @@ class Import
         foreach ($restrictedAttributes as $attribute) {
             unset($attributeList[$attribute]);
         }
+    }
+
+    private function filterValuesMap(stdClass $values): stdClass
+    {
+        $forbiddenAttributeList = $this->getEditForbiddenAttributeList();
+
+        $output = (object) [];
+
+        foreach (get_object_vars($values) as $attribute => $value) {
+            if (in_array($attribute, $forbiddenAttributeList)) {
+                continue;
+            }
+
+            $output->$attribute = $value;
+        }
+
+        return $output;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getEditForbiddenAttributeList(): array
+    {
+        $entityType = $this->entityType ?? throw new LogicException();
+
+        return $this->aclManager->getScopeForbiddenAttributeList($this->user, $entityType, Table::ACTION_EDIT);
+    }
+
+    /**
+     * @throws Error
+     * @throws Forbidden
+     */
+    private function getAttachment(): Attachment
+    {
+        $id = $this->attachmentId ?? throw new LogicException();
+
+        $attachment = $this->entityManager->getRepositoryByClass(Attachment::class)->getById($id);
+
+        if (!$attachment) {
+            throw new Error('Attachment not found.');
+        }
+
+        if ($attachment->getRole() !== self::FILE_ROLE) {
+            throw new Error('Wrong attachment.');
+        }
+
+        if (
+            !$this->user->isEffectiveAdmin() &&
+            !$this->user->isSystem() &&
+            $attachment->getCreatedBy()?->getId() !== $this->user->getId()
+        ) {
+            throw new Forbidden('No access to attachment.');
+        }
+
+        return $attachment;
     }
 }

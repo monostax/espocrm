@@ -54,9 +54,19 @@ class ArrayStringTrim implements Sanitizer
                 continue;
             }
 
-            $value[$i] = trim($item);
+            $value[$i] = self::trim($item);
         }
 
         $data->set($field, $value);
+    }
+
+    private static function trim(string $value): string
+    {
+        // @todo Remove check when PHP 8.4 is min supported.
+        if (function_exists('mb_trim')) {
+            return mb_trim($value);
+        }
+
+        return trim($value);
     }
 }

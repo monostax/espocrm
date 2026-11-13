@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html dir="{{direction}}">
     <head>
         <!--  -->
         <title>Monostax Revenue Center - {{applicationName}}</title>
@@ -59,6 +59,7 @@
                         bundledModuleList: {{bundledModuleList}},
                         theme: {{theme}},
                         embeddedTable: {{embeddedTable}},
+                        useRouter: {{useRouter}},
                     }, app => {
                         loadedApp = app;
 
@@ -80,7 +81,7 @@
             });
         </script>
     </head>
-    <body data-id="{{applicationId}}">
+    <body data-id="{{applicationId}}" data-direction="{{direction}}">
         <div class="container content"></div>
         <footer>
             <p class="credit small">

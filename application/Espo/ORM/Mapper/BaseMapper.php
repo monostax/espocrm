@@ -1172,7 +1172,6 @@ class BaseMapper implements RDBMapper
                         $where[$typeKey] = $foreignEntityType;
                     }
 
-                    /** @noinspection PhpRedundantOptionalArgumentInspection */
                     $entity->set($typeKey, null);
                     $entity->setFetched($typeKey, null);
                 }
@@ -1617,7 +1616,7 @@ class BaseMapper implements RDBMapper
      */
     private function populateEntityFromRow(Entity $entity, $data): void
     {
-        $entity->set($data);
+        $entity->setMultiple($data);
     }
 
     /**

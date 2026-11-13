@@ -113,11 +113,11 @@ class PopupNotificationView extends View {
             });
         });
 
-        this.once('after:render', () => {
+        this.on('after:render', () => {
             this.onShow();
         });
 
-        this.once('remove', function () {
+        this.on('remove', function () {
             $(containerSelector).remove();
         });
 

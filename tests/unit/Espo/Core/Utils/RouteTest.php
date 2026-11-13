@@ -189,12 +189,14 @@ class RouteTest extends TestCase
         $expectedItemList = array_map(
             function (array $item) {
                 return new RouteItem(
-                    $item['method'],
-                    $item['route'],
-                    $item['adjustedRoute'],
-                    $item['params'] ?? [],
-                    $item['noAuth'] ?? false,
-                    null
+                    method: $item['method'],
+                    route: $item['route'],
+                    adjustedRoute: $item['adjustedRoute'],
+                    params: $item['params'] ?? [],
+                    noAuth: $item['noAuth'] ?? false,
+                    consumes: null,
+                    actionClassName: null,
+                    apiAuthForbidden: false,
                 );
             },
             $expected
@@ -292,12 +294,14 @@ class RouteTest extends TestCase
         $expectedItemList = array_map(
             function (array $item) {
                 return new RouteItem(
-                    $item['method'],
-                    $item['route'],
-                    $item['adjustedRoute'],
-                    $item['params'] ?? [],
-                    $item['noAuth'] ?? false,
-                    null
+                    method: $item['method'],
+                    route: $item['route'],
+                    adjustedRoute: $item['adjustedRoute'],
+                    params: $item['params'] ?? [],
+                    noAuth: $item['noAuth'] ?? false,
+                    consumes: null,
+                    actionClassName: null,
+                    apiAuthForbidden: false,
                 );
             },
             $expected
@@ -395,12 +399,14 @@ class RouteTest extends TestCase
         $expectedItemList = array_map(
             function (array $item) {
                 return new RouteItem(
-                    $item['method'],
-                    $item['route'],
-                    $item['adjustedRoute'],
-                    $item['params'] ?? [],
-                    $item['noAuth'] ?? false,
-                    false
+                    method: $item['method'],
+                    route: $item['route'],
+                    adjustedRoute: $item['adjustedRoute'],
+                    params: $item['params'] ?? [],
+                    noAuth: $item['noAuth'] ?? false,
+                    consumes: null,
+                    actionClassName: null,
+                    apiAuthForbidden: false,
                 );
             },
             $expected

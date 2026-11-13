@@ -53,7 +53,7 @@ class PersonalTagsTest extends TestCase
     {
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn($id);
-        $user->method('isAdmin')->willReturn($admin);
+        $user->method('isAdmin')->willReturn($admin); $user->method('isEffectiveAdmin')->willReturn($admin);
         $user->method('getTeamIdList')->willReturn(['shared-team']);
         return $user;
     }

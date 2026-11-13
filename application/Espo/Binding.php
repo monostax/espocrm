@@ -30,8 +30,17 @@
 namespace Espo;
 
 use Espo\Core\Binding\Binder;
+use Espo\Core\Binding\BindingContainerBuilder;
 use Espo\Core\Binding\BindingProcessor;
 use Espo\Core\Binding\Key\NamedClassKey;
+use Espo\Core\Binding\Key\QualifiedClassKey;
+use Espo\Core\Container;
+use Espo\Core\InjectableFactory;
+use Espo\Core\Utils\Cache\DataCacheAccess;
+use Espo\Core\Utils\Cache\DataCacheServiceName as DataCacheServiceName;
+use Espo\Core\Utils\Cache\FileCacheItemPool;
+use Espo\Core\Utils\DataCache;
+use Psr\Cache\CacheItemPoolInterface;
 
 /**
  * Default binding for the dependency injection framework. Custom binding should be set up in
@@ -87,6 +96,8 @@ class Binding implements BindingProcessor
             'Espo\\Core\\Utils\\File\\Manager',
             'fileManager'
         );
+
+        $this->bindDataCacheServices($binder);
 
         $binder->bindService(
             'Espo\\ORM\\EntityManager',
@@ -144,6 +155,11 @@ class Binding implements BindingProcessor
         );
 
         $binder->bindService(
+            'Espo\\Core\\Hook\\DataProvider',
+            'hookDataProvider'
+        );
+
+        $binder->bindService(
             'Espo\\Core\\HookManager',
             'hookManager'
         );
@@ -174,12 +190,27 @@ class Binding implements BindingProcessor
         );
 
         $binder->bindService(
+            QualifiedClassKey::create('Espo\\Core\\Utils\\Language', 'base'),
+            'baseLanguage'
+        );
+
+        $binder->bindService(
             NamedClassKey::create('Espo\\Core\\Utils\\Language', 'defaultLanguage'),
             'defaultLanguage'
         );
 
         $binder->bindService(
+            QualifiedClassKey::create('Espo\\Core\\Utils\\Language', 'default'),
+            'defaultLanguage'
+        );
+
+        $binder->bindService(
             'Espo\\Core\\Utils\\Language',
+            'language'
+        );
+
+        $binder->bindService(
+            QualifiedClassKey::create('Espo\\Core\\Utils\\Language', 'user'),
             'language'
         );
 
@@ -247,6 +278,31 @@ class Binding implements BindingProcessor
             'Espo\\Core\\Session\\Session',
             'session'
         );
+
+        $binder->bindService(
+            'Espo\\Core\\Job\\JobManager',
+            'jobManager'
+        );
+
+        $binder->bindService(
+            'Espo\\Core\\Utils\\System\\SystemState',
+            'systemState'
+        );
+
+        $binder->bindService(
+            'Espo\\Core\\Utils\\Event\\Configuration',
+            'eventDispatcherConfiguration',
+        );
+
+        $binder->bindService(
+            'Espo\\Core\\Utils\\Event\\EventTransport',
+            'eventTransport'
+        );
+
+        $binder->bindService(
+            'Espo\\Tools\\Pipeline\\PipelineDataProvider',
+            'pipelineDataProvider'
+        );
     }
 
     private function bindCore(Binder $binder): void
@@ -264,6 +320,32 @@ class Binding implements BindingProcessor
         $binder->bindImplementation(
             'Espo\\Core\\Job\\JobScheduler\\Creator',
             'Espo\\Core\\Job\\JobScheduler\\Creators\\EntityCreator',
+        );
+
+        $binder->inContext('Espo\\Core\\Job\\JobManager', function ($binder) {
+            $binder->bindImplementation(
+                'Espo\\Core\\Job\\QueueProcessor',
+                'Espo\\Core\\Job\\QueueProcessor\\QueueProcessors\\DefaultQueueProcessor',
+            );
+        });
+
+        $binder->inContext('Espo\\Core\\Job\\Processing\\EnqueueDaemon', function ($binder) {
+            $binder->bindImplementation(
+                'Espo\\Core\\Job\\Processing\\Publisher',
+                'Espo\\Core\\Job\\Processing\\RabbitMq\\Publisher',
+            );
+        });
+
+        $binder->inContext('Espo\\Core\\Job\\Processing\\WorkerDaemon', function ($binder) {
+            $binder->bindImplementation(
+                'Espo\\Core\\Job\\Processing\\Consumer',
+                'Espo\\Core\\Job\\Processing\\RabbitMq\\Consumer',
+            );
+        });
+
+        $binder->bindImplementation(
+            CacheItemPoolInterface::class,
+            FileCacheItemPool::class
         );
     }
 
@@ -383,5 +465,33 @@ class Binding implements BindingProcessor
                 'Espo\\Core\\Mail\\Account\\StorageFactory',
                 'Espo\\Core\\Mail\\Account\\GroupAccount\\StorageFactory'
             );
+    }
+
+    private function bindDataCacheServices(Binder $binder): void
+    {
+        $binder->bindService(
+            DataCache::class,
+            DataCacheServiceName::APPLICATION
+        );
+
+        $binder->bindService(
+            QualifiedClassKey::create(DataCache::class, DataCache::QUALIFIER_SYSTEM),
+            DataCacheServiceName::SYSTEM
+        );
+
+        $binder->bindCallback(
+            QualifiedClassKey::create(DataCacheAccess::class, DataCache::QUALIFIER_SYSTEM),
+            function (InjectableFactory $injectableFactory, Container $container) {
+                return $injectableFactory->createWithBinding(
+                    DataCacheAccess::class,
+                    BindingContainerBuilder::create()
+                        ->bindInstance(
+                            DataCache::class,
+                            $container->get(DataCacheServiceName::SYSTEM)
+                        )
+                        ->build()
+                );
+            }
+        );
     }
 }

@@ -29,6 +29,8 @@
 
 namespace Espo\Core\Utils\Client;
 
+use Espo\Core\Utils\Theme\Direction;
+
 readonly class RenderParams
 {
     /**
@@ -36,11 +38,15 @@ readonly class RenderParams
      * @param Script[] $scripts Scripts to include on the page.
      * @param ?string $pageTitle A page title. Since 9.1.0.
      * @param ?string $theme A page theme name.
+     * @param ?Direction $direction A document direction.
+     * @param bool $useRouter Use the frontend router. As of v10.1.0.
      */
     public function __construct(
         public ?string $runScript = null,
         public array $scripts = [],
         public ?string $pageTitle = null,
         public ?string $theme = null,
+        public ?Direction $direction = null,
+        public bool $useRouter = true,
     ) {}
 }

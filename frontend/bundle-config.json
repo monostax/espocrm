@@ -60,8 +60,8 @@
                 "src/namespace.js",
                 "src/loader.js"
             ],
-            "dependentOn": ["intl-tel-input-utils"],
-            "requires": ["intl-tel-input-utils"],
+            "dependentOn": ["intl-tel-input"],
+            "requires": ["intl-tel-input"],
             "noDuplicates": true
         },
         "dashboard": {

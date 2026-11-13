@@ -30,6 +30,7 @@
 
 import ListRecordView from 'views/record/list';
 import MassActionHelper from 'helpers/mass-action';
+import Ui from 'ui';
 
 class EmailListRecordView extends ListRecordView {
 
@@ -400,14 +401,18 @@ class EmailListRecordView extends ListRecordView {
         }
     }
 
-    actionMarkAllAsRead() {
-        Espo.Ajax.postRequest('Email/inbox/read', {all: true});
-
-        this.collection.forEach(model => {
-            model.set('isRead', true);
-        });
-
+    async actionMarkAllAsRead() {
         this.collection.trigger('all-marked-read');
+
+        const ids = this.collection.models.map(m => m.id);
+
+        await Espo.Ajax.postRequest('Email/inbox/read', {all: true});
+
+        const models = this.collection.models.filter(m => ids.includes(m.id));
+
+        models.forEach(model => {
+            model.set('isRead', true, {sync: true});
+        });
     }
 
     // noinspection JSUnusedGlobalSymbols

@@ -35,7 +35,7 @@ class OidcLoginHandler extends LoginHandler {
     process() {
         const proxy = window.open(
             'about:blank',
-            'ConnectWithOAuth',
+            'ConnectWithOAuthOidc',
             'location=0,status=0,width=800,height=800'
         );
 
@@ -228,7 +228,7 @@ class OidcLoginHandler extends LoginHandler {
                 code: params.get('code'),
                 state: params.get('state'),
                 error: params.get('error'),
-                errorDescription: params.get('errorDescription'),
+                errorDescription: params.get('errorDescription') ?? params.get('error_description'),
             };
         }
         catch (e) {

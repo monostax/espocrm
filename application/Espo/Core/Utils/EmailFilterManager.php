@@ -32,6 +32,7 @@ namespace Espo\Core\Utils;
 use Espo\Core\ORM\EntityManager;
 use Espo\Core\Mail\FiltersMatcher;
 use Espo\Core\Utils\Config\SystemConfig;
+use Espo\Core\Utils\User\UserStateProvider;
 use Espo\Entities\Email;
 use Espo\Entities\EmailFilter;
 use Espo\Entities\User;
@@ -49,13 +50,17 @@ class EmailFilterManager
     private array $data = [];
     private bool $useCache;
 
-    private const CACHE_KEY = 'emailFilters';
+    /** @var array<string, int> */
+    private array $cacheVersionMap = [];
+
+    private const string CACHE_KEY = 'emailFilters';
 
     public function __construct(
         private EntityManager $entityManager,
         private FiltersMatcher $filtersMatcher,
         private DataCache $dataCache,
         SystemConfig $systemConfig,
+        private UserStateProvider $userStateProvider,
     ) {
         $this->useCache = $systemConfig->useCache();
     }
@@ -72,16 +77,24 @@ class EmailFilterManager
      */
     private function get(string $userId): array
     {
-        if (array_key_exists($userId, $this->data)) {
+        if (array_key_exists($userId, $this->data) && $this->cacheIsRelevant($userId)) {
             return $this->data[$userId];
         }
+
+        unset($this->data[$userId]);
 
         $cacheKey = $this->composeCacheKey($userId);
 
         if ($this->useCache && $this->dataCache->has($cacheKey)) {
-            $this->data[$userId] = $this->loadFromCache($cacheKey);
+            $cached = $this->loadFromCache($cacheKey);
 
-            return $this->data[$userId];
+            if ($cached !== null) {
+                $this->data[$userId] = $cached;
+
+                $this->setCacheVersionNumber($userId);
+
+                return $this->data[$userId];
+            }
         }
 
         $this->data[$userId] = $this->fetch($userId);
@@ -89,6 +102,8 @@ class EmailFilterManager
         if ($this->useCache) {
             $this->storeToCache($userId);
         }
+
+        $this->setCacheVersionNumber($userId);
 
         return $this->data[$userId];
     }
@@ -125,12 +140,16 @@ class EmailFilterManager
     }
 
     /**
-     * @return EmailFilter[]
+     * @return ?EmailFilter[]
      */
-    private function loadFromCache(string $cacheKey): array
+    private function loadFromCache(string $cacheKey): ?array
     {
         /** @var stdClass[] $dataList */
         $dataList = $this->dataCache->get($cacheKey);
+
+        if ($dataList === null) {
+            return null;
+        }
 
         /** @var EmailFilter[] $list */
         $list = [];
@@ -162,5 +181,21 @@ class EmailFilterManager
         $cacheKey = $this->composeCacheKey($userId);
 
         $this->dataCache->store($cacheKey, $dataList);
+    }
+
+    private function setCacheVersionNumber(string $userId): void
+    {
+        $this->cacheVersionMap[$userId] = $this->userStateProvider->getEmailFiltersVersionNumber($userId);
+    }
+
+    private function cacheIsRelevant(string $userId): bool
+    {
+        $versionNumber = $this->cacheVersionMap[$userId] ?? null;
+
+        if ($versionNumber === null) {
+            return false;
+        }
+
+        return $versionNumber === $this->userStateProvider->getEmailFiltersVersionNumber($userId);
     }
 }

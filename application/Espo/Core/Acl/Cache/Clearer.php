@@ -29,30 +29,39 @@
 
 namespace Espo\Core\Acl\Cache;
 
+use Espo\Core\Portal\Acl\Events\PortalUserRoleUpdate;
+use Espo\Core\Acl\Events\UserRoleUpdate;
+use Espo\Core\Utils\Event\EventDispatcher;
 use Espo\Core\Utils\File\Manager as FileManager;
+use Espo\Core\Utils\System\SystemState;
 use Espo\Entities\Portal;
 use Espo\Entities\User;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Name\Attribute;
 
-/**
- * @todo Clear cache in AclManager.
- */
 class Clearer
 {
-    public function __construct(private FileManager $fileManager, private EntityManager $entityManager)
-    {}
+    public function __construct(
+        private FileManager $fileManager,
+        private EntityManager $entityManager,
+        private SystemState $systemState,
+        private EventDispatcher $eventDispatcher,
+    ) {}
 
     public function clearForAllInternalUsers(): void
     {
         $this->fileManager->removeInDir('data/cache/application/acl');
         $this->fileManager->removeInDir('data/cache/application/aclMap');
+
+        $this->bumpSystemStateVersionNumber();
     }
 
     public function clearForAllPortalUsers(): void
     {
         $this->fileManager->removeInDir('data/cache/application/aclPortal');
         $this->fileManager->removeInDir('data/cache/application/aclPortalMap');
+
+        $this->bumpSystemStateVersionNumber();
     }
 
     public function clearForUser(User $user): void
@@ -63,10 +72,15 @@ class Clearer
             return;
         }
 
-        $part = basename($user->getId() . '.php');
+        $file = basename($user->getId() . '.php');
+        $dir = basename($user->getId());
 
-        $this->fileManager->remove('data/cache/application/acl/' . $part);
-        $this->fileManager->remove('data/cache/application/aclMap/' . $part);
+        $this->fileManager->remove('data/cache/application/acl/' . $file);
+        $this->fileManager->remove('data/cache/application/aclMap/' . $file);
+        $this->fileManager->removeInDir('data/cache/application/acl/' . $dir, true);
+        $this->fileManager->removeInDir('data/cache/application/aclMap/' . $dir, true);
+
+        $this->eventDispatcher->dispatch(new UserRoleUpdate($user->getId()));
     }
 
     private function clearForPortalUser(User $user): void
@@ -81,6 +95,18 @@ class Clearer
 
             $this->fileManager->remove('data/cache/application/aclPortal/' . $part);
             $this->fileManager->remove('data/cache/application/aclPortalMap/' . $part);
+
+            $event = new PortalUserRoleUpdate(
+                userId: $user->getId(),
+                portalId: $portal->getId(),
+            );
+
+            $this->eventDispatcher->dispatch($event);
         }
+    }
+
+    private function bumpSystemStateVersionNumber(): void
+    {
+        $this->systemState->bumpVersionNumber();
     }
 }

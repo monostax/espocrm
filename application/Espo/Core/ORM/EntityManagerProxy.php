@@ -30,6 +30,7 @@
 namespace Espo\Core\ORM;
 
 use Espo\ORM\Entity;
+use Espo\ORM\Executor\QueryExecutor;
 use Espo\ORM\Metadata;
 use Espo\ORM\Repository\RDBRepository;
 use Espo\ORM\Repository\Repository;
@@ -128,5 +129,15 @@ class EntityManagerProxy
     public function getRepositoryByClass(string $className): Repository
     {
         return $this->getEntityManager()->getRepositoryByClass($className);
+    }
+
+    /**
+     * Get the query executor.
+     *
+     * @since 10.1.0
+     */
+    public function getQueryExecutor(): QueryExecutor
+    {
+        return $this->getEntityManager()->getQueryExecutor();
     }
 }

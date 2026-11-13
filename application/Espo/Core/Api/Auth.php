@@ -29,11 +29,12 @@
 
 namespace Espo\Core\Api;
 
+use Espo\Core\Api\Route\ContentType;
 use Espo\Core\Authentication\HeaderKey;
+use Espo\Core\Authentication\Login\MethodResolver;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\ServiceUnavailable;
 use Espo\Core\Exceptions\Forbidden;
-use Espo\Core\Authentication\ConfigDataProvider;
 use Espo\Core\Authentication\Authentication;
 use Espo\Core\Authentication\AuthenticationData;
 use Espo\Core\Authentication\Result;
@@ -48,12 +49,15 @@ use Exception;
  */
 class Auth
 {
+    private const string SCHEME_BASIC = 'Basic';
+
     public function __construct(
         private Log $log,
         private Authentication $authentication,
-        private ConfigDataProvider $configDataProvider,
+        private MethodResolver $methodResolver,
         private bool $authRequired = true,
-        private bool $isEntryPoint = false
+        private bool $isEntryPoint = false,
+        private bool $apiAuthForbidden = false,
     ) {}
 
     /**
@@ -65,7 +69,13 @@ class Auth
         $username = null;
         $password = null;
 
-        $authenticationMethod = $this->obtainAuthenticationMethodFromRequest($request);
+        $authenticationMethod = $this->methodResolver->resolve($request);
+
+        if ($authenticationMethod && $this->apiAuthForbidden) {
+            $this->handleUnauthorized($response);
+
+            return AuthResult::createNotResolved();
+        }
 
         if (!$authenticationMethod) {
             [$username, $password] = $this->obtainUsernamePasswordFromRequest($request);
@@ -78,8 +88,8 @@ class Auth
 
         $hasAuthData = $username || $authenticationMethod;
 
-        if (!$hasAuthData) {
-            $password = $this->obtainTokenFromCookies($request);
+        if (!$hasAuthData && !$this->toIgnoreNonHeaderAuthorizationData($request)) {
+            $password = self::obtainTokenFromCookies($request);
 
             if ($password) {
                 $authenticationData = AuthenticationData::create()
@@ -92,9 +102,9 @@ class Auth
 
         if (!$this->authRequired && !$this->isEntryPoint && $hasAuthData) {
             $authResult = $this->processAuthNotRequired(
-                $authenticationData,
-                $request,
-                $response
+                data: $authenticationData,
+                request: $request,
+                response: $response,
             );
 
             if ($authResult) {
@@ -110,12 +120,10 @@ class Auth
             return $this->processWithAuthData($authenticationData, $request, $response);
         }
 
-        $showDialog =
-            ($this->isEntryPoint || !$this->isXMLHttpRequest($request)) &&
-            !$request->getHeader('Referer') &&
-            $request->getMethod() !== Method::POST;
-
-        $this->handleUnauthorized($response, null, $showDialog);
+        $this->handleUnauthorized(
+            response: $response,
+            showDialog: self::toShowDialog($request),
+        );
 
         return AuthResult::createNotResolved();
     }
@@ -126,7 +134,7 @@ class Auth
     private function processAuthNotRequired(
         AuthenticationData $data,
         Request $request,
-        Response $response
+        Response $response,
     ): ?AuthResult {
 
         try {
@@ -137,7 +145,7 @@ class Auth
             return AuthResult::createNotResolved();
         }
 
-        if (!$result->isFail()) {
+        if ($result->isSuccess()) {
             return AuthResult::createResolved();
         }
 
@@ -150,7 +158,7 @@ class Auth
     private function processWithAuthData(
         AuthenticationData $data,
         Request $request,
-        Response $response
+        Response $response,
     ): AuthResult {
 
         try {
@@ -166,16 +174,15 @@ class Auth
         }
 
         if ($result->isFail()) {
-            $showDialog =
-                $this->isEntryPoint &&
-                !$request->getHeader('Referer') &&
-                $request->getMethod() !== Method::POST;
-
-            $this->handleUnauthorized($response, $result, $showDialog);
+            $this->handleUnauthorized(
+                response: $response,
+                result: $result,
+                showDialog: $this->toShowDialogOnFail($request),
+            );
         }
 
         if ($result->isSecondStepRequired()) {
-            $this->handleSecondStepRequired($response, $result);
+            self::handleSecondStepRequired($response, $result);
         }
 
         return AuthResult::createNotResolved();
@@ -185,7 +192,7 @@ class Auth
      * @return array{string, string}
      * @throws BadRequest
      */
-    private function decodeAuthorizationString(string $string): array
+    private static function decodeAuthorizationString(string $string): array
     {
         /** @var string $stringDecoded */
         $stringDecoded = base64_decode($string);
@@ -202,7 +209,7 @@ class Auth
         return [$username, $password];
     }
 
-    private function handleSecondStepRequired(Response $response, Result $result): void
+    private static function handleSecondStepRequired(Response $response, Result $result): void
     {
         $response->setStatus(401);
         $response->setHeader('X-Status-Reason', 'second-step-required');
@@ -211,7 +218,6 @@ class Auth
             'status' => $result->getStatus(),
             'message' => $result->getMessage(),
             'view' => $result->getView(),
-            'token' => $result->getToken(),
             'data' => $result->getData(),
         ];
 
@@ -250,52 +256,17 @@ class Auth
         throw $e;
     }
 
-    private function handleUnauthorized(Response $response, ?Result $result, bool $showDialog): void
+    private function handleUnauthorized(Response $response, ?Result $result = null, bool $showDialog = false): void
     {
         if ($showDialog) {
-            $response->setHeader('WWW-Authenticate', 'Basic realm=""');
+            $response->setHeader('WWW-Authenticate', 'Basic realm="api"');
         }
 
         if ($result && $result->getFailReason() === Result\FailReason::ERROR) {
-            $response = $response->setHeader('X-Status-Reason', 'error');
+            $response = $response->setHeader(ErrorOutput::HEADER_STATUS_REASON, 'error');
         }
 
         $response->setStatus(401);
-    }
-
-    private function isXMLHttpRequest(Request $request): bool
-    {
-        if (strtolower($request->getHeader('X-Requested-With') ?? '') == 'xmlhttprequest') {
-            return true;
-        }
-
-        return false;
-    }
-
-    private function obtainAuthenticationMethodFromRequest(Request $request): ?string
-    {
-        if ($request->hasHeader(HeaderKey::AUTHORIZATION)) {
-            return null;
-        }
-
-        $paramsList = array_values(array_filter(
-            $this->configDataProvider->getLoginMetadataParamsList(),
-            function ($params) use ($request): bool {
-                $header = $params->getCredentialsHeader();
-
-                if (!$header || !$params->isApi()) {
-                    return false;
-                }
-
-                return $request->hasHeader($header);
-            }
-        ));
-
-        if (count($paramsList)) {
-            return $paramsList[0]->getMethod();
-        }
-
-        return null;
     }
 
     /**
@@ -307,7 +278,16 @@ class Auth
         if ($request->hasHeader(HeaderKey::AUTHORIZATION)) {
             $headerValue = $request->getHeader(HeaderKey::AUTHORIZATION) ?? '';
 
-            return $this->decodeAuthorizationString($headerValue);
+            return self::decodeAuthorizationString($headerValue);
+        }
+
+        // Bypass as the Authorization header may be used for OAuth.
+        if (!$this->authRequired) {
+            return [null, null];
+        }
+
+        if ($this->toIgnoreNonHeaderAuthorizationData($request)) {
+            return [null, null];
         }
 
         if (
@@ -317,22 +297,20 @@ class Auth
             $username = $request->getServerParam('PHP_AUTH_USER');
             $password = $request->getServerParam('PHP_AUTH_PW');
 
-            if (is_string($username)) {
-                $username = trim($username);
+            if (!is_string($username) || !is_string($password)) {
+                return [null, null];
             }
 
-            if (is_string($password)) {
-                $password = trim($password);
-            }
+            $username = trim($username);
+            $password = trim($password);
 
             return [$username, $password];
         }
 
-        $cgiAuthString = $request->getHeader('Http-Espo-Cgi-Auth') ??
-            $request->getHeader('Redirect-Http-Espo-Cgi-Auth');
+        $cgiAuthString = self::getCgiAuthString($request);
 
         if ($cgiAuthString) {
-            [$username, $password] = $this->decodeAuthorizationString(substr($cgiAuthString, 6));
+            [$username, $password] = self::decodeAuthorizationString($cgiAuthString);
 
             return [$username, $password];
         }
@@ -340,8 +318,61 @@ class Auth
         return [null, null];
     }
 
-    private function obtainTokenFromCookies(Request $request): ?string
+    private static function obtainTokenFromCookies(Request $request): ?string
     {
         return $request->getCookieParam('auth-token');
+    }
+
+    /**
+     * Header might be written by a web server's rewrite rule.
+     */
+    private static function getCgiAuthString(Request $request): ?string
+    {
+        $value = $request->getHeader('Http-Espo-Cgi-Auth') ??
+            $request->getHeader('Redirect-Http-Espo-Cgi-Auth');
+
+        if (!$value) {
+            return null;
+        }
+
+        $basicPrefix = self::SCHEME_BASIC . ' ';
+
+        if (!str_starts_with($value, $basicPrefix)) {
+            return null;
+        }
+
+        return substr($value, strlen($basicPrefix));
+    }
+
+    private static function toShowDialog(Request $request): bool
+    {
+        return
+            $request->getMethod() === Method::GET &&
+            !$request->getHeader('Referer') &&
+            self::isDocumentNavigate($request);
+    }
+
+    private function toShowDialogOnFail(Request $request): bool
+    {
+        return $this->isEntryPoint && $this->toShowDialog($request);
+    }
+
+    private static function isDocumentNavigate(Request $request): bool
+    {
+        return
+            $request->getHeader('Sec-Fetch-Mode') === 'navigate' &&
+            $request->getHeader('Sec-Fetch-Dest') === 'document';
+    }
+
+    private function toIgnoreNonHeaderAuthorizationData(Request $request): bool
+    {
+        return
+            !$this->isEntryPoint &&
+            $request->getHeader('Sec-Fetch-Mode') === 'navigate' &&
+            in_array($request->getContentType(), [
+                ContentType::MULTIPART_FORM_DATA,
+                ContentType::APPLICATION_X_WWW_FORM_URLENCODED,
+                ContentType::TEXT_PLAIN,
+            ]);
     }
 }

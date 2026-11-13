@@ -40,6 +40,7 @@ use Espo\Core\Acl\Table\TableFactory;
 use Espo\Core\AclManager;
 use Espo\Core\ORM\EntityManager;
 
+use Espo\Core\Utils\Event\EventDispatcher;
 use Espo\Entities\User;
 use PHPUnit\Framework\TestCase;
 
@@ -66,13 +67,14 @@ class AclManagerTest extends TestCase
         $globalRestriction = $this->createMock(GlobalRestriction::class);
 
         $this->aclManager = new AclManager(
-            $accessCheckerFactory,
-            $ownershipCheckerFactory,
-            $this->tableFactory,
-            $mapFactory,
-            $globalRestriction,
-            $this->createMock(OwnerUserFieldProvider::class),
-            $this->createMock(EntityManager::class)
+            accessCheckerFactory: $accessCheckerFactory,
+            ownershipCheckerFactory: $ownershipCheckerFactory,
+            tableFactory: $this->tableFactory,
+            mapFactory: $mapFactory,
+            globalRestriction: $globalRestriction,
+            ownerUserFieldProvider: $this->createMock(OwnerUserFieldProvider::class),
+            entityManager: $this->createMock(EntityManager::class),
+            eventDispatcher: $this->createMock(EventDispatcher::class),
         );
     }
 

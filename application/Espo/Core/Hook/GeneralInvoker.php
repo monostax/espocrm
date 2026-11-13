@@ -52,15 +52,15 @@ use LogicException;
  */
 class GeneralInvoker
 {
-    private const HOOK_BEFORE_SAVE = 'beforeSave';
-    private const HOOK_AFTER_SAVE = 'afterSave';
-    private const HOOK_LATE_AFTER_SAVE = 'lateAfterSave';
-    private const HOOK_BEFORE_REMOVE = 'beforeRemove';
-    private const HOOK_AFTER_REMOVE = 'afterRemove';
-    private const HOOK_LATE_AFTER_REMOVE = 'lateAfterRemove';
-    private const HOOK_AFTER_RELATE = 'afterRelate';
-    private const HOOK_AFTER_UNRELATE = 'afterUnrelate';
-    private const HOOK_AFTER_MASS_RELATE = 'afterMassRelate';
+    private const string HOOK_BEFORE_SAVE = 'beforeSave';
+    private const string HOOK_AFTER_SAVE = 'afterSave';
+    private const string HOOK_LATE_AFTER_SAVE = 'lateAfterSave';
+    private const string HOOK_BEFORE_REMOVE = 'beforeRemove';
+    private const string HOOK_AFTER_REMOVE = 'afterRemove';
+    private const string HOOK_LATE_AFTER_REMOVE = 'lateAfterRemove';
+    private const string HOOK_AFTER_RELATE = 'afterRelate';
+    private const string HOOK_AFTER_UNRELATE = 'afterUnrelate';
+    private const string HOOK_AFTER_MASS_RELATE = 'afterMassRelate';
 
     /**
      * @param object $hook A hook object.
@@ -74,7 +74,7 @@ class GeneralInvoker
         string $name,
         mixed $subject,
         array $options,
-        array $hookData
+        array $hookData,
     ): void {
 
         if ($name === self::HOOK_BEFORE_SAVE && $hook instanceof BeforeSave) {
@@ -151,11 +151,11 @@ class GeneralInvoker
             }
 
             $hook->afterRelate(
-                $subject,
-                $relationName,
-                $relatedEntity,
-                $columnData,
-                RelateOptions::fromAssoc($options)
+                entity: $subject,
+                relationName: $relationName,
+                relatedEntity: $relatedEntity,
+                columnData: $columnData,
+                options: RelateOptions::fromAssoc($options),
             );
 
             return;
@@ -174,10 +174,10 @@ class GeneralInvoker
             }
 
             $hook->afterUnrelate(
-                $subject,
-                $relationName,
-                $relatedEntity,
-                UnrelateOptions::fromAssoc($options)
+                entity: $subject,
+                relationName: $relationName,
+                relatedEntity: $relatedEntity,
+                options: UnrelateOptions::fromAssoc($options),
             );
 
             return;
@@ -197,11 +197,11 @@ class GeneralInvoker
             }
 
             $hook->afterMassRelate(
-                $subject,
-                $relationName,
-                $query,
-                $columnData,
-                MassRelateOptions::fromAssoc($options)
+                entity: $subject,
+                relationName: $relationName,
+                query: $query,
+                columnData: $columnData,
+                options: MassRelateOptions::fromAssoc($options),
             );
 
             return;

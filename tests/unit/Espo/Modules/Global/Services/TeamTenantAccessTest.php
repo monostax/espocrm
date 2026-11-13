@@ -104,7 +104,7 @@ class TeamTenantAccessTest extends TestCase
     {
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn($id);
-        $user->method('isAdmin')->willReturn($isAdmin);
+        $user->method('isAdmin')->willReturn($isAdmin); $user->method('isEffectiveAdmin')->willReturn($isAdmin);
 
         return $user;
     }

@@ -94,13 +94,24 @@ class EnsureTransitionScopeColumn implements RebuildAction
         \Doctrine\DBAL\Schema\Table $table,
         Column $column,
     ): void {
-        $options = $column->toArray();
-        unset($options['name'], $options['type']);
-
+        // DBAL 4: Type::getName() is gone, and Column::toArray() spreads platform options
+        // (charset, collation) as top-level keys that addColumn() rejects. Copy explicitly.
         $table->addColumn(
             $column->getName(),
-            $column->getType()->getName(),
-            $options,
+            \Doctrine\DBAL\Types\Type::lookupName($column->getType()),
+            [
+                'notnull' => $column->getNotnull(),
+                'default' => $column->getDefault(),
+                'length' => $column->getLength(),
+                'precision' => $column->getPrecision(),
+                'scale' => $column->getScale(),
+                'fixed' => $column->getFixed(),
+                'unsigned' => $column->getUnsigned(),
+                'autoincrement' => $column->getAutoincrement(),
+                'columnDefinition' => $column->getColumnDefinition(),
+                'comment' => $column->getComment(),
+                'platformOptions' => $column->getPlatformOptions(),
+            ],
         );
     }
 }

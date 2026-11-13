@@ -27,14 +27,17 @@
  ************************************************************************/
 
 /**
- * * `grunt` - full build;
- * * `grunt dev` - build for development;
- * * `grunt offline` - build but skip *composer install*;
- * * `grunt internal` - build only libs and css;
- * * `grunt release` - full build zipped with upgrade packages`;
- * * `grunt test` - build for tests running;
- * * `grunt run-tests` - build and run unit and integration tests.
- */
+* * `grunt` - full build;
+* * `grunt dev` - build for development;
+* * `grunt offline` - build but skip *composer install*;
+* * `grunt internal` - build only libs and css;
+* * `grunt release` - full build zipped with upgrade packages`;
+* * `grunt test` - build for tests running;
+* * `grunt run-tests` - build and run unit and integration tests.
+ *
+ * Parameters:
+ * `--targetVersion` – overrides the target version.
+*/
 
 const fs = require("fs");
 const cp = require("child_process");
@@ -48,9 +51,11 @@ const bundleConfig = require("./frontend/bundle-config.json");
 const libs = require("./frontend/libs.json");
 
 module.exports = (grunt) => {
-    const pkg = grunt.file.readJSON("package.json");
+    const pkg = grunt.file.readJSON('package.json');
 
-    const originalLibDir = "client/lib/original";
+    const version = grunt.option('targetVersion') || pkg.version;
+
+    const originalLibDir = 'client/lib/original';
 
     const libsBundleFileList = [
         "client/src/namespace.js",
@@ -170,10 +175,10 @@ module.exports = (grunt) => {
                 "client/modules/crm/lib/*",
                 "client/css/espo/*",
             ],
-            final: ["build/tmp"],
-            release: ["build/EspoCRM-" + pkg.version],
-            beforeFinal: { src: cleanupBeforeFinal },
-            beforeFinalTest: { src: cleanupBeforeFinalTest },
+            final: ['build/tmp'],
+            release: ['build/EspoCRM-' + version],
+            beforeFinal: {src: cleanupBeforeFinal},
+            beforeFinalTest: {src: cleanupBeforeFinalTest},
         },
 
         less: lessData,
@@ -267,9 +272,9 @@ module.exports = (grunt) => {
             final: {
                 expand: true,
                 dot: true,
-                src: "**",
-                cwd: "build/tmp",
-                dest: "build/EspoCRM-<%= pkg.version %>/",
+                src: '**',
+                cwd: 'build/tmp',
+                dest: 'build/EspoCRM-' + version,
             },
         },
 
@@ -278,10 +283,10 @@ module.exports = (grunt) => {
                 options: {
                     patterns: [
                         {
-                            match: "version",
-                            replacement: "<%= pkg.version %>",
-                        },
-                    ],
+                            match: 'version',
+                            replacement: version,
+                        }
+                    ]
                 },
                 files: [
                     {
@@ -364,18 +369,19 @@ module.exports = (grunt) => {
         cp.execSync("node js/transpile");
     });
 
-    grunt.registerTask("transpile-custom-modules", () => {
+    grunt.registerTask('transpile-custom-modules', () => {
         cp.execSync("node js/transpile-custom-modules", {stdio: "inherit"});
     });
 
-    grunt.registerTask("chmod-folders", () => {
-        cp.execSync("find . -type d -exec chmod 755 {} +", {
-            cwd: "build/EspoCRM-" + pkg.version,
-        });
+    grunt.registerTask('chmod-folders', () => {
+        cp.execSync(
+            "find . -type d -exec chmod 755 {} +",
+            {cwd: 'build/EspoCRM-' + version}
+        );
     });
 
-    grunt.registerTask("chmod-multiple", () => {
-        const dirPath = "build/EspoCRM-" + pkg.version;
+    grunt.registerTask('chmod-multiple', () => {
+        const dirPath = 'build/EspoCRM-' + version;
 
         const fileList = [
             {
@@ -526,8 +532,8 @@ return '${version}';
 
         const resolve = this.async();
 
-        const folder = "EspoCRM-" + pkg.version;
-        const zipPath = "build/" + folder + ".zip";
+        const folder = 'EspoCRM-' + version;
+        const zipPath = 'build/' + folder + '.zip';
 
         if (fs.existsSync(zipPath)) {
             fs.unlinkSync(zipPath);
@@ -554,8 +560,8 @@ return '${version}';
         archive.finalize();
     });
 
-    grunt.registerTask("npm-install", () => {
-        cp.execSync("npm ci", { stdio: "ignore" });
+    grunt.registerTask('npm-install', () => {
+        cp.execSync("npm ci", {stdio: ['ignore', 'ignore', 'pipe']});
     });
 
     grunt.registerMultiTask("clean", "Remove generated build files", function () {

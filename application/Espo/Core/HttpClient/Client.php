@@ -93,7 +93,7 @@ class Client
     {
         if (
             !Util::matchUrlToAddressList($url, $allowed) &&
-            !$this->urlCheck->isUrlAndNotIternal($url)
+            !$this->urlCheck->isUrlAndNotInternal($url)
         ) {
             throw new NotAllowedInternalHost("Not allowed internal host in '$url'.");
         }
@@ -111,6 +111,7 @@ class Client
             ),
             'allow_redirects' => false,
             'http_errors' => false,
+            'stream' => $this->options->stream,
         ];
 
         if ($this->options->redirect->allow) {
@@ -161,8 +162,10 @@ class Client
                         throw new NotAllowedInternalHost("Not allowed internal host in '$url'.");
                     }
 
-                    $options['curl'] ??= [];
-                    $options['curl'][CURLOPT_RESOLVE] = $resolve;
+                    if ($resolve) {
+                        $options['curl'] ??= [];
+                        $options['curl'][CURLOPT_RESOLVE] = $resolve;
+                    }
 
                     return $handler($request, $options);
                 };

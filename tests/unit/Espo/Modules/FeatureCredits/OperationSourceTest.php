@@ -150,7 +150,7 @@ class OperationSourceTest extends TestCase
         $user = $this->createMock(User::class);
         $user->method('isPortal')->willReturn($kind === 'portal');
         $user->method('isApi')->willReturn($kind === 'api');
-        $user->method('isAdmin')->willReturn(in_array($kind, ['portal', 'api', 'missing-tenant'], true));
+        $user->method('isAdmin')->willReturn(in_array($kind, ['portal', 'api', 'missing-tenant'], true)); $user->method('isEffectiveAdmin')->willReturn(in_array($kind, ['portal', 'api', 'missing-tenant'], true));
         $user->method('getLinkMultipleIdList')->willReturn($kind === 'foreign-admin' ? [md5('tenant-admin')] : []);
         $memberships = $this->createMock(UserTenantResolver::class);
         $memberships->method('resolveTenantIds')->willReturn(['other']);

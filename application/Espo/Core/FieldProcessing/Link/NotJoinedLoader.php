@@ -87,7 +87,6 @@ class NotJoinedLoader implements LoaderInterface
             ->findOne();
 
         if (!$foreignEntity) {
-            /** @noinspection PhpRedundantOptionalArgumentInspection */
             $entity->set($nameAttribute, null);
 
             return;

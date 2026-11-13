@@ -30,14 +30,19 @@
 namespace tests\integration\Espo\Core\Binding;
 
 use Espo\Core\Application\ApplicationParams;
+use Espo\Core\Binding\Binder;
 use Espo\Core\Binding\Binding;
 use Espo\Core\Binding\BindingData;
 use Espo\Core\Binding\BindingLoader;
+use Espo\Core\Binding\Key\QualifiedClassKey;
 use Espo\Core\Container\ContainerBuilder;
-
+use Espo\Core\InjectableFactory;
+use Espo\Core\Utils\Cache\FileCacheItemPool;
+use Psr\Cache\CacheItemPoolInterface;
 use tests\integration\Core\BaseTestCase;
 use tests\integration\testClasses\Binding\SomeClass;
 use tests\integration\testClasses\Binding\SomeClassRequiringService;
+use tests\integration\testClasses\Binding\SomeClassRequiringServiceAlt;
 use tests\integration\testClasses\Binding\SomeClassRequiringValue;
 use tests\integration\testClasses\Binding\SomeFactory;
 use tests\integration\testClasses\Binding\SomeImplementation;
@@ -53,6 +58,13 @@ class BindingTest extends BaseTestCase
             public function load(): BindingData
             {
                 $data = new BindingData();
+
+                $binder = new Binder($data);
+
+                $binder->bindImplementation(
+                    CacheItemPoolInterface::class,
+                    FileCacheItemPool::class
+                );
 
                 $data->addGlobal(
                     SomeInterface::class,
@@ -72,6 +84,8 @@ class BindingTest extends BaseTestCase
 
         $injectableFactory = $container->get('injectableFactory');
 
+        $this->assertInstanceOf(InjectableFactory::class, $injectableFactory);
+
         $obj = $injectableFactory->create(SomeClass::class);
 
         $this->assertNotNull($obj);
@@ -89,6 +103,13 @@ class BindingTest extends BaseTestCase
             public function load(): BindingData
             {
                 $data = new BindingData();
+
+                $binder = new Binder($data);
+
+                $binder->bindImplementation(
+                    CacheItemPoolInterface::class,
+                    FileCacheItemPool::class
+                );
 
                 $data->addGlobal(
                     SomeInterface::class,
@@ -108,6 +129,8 @@ class BindingTest extends BaseTestCase
 
         $injectableFactory = $container->get('injectableFactory');
 
+        $this->assertInstanceOf(InjectableFactory::class, $injectableFactory);
+
         $obj = $injectableFactory->create(SomeClass::class);
 
         $this->assertNotNull($obj);
@@ -122,9 +145,16 @@ class BindingTest extends BaseTestCase
     {
         $bindingLoader = new class() implements BindingLoader
         {
-            public function load() : BindingData
+            public function load(): BindingData
             {
                 $data = new BindingData();
+
+                $binder = new Binder($data);
+
+                $binder->bindImplementation(
+                    CacheItemPoolInterface::class,
+                    FileCacheItemPool::class
+                );
 
                 $data->addGlobal(
                     SomeInterface::class,
@@ -146,6 +176,8 @@ class BindingTest extends BaseTestCase
 
         $injectableFactory = $container->get('injectableFactory');
 
+        $this->assertInstanceOf(InjectableFactory::class, $injectableFactory);
+
         $obj = $injectableFactory->create(SomeClass::class);
 
         $this->assertNotNull($obj);
@@ -160,9 +192,16 @@ class BindingTest extends BaseTestCase
     {
         $bindingLoader = new class() implements BindingLoader
         {
-            public function load() : BindingData
+            public function load(): BindingData
             {
                 $data = new BindingData();
+
+                $binder = new Binder($data);
+
+                $binder->bindImplementation(
+                    CacheItemPoolInterface::class,
+                    FileCacheItemPool::class
+                );
 
                 $data->addGlobal(
                     SomeService::class,
@@ -185,6 +224,8 @@ class BindingTest extends BaseTestCase
 
         $injectableFactory = $container->get('injectableFactory');
 
+        $this->assertInstanceOf(InjectableFactory::class, $injectableFactory);
+
         $obj = $injectableFactory->create(SomeClassRequiringService::class);
 
         $this->assertNotNull($obj);
@@ -199,9 +240,16 @@ class BindingTest extends BaseTestCase
     {
         $bindingLoader = new class() implements BindingLoader
         {
-            public function load() : BindingData
+            public function load(): BindingData
             {
                 $data = new BindingData();
+
+                $binder = new Binder($data);
+
+                $binder->bindImplementation(
+                    CacheItemPoolInterface::class,
+                    FileCacheItemPool::class
+                );
 
                 $data->addContext(
                     SomeClassRequiringValue::class,
@@ -220,6 +268,8 @@ class BindingTest extends BaseTestCase
 
         $injectableFactory = $container->get('injectableFactory');
 
+        $this->assertInstanceOf(InjectableFactory::class, $injectableFactory);
+
         $obj = $injectableFactory->create(SomeClassRequiringValue::class);
 
         $this->assertNotNull($obj);
@@ -228,5 +278,52 @@ class BindingTest extends BaseTestCase
             'TEST_VALUE',
             $obj->getValue()
         );
+    }
+
+    public function testQualifier(): void
+    {
+        $bindingLoader = new class() implements BindingLoader
+        {
+            public function load(): BindingData
+            {
+                $data = new BindingData();
+                $binder = new Binder($data);
+
+                $binder->bindImplementation(
+                    CacheItemPoolInterface::class,
+                    FileCacheItemPool::class
+                );
+
+                $binder->bindService(SomeService::class, 'testService');
+                $binder->bindService(QualifiedClassKey::create(SomeService::class, 'alt'), 'testServiceAlt');
+
+                return $data;
+            }
+        };
+
+        $testService = new SomeService();
+        $testServiceAlt = new SomeService('alt');
+
+        $container = (new ContainerBuilder())
+            ->withBindingLoader($bindingLoader)
+            ->withParams(new ApplicationParams(noErrorHandler: true))
+            ->withServices([
+                'testService' => $testService,
+                'testServiceAlt' => $testServiceAlt,
+            ])
+            ->build();
+
+        $injectableFactory = $container->get('injectableFactory');
+
+        $this->assertInstanceOf(InjectableFactory::class, $injectableFactory);
+
+        $obj = $injectableFactory->create(SomeClassRequiringService::class);
+        $objAlt = $injectableFactory->create(SomeClassRequiringServiceAlt::class);
+
+        $this->assertInstanceOf(SomeService::class, $obj->getService());
+        $this->assertEquals('default', $obj->getService()->name);
+
+        $this->assertInstanceOf(SomeService::class, $objAlt->getService());
+        $this->assertEquals('alt', $objAlt->getService()->name);
     }
 }

@@ -558,7 +558,6 @@ class Email extends Database implements
         $from = trim($entity->getFromAddress() ?? '');
 
         if (!$from) {
-            /** @noinspection PhpRedundantOptionalArgumentInspection */
             $entity->set(self::ATTR_FROM_EMAIL_ADDRESS_ID, null);
 
             return;

@@ -31,6 +31,7 @@ namespace tests\integration\Espo\Tools\Pipeline;
 
 use Espo\Classes\AppParams\Pipelines;
 use Espo\Core\Acl\Table;
+use Espo\Core\AclManager;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Field\Date;
 use Espo\Core\Name\Field;
@@ -114,11 +115,11 @@ class PipelineTest extends BaseTestCase
             $pipelineStageService->delete($stage->getId(), DeleteParams::create());
         }
 
-        $pipelineStageService->create((object) [
+        $stage2_1 = $pipelineStageService->create((object) [
             Field::NAME => 'Open',
             PipelineStage::ATTR_PIPELINE_ID => $pipeline2->getId(),
             PipelineStage::FIELD_MAPPED_STATUS => 'Prospecting',
-        ], CreateParams::create());
+        ], CreateParams::create())->getEntity();
 
         $pipelineStageService->create((object) [
             Field::NAME => 'Closed Won',
@@ -157,7 +158,7 @@ class PipelineTest extends BaseTestCase
             Field::NAME => 'Opp 1',
             Field::PIPELINE . 'Id' => $pipeline1->getId(),
             Field::PIPELINE_STAGE . 'Id' => $pipeline1->getStages()[0]->getId(),
-            Opportunity::FIELD_CLOSED_DATE => Date::fromString('2026-01-01')->toString(),
+            Opportunity::FIELD_CLOSE_DATE => Date::fromString('2026-01-01')->toString(),
             Opportunity::FIELD_AMOUNT => 1000,
         ], CreateParams::create())->getEntity();
 
@@ -174,7 +175,7 @@ class PipelineTest extends BaseTestCase
             Field::NAME => 'Opp 2',
             Field::PIPELINE . 'Id' => $pipeline1->getId(),
             Field::PIPELINE_STAGE . 'Id' => $pipeline1->getStages()[4]->getId(),
-            Opportunity::FIELD_CLOSED_DATE => Date::fromString('2026-01-01')->toString(),
+            Opportunity::FIELD_CLOSE_DATE => Date::fromString('2026-01-01')->toString(),
             Opportunity::FIELD_AMOUNT => 1000,
         ], CreateParams::create())->getEntity();
 
@@ -184,7 +185,7 @@ class PipelineTest extends BaseTestCase
 
         $opp = $oppService->create((object) [
             Field::NAME => 'Opp 3',
-            Opportunity::FIELD_CLOSED_DATE => Date::fromString('2026-01-01')->toString(),
+            Opportunity::FIELD_CLOSE_DATE => Date::fromString('2026-01-01')->toString(),
             Opportunity::FIELD_AMOUNT => 1000,
         ], CreateParams::create());
 
@@ -209,6 +210,15 @@ class PipelineTest extends BaseTestCase
         $pipelines = $pipelinesParam->get();
 
         $this->assertCount(1, $pipelines[Opportunity::ENTITY_TYPE]);
+
+        //
+
+        $aclManager = $this->getContainer()->getByClass(AclManager::class);
+
+        $this->assertFalse($aclManager->checkEntityRead($user1, $pipeline1));
+        $this->assertTrue($aclManager->checkEntityRead($user1, $pipeline2));
+
+        $this->assertTrue($aclManager->checkEntityRead($user1, $stage2_1));
     }
 
     /**

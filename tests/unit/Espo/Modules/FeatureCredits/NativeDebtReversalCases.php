@@ -220,7 +220,7 @@ trait NativeDebtReversalCases
     {
         $this->database($dialect, function (PDO $pdo): void {
             [$service, $debit, $funding] = $this->nativeCorrectionFixture($pdo); $funding->grant($this->input('repayment', '5'));
-            $user = $this->createStub(\Espo\Entities\User::class); $user->method('isAdmin')->willReturn(true); $user->method('getId')->willReturn('trusted-admin');
+            $user = $this->createStub(\Espo\Entities\User::class); $user->method('isAdmin')->willReturn(true); $user->method('isEffectiveAdmin')->willReturn(true); $user->method('getId')->willReturn('trusted-admin');
             $request = $this->createStub(\Espo\Core\Api\Request::class); $request->method('getBodyContents')->willReturn(json_encode([
                 'tenantId' => 'tenant', 'transactionId' => $debit['id'], 'credits' => '1', 'idempotencyKey' => 'controller-native', 'reason' => 'Approved correction'], JSON_THROW_ON_ERROR));
             $controller = new \Espo\Modules\FeatureCredits\Controllers\CreditReversals($user, $service);

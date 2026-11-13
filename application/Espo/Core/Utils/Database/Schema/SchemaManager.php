@@ -34,6 +34,7 @@ use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Comparator;
+use Doctrine\DBAL\Schema\ComparatorConfig;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\SchemaDiff;
 use Doctrine\DBAL\Schema\SchemaException;
@@ -45,6 +46,7 @@ use Espo\Core\Utils\Database\Helper;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Metadata\OrmMetadataData;
 
+use RuntimeException;
 use Throwable;
 
 /**
@@ -56,6 +58,7 @@ class SchemaManager
     private AbstractSchemaManager $schemaManager;
     private Comparator $comparator;
     private Builder $builder;
+    private DiffModifier $diffModifier;
 
     /**
      * @throws DbalException
@@ -65,22 +68,33 @@ class SchemaManager
         private Log $log,
         private Helper $helper,
         private MetadataProvider $metadataProvider,
-        private DiffModifier $diffModifier,
         private InjectableFactory $injectableFactory
     ) {
         $this->schemaManager = $this->getDbalConnection()
             ->getDatabasePlatform()
             ->createSchemaManager($this->getDbalConnection());
 
-        // Not using a platform specific comparator as it unsets a collation and charset if
-        // they match a table default.
-        //$this->comparator = $this->schemaManager->createComparator();
-        $this->comparator = new Comparator($this->getPlatform());
+        $comparatorConfig = new ComparatorConfig(
+            // Column renaming as not a desired behavior.
+            detectRenamedColumns: false,
+        );
 
-        $this->initFieldTypes();
+        // Not using a platform specific comparator as it unsets the collation and charset if
+        // they match the table default.
+        // `$this->schemaManager->createComparator()`
+        $this->comparator = new Comparator($this->getPlatform(), $comparatorConfig);
+
+        $this->registerTypes();
 
         $this->builder = $this->injectableFactory->createWithBinding(
             Builder::class,
+            BindingContainerBuilder::create()
+                ->bindInstance(Helper::class, $this->helper)
+                ->build()
+        );
+
+        $this->diffModifier = $this->injectableFactory->createWithBinding(
+            DiffModifier::class,
             BindingContainerBuilder::create()
                 ->bindInstance(Helper::class, $this->helper)
                 ->build()
@@ -105,20 +119,30 @@ class SchemaManager
         return $this->helper->getDbalConnection();
     }
 
-    /**
-     * @throws DbalException
-     */
-    private function initFieldTypes(): void
+    private function registerTypes(): void
     {
         foreach ($this->metadataProvider->getDbalTypeClassNameMap() as $type => $className) {
-            Type::hasType($type) ?
-                Type::overrideType($type, $className) :
-                Type::addType($type, $className);
-
-            $this->getDbalConnection()
-                ->getDatabasePlatform()
-                ->registerDoctrineTypeMapping($type, $type);
+            try {
+                $this->registerType($type, $className);
+            } catch (DbalException $e) {
+                throw new RuntimeException("Could not register DBAL type '$type'.", previous: $e);
+            }
         }
+    }
+
+    /**
+     * @param class-string<Type> $className
+     * @throws DbalException
+     */
+    private function registerType(string $type, string $className): void
+    {
+        Type::hasType($type) ?
+            Type::overrideType($type, $className) :
+            Type::addType($type, $className);
+
+        $this->getDbalConnection()
+            ->getDatabasePlatform()
+            ->registerDoctrineTypeMapping($type, $type);
     }
 
     /**
@@ -133,19 +157,29 @@ class SchemaManager
      */
     public function rebuild(?array $entityTypeList = null, string $mode = RebuildMode::SOFT): bool
     {
+        try {
+            $this->processEarlyRebuildActions();
+        } catch (Throwable $e) {
+            throw new RuntimeException("Rebuild database early-rebuild error.", previous: $e);
+        }
+
         $fromSchema = $this->introspectSchema();
         $schema = $this->builder->build($this->ormMetadataData->getData(), $entityTypeList);
 
         try {
             $this->processPreRebuildActions($fromSchema, $schema);
         } catch (Throwable $e) {
-            $this->log->alert('Rebuild database pre-rebuild error: '. $e->getMessage());
-
-            return false;
+            throw new RuntimeException("Rebuild database pre-rebuild error.", previous: $e);
         }
 
         $diff = $this->comparator->compareSchemas($fromSchema, $schema);
-        $needReRun = $this->diffModifier->modify($diff, $schema, false, $mode);
+
+        $needReRun = $this->diffModifier->modify(
+            diff: $diff,
+            schema: $schema,
+            mode: $mode,
+        );
+
         $sql = $this->composeDiffSql($diff);
 
         $result = $this->runSql($sql);
@@ -163,8 +197,14 @@ class SchemaManager
 
             $diff = $this->comparator->compareSchemas($intermediateSchema, $schema);
 
-            $this->diffModifier->modify($diff, $schema, true);
+            $this->diffModifier->modify(
+                diff: $diff,
+                schema: $schema,
+                secondRun: true,
+            );
+
             $sql = $this->composeDiffSql($diff);
+
             $result = $this->runSql($sql);
         }
 
@@ -225,6 +265,19 @@ class SchemaManager
     private function composeDiffSql(SchemaDiff $diff): array
     {
         return $this->getPlatform()->getAlterSchemaSQL($diff);
+    }
+
+    private function processEarlyRebuildActions(): void
+    {
+        $binding = BindingContainerBuilder::create()
+            ->bindInstance(Helper::class, $this->helper)
+            ->build();
+
+        foreach ($this->metadataProvider->getEarlyRebuildActionClassNameList() as $className) {
+            $action = $this->injectableFactory->createWithBinding($className, $binding);
+
+            $action->process();
+        }
     }
 
     private function processPreRebuildActions(Schema $actualSchema, Schema $schema): void

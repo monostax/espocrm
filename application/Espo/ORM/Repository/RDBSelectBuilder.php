@@ -52,6 +52,7 @@ use RuntimeException;
  * Builds select parameters for an RDB repository. Contains 'find' methods.
  *
  * @template TEntity of Entity
+ * @template TCollection of EntityCollection|SthCollection = EntityCollection<TEntity>
  */
 class RDBSelectBuilder
 {
@@ -93,15 +94,16 @@ class RDBSelectBuilder
     }
 
     /**
-     * @return EntityCollection<TEntity>|SthCollection<TEntity>
+     * @return TCollection
      */
-    public function find(): EntityCollection|SthCollection
+    public function find(): Collection
     {
         $query = $this->builder->build();
 
         /** @var Collection<TEntity> $collection */
         $collection = $this->getMapper()->select($query);
 
+        /** @var TCollection */
         return $this->handleReturnCollection($collection);
     }
 
@@ -197,7 +199,7 @@ class RDBSelectBuilder
      *   A relation name or table. A relation name should be in camelCase, a table in CamelCase.
      * @param string|null $alias An alias.
      * @param WhereItem|array<mixed, mixed>|null $conditions Join conditions.
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      */
     public function join($target, ?string $alias = null, $conditions = null): self
     {
@@ -214,7 +216,7 @@ class RDBSelectBuilder
      * @param string|null $alias An alias.
      * @param WhereItem|array<string|int, mixed>|null $conditions Join conditions.
      *
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      */
     public function leftJoin($target, ?string $alias = null, $conditions = null): self
     {
@@ -226,7 +228,7 @@ class RDBSelectBuilder
     /**
      * Set DISTINCT parameter.
      *
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      */
     public function distinct(): self
     {
@@ -238,7 +240,7 @@ class RDBSelectBuilder
     /**
      * Lock selected rows. To be used within a transaction.
      *
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      */
     public function forUpdate(): self
     {
@@ -251,8 +253,7 @@ class RDBSelectBuilder
     /**
      * Set to return STH collection. Recommended for fetching large number of records.
      *
-     * @todo Remove.
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, SthCollection<TEntity>>
      */
     public function sth(): self
     {
@@ -271,7 +272,7 @@ class RDBSelectBuilder
      *
      * @param WhereItem|array<mixed, mixed>|string $clause A key or where clause.
      * @param mixed[]|scalar|null $value A value. Should be omitted if the first argument is not string.
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      */
     public function where($clause = [], $value = null): self
     {
@@ -290,7 +291,7 @@ class RDBSelectBuilder
      *
      * @param WhereItem|array<mixed, mixed>|string $clause A key or where clause.
      * @param mixed[]|scalar|null $value A value. Should be omitted if the first argument is not string.
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      */
     public function having($clause = [], $value = null): self
     {
@@ -312,7 +313,7 @@ class RDBSelectBuilder
      * An attribute to order by or an array or order items.
      * Passing an array will reset a previously set order.
      * @param (Order::ASC|Order::DESC)|bool|null $direction A direction.
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      */
     public function order($orderBy = Attribute::ID, $direction = null): self
     {
@@ -324,7 +325,7 @@ class RDBSelectBuilder
     /**
      * Apply OFFSET and LIMIT.
      *
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      */
     public function limit(?int $offset = null, ?int $limit = null): self
     {
@@ -349,7 +350,7 @@ class RDBSelectBuilder
      * @param Selection|Selection[]|Expression|Expression[]|string[]|string|array<int, string[]|string> $select
      * An array of expressions or one expression.
      * @param string|null $alias An alias. Actual if the first parameter is a string.
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      */
     public function select($select, ?string $alias = null): self
     {
@@ -368,7 +369,7 @@ class RDBSelectBuilder
      * * `groupBy([$expr1, $expr2, ...])`
      *
      * @param Expression|Expression[]|string|string[] $groupBy
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      */
     public function group($groupBy): self
     {
@@ -380,7 +381,7 @@ class RDBSelectBuilder
     /**
      * @deprecated Use `group` method.
      *
-     * @return RDBSelectBuilder<TEntity>
+     * @return RDBSelectBuilder<TEntity, TCollection>
      * @param Expression|Expression[]|string|string[] $groupBy
      */
     public function groupBy($groupBy): self

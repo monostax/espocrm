@@ -396,6 +396,10 @@
                         "description": "A translatable label.",
                         "type": "string"
                     },
+                    "labelTranslation": {
+                        "type": "string",
+                        "description": "A label translation path. As of v10.1."
+                    },
                     "readOnly": {
                         "description": "Read-only.",
                         "type": "boolean"
@@ -530,6 +534,10 @@
                         },
                         "description": "Attributes to carry over to a related record when creating. Mapping Parent => Related."
                     },
+                    "recordSpecificSearchStorage": {
+                        "type": "boolean",
+                        "description": "Record specific search storage. As of v10.1."
+                    },
                     "buttonList": {
                         "type": "array",
                         "items": {
@@ -590,6 +598,10 @@
                                     "type": "string",
                                     "description": "A translatable label."
                                 },
+                                "labelTranslation": {
+                                    "type": "string",
+                                    "description": "A label translation path. As of v10.0.0."
+                                },
                                 "handler": {
                                     "type": "string",
                                     "description": "A frontend handler. A view is passed to the constructor."
@@ -597,6 +609,10 @@
                                 "actionFunction": {
                                     "type": "string",
                                     "description": "An action method in the handler."
+                                },
+                                "iconClass": {
+                                    "type": "string",
+                                    "description": "An icon class. As of v10.0.0."
                                 }
                             }
                         },

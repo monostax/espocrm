@@ -49,6 +49,7 @@ use Espo\Core\Repositories\Database;
 use Espo\Core\Utils\Config;
 use Espo\ORM\Repository\RDBSelectBuilder;
 
+use Espo\Tools\Email\GroupFolderApplier;
 use PHPUnit\Framework\TestCase;
 
 class ImporterTest extends TestCase
@@ -168,7 +169,7 @@ class ImporterTest extends TestCase
             ->willReturnMap($this->repositoryMap);
 
         $entityManager
-            ->expects($this->exactly(2))
+            ->expects($this->exactly(1))
             ->method('saveEntity')
             ->with($this->isInstanceOf(Email::class))
             ->willReturnCallback(function (Email $entity) {
@@ -189,6 +190,13 @@ class ImporterTest extends TestCase
                 ]
             );
 
+        $saver = $this->createMock(Importer\EmailSaver::class);
+
+        $saver
+            ->expects($this->exactly(1))
+            ->method('save')
+            ->with($this->isInstanceOf(Email::class));
+
         $contents = file_get_contents('tests/unit/testData/Core/Mail/test_email_1.eml');
 
         $importer = new Importer\DefaultImporter(
@@ -201,6 +209,8 @@ class ImporterTest extends TestCase
             jobSchedulerFactory: $this->jobSchedulerFactory,
             parentFinder: $this->parentFinder,
             autoReplyDetector: $this->createMock(Importer\AutoReplyDetector::class),
+            emailSaver: $saver,
+            groupFolderApplier: $this->createMock(GroupFolderApplier::class),
         );
 
         $message = new MessageWrapper(0, null, null, $contents);
@@ -220,6 +230,9 @@ class ImporterTest extends TestCase
         $this->assertStringContainsString('<br>Admin Test', $email->get('body'));
         $this->assertStringContainsString('Admin Test', $email->get('bodyPlain'));
 
-        $this->assertEquals('<e558c4dfc2a0f0d60f5ebff474c97ffc/1466410740/1950@espo>', $email->get('messageId'));
+        $messageId = '<e558c4dfc2a0f0d60f5ebff474c97ffc/1466410740/1950@espo>';
+
+        $this->assertEquals($messageId, $email->get('messageId'));
+        $this->assertEquals($messageId . '-r@test.com', $email->get('messageIdInternal'));
     }
 }

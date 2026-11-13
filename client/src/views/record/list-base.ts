@@ -810,9 +810,7 @@ abstract class ListBaseRecordView<
             this.rowList.map(id => {
                 return {
                     id: id,
-                    isStarred: this.hasStars && this.collection.get(id) ?
-                        this.collection.get(id)?.attributes[this.starredAttribute] :
-                        false,
+                    isStarred: this.isRecordStared(id),
                 };
             }) : [];
 
@@ -847,6 +845,15 @@ abstract class ListBaseRecordView<
             hasStickyBar: hasStickyBar,
             selectable: this.selectable,
         };
+    }
+
+    /**
+     * @since 10.0.4
+     */
+    protected isRecordStared(id: string): boolean {
+        return this.hasStars && this.collection.get(id) ?
+            this.collection.get(id)?.attributes[this.starredAttribute] :
+            false;
     }
 
     protected init() {
@@ -1192,7 +1199,7 @@ abstract class ListBaseRecordView<
         return where;
     }
 
-    private getMassActionSelectionPostData(): Record<string, any> {
+    getMassActionSelectionPostData(): Record<string, any> {
         const data = {} as any;
 
         if (this.allResultIsChecked) {
@@ -1281,7 +1288,11 @@ abstract class ListBaseRecordView<
 
         Ui.notifyWait();
 
-        const helper = new MassActionHelper(this);
+        if (!this.entityType) {
+            throw new Error("No entity type.");
+        }
+
+        const helper = new MassActionHelper(this, {entityType: this.entityType});
         const params = this.getMassActionSelectionPostData();
         const idle = !!params.searchParams && helper.checkIsIdle(this.collection.total);
 
@@ -1646,7 +1657,8 @@ abstract class ListBaseRecordView<
 
         Ui.success(this.translate('Unlinked'));
 
-        this.collection.fetch();
+        this.collection.fetch().then(() => {});
+
         (this.model ?? this.collection.parentModel)?.trigger('after:unrelate');
     }
 
@@ -2121,10 +2133,6 @@ abstract class ListBaseRecordView<
         this.addHandler('click', 'a.reset-custom-order', () => this.resetCustomOrder());
 
         this.addHandler('click', 'a.link', (e, target) => {
-            if (!(e instanceof MouseEvent)) {
-                throw new Error();
-            }
-
             if (e.ctrlKey || e.metaKey || e.shiftKey) {
                 return;
             }
@@ -2172,7 +2180,7 @@ abstract class ListBaseRecordView<
         });
     }
 
-    private processLinkClick(id: string) {
+    protected processLinkClick(id: string) {
         const scope = this.getModelScope(id);
 
         const collection = this.collection.clone({withModels: true});
@@ -3283,6 +3291,10 @@ abstract class ListBaseRecordView<
         const tr = document.createElement('tr');
         tr.dataset.id = id;
         tr.classList.add('list-row');
+
+        if (this.isRecordStared(id)) {
+            tr.classList.add('starred');
+        }
 
         return tr.outerHTML;
     }

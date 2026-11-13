@@ -106,12 +106,18 @@ class AdminController extends Controller {
             throw new Error("View should inherit views/edit.");
         }
 
+        let label = defs.label;
+
+        if (defs.labelTranslation) {
+            label = this.language.translatePath(defs.labelTranslation);
+        }
+
         const editView = new ViewClass({
             model: model,
             headerTemplate: 'admin/settings/headers/page',
             recordView: defs.recordView,
             page: page,
-            label: defs.label,
+            label: label,
             optionsToPass: [
                 'page',
                 'label',
@@ -236,6 +242,11 @@ class AdminController extends Controller {
     // noinspection JSUnusedGlobalSymbols
     actionAuthenticationProviders() {
         this.getRouter().dispatch('AuthenticationProvider', 'list', {fromAdmin: true});
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    actionOAuthClients() {
+        this.getRouter().dispatch('OAuthClient', 'list', {fromAdmin: true});
     }
 
     // noinspection JSUnusedGlobalSymbols

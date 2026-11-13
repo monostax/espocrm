@@ -29,6 +29,8 @@
 
 namespace Espo\Core\Repositories;
 
+use Espo\Core\Field\Date;
+use Espo\Core\Field\DateTime as DateTimeField;
 use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Modules\Crm\Entities\Meeting;
 use Espo\Modules\Crm\Entities\Reminder;
@@ -51,6 +53,8 @@ class Event extends Database implements
 {
     use Di\DateTimeSetter;
     use Di\ConfigSetter;
+
+    private const string FIELD_DURATION = 'duration';
 
     /**
      * @param array<string, mixed> $options
@@ -85,7 +89,6 @@ class Event extends Database implements
 
                 $entity->set(Meeting::FIELD_DATE_START, $dateStart);
             } else {
-                /** @noinspection PhpRedundantOptionalArgumentInspection */
                 $entity->set(Meeting::FIELD_DATE_START_DATE, null);
             }
         }
@@ -107,10 +110,32 @@ class Event extends Database implements
                 $dateEnd = $dt->format(DateTimeUtil::SYSTEM_DATE_TIME_FORMAT);
                 $entity->set(Meeting::FIELD_DATE_END, $dateEnd);
             } else {
-                /** @noinspection PhpRedundantOptionalArgumentInspection */
                 $entity->set(Meeting::FIELD_DATE_END_DATE, null);
             }
         }
+
+        if ($entity->hasAttribute(self::FIELD_DURATION)) {
+            if ($entity->get(Meeting::FIELD_DATE_START) && !$entity->get(Meeting::FIELD_DATE_END)) {
+                $start = DateTimeField::fromString($entity->get(Meeting::FIELD_DATE_START));
+                $duration = $entity->get(self::FIELD_DURATION) ?? 0;
+
+                $end = $start->addSeconds($duration);
+
+                $entity->set(Meeting::FIELD_DATE_END, $end->toString());
+            }
+
+            if ($entity->get(Meeting::FIELD_DATE_START_DATE) && !$entity->get(Meeting::FIELD_DATE_END_DATE)) {
+                $start = Date::fromString($entity->get(Meeting::FIELD_DATE_START_DATE));
+                $duration = $entity->get(self::FIELD_DURATION) ?? 0;
+
+                $days = (int) floor($duration / (3600 * 24));
+
+                $end = $start->addDays($days - 1);
+
+                $entity->set(Meeting::FIELD_DATE_END_DATE, $end->toString());
+            }
+        }
+
 
         parent::beforeSave($entity, $options);
     }

@@ -56,8 +56,8 @@ use Espo\ORM\Type\AttributeType;
  */
 class Builder
 {
-    private const ATTR_ID = 'id';
-    private const ATTR_DELETED = 'deleted';
+    private const string ATTR_ID = 'id';
+    private const string ATTR_DELETED = 'deleted';
 
     private int $idLength;
     private string $idDbType;
@@ -197,7 +197,9 @@ class Builder
             $this->addColumn($table, $column);
         }
 
-        $table->setPrimaryKey($primaryColumns);
+        if ($primaryColumns) {
+            $table->setPrimaryKey($primaryColumns);
+        }
 
         $this->addIndexes($table, $entityDefs->getIndexList());
     }
@@ -379,15 +381,17 @@ class Builder
 
     /**
      * @param IndexDefs[] $indexDefsList
-     * @throws SchemaException
      */
     private function addIndexes(Table $table, array $indexDefsList): void
     {
         foreach ($indexDefsList as $indexDefs) {
-            $columns = array_map(
-                fn($item) => Util::toUnderScore($item),
-                $indexDefs->getColumnList()
-            );
+            $columns = array_map(fn ($item) => Util::toUnderScore($item), $indexDefs->getColumnList());
+
+            if (!$columns) {
+                continue;
+            }
+
+            $columns = array_values($columns);
 
             if ($indexDefs->isUnique()) {
                 $table->addUniqueIndex($columns, $indexDefs->getKey());

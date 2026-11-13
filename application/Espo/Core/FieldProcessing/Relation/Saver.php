@@ -190,7 +190,6 @@ class Saver implements SaverInterface
             return;
         }
 
-        /** @noinspection PhpRedundantOptionalArgumentInspection */
         $anotherEntity->set($idAttribute, null);
 
         $this->entityManager->saveEntity($anotherEntity, [

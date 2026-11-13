@@ -1,0 +1,32 @@
+{
+    "fields": {
+        "id": {
+            "type": "id",
+            "dbType": "integer",
+            "autoincrement": true
+        },
+        "user": {
+            "type": "link"
+        },
+        "emailFiltersVersionNumber": {
+            "type": "int",
+            "dbType": "bigint",
+            "default": 0
+        }
+    },
+    "links": {
+        "user": {
+            "type": "belongsTo",
+            "entity": "User"
+        }
+    },
+    "indexes": {
+        "userId": {
+            "unique": true,
+            "columns": [
+                "userId"
+            ]
+        }
+    },
+    "noDeletedAttribute": true
+}

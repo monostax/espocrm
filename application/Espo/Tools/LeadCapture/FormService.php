@@ -29,6 +29,7 @@
 
 namespace Espo\Tools\LeadCapture;
 
+use Espo\Core\Binding\Attributes\Qualify;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\ORM\Type\FieldType;
 use Espo\Core\Utils\Address\CountryDataProvider;
@@ -36,6 +37,7 @@ use Espo\Core\Utils\Config;
 use Espo\Core\Utils\DataCache;
 use Espo\Core\Utils\Language;
 use Espo\Core\Utils\Metadata;
+use Espo\Core\Utils\Theme\Direction;
 use Espo\Core\Utils\Theme\MetadataProvider as ThemeMetadataProvider;
 use Espo\Core\Utils\ThemeManager;
 use Espo\Entities\Integration;
@@ -48,12 +50,13 @@ use RuntimeException;
 
 class FormService
 {
-    private const CACHE_KEY_PREFIX = 'leadCaptureForm';
+    private const string CACHE_KEY_PREFIX = 'leadCaptureForm';
 
     public function __construct(
         private EntityManager $entityManager,
         private Config $config,
         private Metadata $metadata,
+        #[Qualify(Language::QUALIFIER_DEFAULT)]
         private Language $defaultLanguage,
         private CountryDataProvider $countryDataProvider,
         private LanguageService $languageService,
@@ -62,10 +65,11 @@ class FormService
         private ThemeManager $themeManager,
         private Config\SystemConfig $systemConfig,
         private ThemeMetadataProvider $themeMetadataProvider,
+        private ThemeDirectionDetector $themeDirectionDetector,
     ) {}
 
     /**
-     * @return array{LeadCapture, array<string, mixed>, ?string}
+     * @return array{LeadCapture, array<string, mixed>, ?string, Direction}
      * @throws NotFound
      */
     public function getData(string $id): array
@@ -78,7 +82,9 @@ class FormService
 
         $data['captchaKey'] = $captchaKey;
 
-        return [$leadCapture, $data, $captchaScript];
+        $direction = $this->themeDirectionDetector->detect($leadCapture);
+
+        return [$leadCapture, $data, $captchaScript, $direction];
     }
 
     /**
@@ -89,7 +95,11 @@ class FormService
         $cacheKey = $this->getCacheKey($leadCapture);
 
         if ($this->systemConfig->useCache() && $this->dataCache->has($cacheKey)) {
-            return $this->getFromCache($cacheKey);
+            $cached = $this->getFromCache($cacheKey);
+
+            if ($cached !== null) {
+                return $cached;
+            }
         }
 
         $data = $this->prepareData($leadCapture);
@@ -387,11 +397,11 @@ class FormService
     }
 
     /**
-     * @return array<string, mixed>
+     * @return ?array<string, mixed>
      */
-    private function getFromCache(string $cacheKey): array
+    private function getFromCache(string $cacheKey): ?array
     {
-        /** @var array<string, mixed> */
+        /** @var ?array<string, mixed> */
         return $this->dataCache->get($cacheKey);
     }
 

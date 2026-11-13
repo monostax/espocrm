@@ -106,5 +106,54 @@
     "migrationVersionStep": {
         "listed": false,
         "noSystemUser": true
+    },
+    "cron:run": {
+        "className": "Espo\\Classes\\ConsoleCommands\\CronRun",
+        "listed": true,
+        "allowedFlags": [
+            "force"
+        ],
+        "allowedOptions": []
+    },
+    "job:prepare": {
+        "className": "Espo\\Classes\\ConsoleCommands\\JobPrepare",
+        "listed": false,
+        "allowedFlags": [
+            "sq"
+        ],
+        "allowedOptions": [
+            "interval",
+            "limit"
+        ]
+    },
+    "job:enqueue": {
+        "className": "Espo\\Classes\\ConsoleCommands\\JobEnqueue",
+        "listed": false,
+        "allowedFlags": [],
+        "allowedOptions": [
+            "interval",
+            "limit",
+            "portion",
+            "queue"
+        ]
+    },
+    "job:worker": {
+        "className": "Espo\\Classes\\ConsoleCommands\\JobWorker",
+        "listed": false,
+        "allowedFlags": [],
+        "allowedOptions": [
+            "limit",
+            "queue"
+        ]
+    },
+    "oauthServer:revokeTokens": {
+        "className": "Espo\\Tools\\OAuthServer\\Commands\\RevokeTokens",
+        "listed": true,
+        "allowedOptions": [
+            "username"
+        ],
+        "allowedFlags": [
+            "adminOnly"
+        ]
     }
 }

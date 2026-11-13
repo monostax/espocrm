@@ -40,18 +40,22 @@ use Espo\Tools\Email\Util as EmailUtil;
  */
 class SetBodyPlain implements BeforeSave
 {
-    private const ATTR_BODY = 'body';
-    private const ATTR_BODY_PLAIN = 'bodyPlain';
-
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
-        if (!$entity->isAttributeChanged(self::ATTR_BODY)) {
+        if (
+            !$entity->isAttributeChanged(KnowledgeBaseArticle::FIELD_BODY) &&
+            !$entity->isAttributeChanged(KnowledgeBaseArticle::FIELD_IS_HTML)
+        ) {
             return;
         }
 
-        $bodyPlain = $this->stripHtml($entity->getBody());
+        if ($entity->isHtml()) {
+            $bodyPlain = $this->stripHtml($entity->getBody());
+        } else {
+            $bodyPlain = $entity->getBody();
+        }
 
-        $entity->set(self::ATTR_BODY_PLAIN, $bodyPlain);
+        $entity->set(KnowledgeBaseArticle::FIELD_BODY_PLAIN, $bodyPlain);
     }
 
     private function stripHtml(?string $body): ?string

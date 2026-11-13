@@ -1,7 +1,9 @@
 {
     "actionClassNameList": [
         "Espo\\Core\\Rebuild\\Actions\\AddSystemUser",
+        "Espo\\Core\\Rebuild\\Actions\\AddSystemState",
         "Espo\\Core\\Rebuild\\Actions\\AddSystemData",
+        "Espo\\Core\\Rebuild\\Actions\\VersionUpdate",
         "Espo\\Core\\Rebuild\\Actions\\ScheduledJobs",
         "Espo\\Core\\Rebuild\\Actions\\ConfigMetadataCheck",
         "Espo\\Core\\Rebuild\\Actions\\GenerateInstanceId",

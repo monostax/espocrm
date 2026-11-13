@@ -40,7 +40,7 @@ class OpportunityAiMentionsTest extends TestCase
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn('ai-user');
         $user->method('isRegular')->willReturnCallback(fn () => $this->userType === 'regular');
-        $user->method('isAdmin')->willReturnCallback(fn () => $this->userType === 'admin');
+        $user->method('isAdmin')->willReturnCallback(fn () => $this->userType === 'admin'); $user->method('isEffectiveAdmin')->willReturnCallback(fn () => $this->userType === 'admin');
         $user->method('isApi')->willReturnCallback(fn () => $this->userType === 'api');
         $user->method('isActive')->willReturnCallback(fn () => $this->isActive);
         $account = new EntityDouble(['id' => 'account', 'platformId' => 'platform', 'tenantId' => 'tenant', 'chatwootAccountId' => 1]);

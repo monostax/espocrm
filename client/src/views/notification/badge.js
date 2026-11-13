@@ -104,6 +104,24 @@ class NotificationBadgeView extends View {
     @inject(ModalBarProvider)
     modalBarProvider
 
+    /**
+     * @private
+     * @type {HTMLDivElement}
+     */
+    popupNotificationsContainer
+
+    /**
+     * @private
+     * @type {string[]}
+     */
+    shownNotificationIds
+
+    /**
+     * @private
+     * @type {string[]}
+     */
+    closedNotificationIds
+
     setup() {
         this.addActionHandler('showNotifications', () => this.showNotifications());
 
@@ -157,14 +175,7 @@ class NotificationBadgeView extends View {
 
         this.runCheckUpdates(true);
 
-        this.$popupContainer = $('#popup-notifications-container');
-
-        if (!$(this.$popupContainer).length) {
-            this.$popupContainer = $('<div>')
-                .attr('id', 'popup-notifications-container')
-                .addClass('hidden')
-                .appendTo('body');
-        }
+        this.preparePopupNotificationContainer();
 
         const popupNotificationsData = this.popupNotificationsData =
             this.getMetadata().get('app.popupNotifications') || {};
@@ -176,6 +187,23 @@ class NotificationBadgeView extends View {
         if (this.hasGroupedPopupNotifications()) {
             this.checkGroupedPopupNotifications();
         }
+    }
+
+    /**
+     * @private
+     */
+    preparePopupNotificationContainer() {
+        let popupNotificationsContainer = document.querySelector('#popup-notifications-container');
+
+        if (!popupNotificationsContainer) {
+            popupNotificationsContainer = document.createElement('div');
+            popupNotificationsContainer.id = 'popup-notifications-container';
+            popupNotificationsContainer.className = 'hidden';
+
+            document.body.append(popupNotificationsContainer);
+        }
+
+        this.popupNotificationsContainer = popupNotificationsContainer;
     }
 
     /**
@@ -556,7 +584,7 @@ class NotificationBadgeView extends View {
                 },
             });
 
-        this.$popupContainer.removeClass('hidden');
+        this.popupNotificationsContainer.classList.remove('hidden');
 
         this.listenTo(view, 'remove', () => {
             this.markPopupRemoved(id);
@@ -658,8 +686,8 @@ class NotificationBadgeView extends View {
             this.shownNotificationIds.splice(index, 1);
         }
 
-        if (this.shownNotificationIds.length === 0) {
-            this.$popupContainer.addClass('hidden');
+        if (this.shownNotificationIds.length === 0 && this.popupNotificationsContainer) {
+            this.popupNotificationsContainer.classList.add('hidden')
         }
 
         this.closedNotificationIds.push(id);

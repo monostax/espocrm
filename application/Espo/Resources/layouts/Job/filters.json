@@ -6,5 +6,6 @@
     "executedAt",
     "queue",
     "group",
-    "className"
+    "className",
+    "pid"
 ]

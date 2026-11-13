@@ -150,6 +150,12 @@ class RoleRecordTableView extends View {
      */
     fieldTableDataList
 
+    /**
+     * @type {Map<string, AbortController>}
+     * @private
+     */
+    windowListeners
+
     data() {
         const data = {};
 
@@ -372,11 +378,11 @@ class RoleRecordTableView extends View {
         }
 
         this.once('remove', () => {
-            $(window).off('scroll.scope-' + this.cid);
-            $(window).off('resize.scope-' + this.cid);
-            $(window).off('scroll.field-' + this.cid);
-            $(window).off('resize.field-' + this.cid);
+            this.windowListeners?.forEach(controller => controller.abort());
+            this.windowListeners?.clear();
         });
+
+        this.windowListeners ??= new Map();
     }
 
     /**
@@ -690,6 +696,13 @@ class RoleRecordTableView extends View {
                     return;
                 }
 
+                /** @type {Record} */
+                const fieldDefs = this.getMetadata().get(`entityDefs.${scope}.fields.${field}`) ?? {};
+
+                if (fieldDefs.aclDisabled) {
+                    return;
+                }
+
                 const list = [];
 
                 this.fieldActionList.forEach(action => {
@@ -818,8 +831,10 @@ class RoleRecordTableView extends View {
         this.$quickSearch = this.$el.find('input[data-name="quick-search"]');
 
         if (this.mode === 'edit' || this.mode === 'detail') {
-            this.initStickyHeader('scope');
-            this.initStickyHeader('field');
+            setTimeout(() => {
+                this.initStickyHeader('scope');
+                this.initStickyHeader('field');
+            }, 0);
         }
     }
 
@@ -1045,7 +1060,6 @@ class RoleRecordTableView extends View {
 
         this.$quickSearch.val(searchText);
         this.processQuickSearch(searchText);
-
     }
 
     /**
@@ -1053,68 +1067,97 @@ class RoleRecordTableView extends View {
      * @param {string} type
      */
     initStickyHeader(type) {
-        const $sticky = this.$el.find(`.sticky-header-${type}`);
-
         const screenWidthXs = this.getThemeManager().getParam('screenWidthXs');
 
-        const $buttonContainer = $('.detail-button-container');
-        const $table = this.$el.find(`table.${type}-level`);
+        const stickyHeader = this.element.querySelector(`.sticky-header-${type}`);
 
-        if (!$table.length) {
+        const modalElement = this.element.closest('.modal');
+
+        const buttonContainer = document.querySelector('.detail-button-container');
+        const table = this.element.querySelector(`table.${type}-level`);
+
+        if (!table) {
             return;
         }
 
-        if (!$buttonContainer.length) {
+        if (!modalElement && !buttonContainer) {
             return;
         }
 
-        const navbarHeight = this.getThemeManager().getParam('navbarHeight') *
+        let navbarOffset = this.getThemeManager().getParam('navbarHeight') *
             this.getThemeManager().getFontSizeFactor();
 
-        const handle = () => {
+        let stickTopPositionStatic = null;
+
+        if (modalElement) {
+            stickTopPositionStatic =
+                modalElement.querySelector('.modal-header')?.offsetHeight +
+                modalElement.querySelector('.modal-footer')?.offsetHeight;
+
+            navbarOffset = 0;
+        }
+
+        const scrollable = modalElement ? modalElement.querySelector('.modal-body') : window;
+
+        const handler = () => {
             if (window.innerWidth < screenWidthXs) {
-                $sticky.addClass('hidden');
+                stickyHeader.classList.add('hidden');
 
                 return;
             }
 
-            const stickTopPosition = $buttonContainer.get(0).getBoundingClientRect().top +
-                $buttonContainer.outerHeight();
+            const offsetHeight = modalElement ? 0 : buttonContainer.offsetHeight;
 
-            let topEdge = $table.position().top;
+            const stickTopPosition = stickTopPositionStatic ?? buttonContainer.offsetTop + offsetHeight;
 
-            topEdge -= $buttonContainer.height();
-            topEdge += $table.find('tr > th').height();
-            topEdge -= navbarHeight;
+            const topEdge = table.offsetTop - offsetHeight - navbarOffset;
+            const bottomEdge = topEdge + table.offsetHeight - offsetHeight;
+            const scrollTop = modalElement ? scrollable.scrollTop : window.scrollY;
 
-            const bottomEdge = topEdge + $table.outerHeight(true) - $buttonContainer.height();
-            const scrollTop = window.scrollY;
-            const width = $table.width();
+            const width = table.clientWidth;
 
-            if (scrollTop > topEdge && scrollTop < bottomEdge) {
-                $sticky.css({
-                    position: 'fixed',
-                    marginTop: stickTopPosition + 'px',
-                    top: 0,
-                    width: width + 'px',
-                    marginLeft: '1px',
-                });
+            if (scrollTop <= topEdge || scrollTop >= bottomEdge) {
+                stickyHeader.classList.add('hidden');
 
-                $sticky.removeClass('hidden');
-            } else {
-                $sticky.addClass('hidden');
+                return;
             }
+
+            Object.assign(stickyHeader.style, {
+                position: 'fixed',
+                marginTop: stickTopPosition + 'px',
+                top: '0',
+                width: width + 'px',
+                marginLeft: 'var(--1px)',
+            });
+
+            stickyHeader.classList.remove('hidden');
         };
 
-        const $window = $(window);
+        this.bindScrollEvents(type, handler, scrollable);
 
-        $window.off(`scroll.${type}-${this.cid}`);
-        $window.on(`scroll.${type}-${this.cid}`, handle);
+        handler();
+    }
 
-        $window.off(`resize.${type}-${this.cid}`);
-        $window.on(`resize.${type}-${this.cid}`, handle);
+    /**
+     * @private
+     * @param {string} type
+     * @param {function} handler
+     * @param {HTMLElement | window} scrollable
+     */
+    bindScrollEvents(type, handler, scrollable) {
+        this.windowListeners.get(type)?.abort();
 
-        handle();
+        const controller = new AbortController();
+
+        this.windowListeners.set(type, controller);
+
+        const options = {
+            signal: controller.signal,
+            passive: true
+        };
+
+        scrollable.addEventListener('scroll', handler, options);
+        window.addEventListener('resize', handler, options);
     }
 
     /**

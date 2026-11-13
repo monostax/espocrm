@@ -363,7 +363,7 @@ final class PhoneVerificationUnitTest extends TestCase
 
         // Non-admin user is forbidden from reading or publishing operator configuration.
         $nonAdmin = $this->createMock(User::class);
-        $nonAdmin->method('isAdmin')->willReturn(false);
+        $nonAdmin->method('isAdmin')->willReturn(false); $nonAdmin->method('isEffectiveAdmin')->willReturn(false);
         $controller = new CreditPhoneVerificationConfiguration($nonAdmin, $gate, $this->createMock(Execution::class));
         try {
             $controller->getActionRead($this->createMock(Request::class), $this->createMock(Response::class));
@@ -379,7 +379,7 @@ final class PhoneVerificationUnitTest extends TestCase
         }
 
         $admin = $this->createMock(User::class);
-        $admin->method('isAdmin')->willReturn(true);
+        $admin->method('isAdmin')->willReturn(true); $admin->method('isEffectiveAdmin')->willReturn(true);
         $admin->method('getId')->willReturn('admin');
         $exec = $this->createMock(Execution::class);
         $exec->method('diagnostics')->willReturn(['observedAt' => '2026-10-14 12:00:00', 'staleOpenCount' => 0]);

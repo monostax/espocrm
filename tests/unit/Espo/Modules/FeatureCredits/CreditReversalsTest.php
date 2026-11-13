@@ -17,7 +17,7 @@ final class CreditReversalsTest extends TestCase
     private function controller(bool $admin): CreditReversals
     {
         $user = $this->createStub(User::class);
-        $user->method('isAdmin')->willReturn($admin);
+        $user->method('isAdmin')->willReturn($admin); $user->method('isEffectiveAdmin')->willReturn($admin);
         $user->method('getId')->willReturn('admin');
         $manager = $this->createMock(EntityManager::class);
         $manager->expects($this->never())->method('getPDO');

@@ -177,6 +177,17 @@ class ThemeManager {
     }
 
     /**
+     * Get the normalized document direction.
+     *
+     * @returns {'ltr'|'rtl'}
+     */
+    getDirection() {
+        const direction = this.getParam('direction');
+
+        return direction === 'rtl' ? 'rtl' : 'ltr';
+    }
+
+    /**
      * Get a theme parameter.
      *
      * @param {string} name A parameter name.

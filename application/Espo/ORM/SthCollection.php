@@ -85,7 +85,7 @@ class SthCollection implements Collection, IteratorAggregate, Countable
             while ($row = $this->fetchRow()) {
                 $entity = $this->entityManager->getEntityFactory()->create($this->entityType);
 
-                $entity->set($row);
+                $entity->setMultiple($row);
                 $entity->setAsFetched();
 
                 $this->prepareEntity($entity);

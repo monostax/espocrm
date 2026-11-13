@@ -119,7 +119,7 @@ final class BillingCatalogDatabaseTest extends TestCase
     {
         $this->database($dialect, function (PDO $pdo): void {
             $catalog = $this->catalog($pdo);
-            $user = $this->createStub(User::class); $user->method('isAdmin')->willReturn(true);
+            $user = $this->createStub(User::class); $user->method('isAdmin')->willReturn(true); $user->method('isEffectiveAdmin')->willReturn(true);
             $user->method('getId')->willReturn('platform-admin');
             $controller = new CreditBillingConfiguration($user, $catalog);
             $input = BillingFixtures::definition();

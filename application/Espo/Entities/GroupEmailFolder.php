@@ -30,6 +30,7 @@
 namespace Espo\Entities;
 
 use Espo\Core\Field\LinkMultiple;
+use Espo\Core\Name\Field;
 use Espo\Core\ORM\Entity;
 
 class GroupEmailFolder extends Entity
@@ -45,5 +46,13 @@ class GroupEmailFolder extends Entity
     {
         /** @var LinkMultiple */
         return $this->getValueObject('teams');
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function setTeams(LinkMultiple $teams): self
+    {
+        return $this->setValueObject(Field::TEAMS, $teams);
     }
 }

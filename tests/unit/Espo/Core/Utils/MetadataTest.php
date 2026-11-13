@@ -29,13 +29,15 @@
 
 namespace tests\unit\Espo\Core\Utils;
 
+use Espo\Core\Utils\Cache\DataCacheAccess;
+use Espo\Core\Utils\Config\SystemConfig;
+use Espo\Core\Utils\DataCache;
+use Espo\Core\Utils\Json;
 use PHPUnit\Framework\TestCase;
 use tests\unit\ReflectionHelper;
-
 use Espo\Core\Utils\Metadata;
 use Espo\Core\Utils\File\Manager as FileManager;
 use Espo\Core\Utils\Log;
-use Espo\Core\Utils\DataCache;
 use Espo\Core\Utils\File\UnifierObj;
 use Espo\Core\Utils\File\Unifier;
 use Espo\Core\Utils\Module;
@@ -45,20 +47,15 @@ use Espo\Core\Utils\Resource\PathProvider;
 
 class MetadataTest extends TestCase
 {
-    private $object;
+    private ?Metadata $metadata = null;
     private $reflection;
-    private $fileManager;
+    private ?FileManager $fileManager = null;
+
     private $customPath;
 
     protected function setUp(): void
     {
         $this->fileManager = new FileManager();
-
-        $dataCache = $this->getMockBuilder(DataCache::class)->disableOriginalConstructor()->getMock();
-
-        $log = $this->getMockBuilder(Log::class)->disableOriginalConstructor()->getMock();
-
-        $GLOBALS['log'] = $log;
 
         $module = new Module($this->fileManager);
 
@@ -73,16 +70,28 @@ class MetadataTest extends TestCase
 
         $builder = new Metadata\Builder($reader);
 
-        $this->object = new Metadata(
-            $this->fileManager,
-            $dataCache,
-            $module,
-            $builder,
-            $builderHelper,
-            true
+        $dataCacheAccess = new DataCacheAccess(
+            dataCache: $this->createMock(DataCache::class),
+            systemConfig: $this->createMock(SystemConfig::class),
+            log: $this->createMock(Log::class),
         );
 
-        $this->reflection = new ReflectionHelper($this->object);
+        $objectDataCacheAccess = new DataCacheAccess(
+            dataCache: $this->createMock(DataCache::class),
+            systemConfig: $this->createMock(SystemConfig::class),
+            log: $this->createMock(Log::class),
+        );
+
+        $this->metadata = new Metadata(
+            fileManager: $this->fileManager,
+            module: $module,
+            builder: $builder,
+            builderHelper: $builderHelper,
+            data: $dataCacheAccess,
+            objectData: $objectDataCacheAccess,
+        );
+
+        $this->reflection = new ReflectionHelper($this->metadata);
 
         $this->customPath = 'tests/unit/testData/cache/metadata/custom';
 
@@ -91,180 +100,170 @@ class MetadataTest extends TestCase
 
     protected function tearDown() : void
     {
-        $this->object->clearChanges();
-        $this->object = NULL;
+        $this->metadata->clearChanges();
+        $this->metadata = null;
     }
 
-    public function testGet()
+    public function testGet(): void
     {
-        $this->assertEquals('System', $this->object->get('app.adminPanel.system.label'));
+        $this->assertEquals('System', $this->metadata->get('app.adminPanel.system.label'));
 
-        $this->assertArrayHasKey('fields', $this->object->get('entityDefs.User'));
+        $this->assertArrayHasKey('fields', $this->metadata->get('entityDefs.User'));
     }
 
-    public function testSet()
+    public function testSet(): void
     {
-        $data = array (
+        $data = [
           'fields' =>
-          array (
+          [
             'name' =>
-            array (
+            [
               'required' => false,
               'maxLength' => 150,
               'view' => 'Views.Test.Custom',
-            ),
-          ),
-        );
+            ],
+          ],
+        ];
 
-        $this->object->set('entityDefs', 'Attachment', $data);
+        $this->metadata->set('entityDefs', 'Attachment', $data);
 
-        $this->assertEquals('Views.Test.Custom', $this->object->get('entityDefs.Attachment.fields.name.view'));
-        $this->assertEquals(150, $this->object->get('entityDefs.Attachment.fields.name.maxLength'));
+        $this->assertEquals('Views.Test.Custom', $this->metadata->get('entityDefs.Attachment.fields.name.view'));
+        $this->assertEquals(150, $this->metadata->get('entityDefs.Attachment.fields.name.maxLength'));
 
-        $result = array(
-            'entityDefs' => array(
+        $result = [
+            'entityDefs' => [
                 'Attachment' => $data
-            ),
-        );
+            ],
+        ];
         $this->assertEquals($result, $this->reflection->getProperty('changedData'));
 
-        $data = array (
+        $data = [
           'fields' =>
-          array (
+          [
             'name' =>
-            array (
+            [
               'maxLength' => 200,
-            ),
-          ),
-        );
+            ],
+          ],
+        ];
 
-        $this->object->set('entityDefs', 'Attachment', $data);
-        $this->assertEquals(200, $this->object->get('entityDefs.Attachment.fields.name.maxLength'));
-        $this->assertEquals('Views.Test.Custom', $this->object->get('entityDefs.Attachment.fields.name.view'));
+        $this->metadata->set('entityDefs', 'Attachment', $data);
+        $this->assertEquals(200, $this->metadata->get('entityDefs.Attachment.fields.name.maxLength'));
+        $this->assertEquals('Views.Test.Custom', $this->metadata->get('entityDefs.Attachment.fields.name.view'));
 
-        $result = array(
-            'entityDefs' => array(
-                'Attachment' => array (
+        $result = [
+            'entityDefs' => [
+                'Attachment' => [
                   'fields' =>
-                  array (
+                  [
                     'name' =>
-                    array (
+                    [
                       'required' => false,
                       'maxLength' => 200,
                       'view' => 'Views.Test.Custom',
-                    ),
-                  ),
-                ),
-            ),
-        );
+                    ],
+                  ],
+                ],
+            ],
+        ];
         $this->assertEquals($result, $this->reflection->getProperty('changedData'));
 
-        $this->object->clearChanges();
+        $this->metadata->clearChanges();
 
-        $this->assertEquals(array(), $this->reflection->getProperty('changedData'));
-        $this->assertEquals(255, $this->object->get('entityDefs.Attachment.fields.name.maxLength'));
+        $this->assertEquals([], $this->reflection->getProperty('changedData'));
+        $this->assertEquals(255, $this->metadata->get('entityDefs.Attachment.fields.name.maxLength'));
     }
 
-    public function testDelete()
+    public function testDelete(): void
     {
-        $data = array (
+        $this->metadata->delete('entityDefs', 'Attachment', [
             'fields.name.type',
-        );
-        $this->object->delete('entityDefs', 'Attachment', $data);
-        $this->assertNull($this->object->get('entityDefs.Attachment.fields.name.type'));
+        ]);
 
-        $result = array(
-            'entityDefs' => array(
-                'Attachment' => array(
+        $this->assertNull($this->metadata->get('entityDefs.Attachment.fields.name.type'));
+
+        $this->assertEquals([
+            'entityDefs' => [
+                'Attachment' => [
                     'fields.name.type',
-                ),
-            ),
-        );
+                ],
+            ],
+        ], $this->reflection->getProperty('deletedData'));
 
-        $this->assertEquals($result, $this->reflection->getProperty('deletedData'));
-
-        $data = array (
+        $this->metadata->delete('entityDefs', 'Attachment', [
             'fields.name.required',
-        );
-        $this->object->delete('entityDefs', 'Attachment', $data);
-        $this->assertNull($this->object->get('entityDefs.Attachment.fields.name.required'));
+        ]);
 
-        $result = array(
-            'entityDefs' => array(
-                'Attachment' => array(
+        $this->assertNull($this->metadata->get('entityDefs.Attachment.fields.name.required'));
+
+        $this->assertEquals([
+            'entityDefs' => [
+                'Attachment' => [
                     'fields.name.type',
                     'fields.name.required',
-                ),
-            ),
-        );
-        $this->assertEquals($result, $this->reflection->getProperty('deletedData'));
+                ],
+            ],
+        ], $this->reflection->getProperty('deletedData'));
 
-        $this->object->init(false);
+        $this->metadata->init();
 
-        $this->assertNotNull($this->object->get('entityDefs.Attachment.fields.name.type'));
-        $this->assertNotNull($this->object->get('entityDefs.Attachment.fields.name.required'));
+        $this->assertNotNull($this->metadata->get('entityDefs.Attachment.fields.name.type'));
+        $this->assertNotNull($this->metadata->get('entityDefs.Attachment.fields.name.required'));
 
-        $this->object->clearChanges();
+        $this->metadata->clearChanges();
         $this->assertEquals([], $this->reflection->getProperty('deletedData'));
     }
 
-    public function testUndelete()
+    public function testUndelete(): void
     {
-        $data = [
+        $this->metadata->delete('entityDefs', 'Attachment', [
             'fields.name.type',
             'fields.name.required',
-        ];
+        ]);
 
-        $this->object->delete('entityDefs', 'Attachment', $data);
-        $this->assertNull($this->object->get('entityDefs.Attachment.fields.name.type'));
+        $this->assertNull($this->metadata->get('entityDefs.Attachment.fields.name.type'));
 
-        $data = array (
-          'fields' =>
-          array (
-            'name' =>
-            array (
-              'type' => 'enum',
-            ),
-          ),
-        );
-        $this->object->set('entityDefs', 'Attachment', $data);
-        $this->assertEquals('enum', $this->object->get('entityDefs.Attachment.fields.name.type'));
 
-        $result = array(
-            'entityDefs' => array(
-                'Attachment' => array(
+        $this->metadata->set('entityDefs', 'Attachment', [
+            'fields' => [
+                'name' => [
+                    'type' => 'enum',
+                ],
+            ],
+        ]);
+
+        $this->assertEquals('enum', $this->metadata->get('entityDefs.Attachment.fields.name.type'));
+
+        $this->assertEquals([
+            'entityDefs' => [
+                'Attachment' => [
                     1 => 'fields.name.required',
-                ),
-            ),
-        );
-        $this->assertEquals($result, $this->reflection->getProperty('deletedData'));
+                ],
+            ],
+        ], $this->reflection->getProperty('deletedData'));
 
-        $data = array (
-          'fields' =>
-          array (
-            'name' =>
-            array (
-              'required' => true,
-            ),
-          ),
-        );
-        $this->object->set('entityDefs', 'Attachment', $data);
-        $this->assertEquals(true, $this->object->get('entityDefs.Attachment.fields.name.required'));
+        $this->metadata->set('entityDefs', 'Attachment', [
+            'fields' => [
+                'name' => [
+                    'required' => true,
+                ],
+            ],
+        ]);
 
-        $result = array(
-            'entityDefs' => array(
-                'Attachment' => array(
-                ),
-            ),
-        );
-        $this->assertEquals($result, $this->reflection->getProperty('deletedData'));
+        $this->assertEquals(true, $this->metadata->get('entityDefs.Attachment.fields.name.required'));
+
+        $this->assertEquals([
+            'entityDefs' => [
+                'Attachment' => [],
+            ],
+        ], $this->reflection->getProperty('deletedData'));
     }
 
-    public function testGetCustom()
+    public function testGetCustom(): void
     {
-        $this->assertNull($this->object->getCustom('entityDefs', 'Lead'));
+        $this->assertNull($this->metadata->getCustom('entityDefs', 'Lead'));
 
-        $customData = $this->object->getCustom('entityDefs', 'Lead', (object) []);
+        $customData = $this->metadata->getCustom('entityDefs', 'Lead', (object) []);
 
         $this->assertTrue(is_object($customData));
 
@@ -277,14 +276,14 @@ class MetadataTest extends TestCase
           ],
         ];
 
-        $this->object->saveCustom('entityDefs', 'Lead', $data);
+        $this->metadata->saveCustom('entityDefs', 'Lead', $data);
 
-        $this->assertEquals($data, $this->object->getCustom('entityDefs', 'Lead'));
+        $this->assertEquals($data, $this->metadata->getCustom('entityDefs', 'Lead'));
 
         unlink($this->customPath . '/entityDefs/Lead.json');
     }
 
-    public function testSaveCustom1()
+    public function testSaveCustom1(): void
     {
         $data = (object) [
           'fields' => (object) [
@@ -295,19 +294,19 @@ class MetadataTest extends TestCase
           ],
         ];
 
-        $this->object->saveCustom('entityDefs', 'Lead', $data);
+        $this->metadata->saveCustom('entityDefs', 'Lead', $data);
 
         $savedFile = $this->customPath . '/entityDefs/Lead.json';
         $fileContent = $this->fileManager->getContents($savedFile);
 
-        $savedData = \Espo\Core\Utils\Json::decode($fileContent);
+        $savedData = Json::decode($fileContent);
 
         $this->assertEquals($data, $savedData);
 
         unlink($savedFile);
     }
 
-    public function testSaveCustom2()
+    public function testSaveCustom2(): void
     {
         $initData = (object) [
           'fields' => (object) [
@@ -318,19 +317,19 @@ class MetadataTest extends TestCase
           ],
         ];
 
-        $this->object->saveCustom('entityDefs', 'Lead', $initData);
+        $this->metadata->saveCustom('entityDefs', 'Lead', $initData);
 
-        $customData = $this->object->getCustom('entityDefs', 'Lead');
+        $customData = $this->metadata->getCustom('entityDefs', 'Lead');
 
         unset($customData->fields->status->type);
         $customData->fields->status->options = ["__APPEND__", "Test1"];
-        $this->object->saveCustom('entityDefs', 'Lead', $customData);
+        $this->metadata->saveCustom('entityDefs', 'Lead', $customData);
 
         $savedFile = $this->customPath . '/entityDefs/Lead.json';
 
         $fileContent = $this->fileManager->getContents($savedFile);
 
-        $savedData = \Espo\Core\Utils\Json::decode($fileContent);
+        $savedData = Json::decode($fileContent);
 
         $expectedData = (object) [
           'fields' => (object) [
@@ -345,10 +344,10 @@ class MetadataTest extends TestCase
         unlink($savedFile);
     }
 
-    public function testGetObjects()
+    public function testGetObjects(): void
     {
-        $this->assertEquals('System', $this->object->getObjects('app.adminPanel.system.label'));
-        $this->assertObjectHasProperty('fields', $this->object->getObjects('entityDefs.User'));
-        $this->assertObjectHasProperty('type', $this->object->getObjects('entityDefs.User.fields.name'));
+        $this->assertEquals('System', $this->metadata->getObjects('app.adminPanel.system.label'));
+        $this->assertObjectHasProperty('fields', $this->metadata->getObjects('entityDefs.User'));
+        $this->assertObjectHasProperty('type', $this->metadata->getObjects('entityDefs.User.fields.name'));
     }
 }

@@ -45,7 +45,7 @@ use LogicException;
 
 class TokensProvider
 {
-    private const EXPIRATION_LEAD_TIME = 60;
+    private const int EXPIRATION_LEAD_TIME = 60;
 
     public function __construct(
         private EntityManager $entityManager,
@@ -134,7 +134,6 @@ class TokensProvider
 
     /**
      * @throws TokenObtainingFailure
-     * @noinspection PhpDocRedundantThrowsInspection
      */
     private function refresh(OAuthAccount $account, ?float $requestTimeout = null): void
     {

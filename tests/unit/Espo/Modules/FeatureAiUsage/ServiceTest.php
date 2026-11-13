@@ -115,7 +115,7 @@ class ServiceTest extends TestCase
         $currency = $this->createMock(ConfigDataProvider::class);
         $currency->method('getDefaultCurrency')->willReturn('BRL');
         $user = $this->createMock(User::class);
-        $user->method('isAdmin')->willReturn($admin);
+        $user->method('isAdmin')->willReturn($admin); $user->method('isEffectiveAdmin')->willReturn($admin);
         $acl = $this->createMock(Acl::class);
         $acl->method('checkField')->willReturn(true);
         $projection = $this->getMockBuilder(Projection::class)

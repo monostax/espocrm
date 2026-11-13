@@ -32,7 +32,7 @@ class RunAsUserAccessTest extends TestCase
         $user->method('isPortal')->willReturn(false);
         $user->method('isRegular')->willReturn($isRegular);
         $user->method('isApi')->willReturn(false);
-        $user->method('isAdmin')->willReturn($isAdmin);
+        $user->method('isAdmin')->willReturn($isAdmin); $user->method('isEffectiveAdmin')->willReturn($isAdmin);
         $user->method('isSuperAdmin')->willReturn($isSuperAdmin);
         $user->method('getTeamIdList')->willReturn(['team-1']);
 

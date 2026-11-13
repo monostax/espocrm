@@ -29,9 +29,12 @@
 
 namespace Espo\Core;
 
+use Espo\Core\Acl\Events\UserRoleUpdate;
 use Espo\Core\Acl\OwnershipSharedChecker;
 use Espo\Core\Acl\Permission;
+use Espo\Core\Acl\Scope;
 use Espo\Core\Name\Field;
+use Espo\Core\Utils\Event\EventDispatcher;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Entities\User;
@@ -119,12 +122,15 @@ class AclManager
         MapFactory $mapFactory,
         protected GlobalRestriction $globalRestriction,
         protected OwnerUserFieldProvider $ownerUserFieldProvider,
-        protected EntityManager $entityManager
+        protected EntityManager $entityManager,
+        protected EventDispatcher $eventDispatcher,
     ) {
         $this->accessCheckerFactory = $accessCheckerFactory;
         $this->ownershipCheckerFactory = $ownershipCheckerFactory;
         $this->tableFactory = $tableFactory;
         $this->mapFactory = $mapFactory;
+
+        $this->initEventHandling();
     }
 
     /**
@@ -467,14 +473,14 @@ class AclManager
             $typeList[] = GlobalRestriction::TYPE_INTERNAL;
         }
 
-        if (!$user->isAdmin()) {
+        if (!$this->checkAdmin($user)) {
             $typeList[] = GlobalRestriction::TYPE_ONLY_ADMIN;
         }
 
         if ($action === Table::ACTION_EDIT) {
             $typeList[] = GlobalRestriction::TYPE_READ_ONLY;
 
-            if (!$user->isAdmin()) {
+            if (!$this->checkAdmin($user)) {
                 $typeList[] = GlobalRestriction::TYPE_NON_ADMIN_READ_ONLY;
             }
         }
@@ -781,5 +787,25 @@ class AclManager
         }
 
         return false;
+    }
+
+    protected function initEventHandling(): void
+    {
+        $this->eventDispatcher->subscribe(UserRoleUpdate::class, function (UserRoleUpdate $event) {
+            $userId = $event->userId;
+
+            unset($this->tableHashMap[$userId]);
+            unset($this->mapHashMap[$userId]);
+        });
+    }
+
+    /**
+     * Whether the user is admin and has admin capabilities.
+     *
+     * @since 10.1.0
+     */
+    public function checkAdmin(User $user): bool
+    {
+        return $user->isEffectiveAdmin() && $this->checkScope($user, Scope::ADMIN);
     }
 }

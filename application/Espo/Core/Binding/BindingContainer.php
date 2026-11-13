@@ -29,6 +29,7 @@
 
 namespace Espo\Core\Binding;
 
+use Espo\Core\Binding\Attributes\Qualify;
 use ReflectionClass;
 use ReflectionParameter;
 use ReflectionNamedType;
@@ -67,8 +68,7 @@ class BindingContainer
             throw new LogicException("Cannot get not existing binding.");
         }
 
-        /** @var Binding */
-        return $this->getInternal($class, $param);
+        return $this->getInternal($class, $param) ?? throw new LogicException();
     }
 
     /**
@@ -104,36 +104,110 @@ class BindingContainer
      */
     private function getInternal(?ReflectionClass $class, ReflectionParameter $param): ?Binding
     {
-        $className = null;
-
-        $key = null;
-
         if ($class) {
-            $className = $class->getName();
+            $binding = $this->getInternalContextualNamed($class, $param);
 
-            $key = '$' . $param->getName();
-        }
-
-        $type = $param->getType();
-
-        if (
-            $className &&
-            $key &&
-            $this->data->hasContext($className, $key)
-        ) {
-            $binding = $this->data->getContext($className, $key);
-
-            $notMatching =
-                $type instanceof ReflectionNamedType &&
-                !$type->isBuiltin() &&
-                $binding->getType() === Binding::VALUE &&
-                is_scalar($binding->getValue());
-
-            if (!$notMatching) {
+            if ($binding) {
                 return $binding;
             }
         }
 
+        $paramClassName = $this->getClassNameFromParameterType($param->getType());
+
+        if ($paramClassName === null) {
+            return null;
+        }
+
+        $qualifiedName = $this->getQualifiedName($param);
+
+        if ($qualifiedName) {
+            $keyQualified = $paramClassName . ' #' . $qualifiedName;
+
+            $binding = $this->getInternalByClassNameKey($class?->getName(), $keyQualified);
+
+            if ($binding) {
+                return $binding;
+            }
+        }
+
+        $keyWithName = $paramClassName . ' $' . $param->getName();
+
+        $binding = $this->getInternalByClassNameKey($class?->getName(), $keyWithName);
+
+        if ($binding) {
+            return $binding;
+        }
+
+        $key = $paramClassName;
+
+        $binding = $this->getInternalByClassNameKey($class?->getName(), $key);
+
+        if ($binding) {
+            return $binding;
+        }
+
+        return null;
+    }
+
+    private function getQualifiedName(ReflectionParameter $param): ?string
+    {
+        $qualifierClass = $param->getAttributes(Qualify::class)[0] ?? null;
+
+        if (!$qualifierClass) {
+            return null;
+        }
+
+        $qualifier = $qualifierClass->newInstance();
+
+        return $qualifier->qualifier;
+    }
+
+    /**
+     * @param ReflectionClass<object> $class
+     */
+    private function getInternalContextualNamed(ReflectionClass $class, ReflectionParameter $param): ?Binding
+    {
+        $key = '$' . $param->getName();
+
+        if (!$this->data->hasContext($class->getName(), $key)) {
+            return null;
+        }
+
+        $type = $param->getType();
+
+        $binding = $this->data->getContext($class->getName(), $key);
+
+        $notMatching =
+            $type instanceof ReflectionNamedType &&
+            !$type->isBuiltin() &&
+            $binding->getType() === Binding::VALUE &&
+            is_scalar($binding->getValue());
+
+        if ($notMatching) {
+            return null;
+        }
+
+        return $binding;
+    }
+
+    /**
+     * @param ?class-string<object> $className
+     */
+    private function getInternalByClassNameKey(?string $className, string $key): ?Binding
+    {
+        if ($className && $this->data->hasContext($className, $key)) {
+            return $this->data->getContext($className, $key);
+        }
+
+        if ($this->data->hasGlobal($key)) {
+            return $this->data->getGlobal($key);
+        }
+
+        return null;
+    }
+
+    private function getClassNameFromParameterType(mixed $type): ?string
+    {
         $dependencyClassName = null;
 
         if (
@@ -143,35 +217,6 @@ class BindingContainer
             $dependencyClassName = $type->getName();
         }
 
-        $key = null;
-        $keyWithParamName = null;
-
-        if ($dependencyClassName) {
-            $key = $dependencyClassName;
-
-            $keyWithParamName = $key . ' $' . $param->getName();
-        }
-
-        if ($keyWithParamName) {
-            if ($className && $this->data->hasContext($className, $keyWithParamName)) {
-                return $this->data->getContext($className, $keyWithParamName);
-            }
-
-            if ($this->data->hasGlobal($keyWithParamName)) {
-                return $this->data->getGlobal($keyWithParamName);
-            }
-        }
-
-        if ($key) {
-            if ($className && $this->data->hasContext($className, $key)) {
-                return $this->data->getContext($className, $key);
-            }
-
-            if ($this->data->hasGlobal($key)) {
-                return $this->data->getGlobal($key);
-            }
-        }
-
-        return null;
+        return $dependencyClassName;
     }
 }

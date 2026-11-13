@@ -67,7 +67,7 @@ class AccessTest extends TestCase
         foreach (['isPortal', 'isApi'] as $type) {
             $user = $this->createMock(User::class);
             $user->method($type)->willReturn(true);
-            $user->method('isAdmin')->willReturn(true);
+            $user->method('isAdmin')->willReturn(true); $user->method('isEffectiveAdmin')->willReturn(true);
             $memberships = $this->createMock(UserTenantResolver::class);
             $memberships->expects($this->never())->method('resolveTenantIds');
             $access = new Access($user, $this->createMock(EntityManager::class), $this->createMock(TenantResolver::class), $memberships);

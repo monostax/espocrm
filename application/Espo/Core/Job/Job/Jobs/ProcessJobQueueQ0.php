@@ -34,4 +34,6 @@ use Espo\Core\Job\QueueName;
 class ProcessJobQueueQ0 extends AbstractQueueJob
 {
     protected string $queue = QueueName::Q0;
+
+    public const string NAME = 'ProcessJobQueueQ0';
 }

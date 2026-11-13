@@ -78,7 +78,7 @@ class ProjectionTest extends TestCase
     {
         foreach ([false, true] as $isAdmin) {
             $user = $this->createMock(User::class);
-            $user->method('isAdmin')->willReturn($isAdmin);
+            $user->method('isAdmin')->willReturn($isAdmin); $user->method('isEffectiveAdmin')->willReturn($isAdmin);
             $acl = $this->createMock(Acl::class);
             $acl->method('checkField')->willReturn(true);
             $projection = new Projection($this->createMock(EntityManager::class), $acl, $this->createMock(SelectBuilderFactory::class), $user);

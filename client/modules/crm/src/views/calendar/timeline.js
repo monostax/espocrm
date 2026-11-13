@@ -370,18 +370,6 @@ class TimelineView extends View {
         this.getStorage().set('state', key, enabledScopeList);
     }
 
-    getTitle() {
-        let title = '';
-
-        if (this.options.userId && this.options.userName) {
-            title += ' (' + this.options.userName + ')';
-        }
-
-        title = this.getHelper().escapeString(title);
-
-        return title;
-    }
-
     /**
      * @param {Object.<string, *>} o
      * @return {Object}
@@ -595,6 +583,7 @@ class TimelineView extends View {
             const itemsDataSet = new DataSet(eventList);
 
             this.timeline = new Timeline($timeline.get(0), itemsDataSet, this.groupsDataSet, {
+                rtl: this.getThemeManager().getDirection() === 'rtl',
                 dataAttributes: 'all',
                 start: this.start.toDate(),
                 end: this.end.toDate(),
@@ -637,6 +626,7 @@ class TimelineView extends View {
                 margin: {
                     item: {
                         vertical: 12,
+                        horizontal: 0,
                     },
                     axis: 6,
                 },
@@ -938,13 +928,13 @@ class TimelineView extends View {
         this.groupsDataSet = new DataSet(list);
     }
 
+    /**
+     * @private
+     * @param {string} id
+     * @param {string} name
+     * @return {string}
+     */
     getGroupContent(id, name) {
-        if (this.calendarType === 'single') {
-            return $('<span>')
-                .text(name)
-                .get(0).outerHTML;
-        }
-
         let avatarHtml = this.getAvatarHtml(id);
 
         if (avatarHtml) {
@@ -959,6 +949,11 @@ class TimelineView extends View {
                 .get(0).outerHTML;
     }
 
+    /**
+     * @private
+     * @param {string} id
+     * @return {string}
+     */
     getAvatarHtml(id) {
         if (this.getConfig().get('avatarsDisabled')) {
             return '';

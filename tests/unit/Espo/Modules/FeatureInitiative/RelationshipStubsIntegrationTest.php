@@ -9,6 +9,7 @@ use Espo\Core\ApplicationState;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\FieldProcessing\Relation\LinkMultipleSaver;
 use Espo\Core\FieldProcessing\Saver\Params;
+use Espo\Core\Hook\DataProvider as HookDataProvider;
 use Espo\Core\Hook\GeneralInvoker;
 use Espo\Core\HookManager;
 use Espo\Core\InjectableFactory;
@@ -101,8 +102,11 @@ class RelationshipStubsIntegrationTest extends TestCase
         $config = $this->createMock(SystemConfig::class);
         $config->method('useCache')->willReturn(true);
         return new HookManager(
-            $factory, $this->createMock(FileManager::class), $this->createMock(Metadata::class),
-            $cache, $this->createMock(Log::class), $this->createMock(PathProvider::class), new GeneralInvoker(), $config,
+            $factory, $this->createMock(Log::class), new GeneralInvoker(),
+            new HookDataProvider(
+                $config, $this->createMock(FileManager::class), $this->createMock(PathProvider::class),
+                $cache, $this->createMock(Metadata::class),
+            ),
         );
     }
 

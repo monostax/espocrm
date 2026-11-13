@@ -36,6 +36,7 @@ use DOMDocument;
 use DOMElement;
 use DOMException;
 use DOMXPath;
+use Espo\Core\AclManager;
 use Espo\Core\Currency\PrecisionProvider;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
@@ -87,6 +88,7 @@ class Htmlizer
         private Log $log,
         private InjectableFactory $injectableFactory,
         private PrecisionProvider $precisionProvider,
+        private AclManager $aclManager,
         private ?Acl $acl = null,
     ) {}
 
@@ -830,20 +832,19 @@ class Htmlizer
      */
     private function getForbiddenAttributes(string $entityType): array
     {
+        $restrictedList = $this->aclManager->getScopeRestrictedAttributeList($entityType, [
+            Acl\GlobalRestriction::TYPE_FORBIDDEN,
+            Acl\GlobalRestriction::TYPE_INTERNAL,
+            Acl\GlobalRestriction::TYPE_ONLY_ADMIN,
+        ]);
+
         if (!$this->acl) {
-            return [];
+            return $restrictedList;
         }
 
         return array_merge(
+            $restrictedList,
             $this->acl->getScopeForbiddenAttributeList($entityType),
-            $this->acl->getScopeRestrictedAttributeList(
-                $entityType,
-                [
-                    Acl\GlobalRestriction::TYPE_FORBIDDEN,
-                    Acl\GlobalRestriction::TYPE_INTERNAL,
-                    Acl\GlobalRestriction::TYPE_ONLY_ADMIN,
-                ]
-            )
         );
     }
 
@@ -852,11 +853,7 @@ class Htmlizer
      */
     private function getRestrictedLinks(Entity $entity): array
     {
-        if (!$this->acl) {
-            return [];
-        }
-
-        return $this->acl->getScopeRestrictedLinkList(
+        return $this->aclManager->getScopeRestrictedLinkList(
             $entity->getEntityType(),
             [
                 Acl\GlobalRestriction::TYPE_FORBIDDEN,
@@ -914,6 +911,11 @@ class Htmlizer
         $forbiddenAttributeList = $this->getForbiddenAttributes($entity->getEntityType());
 
         foreach ($entity->getAttributeList() as $attribute) {
+            // Should be before unsetting. Additional data is already applied to the data.
+            if ($additionalData && array_key_exists($attribute, $additionalData)) {
+                continue;
+            }
+
             if (in_array($attribute, $forbiddenAttributeList)) {
                 unset($data[$attribute]);
 
@@ -921,10 +923,6 @@ class Htmlizer
             }
 
             if (in_array($attribute, $skipAttributeList)) {
-                continue;
-            }
-
-            if ($additionalData && array_key_exists($attribute, $additionalData)) {
                 continue;
             }
 

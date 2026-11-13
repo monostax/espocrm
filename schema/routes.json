@@ -28,9 +28,27 @@
                 "type": "boolean",
                 "description": "Makes the route not requiring authentication."
             },
+            "apiAuthForbidden": {
+                "type": "boolean",
+                "description": "Forbids API authentication, such as the API user, OAuth. Since 10.1."
+            },
             "actionClassName": {
                 "type": "string",
                 "description": "An action class. Should implement the interface Espo\\Core\\Api\\Action."
+            },
+            "consumes": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "description": "Media type.",
+                    "examples": [
+                        "application/json",
+                        "multipart/form-data",
+                        "application/x-www-form-urlencoded",
+                        "text/plain"
+                    ]
+                },
+                "description": "If defined, restricts content types allowed for the endpoint. If an empty array, the Content-Type header must be empty. As of v10.1."
             },
             "params": {
                 "type": "object",

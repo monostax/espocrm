@@ -29,8 +29,8 @@
 
 namespace Espo\Tools\App\Language;
 
+use Espo\Core\Binding\Attributes\Qualify;
 use Espo\Core\ORM\Type\FieldType;
-use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Config\SystemConfig;
 use Espo\Core\Utils\DataCache;
 use Espo\Core\Utils\Metadata;
@@ -38,7 +38,7 @@ use Espo\ORM\Defs;
 
 class AclDependencyProvider
 {
-    private const CACHE_KEY = 'languageAclDependency';
+    private const string CACHE_KEY = 'languageAclDependency';
 
     /** @var string[] */
     private array $enumFieldTypeList = [
@@ -53,6 +53,7 @@ class AclDependencyProvider
     private bool $useCache;
 
     public function __construct(
+        #[Qualify(DataCache::QUALIFIER_SYSTEM)]
         private DataCache $dataCache,
         private Metadata $metadata,
         private Defs $ormDefs,
@@ -79,10 +80,12 @@ class AclDependencyProvider
     private function loadData(): array
     {
         if ($this->useCache && $this->dataCache->has(self::CACHE_KEY)) {
-            /** @var array<string, mixed>[] $raw */
+            /** @var ?array<string, mixed>[] $raw */
             $raw = $this->dataCache->get(self::CACHE_KEY);
 
-            return $this->buildFromRaw($raw);
+            if ($raw !== null) {
+                return $this->buildFromRaw($raw);
+            }
         }
 
         return $this->buildData();

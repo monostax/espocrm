@@ -38,7 +38,6 @@ use Espo\Core\Exceptions\HasLogLevel;
 use Espo\Core\Exceptions\HasLogMessage;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Utils\Log;
-
 use Espo\ORM\Exceptions\ValidationException;
 use LogicException;
 use Psr\Log\LogLevel;
@@ -88,8 +87,12 @@ class ErrorOutput
         ValidationException::class => 409,
     ];
 
-    public function __construct(private Log $log)
-    {}
+    public const string HEADER_STATUS_REASON = 'X-Status-Reason';
+
+    public function __construct(
+        private Log $log,
+        private ConfigDataProvider $config,
+    ) {}
 
     public function process(
         Request $request,
@@ -136,8 +139,20 @@ class ErrorOutput
 
         $response->setStatus($statusCode);
 
+        $statusReason = null;
+
         if ($this->toPrintExceptionStatusReason($exception)) {
-            $response->setHeader('X-Status-Reason', $this->stripInvalidCharactersFromHeaderValue($message));
+            $statusReason = $this->stripInvalidCharactersFromHeaderValue($message);
+        } else if ($this->config->exposeExceptions()) {
+            $strippedMessage = $this->stripInvalidCharactersFromHeaderValue($message);
+
+            if ($strippedMessage) {
+                $statusReason = 'Exposed: ' . $strippedMessage;
+            }
+        }
+
+        if ($statusReason !== null) {
+            $response->setHeader(self::HEADER_STATUS_REASON, $statusReason);
         }
 
         $this->printBody(
@@ -169,11 +184,6 @@ class ErrorOutput
         return null;
     }
 
-    private function clearPasswords(string $string): string
-    {
-        return preg_replace('/"(.*password.*)":".*"/i', '"$1":"*****"', $string) ?? $string;
-    }
-
     private static function generateErrorBody(string $header, string $text): string
     {
         $body = "<h1>" . $header . "</h1>";
@@ -192,8 +202,6 @@ class ErrorOutput
 
     private function processRoute(string $route, Request $request, Throwable $exception): void
     {
-        $requestBodyString = $this->clearPasswords($request->getBodyContents() ?? '');
-
         $message = $exception->getMessage();
 
         if ($exception->getPrevious() && $exception->getPrevious()->getMessage()) {
@@ -214,10 +222,6 @@ class ErrorOutput
 
         $logMessageItemList[] = $request->getMethod() . ' ' . $request->getResourcePath();
 
-        if ($requestBodyString) {
-            $logMessageItemList[] = "Input data: " . $requestBodyString;
-        }
-
         $logMessageItemList[] = "Route pattern: " . $route;
 
         if (!empty($routeParams)) {
@@ -232,7 +236,6 @@ class ErrorOutput
     private function toPrintExceptionStatusReason(Throwable $exception): bool
     {
         foreach ($this->printStatusReasonExceptionClassNameList as $clasName) {
-
             if ($exception instanceof ($clasName)) {
                 return true;
             }

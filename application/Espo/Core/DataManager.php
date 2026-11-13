@@ -29,11 +29,17 @@
 
 namespace Espo\Core;
 
+use Espo\Core\Binding\Attributes\Qualify;
 use Espo\Core\Exceptions\Error;
+use Espo\Core\Hook\Control;
 use Espo\Core\ORM\EntityManagerProxy;
+use Espo\Core\Utils\Cache\DataCacheProvider;
+use Espo\Core\Utils\Cache\Exceptions\PersistenceError;
 use Espo\Core\Utils\Database\Helper as DatabaseHelper;
+use Espo\Core\Utils\Database\Platform;
 use Espo\Core\Utils\Database\Schema\RebuildMode;
 use Espo\Core\Utils\Database\Schema\SchemaManagerProxy;
+use Espo\Core\Utils\DataCache;
 use Espo\Core\Utils\File\Manager as FileManager;
 use Espo\Core\Utils\Metadata;
 use Espo\Core\Utils\Util;
@@ -62,7 +68,6 @@ class DataManager
         private ConfigWriter $configWriter,
         private Metadata $metadata,
         private OrmMetadataData $ormMetadataData,
-        private HookManager $hookManager,
         private SchemaManagerProxy $schemaManager,
         private Log $log,
         private Module $module,
@@ -70,7 +75,13 @@ class DataManager
         private ConfigMissingDefaultParamsSaver $configMissingDefaultParamsSaver,
         private FileManager $fileManager,
         private DatabaseParamsFactory $databaseParamsFactory,
-        private InjectableFactory $injectableFactory
+        private InjectableFactory $injectableFactory,
+        private Control $hookControl,
+        #[Qualify(DataCache::QUALIFIER_SYSTEM)]
+        private DataCache $systemDataCache,
+        private DataCacheProvider $dataCacheProvider,
+        // Monostax: clears and preloads hooks at the end of a rebuild (see rebuild()).
+        private HookManager $hookManager,
     ) {}
 
     /**
@@ -100,6 +111,7 @@ class DataManager
      * Clear cache.
      *
      * @throws Error
+     * @todo Trigger an inter-process event.
      */
     public function clearCache(): void
     {
@@ -107,8 +119,30 @@ class DataManager
 
         $result = $this->fileManager->removeInDir($this->cachePath);
 
+        try {
+            $this->systemDataCache->clearAll();
+        } catch (PersistenceError $e) {
+            throw new Error("Could not clear system cache.", previous: $e);
+        }
+
+        try {
+            $dataCache = $this->dataCacheProvider->get();
+        } catch (Throwable $e) {
+            $this->log->error("Could not get application data cache.", ['exception' => $e]);
+
+            $dataCache = null;
+        }
+
+        if ($dataCache && $this->systemDataCache !== $dataCache) {
+            try {
+                $dataCache->clearAll();
+            } catch (PersistenceError $e) {
+                throw new Error("Could not clear application cache.", previous: $e);
+            }
+        }
+
         if (!$result) {
-            throw new Error("Error while clearing cache");
+            throw new Error("Error while clearing cache.");
         }
 
         $this->updateCacheTimestamp();
@@ -123,7 +157,7 @@ class DataManager
      */
     public function rebuildDatabase(?array $entityTypeList = null, string $mode = RebuildMode::SOFT): void
     {
-        if ($entityTypeList && $this->config->get('database.platform') === 'Postgresql') {
+        if ($entityTypeList && $this->config->get('database.platform') === Platform::POSTGRESQL) {
             // Prevents sequences from being dropped.
             // @todo Refactor.
             $entityTypeList = null;
@@ -131,19 +165,23 @@ class DataManager
 
         $schemaManager = $this->schemaManager;
 
+        $exception = null;
+
         try {
             $result = $schemaManager->rebuild($entityTypeList, $mode);
         } catch (Throwable $e) {
             $result = false;
 
-            $this->log->error(
-                "Failed to rebuild database schema. {$e->getMessage()}; {$e->getFile()}:{$e->getLine()}",
-                ['exception' => $e]
-            );
+            $this->log->error("Failed to rebuild database schema. {message}", [
+                'exception' => $e,
+                'message' => $e->getMessage(),
+            ]);
+
+            $exception = $e;
         }
 
         if (!$result) {
-            throw new Error("Error while rebuilding database. See log file for details.");
+            throw new Error("Error while rebuilding database. See log file for details.", previous: $exception);
         }
 
         $databaseType = strtolower($schemaManager->getDatabaseHelper()->getType());
@@ -173,7 +211,7 @@ class DataManager
      */
     public function rebuildMetadata(): void
     {
-        $this->metadata->init(true);
+        $this->metadata->init();
         $this->ormMetadataData->reload();
         $this->entityManager->getMetadata()->updateData();
 
@@ -214,7 +252,7 @@ class DataManager
     {
         $databaseParams = $this->databaseParamsFactory->create();
 
-        if ($databaseParams->getPlatform() !== 'Mysql') {
+        if ($databaseParams->getPlatform() !== Platform::MYSQL) {
             return;
         }
 
@@ -242,12 +280,12 @@ class DataManager
 
     private function disableHooks(): void
     {
-        $this->hookManager->disable();
+        $this->hookControl->disable();
     }
 
     private function enableHooks(): void
     {
-        $this->hookManager->enable();
+        $this->hookControl->enable();
     }
 
     /**

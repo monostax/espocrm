@@ -16,7 +16,8 @@
         "group": "Group",
         "className": "Class Name",
         "targetGroup": "Target Group",
-        "job": "Job"
+        "job": "Job",
+        "pid": "PID"
     },
     "options": {
         "status": {

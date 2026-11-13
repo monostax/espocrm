@@ -36,35 +36,29 @@ use Espo\Core\Acl\Map\Map;
 use Espo\Core\Acl\Map\MetadataProvider;
 use Espo\Core\Acl\ScopeData;
 use Espo\Core\Acl\Table;
-use Espo\Core\Utils\Config;
+use Espo\Core\Utils\Cache\DataCacheAccess;
+use Espo\Core\Utils\Config\SystemConfig;
 use Espo\Core\Utils\DataCache;
 use Espo\Core\Utils\FieldUtil;
 
+use Espo\Core\Utils\Log;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
 class MapTest extends TestCase
 {
     private $fieldUtil;
-    private $systemConfig;
     private $table;
     private $metadataProvider;
     private $cacheKeyProvider;
-    private $dataCache;
 
     protected function setUp(): void
     {
-        $this->systemConfig = $this->createMock(Config\SystemConfig::class);
         $this->fieldUtil = $this->createMock(FieldUtil::class);
         $this->table = $this->createMock(Table::class);
-        $this->dataCache = $this->createMock(DataCache::class);
         $this->metadataProvider = $this->createMock(MetadataProvider::class);
         $this->cacheKeyProvider = $this->createMock(CacheKeyProvider::class);
 
-        $this->systemConfig
-            ->expects($this->any())
-            ->method('useCache')
-            ->willReturn(false);
     }
 
     private function mockTableData(array $scopeData, array $fieldData, array $permissionData): void
@@ -201,12 +195,20 @@ class MapTest extends TestCase
 
         $expectedData = $this->getExpectedRawData();
 
+        $this->cacheKeyProvider->method('get')
+            ->willReturn('key');
+
+        $dataCacheAccess = new DataCacheAccess(
+            dataCache: $this->createMock(DataCache::class),
+            systemConfig: $this->createMock(SystemConfig::class),
+            log: $this->createMock(Log::class),
+        );
+
         $map = new Map(
-            $this->table,
-            $dataBuilder,
-            $this->dataCache,
-            $this->cacheKeyProvider,
-            $this->systemConfig,
+            table: $this->table,
+            dataBuilder: $dataBuilder,
+            cacheKeyProvider: $this->cacheKeyProvider,
+            dataCacheAccess: $dataCacheAccess,
         );
 
         $this->assertEquals($expectedData, $map->getData());

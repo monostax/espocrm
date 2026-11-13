@@ -30,6 +30,9 @@ import ActionHandler from 'action-handler';
 
 export default class CurrencyRecordMenuActionSettingsHandler extends ActionHandler {
 
+    process() {
+        document.location.href = '#Admin/currency';
+    }
 
     // noinspection JSUnusedGlobalSymbols
     isVisible() {

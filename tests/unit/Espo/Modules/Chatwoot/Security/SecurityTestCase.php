@@ -73,7 +73,7 @@ abstract class SecurityTestCase extends TestCase
         $this->scope = ScopeData::fromRaw((object) array_fill_keys(['read', 'stream', 'create', 'edit', 'delete'], 'all'));
         $this->user = $this->createMock(User::class);
         $this->user->method('getId')->willReturn('agent');
-        $this->user->method('isAdmin')->willReturnCallback(fn () => $this->admin);
+        $this->user->method('isAdmin')->willReturnCallback(fn () => $this->admin); $this->user->method('isEffectiveAdmin')->willReturnCallback(fn () => $this->admin);
         $this->user->method('isPortal')->willReturnCallback(fn () => $this->portal);
         $this->user->method('isRegular')->willReturnCallback(fn () => !$this->portal && !$this->admin);
         $this->user->method('getTeamIdList')->willReturn(['team-a']);

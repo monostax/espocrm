@@ -130,7 +130,7 @@ trait ConfigurationCases
             try { $service->inspect('agreement', $rate['id'], 'other'); $this->fail('Foreign agreement lookup accepted.'); }
             catch (\Espo\Core\Exceptions\NotFound) { $this->addToAssertionCount(1); }
             $user = $this->createStub(\Espo\Entities\User::class);
-            $user->method('isAdmin')->willReturn(true);
+            $user->method('isAdmin')->willReturn(true); $user->method('isEffectiveAdmin')->willReturn(true);
             $request = $this->createStub(\Espo\Core\Api\Request::class);
             $request->method('getQueryParam')->willReturnCallback(fn ($key) => [
                 'kind' => 'agreement', 'id' => $rate['id'], 'tenantId' => 'tenant',

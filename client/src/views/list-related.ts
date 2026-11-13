@@ -390,6 +390,9 @@ class ListRelatedView<S extends ListRelatedViewSchema = ListRelatedViewSchema> e
             filterList = [];
         }
 
+        const storageKey = this.panelDefs.recordSpecificSearchStorage ?
+            this.model.entityType + '-' + this.model.id + '-' + this.link : null;
+
         const view = await this.createView<SearchView>('search', this.searchView, {
             collection: this.collection,
             fullSelector: '#main > .search-container',
@@ -399,6 +402,7 @@ class ListRelatedView<S extends ListRelatedViewSchema = ListRelatedViewSchema> e
             viewModeList: this.viewModeList,
             isWide: true,
             filterList: filterList,
+            storageKey: storageKey,
         });
 
         if (this.viewModeList.length > 1) {
@@ -573,8 +577,11 @@ class ListRelatedView<S extends ListRelatedViewSchema = ListRelatedViewSchema> e
             o.pagination = true;
         }
 
-        const massUnlinkDisabled = this.panelDefs.massUnlinkDisabled ||
-            this.panelDefs.unlinkDisabled || this.unlinkDisabled;
+        const unlinkDisabled = this.panelDefs.unlinkDisabled ||
+            this.unlinkDisabled ||
+            (this.link && this.model.getLinkParam(this.link, 'readOnly'));
+
+        const massUnlinkDisabled = this.panelDefs.massUnlinkDisabled || unlinkDisabled;
 
         o = {
             unlinkMassAction: !massUnlinkDisabled,
@@ -582,7 +589,7 @@ class ListRelatedView<S extends ListRelatedViewSchema = ListRelatedViewSchema> e
             buttonsDisabled: true,
             forceDisplayTopBar: true,
             rowActionsOptions:  {
-                unlinkDisabled: this.panelDefs.unlinkDisabled || this.unlinkDisabled,
+                unlinkDisabled: unlinkDisabled,
                 editDisabled: this.panelDefs.editDisabled,
                 removeDisabled: this.panelDefs.removeDisabled,
             },

@@ -31,7 +31,7 @@ namespace Espo\Core\Utils;
 
 use Espo\Core\Api\Action;
 use Espo\Core\Api\Route as RouteItem;
-use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Binding\Attributes\Qualify;
 use Espo\Core\Utils\Config\SystemConfig;
 use Espo\Core\Utils\File\Manager as FileManager;
 use Espo\Core\Utils\Resource\PathProvider;
@@ -43,7 +43,9 @@ use Espo\Core\Utils\Resource\PathProvider;
  *     method: string,
  *     noAuth?: bool,
  *     params?: array<string, mixed>,
- *     actionClassName: ?class-string<Action>
+ *     consumes?: ?string[],
+ *     actionClassName: ?class-string<Action>,
+ *     apiAuthForbidden?: bool,
  *   }
  */
 class Route
@@ -56,6 +58,7 @@ class Route
     public function __construct(
         private Metadata $metadata,
         private FileManager $fileManager,
+        #[Qualify(DataCache::QUALIFIER_SYSTEM)]
         private DataCache $dataCache,
         private PathProvider $pathProvider,
         private SystemConfig $systemConfig,
@@ -77,12 +80,14 @@ class Route
         return array_map(
             function (array $item): RouteItem {
                 return new RouteItem(
-                    $item['method'],
-                    $item['route'],
-                    $item['adjustedRoute'],
-                    $item['params'] ?? [],
-                    $item['noAuth'] ?? false,
-                    $item['actionClassName'] ?? null
+                    method: $item['method'],
+                    route: $item['route'],
+                    adjustedRoute: $item['adjustedRoute'],
+                    params: $item['params'] ?? [],
+                    noAuth: $item['noAuth'] ?? false,
+                    consumes: $item['consumes'] ?? null,
+                    actionClassName: $item['actionClassName'] ?? null,
+                    apiAuthForbidden: $item['apiAuthForbidden'] ?? false,
                 );
             },
             $this->data
@@ -97,9 +102,11 @@ class Route
             /** @var ?(RouteArrayShape[]) $data  */
             $data = $this->dataCache->get($this->cacheKey);
 
-            $this->data = $data;
+            if ($data !== null) {
+                $this->data = $data;
 
-            return;
+                return;
+            }
         }
 
         $this->data = $this->unify();

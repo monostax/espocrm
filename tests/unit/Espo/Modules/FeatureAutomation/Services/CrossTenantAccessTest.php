@@ -35,7 +35,7 @@ class CrossTenantAccessTest extends TestCase
     private function user(bool $isAdmin, bool $isSuperAdmin = false): User
     {
         $user = $this->createMock(User::class);
-        $user->method('isAdmin')->willReturn($isAdmin);
+        $user->method('isAdmin')->willReturn($isAdmin); $user->method('isEffectiveAdmin')->willReturn($isAdmin);
         $user->method('isSuperAdmin')->willReturn($isSuperAdmin);
         $user->method('getId')->willReturn('user-1');
 

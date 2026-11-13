@@ -30,6 +30,7 @@
 namespace Espo\Core\Utils;
 
 use Espo\Core\Utils\Config\ConfigWriter;
+use SensitiveParameter;
 
 class ApiKey
 {
@@ -45,6 +46,7 @@ class ApiKey
 
     /**
      * @deprecated
+     * @todo Remove in v11.0.
      * @internal
      */
     public static function hashLegacy(string $secretKey, string $string = ''): string
@@ -71,7 +73,7 @@ class ApiKey
         return $apiSecretKeys->$id;
     }
 
-    public function storeSecretKeyForUserId(string $id, string $secretKey): void
+    public function storeSecretKeyForUserId(string $id, #[SensitiveParameter] string $secretKey): void
     {
         $apiSecretKeys = $this->config->get('apiSecretKeys');
 

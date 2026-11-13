@@ -542,9 +542,9 @@ class Expression implements WhereItem
     /**
      * Difference between two dates in days. Floor is applied.
      *
-     * @since 10.0.0
+     * @since 10.0.3
      */
-    public function timestampDiffDay(Expression $from, Expression $to): self
+    public static function timestampDiffDay(Expression $from, Expression $to): self
     {
         return self::composeFunction('TIMESTAMPDIFF_DAY', $from, $to);
     }
@@ -552,9 +552,9 @@ class Expression implements WhereItem
     /**
      * Difference between two dates in hours. Floor is applied.
      *
-     * @since 10.0.0
+     * @since 10.0.3
      */
-    public function timestampDiffHour(Expression $from, Expression $to): self
+    public static function timestampDiffHour(Expression $from, Expression $to): self
     {
         return self::composeFunction('TIMESTAMPDIFF_HOUR', $from, $to);
     }
@@ -562,9 +562,9 @@ class Expression implements WhereItem
     /**
      * Difference between two dates in minutes. Floor is applied.
      *
-     * @since 10.0.0
+     * @since 10.0.3
      */
-    public function timestampDiffMinute(Expression $from, Expression $to): self
+    public static function timestampDiffMinute(Expression $from, Expression $to): self
     {
         return self::composeFunction('TIMESTAMPDIFF_MINUTE', $from, $to);
     }
@@ -572,9 +572,9 @@ class Expression implements WhereItem
     /**
      * Difference between two dates in seconds.
      *
-     * @since 10.0.0
+     * @since 10.0.3
      */
-    public function timestampDiffSecond(Expression $from, Expression $to): self
+    public static function timestampDiffSecond(Expression $from, Expression $to): self
     {
         return self::composeFunction('TIMESTAMPDIFF_SECOND', $from, $to);
     }

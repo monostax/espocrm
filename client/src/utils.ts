@@ -33,6 +33,8 @@ import type Model from 'model';
 import type User from 'models/user';
 import _ from 'underscore';
 
+let isMobile;
+
 export interface AccessDefs {
     /**
      * An ACL action to check.
@@ -184,10 +186,9 @@ const Utils = {
             method = 'action' + Utils.upperCaseFirst(action);
         }
 
-        // @todo Drop `data.handler` support in v10.1.
-        handler = actionData.handler ?? handler ?? data.handler ?? null;
-
         let fired = false;
+
+        handler = actionData.handler ?? handler ?? null;
 
         if (handler) {
             event.preventDefault();
@@ -196,9 +197,13 @@ const Utils = {
             fired = true;
 
             Espo.loader.require(handler, Handler => {
-                const handler = new Handler(view);
+                const handlerInstance = new Handler(view);
 
-                handler[method].call(handler, data, event);
+                if (!(method in handlerInstance)) {
+                    throw new Error(`No method '${method}' in action handler '${handler}'.`);
+                }
+
+                handlerInstance[method].call(handlerInstance, data, event);
             });
         } else if (
             // @ts-ignore
@@ -745,7 +750,19 @@ const Utils = {
         }
 
         return baseUrl;
-    }
+    },
+
+    /**
+     * @since 10.1.0
+     * @internal
+     */
+    isMobile: function(): boolean {
+        // @ts-ignore
+        isMobile ??= navigator?.userAgentData?.mobile ??
+            /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+        return isMobile;
+    },
 };
 
 const keyMap = {

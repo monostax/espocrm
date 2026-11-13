@@ -36,6 +36,7 @@ use Espo\Core\Formula\Exceptions\TooFewArguments;
 use Espo\Core\Formula\Func;
 use Espo\Core\Formula\Utils\EntityUtil;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Name\Attribute;
 use stdClass;
 
 /**
@@ -67,8 +68,22 @@ class CreateType implements Func
             $this->entityUtil->getWriteRestrictedAttributeList($entityType),
         );
 
+        $notAllowedAttributes = array_values($notAllowedAttributes);
+
         if ($notAllowedAttributes) {
             throw new NotAllowedUsage("Cannot write $entityType.$notAllowedAttributes[0].");
+        }
+
+        $id = $data[Attribute::ID] ?? null;
+
+        if ($id !== null) {
+            if (!is_string($id) && !is_int($id)) {
+                throw new NotAllowedUsage("Entity ID can be only string or int.");
+            }
+
+            if (is_string($id) && !preg_match('/^[a-zA-Z0-9\-]+$/', $id)) {
+                throw new NotAllowedUsage("Not allowed characters in ID '$id'.");
+            }
         }
 
         $entity = $this->entityManager->getNewEntity($entityType);
@@ -88,7 +103,7 @@ class CreateType implements Func
     private function getData(EvaluatedArgumentList $args, mixed $entityType): array
     {
         if (count($args) >= 2 && $args[1] instanceof stdClass) {
-            return get_object_vars($args[1]);
+            return $this->filterData(get_object_vars($args[1]));
         }
 
         $data = [];
@@ -111,6 +126,15 @@ class CreateType implements Func
             $i = $i + 2;
         }
 
+        return $this->filterData($data);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function filterData(array $data): array
+    {
         return $data;
     }
 }

@@ -29,6 +29,7 @@
 
 namespace Espo\Core\Authentication;
 
+use Espo\Core\Api\Response;
 use Espo\Core\Authentication\Result\Data;
 use Espo\Entities\User;
 
@@ -41,18 +42,18 @@ use stdClass;
  */
 class Result
 {
-    public const STATUS_SUCCESS = 'success';
-    public const STATUS_SECOND_STEP_REQUIRED = 'secondStepRequired';
-    public const STATUS_FAIL = 'fail';
+    public const string STATUS_SUCCESS = 'success';
+    public const string STATUS_SECOND_STEP_REQUIRED = 'secondStepRequired';
+    public const string STATUS_FAIL = 'fail';
 
     private ?User $user;
     private string $status;
     private ?string $message = null;
-    private ?string $token = null;
     private ?string $view = null;
     private ?string $failReason = null;
     private bool $bypassSecondStep = false;
     private ?Data $data;
+    private ?Response $response = null;
 
     private function __construct(string $status, ?User $user = null, ?Data $data = null)
     {
@@ -63,7 +64,6 @@ class Result
 
         if ($data) {
             $this->message = $data->getMessage();
-            $this->token = $data->getToken();
             $this->view = $data->getView();
             $this->failReason = $data->getFailReason();
         }
@@ -79,14 +79,24 @@ class Result
 
     /**
      * Create an instance for a failed login.
+     *
+     * @param ?string $reason A fail reason.
+     * @param ?Response $response An error response.
      */
-    public static function fail(?string $reason = null): self
+    public static function fail(?string $reason = null, ?Response $response = null): self
     {
         $data = $reason ?
             Data::createWithFailReason($reason) :
             Data::create();
 
-        return new self(self::STATUS_FAIL, null, $data);
+        $object = new self(
+            status: self::STATUS_FAIL,
+            data: $data,
+        );
+
+        $object->response = $response;
+
+        return $object;
     }
 
     /**
@@ -172,15 +182,7 @@ class Result
     }
 
     /**
-     * A token can be returned to a client to be used instead of password in a request for a second step.
-     */
-    public function getToken(): ?string
-    {
-        return $this->token;
-    }
-
-    /**
-     * Additional data that can be needed for a second step.
+     * Additional data that can be needed for the second step.
      */
     public function getData(): ?stdClass
     {
@@ -206,5 +208,15 @@ class Result
         $obj->bypassSecondStep = $bypassSecondStep;
 
         return $obj;
+    }
+
+    /**
+     * An error response.
+     *
+     * @since 10.1.0
+     */
+    public function getResponse(): ?Response
+    {
+        return $this->response;
     }
 }

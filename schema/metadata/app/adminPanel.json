@@ -12,6 +12,10 @@
                 "type": "string",
                 "description": "A panel label. A translation path: Admin > labels > {label}."
             },
+            "labelTranslation": {
+                "type": "string",
+                "description": "A label translation path. As of v10.0.3."
+            },
             "order": {
                 "type": "integer",
                 "description": "Used for ordering panels on the page."
@@ -32,6 +36,10 @@
                                 "label": {
                                     "type": "string",
                                     "description": "An item (link) label. A translation path: Admin > labels > {label}."
+                                },
+                                "labelTranslation": {
+                                    "type": "string",
+                                    "description": "A label translation path. As of v10.0.3."
                                 },
                                 "iconClass": {
                                     "type": "string",

@@ -122,6 +122,11 @@ const amdIdMap = {};
 const suppressAmdMap = {};
 
 libs.forEach(item => {
+    // Monostax: also wrap non-bundled (lazily loaded) UMD libs, e.g. intl-tel-input.
+    if (item.suppressAmd && item.src && !item.files) {
+        suppressAmdMap[item.src] = true;
+    }
+
     if (!item.amdId || !item.bundle || item.files) {
         return;
     }

@@ -41,14 +41,19 @@ use RuntimeException;
 
 class Hmac implements Login
 {
-    public const NAME = 'Hmac';
+    public const string NAME = 'Hmac';
+
+    /**
+     * @since 10.1.0
+     */
+    public const string HEADER_HMAC_AUTHORIZATION = 'X-Hmac-Authorization';
 
     public function __construct(private UserFinder $userFinder, private ApiKey $apiKeyUtil)
     {}
 
     public function login(Data $data, Request $request): Result
     {
-        $authString = base64_decode($request->getHeader('X-Hmac-Authorization') ?? '');
+        $authString = base64_decode($request->getHeader(self::HEADER_HMAC_AUTHORIZATION) ?? '');
 
         [$apiKey, $hash] = explode(':', $authString, 2);
 
@@ -71,11 +76,12 @@ class Hmac implements Login
         $string = $request->getMethod() . ' ' . $request->getResourcePath();
 
         // As of v8.4.1.
-        if ($hash === ApiKey::hash($secretKey, $string)) {
+        if (hash_equals(ApiKey::hash($secretKey, $string), $hash)) {
             return Result::success($user);
         }
 
-        if ($hash === ApiKey::hashLegacy($secretKey, $string)) {
+        // @todo Remove in v11.0.
+        if (hash_equals(ApiKey::hashLegacy($secretKey, $string), $hash)) {
             return Result::success($user);
         }
 

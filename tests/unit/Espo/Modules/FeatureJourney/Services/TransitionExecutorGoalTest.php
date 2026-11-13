@@ -147,6 +147,13 @@ class TransitionExecutorGoalTest extends TestCase
                 return $entity;
             },
         );
+        $entity->method('setMultiple')->willReturnCallback(
+            static function (array|\stdClass $values) use (&$state, &$entity): Entity {
+                $state = array_replace($state, (array) $values);
+
+                return $entity;
+            },
+        );
 
         return $entity;
     }

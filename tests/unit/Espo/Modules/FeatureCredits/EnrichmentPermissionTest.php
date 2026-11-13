@@ -43,7 +43,7 @@ class EnrichmentPermissionTest extends TestCase
         }
         $provider = $this->createStub(RoleListProvider::class); $provider->method('get')->willReturn($roles);
         $cacheKey = $this->createStub(CacheKeyProvider::class); $cacheKey->method('get')->willReturn('enrichment-permission-test');
-        $user = $this->createStub(User::class); $user->method('isFetched')->willReturn(true); $user->method('isAdmin')->willReturn($admin);
+        $user = $this->createStub(User::class); $user->method('isFetched')->willReturn(true); $user->method('isAdmin')->willReturn($admin); $user->method('isEffectiveAdmin')->willReturn($admin);
         $table = new DefaultTable($provider, $cacheKey, $user, $this->createStub(SystemConfig::class), $metadata, $this->createStub(DataCache::class));
         $this->assertSame($expected, $table->getPermissionLevel('useEnrichmentCredits'));
         $this->assertContains('exportPermission', $acl['valuePermissionList']);

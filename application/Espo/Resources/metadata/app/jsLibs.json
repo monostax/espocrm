@@ -84,18 +84,10 @@
     },
     "autonumeric": {},
     "intl-tel-input": {
+        "path": "client/lib/intl-tel-input.js",
+        "devPath": "client/lib/original/intl-tel-input.js",
         "exportsTo": "window",
         "exportsAs": "intlTelInput"
-    },
-    "intl-tel-input-utils": {
-        "path": "client/lib/intl-tel-input-utils.js",
-        "devPath": "client/lib/original/intl-tel-input-utils.js",
-        "exportsTo": "window",
-        "exportsAs": "intlTelInputUtils"
-    },
-    "intl-tel-input-globals": {
-        "exportsTo": "window",
-        "exportsAs": "intlTelInputGlobals"
     },
     "cronstrue": {
         "path": "client/lib/cronstrue-i18n.js",

@@ -35,6 +35,7 @@ class Route
 
     /**
      * @param array<string, string> $params
+     * @param ?string[] $consumes
      * @param ?class-string<Action> $actionClassName
      */
     public function __construct(
@@ -43,7 +44,9 @@ class Route
         private string $adjustedRoute,
         private array $params,
         private bool $noAuth,
-        private ?string $actionClassName
+        private ?array $consumes,
+        private ?string $actionClassName,
+        private bool $apiAuthForbidden,
     ) {
         $this->method = strtoupper($method);
     }
@@ -88,5 +91,26 @@ class Route
     public function noAuth(): bool
     {
         return $this->noAuth;
+    }
+
+    /**
+     * Allowed media types.
+     *
+     * @return ?string[]
+     * @since 10.1.0
+     */
+    public function getConsumes(): ?array
+    {
+        return $this->consumes;
+    }
+
+    /**
+     * Forbid API authentication.
+     *
+     * @since 10.1.0
+     */
+    public function apiAuthForbidden(): bool
+    {
+        return $this->apiAuthForbidden;
     }
 }

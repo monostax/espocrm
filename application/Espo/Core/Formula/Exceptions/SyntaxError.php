@@ -38,15 +38,18 @@ class SyntaxError extends Error
      */
     private $shortMessage = null;
 
+    private ?int $position = null;
+
     final public function __construct(string $message = '', int $code = 0, ?Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
     }
 
-    public static function create(string $message, ?string $shortMessage = null): self
+    public static function create(string $message, ?string $shortMessage = null, ?int $position = null): self
     {
         $obj = new static($message);
         $obj->shortMessage = $shortMessage;
+        $obj->position = $position;
 
         return $obj;
     }
@@ -54,5 +57,13 @@ class SyntaxError extends Error
     public function getShortMessage(): ?string
     {
         return $this->shortMessage ?? $this->getMessage();
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function getPosition(): ?int
+    {
+        return $this->position;
     }
 }

@@ -32,18 +32,21 @@
 
  * Examples:
  * * `node diff 5.9.0` - builds an upgrade from 5.9.0 to the current version;
- * * `node diff --all` - builds all upgrades needed for a release.
+ * * `node diff --all` - builds all possible upgrades for the release.
+ *
+ * Parameters:
+ * `--targetVersion` – overrides the target version.
  *
  * Data for upgrade packages is defined in `upgrades/{x.x|x.x.x-x.x.x}/data.json`.
  *
- * Parameters:
- * * `mandatoryFiles` – {string[]} – mandatory files to include in upgrade
+ * Data parameters:
+ * - `mandatoryFiles` – {string[]} – mandatory files to include in upgrade
  *   (even files that were not changed in version control);
- * * `beforeUpgradeFiles` – {string[]} – files to copy in the beginning of the upgrade process;
- * * `manifest` – {object} – upgrade manifest parameters.
+ * - `beforeUpgradeFiles` – {string[]} – files to copy in the beginning of the upgrade process;
+ * - `manifest` – {object} – upgrade manifest parameters.
  *
  * Manifest parameters:
- * * `delete` – {string[]} – additional files to be deleted (usually those that are not in version control).
+ * - `delete` – {string[]} – additional files to be deleted (usually those that are not in version control).
  */
 
 const Diff = require('./js/diff');
@@ -59,6 +62,7 @@ let isAll = false;
 let withVendor = true;
 let forceScripts = false;
 let isClosest = false;
+let targetVersion = null;
 
 if (process.argv.length > 1) {
     for (const i in process.argv) {
@@ -86,6 +90,10 @@ if (process.argv.length > 1) {
         if (~process.argv[i].indexOf('--acceptedVersion=')) {
             acceptedVersionName = process.argv[i].substr(('--acceptedVersion=').length);
         }
+
+        if (process.argv[i].includes('--targetVersion=')) {
+            targetVersion = process.argv[i].substr(('--targetVersion=').length);
+        }
     }
 }
 
@@ -100,6 +108,7 @@ const diff = new Diff(espoPath, {
     withVendor: withVendor,
     forceScripts: forceScripts,
     acceptedVersionName: acceptedVersionName,
+    targetVersion: targetVersion,
 });
 
 (() => {

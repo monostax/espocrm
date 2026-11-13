@@ -2,6 +2,9 @@
     "authTokenManager": {
         "className": "Espo\\Core\\Authentication\\AuthToken\\EspoManager"
     },
+    "dataCache": {
+        "loaderClassName": "Espo\\Core\\Utils\\Cache\\DataCacheServiceLoader"
+    },
     "ormMetadataData": {
         "className": "Espo\\Core\\Utils\\Metadata\\OrmMetadataData"
     },
@@ -91,5 +94,14 @@
     },
     "session": {
         "className": "Espo\\Core\\Session\\DefaultSession"
+    },
+    "eventDispatcherConfiguration": {
+        "className": "Espo\\Core\\Utils\\Event\\Configuration"
+    },
+    "eventTransport": {
+        "loaderClassName": "Espo\\Core\\Utils\\Event\\EventTransportLoader"
+    },
+    "pipelineDataProvider": {
+        "className": "Espo\\Tools\\Pipeline\\PipelineDataProvider"
     }
 }

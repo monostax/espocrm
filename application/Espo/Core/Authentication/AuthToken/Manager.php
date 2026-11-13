@@ -31,26 +31,51 @@ namespace Espo\Core\Authentication\AuthToken;
 
 /**
  * Fetches and stores auth tokens.
+ *
+ * @template TAuthToken of AuthToken = AuthToken
  */
 interface Manager
 {
     /**
      * Get an auth token. If it does not exist, then returns NULL.
+     *
+     * @return ?TAuthToken
      */
     public function get(string $token): ?AuthToken;
 
     /**
      * Create an auth token and store it.
+     *
+     * @return TAuthToken
      */
     public function create(Data $data): AuthToken;
 
     /**
      * Make an auth token inactive (invalid).
+     *
+     * @param TAuthToken $authToken
      */
     public function inactivate(AuthToken $authToken): void;
 
     /**
      * Update a last access date. An implementation can be omitted to avoid a writing operation.
+     *
+     * @param TAuthToken $authToken
      */
     public function renew(AuthToken $authToken): void;
+
+    /**
+     * Inactivate concurrent auth tokens for the same user.
+     *
+     * @param TAuthToken $authToken
+     * @since 10.1.0
+     */
+    public function inactivateOther(AuthToken $authToken): void;
+
+    /**
+     * Inactivate all auth tokens for a user.
+     *
+     * @since 10.1.0
+     */
+    public function inactivateAllForUser(string $userId): void;
 }

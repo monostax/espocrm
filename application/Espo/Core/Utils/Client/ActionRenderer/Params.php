@@ -30,6 +30,8 @@
 namespace Espo\Core\Utils\Client\ActionRenderer;
 
 use Espo\Core\Utils\Client\Script;
+use Espo\Core\Utils\Client\SecurityParams;
+use Espo\Core\Utils\Theme\Direction;
 
 /**
  * Immutable.
@@ -45,6 +47,10 @@ class Params
     private array $scripts = [];
     private ?string $pageTitle = null;
     private ?string $theme = null;
+    private ?Direction $direction = null;
+    private bool $login = false;
+    private ?SecurityParams $securityParams = null;
+    private bool $useRouter = false;
 
     /**
      * @param ?array<string, mixed> $data
@@ -52,7 +58,7 @@ class Params
     public function __construct(
         private string $controller,
         private string $action,
-        ?array $data = null
+        ?array $data = null,
     ) {
         $this->data = $data;
     }
@@ -76,6 +82,17 @@ class Params
         return $obj;
     }
 
+    /**
+     * @since 10.1.0
+     */
+    public function withUserRouter(bool $useRouter = true): self
+    {
+        $obj = clone $this;
+        $obj->useRouter = $useRouter;
+
+        return $obj;
+    }
+
     public function withInitAuth(bool $initAuth = true): self
     {
         $obj = clone $this;
@@ -85,8 +102,10 @@ class Params
     }
 
     /**
+     * @deprecated As of v10.1.0. Use `withSecurityParams`.
      * @param string[] $frameAncestors
      * @since 9.0.0
+     * @todo Remove in v11.0.
      */
     public function withFrameAncestors(array $frameAncestors): self
     {
@@ -130,6 +149,36 @@ class Params
         return $obj;
     }
 
+    public function withDirection(?Direction $direction): self
+    {
+        $obj = clone $this;
+        $obj->direction = $direction;
+
+        return $obj;
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function withLogin(bool $login = true): self
+    {
+        $obj = clone $this;
+        $obj->login = $login;
+
+        return $obj;
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function withSecurityParams(?SecurityParams $securityParams): self
+    {
+        $obj = clone $this;
+        $obj->securityParams = $securityParams;
+
+        return $obj;
+    }
+
     public function getController(): string
     {
         return $this->controller;
@@ -154,8 +203,10 @@ class Params
     }
 
     /**
+     * @deprecated As of v10.1.0. Use `getSecurityParams`.
      * @return string[]
      * @since 9.0.0
+     * @todo Remove in v11.0.
      */
     public function getFrameAncestors(): array
     {
@@ -185,5 +236,34 @@ class Params
     public function getTheme(): ?string
     {
         return $this->theme;
+    }
+
+    public function getDirection(): ?Direction
+    {
+        return $this->direction;
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function login(): bool
+    {
+        return $this->login;
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function getSecurityParams(): ?SecurityParams
+    {
+        return $this->securityParams;
+    }
+
+    /**
+     * @since 10.1.0
+     */
+    public function useRouter(): bool
+    {
+        return $this->useRouter;
     }
 }

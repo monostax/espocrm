@@ -56,12 +56,12 @@ use stdClass;
  */
 class Database extends RDBRepository
 {
-    private const ATTR_ID = 'id';
-    private const ATTR_CREATED_BY_ID = Field::CREATED_BY . 'Id';
-    private const ATTR_MODIFIED_BY_ID =  Field::MODIFIED_BY . 'Id';
-    private const ATTR_MODIFIED_BY_NAME = Field::MODIFIED_BY . 'Name';
-    private const ATTR_CREATED_AT = Field::CREATED_AT;
-    private const ATTR_MODIFIED_AT = Field::MODIFIED_AT;
+    private const string ATTR_ID = 'id';
+    private const string ATTR_CREATED_BY_ID = Field::CREATED_BY . 'Id';
+    private const string ATTR_MODIFIED_BY_ID =  Field::MODIFIED_BY . 'Id';
+    private const string ATTR_MODIFIED_BY_NAME = Field::MODIFIED_BY . 'Name';
+    private const string ATTR_CREATED_AT = Field::CREATED_AT;
+    private const string ATTR_MODIFIED_AT = Field::MODIFIED_AT;
 
     /**
      * Disables hook processing.
@@ -116,12 +116,6 @@ class Database extends RDBRepository
     {
         return $this->metadata;
     }
-
-    /**
-     * @deprecated Will be removed.
-     */
-    public function handleSelectParams(&$params) /** @phpstan-ignore-line */
-    {}
 
     /**
      * @param TEntity $entity
@@ -183,6 +177,8 @@ class Database extends RDBRepository
      * @param TEntity $entity
      * @param array<string, mixed> $options
      * @return void
+     *
+     * @todo Add final in v11.0.
      */
     protected function beforeRemove(Entity $entity, array $options = [])
     {
@@ -222,6 +218,8 @@ class Database extends RDBRepository
      * @param TEntity $entity
      * @param array<string, mixed> $options
      * @return void
+     *
+     * @todo Add final in v11.0.
      */
     protected function afterRemove(Entity $entity, array $options = [])
     {
@@ -240,6 +238,8 @@ class Database extends RDBRepository
      * @param array<string, mixed> $params
      * @param array<string, mixed> $options
      * @return void
+     *
+     * @todo Add final in v11.0.
      */
     protected function afterMassRelate(Entity $entity, $relationName, array $params = [], array $options = [])
     {
@@ -366,7 +366,7 @@ class Database extends RDBRepository
     protected function afterSave(Entity $entity, array $options = [])
     {
         if (!empty($this->restoreData)) {
-            $entity->set($this->restoreData);
+            $entity->setMultiple($this->restoreData);
 
             $this->restoreData = null;
         }
@@ -478,6 +478,7 @@ class Database extends RDBRepository
     /**
      * @pparam TEntity $entity
      * @return mixed
+     * @noinspection PhpSameParameterValueInspection
      */
     private function getAttributeParam(Entity $entity, string $attribute, string $param)
     {
@@ -499,6 +500,7 @@ class Database extends RDBRepository
     /**
      * @param TEntity $entity
      * @return mixed
+     * @noinspection PhpSameParameterValueInspection
      */
     private function getRelationParam(Entity $entity, string $relation, string $param)
     {

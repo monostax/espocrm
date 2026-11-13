@@ -519,3 +519,28 @@ a.btn {
         var(--btn-info-active-border)
     );
 }
+
+.btn {
+    &.btn-default,
+    &.btn-text {
+        &.text-success {
+            color: var(--state-success-text);
+        }
+
+        &.text-danger {
+            color: var(--state-danger-text);
+        }
+
+        &.text-warning {
+            color: var(--state-warning-text);
+        }
+
+        &.text-primary {
+            color: var(--state-primary-text);
+        }
+
+        &.text-info {
+            color: var(--state-info-text);
+        }
+    }
+}

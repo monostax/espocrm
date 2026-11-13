@@ -89,6 +89,7 @@ class App {
          */
         this.useCache = options.useCache || this.useCache;
 
+        this.useRouter = options.useRouter ?? true;
         this.apiUrl = options.apiUrl || this.apiUrl;
 
         /**
@@ -153,6 +154,12 @@ class App {
      * @type {boolean}
      */
     useCache = false;
+
+    /**
+     * @private
+     * @type {boolean}
+     */
+    useRouter
 
     /**
      * @protected
@@ -547,9 +554,11 @@ class App {
 
     /**
      * Start the application.
+     *
+     * @param {{onAuth: () => void}} [options]
      */
-    start() {
-        this.initAuth();
+    start(options = {}) {
+        this.initAuth(options.onAuth);
 
         const chatRedirect = localStorage.getItem('chat_redirect');
 
@@ -572,7 +581,13 @@ class App {
             return;
         }
 
-        this.initUserData(null, () => this.onAuth());
+        this.initUserData(null, async () => {
+            await this.onAuth(false);
+
+            if (options.onAuth) {
+                options.onAuth();
+            }
+        });
     }
 
     /**
@@ -596,6 +611,7 @@ class App {
             this.loadStylesheet();
         }
 
+        this.applyThemeDirection();
         this.applyUserStyle();
 
         if (this.anotherUser) {
@@ -665,7 +681,10 @@ class App {
 
         this.acl.implementationClassMap = aclImplementationClassMap;
 
-        this.initRouter();
+        if (this.useRouter) {
+            this.initRouter();
+        }
+
         this.initProductAnalytics();
 
         this.webSocketManager.subscribe('appParamsUpdate', () => this.appParams.load());
@@ -1057,10 +1076,19 @@ class App {
 
     /**
      * @public
+     * @param {() => void} [callback]
      */
-    initAuth() {
+    initAuth(callback) {
         this.auth = this.storage.get("user", "auth") || null;
         this.anotherUser = this.storage.get("user", "anotherUser") || null;
+
+        const afterAuth = async () => {
+            await this.onAuth(true);
+
+            if (callback) {
+                callback();
+            }
+        };
 
         this.baseController.on(
             "login",
@@ -1092,13 +1120,13 @@ class App {
                     localStorage.removeItem('chat_redirect');
 
                     this.redirectToChatwoot(chatRedirect, () => {
-                        this.initUserData(data, () => this.onAuth(true));
+                        this.initUserData(data, afterAuth);
                     });
 
                     return;
                 }
 
-                this.initUserData(data, () => this.onAuth(true));
+                this.initUserData(data, afterAuth);
             }
         );
 
@@ -1162,6 +1190,8 @@ class App {
         this.user.clear();
         this.preferences.clear();
         this.acl.clear();
+
+        this.applyThemeDirection();
 
         if (!silent) {
             this.storage.clear("user", "auth");
@@ -1228,11 +1258,26 @@ class App {
     /**
      * @private
      */
+    applyThemeDirection() {
+        const direction = this.themeManager.getDirection();
+
+        document.documentElement.dir = direction;
+        document.body.dataset.direction = direction;
+    }
+
+    /**
+     * @private
+     */
     applyUserStyle() {
-        const pageContentWidth = this.preferences.get("pageContentWidth");
+        const pageContentWidth = this.preferences.get('pageContentWidth');
+        const recordContentWidth = this.preferences.get('recordContentWidth');
 
         if (pageContentWidth) {
             document.body.dataset.contentWidth = pageContentWidth;
+        }
+
+        if (recordContentWidth) {
+            document.body.dataset.recordContentWidth = recordContentWidth;
         }
     }
 
@@ -1975,6 +2020,7 @@ class App {
  * @property {Number|null} [appTimestamp] An application timestamp.
  * @property {string|null} [assetVersion] An immutable frontend asset version.
  * @property {string|null} [theme] A theme name.
+ * @property {boolean} [useRouter = true] Use router.
  */
 
 Object.assign(App.prototype, Events);

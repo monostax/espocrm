@@ -42,9 +42,10 @@ jobs:
         ref: ${{ matrix.branches }}
 
     - name: Setup Node.js
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v4
       with:
-        node-version: 16.x
+        node-version: '24'
+        cache: 'npm'
 
     - name: Setup PHP with Composer
       uses: shivammathur/setup-php@v2
@@ -61,3 +62,14 @@ jobs:
 
     - name: Integration testing
       run: vendor/bin/phpunit --testsuite integration-pg
+
+    - name: Print log
+      if: failure()
+      run: cat build/test/data/logs/*.log || true
+
+    - name: Upload logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: espo-logs-${{ matrix.php-versions }}
+        path: build/test/data/logs/

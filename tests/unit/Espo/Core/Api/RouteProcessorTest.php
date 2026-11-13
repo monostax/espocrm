@@ -1,179 +1,110 @@
 <?php
+/************************************************************************
+ * This file is part of EspoCRM.
+ *
+ * EspoCRM – Open Source CRM application.
+ * Copyright (C) 2014-2026 EspoCRM, Inc.
+ * Website: https://www.espocrm.com
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * The interactive user interfaces in modified source and object code versions
+ * of this program must display Appropriate Legal Notices, as required under
+ * Section 5 of the GNU Affero General Public License version 3.
+ *
+ * In accordance with Section 7(b) of the GNU Affero General Public License version 3,
+ * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
+ ************************************************************************/
 
 namespace tests\unit\Espo\Core\Api;
 
-use Espo\Core\Api\{Auth, AuthBuilder, AuthBuilderFactory, AuthResult, ControllerActionProcessor,
-    ErrorOutput, MiddlewareProvider, ProcessData, Request, Response, Route, RouteProcessor};
+use Espo\Core\Api\AuthBuilderFactory;
+use Espo\Core\Api\ControllerActionProcessor;
+use Espo\Core\Api\ErrorOutput;
+use Espo\Core\Api\Method;
+use Espo\Core\Api\MiddlewareProvider;
+use Espo\Core\Api\ProcessData;
+use Espo\Core\Api\Route;
+use Espo\Core\Api\Route\ContentType;
+use Espo\Core\Api\RouteProcessor;
 use Espo\Core\ApplicationUser;
 use Espo\Core\Authentication\AuthenticationFactory;
+use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\InjectableFactory;
-use Espo\Core\Utils\{Config, Log};
-use GuzzleHttp\Psr7\{LimitStream, PumpStream, Response as PsrResponse, ServerRequest, Utils};
+use Espo\Core\Utils\Config;
+use Espo\Core\Utils\Log;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ResponseInterface;
-use Slim\ResponseEmitter;
+use Slim\Psr7\Factory\ResponseFactory;
 
 class RouteProcessorTest extends TestCase
 {
-    private RouteProcessor $processor;
-    private ControllerActionProcessor $controller;
-    private ErrorOutput $errors;
-    private bool $authenticated = true;
-    private int $bufferLevel;
-
-    protected function setUp(): void
+    public function testConsumesFail(): void
     {
-        $this->bufferLevel = ob_get_level();
-        $auth = $this->createMock(Auth::class);
-        $auth->method('process')->willReturnCallback(function (Request $request, Response $response) {
-            if (!$this->authenticated) {
-                $response->setStatus(401);
-                return AuthResult::createNotResolved();
-            }
-
-            return AuthResult::createResolved();
-        });
-        $builder = $this->createMock(AuthBuilder::class);
-        $builder->method('setAuthentication')->willReturnSelf();
-        $builder->expects($this->once())->method('setAuthRequired')->with(true)->willReturnSelf();
-        $builder->method('build')->willReturn($auth);
-        $builders = $this->createStub(AuthBuilderFactory::class);
-        $builders->method('create')->willReturn($builder);
-        $this->controller = $this->createMock(ControllerActionProcessor::class);
-        $this->errors = $this->createMock(ErrorOutput::class);
-        $this->processor = new RouteProcessor(
-            $this->createStub(AuthenticationFactory::class),
-            $builders,
-            $this->errors,
-            $this->createStub(Config::class),
-            $this->createStub(Log::class),
-            $this->createStub(ApplicationUser::class),
-            $this->controller,
-            $this->createStub(MiddlewareProvider::class),
-            $this->createStub(InjectableFactory::class),
+        $request = AuthTest::createRequest(
+            method: Method::POST,
+            headers: [
+                'Content-Type' => ContentType::TEXT_PLAIN,
+            ],
         );
-    }
 
-    protected function tearDown(): void
-    {
-        while (ob_get_level() > $this->bufferLevel) {
-            ob_end_clean();
-        }
-    }
-
-    private function process(): ResponseInterface
-    {
-        $params = ['controller' => 'MeetingGoogleImport', 'action' => 'playback'];
-
-        return $this->processor->process(
-            new ProcessData(new Route('GET', '/recording', '/recording', $params, false, null), '', $params),
-            new ServerRequest('GET', '/recording'),
-            new PsrResponse(),
+        $route = new Route(
+            method: Method::POST,
+            route: '/test',
+            adjustedRoute: '/test',
+            params: [],
+            noAuth: false,
+            consumes: [
+                ContentType::APPLICATION_JSON,
+            ],
+            actionClassName: null,
+            apiAuthForbidden: false,
         );
-    }
 
-    private function handle(callable $callback): void
-    {
-        $this->controller->expects($this->once())->method('process')->willReturnCallback(
-            function (string $controller, string $action, Request $request, Response $response) use ($callback) {
-                echo 'accidental controller output';
-                $callback($response);
+        $errorOutput = $this->createMock(ErrorOutput::class);
 
-                return $response;
-            }
+        $processor = new RouteProcessor(
+            authenticationFactory: $this->createMock(AuthenticationFactory::class),
+            authBuilderFactory: $this->createMock(AuthBuilderFactory::class),
+            errorOutput: $errorOutput,
+            config: $this->createMock(Config::class),
+            log: $this->createMock(Log::class),
+            applicationUser: $this->createMock(ApplicationUser::class),
+            actionProcessor: $this->createMock(ControllerActionProcessor::class),
+            middlewareProvider: $this->createMock(MiddlewareProvider::class),
+            injectableFactory: $this->createMock(InjectableFactory::class),
         );
-    }
 
-    public function testJsonResponsePreservesCallerBufferAndDiscardsControllerOutput(): void
-    {
-        ob_start();
-        echo 'caller output';
-        $level = ob_get_level();
-        $this->handle(fn (Response $response) => $response->writeBody('{"ok":true}'));
+        $response = (new ResponseFactory())->createResponse();
 
-        $response = $this->process();
+        $errorOutput->expects(self::once())
+            ->method('process')
+            ->with(
+                self::anything(),
+                self::anything(),
+                $this->callback(function ($e) {
+                    return $e instanceof BadRequest;
+                })
+            );
 
-        $this->assertSame($level, ob_get_level());
-        $this->assertSame('caller output', ob_get_clean());
-        $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame('{"ok":true}', (string) $response->getBody());
-    }
-
-    public function testNonzeroRangeSurvivesEmitterRewind(): void
-    {
-        $stream = new LimitStream(Utils::streamFor('0123456789'), 4, 3);
-        $this->handle(function (Response $response) use ($stream) {
-            $response->setStatus(206)->setHeader('Content-Length', '4')
-                ->setHeader('Content-Range', 'bytes 3-6/10')->setBody($stream);
-        });
-        $response = $this->process();
-
-        $this->assertSame($this->bufferLevel, ob_get_level());
-        $this->assertSame(0, $stream->tell());
-        ob_start();
-        (new ResponseEmitter())->emit($response);
-        $this->assertSame('3456', ob_get_clean());
-        $this->assertSame('bytes 3-6/10', $response->getHeaderLine('Content-Range'));
-    }
-
-    public function testLargeResponseEmitsIncrementallyWithBoundedMemory(): void
-    {
-        $size = 600536040;
-        $remaining = $size;
-        $stream = new PumpStream(function (int $length) use (&$remaining) {
-            if (!$remaining) {
-                return false;
-            }
-
-            $length = min($length, $remaining);
-            $remaining -= $length;
-            return str_repeat('x', $length);
-        });
-        $this->handle(fn (Response $response) => $response->setStatus(206)
-            ->setHeader('Content-Length', (string) $size)->setBody($stream));
-        $response = $this->process();
-        $this->assertSame($this->bufferLevel, ob_get_level());
-        $this->assertSame($size, $remaining);
-
-        $delivered = 0;
-        ob_start(function (string $chunk) use (&$delivered): string {
-            $delivered += strlen($chunk);
-            return '';
-        }, 8192);
-        memory_reset_peak_usage();
-        $before = memory_get_usage(true);
-        (new ResponseEmitter())->emit($response);
-        $this->assertGreaterThan(0, $delivered);
-        ob_end_flush();
-        $this->assertSame($size, $delivered);
-        $this->assertLessThan(8 * 1024 * 1024, memory_get_peak_usage(true) - $before);
-    }
-
-    public function testControllerExceptionClosesBufferBeforeErrorResponse(): void
-    {
-        $this->handle(function () {
-            throw new \RuntimeException('test failure');
-        });
-        $this->errors->expects($this->once())->method('process')->willReturnCallback(
-            function (Request $request, Response $response) {
-                $this->assertSame($this->bufferLevel, ob_get_level());
-                $response->setStatus(500)->writeBody('{"error":"test"}');
-            }
+        $processor->process(
+            processData: new ProcessData(
+                route: $route,
+                basePath: '',
+                routeParams: [],
+            ),
+            request: $request->toPsr7(),
+            response: $response,
         );
-        $response = $this->process();
-
-        $this->assertSame($this->bufferLevel, ob_get_level());
-        $this->assertSame(500, $response->getStatusCode());
-        $this->assertSame('{"error":"test"}', (string) $response->getBody());
-    }
-
-    public function testAuthenticationDenialDoesNotRunControllerOrOpenBuffer(): void
-    {
-        $this->authenticated = false;
-        $this->controller->expects($this->never())->method('process');
-        $response = $this->process();
-
-        $this->assertSame(401, $response->getStatusCode());
-        $this->assertSame($this->bufferLevel, ob_get_level());
     }
 }

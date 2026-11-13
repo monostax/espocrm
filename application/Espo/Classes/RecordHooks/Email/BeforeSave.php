@@ -55,11 +55,17 @@ class BeforeSave implements SaveHook
 
     private function processBodyPlain(Email $entity): void
     {
-        if (!$entity->isHtml() || !$entity->isAttributeChanged('body')) {
+        if (!$entity->isAttributeChanged('body')) {
             return;
         }
 
-        $body = $entity->getBody();
+        $body = $entity->getBody() ?: null;
+
+        if (!$entity->isHtml()) {
+            $entity->setBodyPlain($body);
+
+            return;
+        }
 
         if ($body) {
             $body = Util::stripHtml($body) ?: null;

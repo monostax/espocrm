@@ -29,9 +29,11 @@
 
 namespace tests\unit\Espo\ORM;
 
+use Espo\ORM\Exceptions\DeadlockException;
 use Espo\ORM\QueryComposer\MysqlQueryComposer;
 use Espo\ORM\TransactionManager;
 use PDO;
+use PDOException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -273,7 +275,99 @@ class TransactionManagerTest extends TestCase
                     throw new RuntimeException();
                 }
             );
-        } catch (RuntimeException $e) {}
+        } catch (RuntimeException) {}
+    }
+
+    /**
+     * Upstream 10.1 test, adapted to this fixture: `inTransaction()` is true after BEGIN
+     * and false once InnoDB has rolled the transaction back on the deadlock.
+     */
+    public function testDeadlock(): void
+    {
+        $expectedCount = 4;
+
+        $this->transactionActive = false;
+
+        $this->pdo
+            ->expects($this->exactly($expectedCount))
+            ->method('beginTransaction')
+            ->willReturnCallback(function () {
+                $this->transactionActive = true;
+
+                return true;
+            });
+
+        $this->pdo
+            ->expects($this->never())
+            ->method('rollBack');
+
+        $counter = 0;
+        $thrown = false;
+
+        try {
+            $this->manager->run(function () use (&$counter) {
+                $counter ++;
+
+                $this->transactionActive = false;
+
+                throw new DeadlockException(previous: new PDOException());
+            });
+        } catch (DeadlockException) {
+            $thrown = true;
+        }
+
+        $this->assertTrue($thrown);
+        $this->assertEquals($expectedCount, $counter);
+        $this->assertSame(0, $this->manager->getLevel());
+    }
+
+    /**
+     * Upstream 10.1 test, adapted like testDeadlock(). Only the outermost run() retries.
+     */
+    public function testNestedDeadlock(): void
+    {
+        $expectedCount = 4;
+
+        $this->transactionActive = false;
+
+        $this->pdo
+            ->expects($this->exactly($expectedCount))
+            ->method('beginTransaction')
+            ->willReturnCallback(function () {
+                $this->transactionActive = true;
+
+                return true;
+            });
+
+        $this->pdo
+            ->expects($this->never())
+            ->method('rollBack');
+
+        $counter = 0;
+        $outermostCounter = 0;
+        $thrown = false;
+
+        try {
+            $this->manager->run(function () use (&$counter, &$outermostCounter) {
+                $outermostCounter ++;
+
+                $this->manager->run(function () use (&$counter) {
+                    $counter ++;
+
+                    $this->transactionActive = false;
+
+                    throw new DeadlockException(previous: new PDOException());
+                });
+            });
+
+        } catch (DeadlockException) {
+            $thrown = true;
+        }
+
+        $this->assertTrue($thrown);
+        $this->assertEquals($expectedCount, $counter);
+        $this->assertEquals($expectedCount, $outermostCounter);
+        $this->assertSame(0, $this->manager->getLevel());
     }
 
     public function testFailedCommitPreservesOriginalExceptionAndRollsBack(): void

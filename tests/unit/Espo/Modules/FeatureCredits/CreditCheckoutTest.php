@@ -48,7 +48,7 @@ final class CreditCheckoutTest extends TestCase
     public function testFinancialAuthorizationPrecedesCheckoutReadsAndProviderLookup(string $action, string $kind): void
     {
         $user = $this->createStub(User::class);
-        $user->method('isAdmin')->willReturn(in_array($kind, ['api', 'portal', 'missing-tenant'], true));
+        $user->method('isAdmin')->willReturn(in_array($kind, ['api', 'portal', 'missing-tenant'], true)); $user->method('isEffectiveAdmin')->willReturn(in_array($kind, ['api', 'portal', 'missing-tenant'], true));
         $user->method('isApi')->willReturn($kind === 'api'); $user->method('isPortal')->willReturn($kind === 'portal');
         $user->method('getLinkMultipleIdList')->willReturn($kind === 'foreign-admin' ? [md5('tenant-admin')] : []);
         $memberships = $this->createStub(UserTenantResolver::class); $memberships->method('resolveTenantIds')->willReturn(['other']);

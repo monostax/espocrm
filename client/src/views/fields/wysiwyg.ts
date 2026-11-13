@@ -114,7 +114,7 @@ class WysiwygFieldView <
 
     protected noStylesheet: boolean = false
 
-    protected useIframe: boolean = false
+    protected useIframe: boolean = true
 
     protected handlebars: boolean = false
 
@@ -164,7 +164,7 @@ class WysiwygFieldView <
             this.minHeight = this.params.minHeight as number;
         }
 
-        this.useIframe = this.params.useIframe || this.useIframe;
+        this.useIframe = this.params.useIframe ?? this.useIframe;
 
         this.setupToolbar();
         this.setupIsHtml();
@@ -412,11 +412,19 @@ class WysiwygFieldView <
             return;
         }
 
-        $iframe.on('load', () => {
-            $iframe.contents().find('a').attr('target', '_blank');
-        });
-
         const documentElement = iframeElement.contentWindow.document;
+
+        $iframe.on('load', () => {
+            documentElement.querySelectorAll('a').forEach(a => {
+                const href = a.getAttribute('href');
+
+                if (href && href.startsWith('#')) {
+                    return;
+                }
+
+                a.setAttribute('target', '_blank');
+            });
+        });
 
         let bodyHtml = this.getValueForIframe();
 
@@ -455,7 +463,8 @@ class WysiwygFieldView <
         }
 
         // noinspection HtmlRequiredTitleElement
-        const documentHtml = `<head>${headHtml}</head><body>${bodyHtml}</body>`
+        const direction = this.getThemeManager().getDirection();
+        const documentHtml = `<html dir="${direction}"><head>${headHtml}</head><body>${bodyHtml}</body></html>`
 
         // @ts-ignore
         documentElement.write(documentHtml);

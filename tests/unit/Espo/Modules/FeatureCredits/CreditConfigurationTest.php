@@ -18,7 +18,7 @@ class CreditConfigurationTest extends TestCase
 {
     private function controller(bool $admin): CreditConfiguration
     {
-        $user = $this->createStub(User::class); $user->method('isAdmin')->willReturn($admin);
+        $user = $this->createStub(User::class); $user->method('isAdmin')->willReturn($admin); $user->method('isEffectiveAdmin')->willReturn($admin);
         $user->method('getId')->willReturn('admin');
         $manager = $this->createMock(EntityManager::class); $manager->expects($this->never())->method('getPDO');
         return new CreditConfiguration($user, new Configuration($manager, $this->createStub(Clock::class), new AiCatalog($manager)));

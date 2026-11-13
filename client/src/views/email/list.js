@@ -66,6 +66,11 @@ class EmailListView extends ListView {
     async createListRecordView(fetch) {
         const view = await super.createListRecordView(fetch);
 
+        // Handles return.
+        if (view.isRendered()) {
+            this.whenRendered().then(() => this.initDraggable(null));
+        }
+
         this.listenTo(view, 'after:render', () => this.initDraggable(null));
         this.listenTo(view, 'after:show-more', fromIndex_1 => this.initDraggable(fromIndex_1));
 

@@ -31,6 +31,9 @@ namespace Espo\Core\Di;
 
 use Espo\Core\Utils\DataCache;
 
+/**
+ * @phpstan-ignore-next-line trait.unused
+ */
 trait DataCacheSetter
 {
     /**

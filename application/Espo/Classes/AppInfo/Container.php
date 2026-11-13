@@ -53,6 +53,7 @@ class Container implements InfoProvider
             'dataManager',
             'metadata',
             'user',
+            'systemDataCache',
         ];
 
         /** @var string[] $fileList */

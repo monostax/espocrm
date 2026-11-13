@@ -299,6 +299,10 @@ class RecordService
 
         $count = $row['c'] ?? null;
 
+        if (is_string($count) && is_numeric($count)) {
+            $count = (int) $count;
+        }
+
         if (!is_int($count)) {
             throw new UnexpectedValueException();
         }
@@ -396,7 +400,7 @@ class RecordService
         $relatedType = $note->getRelatedType();
 
         if ($relatedId && $relatedType && $notification->getType() !== Notification::TYPE_USER_REACTION) {
-            $note->loadParentNameField(Notification::FIELD_RELATED);
+            $note->loadParentNameField(Note::FIELD_RELATED);
         }
 
         if ($notification->getType() !== Notification::TYPE_USER_REACTION) {
@@ -617,6 +621,7 @@ class RecordService
             ->create()
             ->from(Notification::ENTITY_TYPE)
             ->withSearchParams($searchParams)
+            ->withComplexExpressionsForbidden()
             ->buildQueryBuilder()
             ->where([Notification::ATTR_USER_ID => $user->getId()])
             ->order(Notification::ATTR_NUMBER, SearchParams::ORDER_DESC);
@@ -656,6 +661,7 @@ class RecordService
         $builder = $this->selectBuilderFactory
             ->create()
             ->from(Notification::ENTITY_TYPE)
+            ->withComplexExpressionsForbidden()
             ->withSearchParams($searchParams)
             ->buildQueryBuilder()
             ->select([
@@ -779,6 +785,7 @@ class RecordService
             ->create()
             ->from(Notification::ENTITY_TYPE)
             ->withSearchParams($searchParams)
+            ->withComplexExpressionsForbidden()
             ->buildQueryBuilder()
             ->select([
                 Selection::create(
@@ -884,6 +891,7 @@ class RecordService
             ->create()
             ->from(Notification::ENTITY_TYPE)
             ->withSearchParams($searchParams)
+            ->withComplexExpressionsForbidden()
             ->buildQueryBuilder()
             ->select([
                 Selection::create(

@@ -238,14 +238,14 @@ class General implements WhereBuilder
      */
     private function getEmailAddressList(CoreEntity $entity): array
     {
-        if ($entity->get('emailAddressData')) {
+        if ($entity->get('emailAddressData') && $entity->isAttributeChanged('emailAddressData')) {
             /** @var EmailAddressGroup $eaGroup */
             $eaGroup = $entity->getValueObject('emailAddress');
 
             return $eaGroup->getAddressList();
         }
 
-        if ($entity->get('emailAddress')) {
+        if ($entity->get('emailAddress') && $entity->isAttributeChanged('emailAddress')) {
             return [
                 $entity->get('emailAddress')
             ];
@@ -259,14 +259,14 @@ class General implements WhereBuilder
      */
     private function getPhoneNumberList(CoreEntity $entity): array
     {
-        if ($entity->get('phoneNumberData')) {
+        if ($entity->get('phoneNumberData') && $entity->isAttributeChanged('phoneNumberData')) {
             /** @var PhoneNumberGroup $eaGroup */
             $eaGroup = $entity->getValueObject('phoneNumber');
 
             return $eaGroup->getNumberList();
         }
 
-        if ($entity->get('phoneNumber')) {
+        if ($entity->get('phoneNumber') && $entity->isAttributeChanged('phoneNumber')) {
             return [$entity->get('phoneNumber')];
         }
 

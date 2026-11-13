@@ -38,6 +38,7 @@ import SaveFiltersModalView from 'views/modals/save-filters';
 import _ from 'underscore';
 import type Model from 'model';
 import type Collection from 'collection';
+import {fragment, h, VNode} from 'bullbone';
 
 interface BoolFilterDefs {
     name?: string;
@@ -68,6 +69,7 @@ interface SearchViewOptions {
     viewMode: string;
     viewModeList?: string[];
     filterList?: string[];
+    storageKey?: string | null,
 }
 
 interface ViewSchema {
@@ -179,6 +181,8 @@ class SearchView extends View<ViewSchema> {
 
     private advancedFiltersPanelElement: HTMLElement;
 
+    private boolFiltersView: BoolFiltersView;
+
     protected data(): Record<string, any> {
         return {
             scope: this.scope,
@@ -222,7 +226,7 @@ class SearchView extends View<ViewSchema> {
 
         this.searchManager = this.options.searchManager;
 
-        this.storedTextSearchHelper = new StoredTextSearch(this.scope, this.getHelper().storage);
+        this.storedTextSearchHelper = new StoredTextSearch(this.options.storageKey ?? this.scope);
 
         this.textSearchStoringDisabled = this.getPreferences().get('textSearchStoringDisabled');
 
@@ -355,6 +359,21 @@ class SearchView extends View<ViewSchema> {
         this.wait(
             this.getHelper().processSetupHandlers(this, 'record/search')
         );
+
+        this.boolFiltersView = new BoolFiltersView({
+            listProvider: () => {
+                return this.boolFilterList
+                    .filter(it => this.bool?.[it])
+                    .map(it => {
+                        return {
+                            name: it,
+                            label: this.translate(it, 'boolFilters', this.entityType),
+                        };
+                    });
+            },
+        });
+
+        this.assignView('boolFilters', this.boolFiltersView);
     }
 
     private setupEventHandlers() {
@@ -424,6 +443,8 @@ class SearchView extends View<ViewSchema> {
 
             this.search();
             this.manageLabels();
+
+            this.boolFiltersView.reRender();
         });
 
         this.addActionHandler('switchViewMode', (_, target) => {
@@ -601,9 +622,7 @@ class SearchView extends View<ViewSchema> {
         this.element.querySelector(`ul.filter-list li[data-name="${name}"]`)
             ?.classList.remove('hidden');
 
-        //
         const container = this.getView(`filter-${name}`)?.element?.closest('div.filter');
-            //.$el.closest('div.filter');
 
         this.clearView(`filter-${name}`);
 
@@ -879,7 +898,15 @@ class SearchView extends View<ViewSchema> {
                     autocomplete.hide();
                     // 200 is hardcoded in autocomplete lib.
 
-                    setTimeout(() => this.textFilterInputElement?.focus(), 201);
+                    setTimeout(() => {
+                        if (this.textFilterInputElement && document.activeElement === this.textFilterInputElement) {
+                            $(this.textFilterInputElement).triggerHandler('focus.autocomplete');
+
+                            return;
+                        }
+
+                        this.textFilterInputElement?.focus();
+                    }, 201);
                 });
             },
         });
@@ -913,7 +940,9 @@ class SearchView extends View<ViewSchema> {
         $(parent).on('hide.bs.dropdown', () => {
             this.resetFieldFilterQuickSearch();
 
-            this.fieldQuickSearchInput!.style.minWidth = '';
+            if (this.fieldQuickSearchInput) {
+                this.fieldQuickSearchInput.style.minWidth = '';
+            }
         });
     }
 
@@ -924,7 +953,6 @@ class SearchView extends View<ViewSchema> {
         this.currentFilterLabelList = [];
 
         this.managePresetFilters();
-        this.manageBoolFilters();
 
         if (!this.filtersLabel) {
             return;
@@ -1033,25 +1061,23 @@ class SearchView extends View<ViewSchema> {
         this.currentFilterLabelList!.push(filterLabel);
 
         this.filtersButton.classList
-            .remove('btn-default', 'btn-primary', 'btn-danger', 'btn-success', 'btn-info', 'btn-info');
+            .remove(...[
+                'text-primary',
+                'text-danger',
+                'text-success',
+                'text-info',
+                'text-warning',
+            ]);
 
-        this.filtersButton.classList.add(`btn-${filterStyle}`);
+        if (filterStyle !== 'default') {
+            this.filtersButton.classList.add(`text-${filterStyle}`);
+        }
 
         presetName = presetName || '';
 
         this.$el
             .find('ul.filter-menu a.preset[data-name="'+presetName+'"]')
             .prepend('<span class="fas fa-check check-icon pull-right"></span>');
-    }
-
-    manageBoolFilters() {
-        (this.boolFilterList ?? []).forEach((item) => {
-            if (this.bool && this.bool[item]) {
-                const label = this.translate(item, 'boolFilters', this.entityType);
-
-                this.currentFilterLabelList!.push(label);
-            }
-        });
     }
 
     search() {
@@ -1478,3 +1504,30 @@ class SearchView extends View<ViewSchema> {
 }
 
 export default SearchView;
+
+class BoolFiltersView extends View<{
+    options: {
+        listProvider: () => {
+            name: string,
+            label: string,
+        }[],
+    },
+}> {
+
+    readonly useVirtualDom = true
+
+    content(): VNode {
+        const elements = this.options.listProvider().map(it => {
+            return h('span', {
+                props: {
+                    className: 'label label-default label-state',
+                },
+                dataset: {
+                    name: it.label,
+                },
+            }, it.label);
+        });
+
+        return fragment(elements);
+    }
+}

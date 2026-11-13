@@ -31,6 +31,7 @@ namespace Espo\Core\Record;
 
 use Espo\Core\Binding\BindingContainer;
 use Espo\Core\Binding\BindingContainerBuilder;
+use Espo\Core\Record\Exceptions\DuplicateConflict;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\ConflictSilent;
@@ -264,7 +265,7 @@ class Service implements Crud,
             ->where([Attribute::ID => $id])
             ->findOne();
 
-        if (!$entity && $this->user->isAdmin()) {
+        if (!$entity && $this->user->isEffectiveAdmin()) {
             $entity = $this->getEntityEvenDeleted($id);
         }
 
@@ -601,7 +602,7 @@ class Service implements Crud,
 
     /**
      * @param TEntity $entity
-     * @throws Conflict
+     * @throws DuplicateConflict
      */
     protected function processDuplicateCheck(Entity $entity): void
     {
@@ -615,7 +616,7 @@ class Service implements Crud,
             $this->prepareEntityForOutput($e);
         }
 
-        throw ConflictSilent::createWithBody('duplicate', Json::encode($duplicates->getValueMapList()));
+        throw DuplicateConflict::create($duplicates);
     }
 
     /**
@@ -650,6 +651,7 @@ class Service implements Crud,
      * @throws BadRequest
      * @throws Forbidden If no create access.
      * @throws Conflict
+     * @throws DuplicateConflict
      */
     public function create(stdClass $data, CreateParams $params = new CreateParams()): CreateResult
     {
@@ -712,6 +714,7 @@ class Service implements Crud,
      * @throws Forbidden If no access.
      * @throws Conflict
      * @throws BadRequest
+     * @throws DuplicateConflict
      */
     public function update(string $id, stdClass $data, UpdateParams $params = new UpdateParams()): UpdateResult
     {
@@ -942,7 +945,7 @@ class Service implements Crud,
      */
     public function restoreDeleted(string $id): void
     {
-        if (!$this->user->isAdmin()) {
+        if (!$this->user->isEffectiveAdmin()) {
             throw new Forbidden("Only admin can restore.");
         }
 

@@ -86,7 +86,7 @@ class RoleAddFieldModalView extends ModalView {
                 label: 'Cancel',
                 onClick: () => this.actionCancel(),
             },
-        ]
+        ];
 
         /** @type {string[]} */
         this.checkedList = [];
@@ -95,6 +95,7 @@ class RoleAddFieldModalView extends ModalView {
 
         this.headerText = this.translate(scope, 'scopeNamesPlural') + ' · ' + this.translate('Add Field');
 
+        /** @type {Record<string, Record>} */
         const fields = this.getMetadata().get(`entityDefs.${scope}.fields`) || {};
         const fieldList = [];
 
@@ -102,6 +103,10 @@ class RoleAddFieldModalView extends ModalView {
 
         Object.keys(fields).filter(field => !ignoreFieldList.includes(field)).forEach(field => {
             if (!this.getFieldManager().isEntityTypeFieldAvailable(scope, field)) {
+                return;
+            }
+
+            if (fields[field].aclDisabled) {
                 return;
             }
 
@@ -123,6 +128,27 @@ class RoleAddFieldModalView extends ModalView {
                 name: field,
                 label: this.translate(field, 'fields', this.scope),
             };
+        });
+
+        this.addButton({
+            name: 'checkAll',
+            label: 'Check All',
+            position: 'right',
+            onClick: () => {
+                this.checkedList = [];
+
+                for (const it of this.fieldList) {
+                    this.checkedList.push(it);
+
+                    this.element.querySelectorAll('input[data-name]').forEach(input => {
+                        input.checked = true;
+                    });
+
+                    this.checkedList.length ?
+                        this.enableButton('select') :
+                        this.disableButton('select');
+                }
+            },
         });
     }
 

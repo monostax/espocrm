@@ -28,7 +28,7 @@ class CreditsTest extends TestCase
         $user = $this->createMock(User::class);
         $user->method('isPortal')->willReturn($kind === 'portal');
         $user->method('isApi')->willReturn($kind === 'api');
-        $user->method('isAdmin')->willReturn($kind !== 'member');
+        $user->method('isAdmin')->willReturn($kind !== 'member'); $user->method('isEffectiveAdmin')->willReturn($kind !== 'member');
         $user->method('getLinkMultipleIdList')->willReturn([]);
         $user->method('getTeamIdList')->willReturn([]);
         $manager = $this->createMock(EntityManager::class);

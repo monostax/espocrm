@@ -30,12 +30,13 @@
 namespace Espo\Entities;
 
 use Espo\Core\Field\Link;
+use Espo\Core\Name\Field;
 use Espo\Core\ORM\Entity;
 use Espo\Repositories\Portal as PortalRepository;
 
 class Portal extends Entity
 {
-    public const ENTITY_TYPE = 'Portal';
+    public const string ENTITY_TYPE = 'Portal';
 
     /**
      * @var string[]
@@ -57,12 +58,30 @@ class Portal extends Entity
         'defaultCurrency',
     ];
 
+    public const string LINK_USERS = 'users';
+
     /**
      * @return string[]
      */
     public function getSettingsAttributeList(): array
     {
         return $this->settingsAttributeList;
+    }
+
+    /**
+     * @since 10.1.10
+     */
+    public function setName(string $name): self
+    {
+        return $this->set(Field::NAME, $name);
+    }
+
+    /**
+     * @since 10.1.10
+     */
+    public function getName(): ?string
+    {
+        return $this->get(Field::NAME);
     }
 
     public function getUrl(): ?string

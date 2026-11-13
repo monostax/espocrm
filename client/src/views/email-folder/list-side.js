@@ -82,6 +82,7 @@ export default class extends View {
             }
 
             this.renderCounts();
+            this.loadNotReadCounts();
         });
 
         this.listenTo(this.emailCollection, 'draft-sent', () => {

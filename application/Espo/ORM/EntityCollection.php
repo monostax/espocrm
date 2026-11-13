@@ -252,7 +252,7 @@ class EntityCollection implements Collection, Iterator, Countable, ArrayAccess, 
         /** @var TEntity $entity */
         $entity = $this->entityFactory->create($this->entityType);
 
-        $entity->set($dataArray);
+        $entity->setMultiple($dataArray);
 
         if ($this->isFetched) {
             $entity->setAsFetched();

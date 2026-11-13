@@ -39,7 +39,7 @@ trait LegacyMigrationCases
             $service = $this->migration($pdo);
             $args = ['tenant', $cutover['id'], '17.25', '2026-11-01 00:00:00', 'legacy-contract:42', 'approved-opening:42', 'admin'];
             $user = $this->createStub(\Espo\Entities\User::class);
-            $user->method('isAdmin')->willReturn(true);
+            $user->method('isAdmin')->willReturn(true); $user->method('isEffectiveAdmin')->willReturn(true);
             $user->method('getId')->willReturn('admin');
             $request = $this->createStub(\Espo\Core\Api\Request::class);
             $request->method('getBodyContents')->willReturn(json_encode(array_combine(

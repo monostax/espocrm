@@ -74,6 +74,7 @@ export default class extends DetailView {
                         action: 'externalAccounts',
                         link: '#ExternalAccount',
                         onClick: () => this.actionExternalAccounts(),
+                        style: 'text',
                     });
                 }
             }
@@ -104,7 +105,20 @@ export default class extends DetailView {
                 link: `#Calendar/show/userId=${this.model.id}` +
                     `&userName=${encodeURIComponent(this.model.attributes.name)}`,
                 hidden: !showActivities,
+                style: 'text',
             })
+        }
+
+        if (
+            (this.getUserModel().isRegular() || this.getUserModel().isAdmin()) &&
+            (this.getUser().id === this.getUserModel().id || this.getUser().isAdmin())
+        ) {
+            this.addMenuItem('dropdown', {
+                name: 'connectedApps',
+                iconHtml: '<span class="fas fa-user-lock"></span>',
+                text: this.translate('Connected Apps', 'labels', 'User'),
+                link: `#User/${this.model.id}/connectedApps`,
+            });
         }
     }
 

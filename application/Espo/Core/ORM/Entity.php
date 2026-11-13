@@ -98,7 +98,6 @@ class Entity extends BaseEntity
         $toSetFetched = !$this->isNew() && !$this->isAttributeChanged($idAttribute);
 
         if (!$parentId || !$parentType) {
-            /** @noinspection PhpRedundantOptionalArgumentInspection */
             $this->set($nameAttribute, null);
 
             if ($toSetFetched) {

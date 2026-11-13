@@ -38,6 +38,8 @@ use Espo\Core\Binding\BindingLoader;
 use Espo\Core\Binding\EspoBindingLoader;
 
 use Espo\Core\Loaders\ApplicationState as ApplicationStateLoader;
+use Espo\Core\Utils\Cache\FileCacheItemPool;
+use Espo\Core\Utils\Cache\DataCacheServiceName;
 use Espo\Core\Utils\File\Manager as FileManager;
 use Espo\Core\Utils\Config\ConfigFileManager;
 use Espo\Core\Utils\Config;
@@ -61,8 +63,6 @@ class ContainerBuilder
     private string $configClassName = Config::class;
     /** @var class-string */
     private string $fileManagerClassName = FileManager::class;
-    /** @var class-string */
-    private string $dataCacheClassName = DataCache::class;
     /** @var class-string<Module> */
     private string $moduleClassName = Module::class;
     private ?BindingLoader $bindingLoader = null;
@@ -157,17 +157,6 @@ class ContainerBuilder
         return $this;
     }
 
-    /**
-     * @param class-string $dataCacheClassName
-     * @noinspection PhpUnused
-     */
-    public function withDataCacheClassName(string $dataCacheClassName): self
-    {
-        $this->dataCacheClassName = $dataCacheClassName;
-
-        return $this;
-    }
-
     public function build(): ContainerInterface
     {
        $this->services['applicationParams'] = $this->params ?? new ApplicationParams();
@@ -186,9 +175,11 @@ class ContainerBuilder
             )
         );
 
+        $cacheItemPool = new FileCacheItemPool($fileManager);
+
         /** @var DataCache $dataCache */
-        $dataCache = $this->services['dataCache'] ?? (
-            new $this->dataCacheClassName($fileManager)
+        $dataCache = $this->services[DataCacheServiceName::SYSTEM] ?? (
+            new DataCache($cacheItemPool)
         );
 
         $useCache = $config->get('useCache') ?? false;
@@ -202,7 +193,7 @@ class ContainerBuilder
 
         $this->services['config'] = $config;
         $this->services['fileManager'] = $fileManager;
-        $this->services['dataCache'] = $dataCache;
+        $this->services[DataCacheServiceName::SYSTEM] = $dataCache;
         $this->services['module'] = $module;
         $this->services['systemConfig'] = $systemConfig;
 

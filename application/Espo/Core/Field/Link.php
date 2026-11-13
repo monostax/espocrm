@@ -29,7 +29,6 @@
 
 namespace Espo\Core\Field;
 
-use Espo\Core\Name\Field;
 use Espo\ORM\Entity;
 use InvalidArgumentException;
 

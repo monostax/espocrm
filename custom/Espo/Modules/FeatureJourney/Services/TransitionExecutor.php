@@ -765,7 +765,7 @@ class TransitionExecutor
         $stageType = $toStage->get('stageType');
 
         if ($stageType === JourneyStage::TYPE_SUCCESS) {
-            $record->set([
+            $record->setMultiple([
                 'status' => JourneyRecord::STATUS_COMPLETED,
                 'claimedAt' => null,
                 'exitReason' => $goalMatched ? 'goal' : 'success-stage',

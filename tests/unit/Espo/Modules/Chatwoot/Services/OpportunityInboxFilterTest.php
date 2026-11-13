@@ -125,7 +125,7 @@ class OpportunityInboxFilterTest extends TestCase
         $user->method('getId')->willReturn('viewer');
         $user->method('isActive')->willReturn(true);
         $user->method('isRegular')->willReturn(true);
-        $user->method('isAdmin')->willReturnCallback(fn () => $this->admin);
+        $user->method('isAdmin')->willReturnCallback(fn () => $this->admin); $user->method('isEffectiveAdmin')->willReturnCallback(fn () => $this->admin);
         $tenants = $this->createMock(UserTenantResolver::class);
         $tenants->method('canActForTenant')->willReturnCallback(fn ($user, $tenant) => $this->tenantMember && $tenant === 'tenant-a');
         $workspace = new OpportunityBulkPostAccess($em, $user, $acl, $tenants);

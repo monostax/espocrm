@@ -30,6 +30,7 @@
 namespace Espo\Entities;
 
 use Espo\Core\Field\Link;
+use Espo\Core\Name\Field;
 use Espo\Core\ORM\Entity;
 
 class Team extends Entity
@@ -59,5 +60,21 @@ class Team extends Entity
     public function getPositionList(): array
     {
         return $this->get('positionList') ?? [];
+    }
+
+    /**
+     * @since 10.0.3
+     */
+    public function setName(string $name): self
+    {
+        return $this->set(Field::NAME, $name);
+    }
+
+    /**
+     * @since 10.0.3
+     */
+    public function getName(): ?string
+    {
+        return $this->get(Field::NAME);
     }
 }

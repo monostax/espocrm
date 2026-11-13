@@ -55,7 +55,7 @@ class EntityManager
         private LinkManager $linkManager,
         private InjectableFactory $injectableFactory
     ) {
-        if (!$this->user->isAdmin()) {
+        if (!$this->user->isEffectiveAdmin()) {
             throw new Forbidden();
         }
     }
@@ -307,6 +307,7 @@ class EntityManager
     /**
      * @throws BadRequest
      * @throws Error
+     * @throws Forbidden
      */
     public function postActionUpdateLink(Request $request): bool
     {
@@ -399,6 +400,7 @@ class EntityManager
     /**
      * @throws BadRequest
      * @throws Error
+     * @throws Forbidden
      */
     public function postActionRemoveLink(Request $request): bool
     {
@@ -433,6 +435,7 @@ class EntityManager
     /**
      * @throws BadRequest
      * @throws Error
+     * @throws Forbidden
      */
     public function postActionUpdateLinkParams(Request $request): bool
     {
@@ -571,9 +574,9 @@ class EntityManager
         $export = $this->injectableFactory->create(ExportCustom::class);
         $service = $this->injectableFactory->create(ExportCustomService::class);
 
-        $service->storeToConfig($params);
-
         $result = $export->process($params);
+
+        $service->storeToConfig($params);
 
         return (object) ['id' => $result->getAttachmentId()];
     }

@@ -310,7 +310,7 @@ class ContactImportUpdateEntityFinderTest extends TestCase
         $user = $this->createMock(User::class);
         $user->method('get')->with('defaultTeamId')->willReturn('team-1');
         $user->method('getTeamIdList')->willReturn([]);
-        $user->method('isAdmin')->willReturn(true);
+        $user->method('isAdmin')->willReturn(true); $user->method('isEffectiveAdmin')->willReturn(true);
 
         $identityBuilder = $this->createMock(RDBSelectBuilder::class);
         $identityBuilder->expects($this->once())

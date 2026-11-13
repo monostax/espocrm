@@ -37,9 +37,7 @@ export default class UserSelectPositionModalView extends ModalView {
 
     className = 'dialog dialog-record'
 
-    shortcutKeys = {
-        'Control+Enter': 'apply',
-    }
+    shortcutKeys = {}
 
     /**
      * @param {{
@@ -100,6 +98,13 @@ export default class UserSelectPositionModalView extends ModalView {
         });
 
         this.assignView('record', this.recordView, '.record');
+
+        this.shortcutKeys['Control+Enter'] = e => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            this.apply();
+        }
     }
 
     /**

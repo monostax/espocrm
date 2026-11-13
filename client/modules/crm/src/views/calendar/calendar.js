@@ -483,7 +483,6 @@ class CalendarView extends View {
     }
 
     /**
-     * @private
      * @return {string}
      */
     getTitle() {
@@ -515,10 +514,8 @@ class CalendarView extends View {
         }
 
         if (this.options.userId && this.options.userName) {
-            title += ' (' + this.options.userName + ')';
+            title += ' · ' + this.options.userName;
         }
-
-        title = this.getHelper().escapeString(title);
 
         return title;
     }
@@ -896,6 +893,7 @@ class CalendarView extends View {
 
         /** @type {CalendarOptions & Object.<string, *>} */
         const options = {
+            direction: this.getThemeManager().getDirection(),
             scrollTime: this.scrollHour + ':00',
             headerToolbar: false,
             slotLabelFormat: slotLabelFormat,

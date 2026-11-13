@@ -138,6 +138,7 @@ export default class HeaderButtonsView extends View<{
                         hidden: it.hidden,
                         disabled: it.disabled,
                         iconClass: it.iconClass,
+                        data: it.data,
                     }).node()
                 );
             });
@@ -189,6 +190,7 @@ export default class HeaderButtonsView extends View<{
                         hidden: it.hidden,
                         disabled: it.disabled,
                         iconClass: it.iconClass,
+                        data: it.data,
                     }).node()
                 );
             });

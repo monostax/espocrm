@@ -30,6 +30,7 @@
 namespace Espo\Core\Binding;
 
 use Espo\Core\Binding\Key\NamedClassKey;
+use Espo\Core\Binding\Key\QualifiedClassKey;
 use LogicException;
 use Closure;
 
@@ -42,18 +43,19 @@ class Binder
      * Bind an interface to an implementation.
      *
      * @template T of object
-     * @param class-string<T>|NamedClassKey<T> $key An interface or interface with a parameter name.
+     * @param class-string<T>|NamedClassKey<T>|QualifiedClassKey<T> $key
+     *     An interface, an interface with a parameter name or an interface with a qualifier.
      * @param class-string<T> $implementationClassName An implementation class name.
      */
-    public function bindImplementation(string|NamedClassKey $key, string $implementationClassName): self
-    {
+    public function bindImplementation(
+        string|NamedClassKey|QualifiedClassKey $key,
+        string $implementationClassName,
+    ): self {
+
         $key = self::keyToString($key);
         $this->validateBindingKey($key);
 
-        $this->data->addGlobal(
-            $key,
-            Binding::createFromImplementationClassName($implementationClassName)
-        );
+        $this->data->addGlobal($key, Binding::createFromImplementationClassName($implementationClassName));
 
         return $this;
     }
@@ -61,18 +63,16 @@ class Binder
     /**
      * Bind an interface to a specific service.
      *
-     * @param class-string<object>|NamedClassKey<object> $key An interface or interface with a parameter name.
+     * @param class-string<object>|NamedClassKey<object>|QualifiedClassKey<object> $key
+     *     An interface, an interface with a parameter name or an interface with a qualifier.
      * @param string $serviceName A service name.
      */
-    public function bindService(string|NamedClassKey $key, string $serviceName): self
+    public function bindService(string|NamedClassKey|QualifiedClassKey $key, string $serviceName): self
     {
         $key = self::keyToString($key);
         $this->validateBindingKey($key);
 
-        $this->data->addGlobal(
-            $key,
-            Binding::createFromServiceName($serviceName)
-        );
+        $this->data->addGlobal($key, Binding::createFromServiceName($serviceName));
 
         return $this;
     }
@@ -81,19 +81,17 @@ class Binder
      * Bind an interface to a callback.
      *
      * @template T of object
-     * @param class-string<T>|NamedClassKey<T> $key An interface or interface with a parameter name.
+     * @param class-string<T>|NamedClassKey<T>|QualifiedClassKey<T> $key
+     *     An interface, an interface with a parameter name or an interface with a qualifier.
      * @param Closure $callback A callback that will resolve a dependency.
      * @todo Change to Closure(...): T Once https://github.com/phpstan/phpstan/issues/8214 is implemented.
      */
-    public function bindCallback(string|NamedClassKey $key, Closure $callback): self
+    public function bindCallback(string|NamedClassKey|QualifiedClassKey $key, Closure $callback): self
     {
         $key = self::keyToString($key);
         $this->validateBindingKey($key);
 
-        $this->data->addGlobal(
-            $key,
-            Binding::createFromCallback($callback)
-        );
+        $this->data->addGlobal($key, Binding::createFromCallback($callback));
 
         return $this;
     }
@@ -102,19 +100,16 @@ class Binder
      * Bind an interface to a specific instance.
      *
      * @template T of object
-     * @param class-string<T>|NamedClassKey<T> $key An interface or interface with a parameter name.
+     * @param class-string<T>|NamedClassKey<T>|QualifiedClassKey<T> $key
+     *     An interface, an interface with a parameter name or an interface with a qualifier.
      * @param T $instance An instance.
-     * @noinspection PhpDocSignatureInspection
      */
-    public function bindInstance(string|NamedClassKey $key, object $instance): self
+    public function bindInstance(string|NamedClassKey|QualifiedClassKey $key, object $instance): self
     {
         $key = self::keyToString($key);
         $this->validateBindingKey($key);
 
-        $this->data->addGlobal(
-            $key,
-            Binding::createFromValue($instance)
-        );
+        $this->data->addGlobal($key, Binding::createFromValue($instance));
 
         return $this;
     }
@@ -123,18 +118,16 @@ class Binder
      * Bind an interface to a factory.
      *
      * @template T of object
-     * @param class-string<T>|NamedClassKey<T> $key An interface or interface with a parameter name.
+     * @param class-string<T>|NamedClassKey<T>|QualifiedClassKey<T> $key
+     *     An interface, an interface with a parameter name or an interface with a qualifier.
      * @param class-string<Factory<T>> $factoryClassName A factory class name.
      */
-    public function bindFactory(string|NamedClassKey $key, string $factoryClassName): self
+    public function bindFactory(string|NamedClassKey|QualifiedClassKey $key, string $factoryClassName): self
     {
         $key = self::keyToString($key);
         $this->validateBindingKey($key);
 
-        $this->data->addGlobal(
-            $key,
-            Binding::createFromFactoryClassName($factoryClassName)
-        );
+        $this->data->addGlobal($key, Binding::createFromFactoryClassName($factoryClassName));
 
         return $this;
     }
@@ -165,9 +158,9 @@ class Binder
     }
 
     /**
-     * @param string|NamedClassKey<object> $key
+     * @param string|NamedClassKey<object>|QualifiedClassKey<object> $key
      */
-    private static function keyToString(string|NamedClassKey $key): string
+    private static function keyToString(string|NamedClassKey|QualifiedClassKey $key): string
     {
         return is_string($key) ? $key : $key->toString();
     }
@@ -180,6 +173,10 @@ class Binder
 
         if ($key[0] === '$') {
             throw new LogicException("Can't binding a parameter name w/o an interface globally.");
+        }
+
+        if ($key[0] === '#') {
+            throw new LogicException("Can't binding a qualification name w/o an interface globally.");
         }
     }
 }

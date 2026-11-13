@@ -176,7 +176,7 @@ final class BillingAccountsDatabaseTest extends TestCase
     {
         $this->database($dialect, function (PDO $pdo): void {
             [$accounts] = $this->prepare($pdo);
-            $user = $this->createStub(User::class); $user->method('getId')->willReturn('root-admin'); $user->method('isAdmin')->willReturn(true);
+            $user = $this->createStub(User::class); $user->method('getId')->willReturn('root-admin'); $user->method('isAdmin')->willReturn(true); $user->method('isEffectiveAdmin')->willReturn(true);
             $access = new Access($user, $this->manager($pdo), $this->createStub(TenantResolver::class), $this->createStub(UserTenantResolver::class));
             $controller = new CreditBilling($user, $access, $accounts, $this->creation($accounts));
             $request = $this->createStub(Request::class); $request->method('getBodyContents')->willReturn(json_encode([

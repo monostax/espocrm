@@ -30,6 +30,7 @@
 namespace Espo\Core\Utils\Database\Schema\RebuildActions;
 
 use Doctrine\DBAL\Exception as DbalException;
+use Doctrine\DBAL\Schema\Index\IndexType;
 use Doctrine\DBAL\Schema\Schema as DbalSchema;
 use Espo\Core\Utils\Database\Helper;
 use Espo\Core\Utils\Database\Schema\RebuildAction;
@@ -37,11 +38,14 @@ use Espo\Core\Utils\Log;
 
 use Exception;
 
+/**
+ * @noinspection PhpUnused
+ */
 class PrepareForFulltextIndex implements RebuildAction
 {
     public function __construct(
         private Helper $helper,
-        private Log $log
+        private Log $log,
     ) {}
 
     /**
@@ -57,18 +61,21 @@ class PrepareForFulltextIndex implements RebuildAction
         $pdo = $this->helper->getPDO();
 
         foreach ($newSchema->getTables() as $table) {
-            $tableName = $table->getName();
+            $tableName = $table->getObjectName()->getUnqualifiedName()->getValue();
+
             $indexes = $table->getIndexes();
 
             foreach ($indexes as $index) {
-                if (!$index->hasFlag('fulltext')) {
+                if ($index->getType() !== IndexType::FULLTEXT) {
                     continue;
                 }
 
-                $columns = $index->getColumns();
+                foreach ($index->getIndexedColumns() as $indexedColumn) {
+                    $columnName = $indexedColumn->getColumnName()->getIdentifier()->getValue();
 
-                foreach ($columns as $columnName) {
-                    $sql = "SHOW FULL COLUMNS FROM `" . $tableName . "` WHERE Field = " . $pdo->quote($columnName);
+                    $quotedColumnName = $pdo->quote($columnName);
+
+                    $sql = "SHOW FULL COLUMNS FROM `$tableName` WHERE Field = $quotedColumnName";
 
                     try {
                         /** @var array{Type: string, Collation: string} $row */
@@ -79,9 +86,12 @@ class PrepareForFulltextIndex implements RebuildAction
 
                     switch (strtoupper($row['Type'])) {
                         case 'LONGTEXT':
-                            $alterSql =
-                                "ALTER TABLE `{$tableName}` " .
-                                "MODIFY `{$columnName}` MEDIUMTEXT COLLATE " . $row['Collation'];
+                            $collationPart = $row['Collation'];
+
+                            $alterSql = <<<EOF
+                                ALTER TABLE `$tableName`
+                                    MODIFY `$columnName` MEDIUMTEXT COLLATE $collationPart
+                                EOF;
 
                             $this->log->info('SCHEMA, Execute Query: ' . $alterSql);
 

@@ -60,7 +60,7 @@ class AppService
     /** @var string[] */
     private array $forbiddenUserAttributeList = [
         'apiKey',
-        'authTokenId',
+        User::ATTR_AUTH_TOKEN_ID,
         User::FIELD_PASSWORD,
     ];
 
@@ -146,7 +146,7 @@ class AppService
             'user' => $this->measure('user', fn () => $this->getUserDataForFrontend()),
             'acl' => $this->measure('acl', fn () => $this->getAclDataForFrontend()),
             'preferences' => $preferencesData,
-            'token' => $this->user->get('token'),
+            'token' => $this->user->get(User::FIELD_TOKEN),
             'settings' => $settings,
             'language' => $language,
             'appParams' => $this->getAppParams($embeddedTable),
@@ -273,7 +273,7 @@ class AppService
     {
         $data = $this->acl->getMapData();
 
-        if (!$this->user->isAdmin()) {
+        if (!$this->user->isEffectiveAdmin()) {
             $data = unserialize(serialize($data));
 
             /** @var string[] $scopeList */

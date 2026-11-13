@@ -334,7 +334,7 @@ class Saver implements SaverInterface
 
             $entityEmailAddress = $this->entityManager->getNewEntity('EntityEmailAddress');
 
-            $entityEmailAddress->set([
+            $entityEmailAddress->setMultiple([
                 'entityId' => $entity->getId(),
                 'entityType' => $entity->getEntityType(),
                 'emailAddressId' => $emailAddress->getId(),

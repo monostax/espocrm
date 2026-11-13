@@ -33,10 +33,12 @@ use Espo\Core\Currency\ConfigDataProvider;
 use Espo\Core\Currency\InternalRateEntryProvider;
 use Espo\Core\Field\Date;
 use Espo\Core\Utils\DateTime;
+use Espo\Core\Utils\Event\EventDispatcher;
 use Espo\Entities\CurrencyRecord;
 use Espo\Entities\CurrencyRecordRate;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Order;
+use Espo\Tools\Currency\Events\CurrencyRateUpdate;
 use Espo\Tools\Currency\Exceptions\NotEnabled;
 use WeakMap;
 
@@ -53,8 +55,13 @@ class RateEntryProvider
         private EntityManager $entityManager,
         private DateTime $dateTime,
         private InternalRateEntryProvider $internalRateEntryProvider,
+        private EventDispatcher $eventDispatcher,
     ) {
         $this->map = new WeakMap();
+
+        $this->eventDispatcher->subscribe(CurrencyRateUpdate::class, function () {
+            $this->map = new WeakMap();
+        });
     }
 
     public function getCurrentRateEntry(CurrencyRecord $record): ?CurrencyRecordRate

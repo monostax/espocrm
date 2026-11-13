@@ -113,7 +113,7 @@ class TenantPredicatesSqlTest extends TestCase
         $this->user = $this->createMock(User::class);
         $this->user->method('getId')->willReturn('agent');
         $this->user->method('isActive')->willReturn(true);
-        $this->user->method('isAdmin')->willReturnCallback(fn () => $this->admin);
+        $this->user->method('isAdmin')->willReturnCallback(fn () => $this->admin); $this->user->method('isEffectiveAdmin')->willReturnCallback(fn () => $this->admin);
         $this->user->method('isPortal')->willReturnCallback(fn () => $this->portal);
         $this->user->method('isRegular')->willReturnCallback(fn () => !$this->portal && !$this->admin && !$this->api);
         $this->tenants = $this->createMock(UserTenantResolver::class);

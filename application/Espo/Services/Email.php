@@ -31,7 +31,6 @@ namespace Espo\Services;
 
 use Espo\Core\Record\CreateResult;
 use Espo\Tools\Email\SendService;
-use Espo\ORM\Entity;
 use Espo\Entities\Email as EmailEntity;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Conflict;

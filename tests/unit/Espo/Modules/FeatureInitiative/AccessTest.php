@@ -122,7 +122,7 @@ class AccessTest extends TestCase
     public function testInstanceAdminHasNoMandatoryRestriction(): void
     {
         $user = $this->createMock(User::class);
-        $user->method('isAdmin')->willReturn(true);
+        $user->method('isAdmin')->willReturn(true); $user->method('isEffectiveAdmin')->willReturn(true);
         $query = SelectBuilder::create()->from('InitiativeType');
         (new AccessibleInitiativeType('InitiativeType', $user, $this->createMock(Acl::class)))->apply($query);
         $this->assertNull($query->build()->getWhere());

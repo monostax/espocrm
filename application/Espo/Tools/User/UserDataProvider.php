@@ -29,15 +29,15 @@
 
 namespace Espo\Tools\User;
 
+use Espo\Core\ORM\EntityManagerProxy;
 use Espo\Entities\UserData;
-use Espo\ORM\EntityManager;
 use Espo\Repositories\UserData as UserDataRepository;
 use RuntimeException;
 
 class UserDataProvider
 {
     public function __construct(
-        private EntityManager $entityManager,
+        private EntityManagerProxy $entityManager,
     ) {}
 
     public function get(string $userId): ?UserData

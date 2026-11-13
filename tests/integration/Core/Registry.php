@@ -32,4 +32,9 @@ namespace tests\integration\Core;
 class Registry
 {
     public static $isCleanAndReady = false;
+
+    /**
+     * Set before the first test run, and never set back.
+     */
+    public static $isNamespaceConfigured = false;
 }

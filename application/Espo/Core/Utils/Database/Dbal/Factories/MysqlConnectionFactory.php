@@ -31,7 +31,6 @@ namespace Espo\Core\Utils\Database\Dbal\Factories;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Driver\PDO\MySQL\Driver as PDOMySQLDriver;
-use Doctrine\DBAL\Exception as DBALException;
 
 use Espo\Core\Utils\Database\Dbal\ConnectionFactory;
 use Espo\ORM\DatabaseParams;
@@ -40,17 +39,17 @@ use Espo\ORM\PDO\Options as PdoOptions;
 use PDO;
 use RuntimeException;
 
+/**
+ * @noinspection PhpUnused
+ */
 class MysqlConnectionFactory implements ConnectionFactory
 {
-    private const DEFAULT_CHARSET = 'utf8mb4';
+    private const string DEFAULT_CHARSET = 'utf8mb4';
 
     public function __construct(
-        private PDO $pdo
+        private PDO $pdo,
     ) {}
 
-    /**
-     * @throws DBALException
-     */
     public function create(DatabaseParams $databaseParams): Connection
     {
         $driver = new PDOMySQLDriver();

@@ -29,11 +29,10 @@
 
 namespace tests\unit\Espo\Core\Job;
 
-use Espo\Core\{
-    Job\QueueProcessor\Params,
-};
+use Espo\Core\Job\QueueProcessor\Params;
+use PHPUnit\Framework\TestCase;
 
-class QueueProcessorParamsTest extends \PHPUnit\Framework\TestCase
+class QueueProcessorParamsTest extends TestCase
 {
     protected function setUp() : void
     {
@@ -41,33 +40,23 @@ class QueueProcessorParamsTest extends \PHPUnit\Framework\TestCase
 
     public function testParams1()
     {
-        $params = \Espo\Core\Job\QueueProcessor\Params
+        $params = Params
             ::create()
             ->withLimit(10);
 
-        $this->assertFalse($params->useProcessPool());
-        $this->assertFalse($params->noLock());
-
         $this->assertEquals(10, $params->getLimit());
-
         $this->assertNull($params->getQueue());
     }
 
     public function testParams2()
     {
-        $params = \Espo\Core\Job\QueueProcessor\Params
+        $params = Params
             ::create()
             ->withLimit(10)
-            ->withUseProcessPool(true)
-            ->withNoLock(true)
             ->withGroup('group-0')
             ->withQueue('q0');
 
-        $this->assertTrue($params->useProcessPool());
-        $this->assertTrue($params->noLock());
-
         $this->assertEquals('q0', $params->getQueue());
-
         $this->assertEquals('group-0', $params->getGroup());
     }
 }

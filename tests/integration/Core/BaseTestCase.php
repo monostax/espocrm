@@ -29,15 +29,19 @@
 
 namespace tests\integration\Core;
 
+use Closure;
 use Espo\Core\Api\RequestWrapper;
 use Espo\Core\Api\ResponseWrapper;
 use Espo\Core\Application;
+use Espo\Core\Binding\Binder;
 use Espo\Core\Binding\BindingProcessor;
 use Espo\Core\Container;
 use Espo\Core\DataManager;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\InjectableFactory;
+use Espo\Core\Utils\Cache\DataCacheServiceName as CacheServiceName;
 use Espo\Core\Utils\Config;
+use Espo\Core\Utils\Config\ConfigWriter;
 use Espo\Core\Utils\File\Manager as FileManager;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
@@ -48,6 +52,7 @@ use Exception;
 use integration\Core\NoTransaction;
 use PHPUnit\Framework\TestCase;
 
+use Psr\Http\Message\ServerRequestInterface;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
@@ -91,6 +96,7 @@ abstract class BaseTestCase extends TestCase
         ?string $portalId = null,
         ?BindingProcessor $binding = null,
         bool $reuse = false,
+        bool $noUser = false,
     ): Application {
 
         if (!$this->isNotCleanTest() && !$reuse) {
@@ -109,6 +115,7 @@ abstract class BaseTestCase extends TestCase
             portalId: $portalId,
             binding: $binding,
             reuse: $reuse,
+            noUser: $noUser,
         );
     }
 
@@ -192,6 +199,9 @@ abstract class BaseTestCase extends TestCase
         return $this->espoTester->normalizePath($path);
     }
 
+    /**
+     * Important. CWD is not set to `build/test before `setUp` is called. Do not clean up anything before.
+     */
     protected function setUp(): void
     {
         $params = [
@@ -249,6 +259,7 @@ abstract class BaseTestCase extends TestCase
             'module',
             'fileManager',
             'applicationParams',
+            CacheServiceName::SYSTEM,
         ]);
 
         if ($username === null && $method === null) {
@@ -262,11 +273,20 @@ abstract class BaseTestCase extends TestCase
 
     /**
      * Re-create an application.
+     *
+     * @param bool $reuse Re-use the previous application for performance.
+     * @param bool $noUser Do not set current user. May be needed when testing authentication.
      */
-    protected function reCreateApplication(bool $reuse = false): void
-    {
+    protected function reCreateApplication(
+        bool $reuse = false,
+        bool $noUser = false,
+        ?BindingProcessor $binding = null,
+    ): void {
+
         $this->espoApplication = $this->createApplication(
+            binding: $binding,
             reuse: $reuse,
+            noUser: $noUser,
         );
     }
 
@@ -313,7 +333,9 @@ abstract class BaseTestCase extends TestCase
     {}
 
     /**
-     * @param array<string, mixed> $queryParams
+     * @param array<string, string> $headers
+     * @param array<string, string> $queryParams
+     * @param array<string, string> $cookieParams
      */
     protected function createRequest(
         string $method,
@@ -321,10 +343,22 @@ abstract class BaseTestCase extends TestCase
         array $headers = [],
         ?string $body = null,
         array $routeParams = [],
+        array $cookieParams = [],
+        string $resourcePath = '',
     ): RequestWrapper {
 
+        if (!str_starts_with($resourcePath, '/')) {
+            $resourcePath = '/' . $resourcePath;
+        }
+
         $request = (new RequestFactory())
-            ->createRequest($method, 'http://localhost/?' . http_build_query($queryParams));
+            ->createRequest($method, "http://localhost$resourcePath?" . http_build_query($queryParams));
+
+        if (!$request instanceof ServerRequestInterface) {
+            throw new RuntimeException();
+        }
+
+        $request = $request->withCookieParams($cookieParams);
 
         foreach ($headers as $name => $value) {
             $request = $request->withHeader($name, $value);
@@ -334,6 +368,14 @@ abstract class BaseTestCase extends TestCase
             $request = $request->withBody(
                 (new StreamFactory)->createStream($body)
             );
+
+            $contentType = $request->getHeaderLine('Content-Type');
+
+            if ($contentType === 'application/x-www-form-urlencoded') {
+                parse_str($body, $parsedBody);
+
+                $request = $request->withParsedBody($parsedBody);
+            }
         }
 
         return new RequestWrapper($request, '', $routeParams);
@@ -377,5 +419,35 @@ abstract class BaseTestCase extends TestCase
 
             $this->transactionManager->start();
         }
+    }
+
+    /**
+     * Set and save config parameters.
+     *
+     * @param array<string, mixed> $params
+     */
+    protected function setConfigParams(array $params): void
+    {
+        $configWriter = $this->getInjectableFactory()->create(ConfigWriter::class);
+        $configWriter->setMultiple($params);
+        $configWriter->save();
+    }
+
+    /**
+     * @param Closure(Binder): void $callback
+     */
+    protected function prepareBinding(Closure $callback): BindingProcessor
+    {
+        return new class ($callback) implements BindingProcessor {
+            /**
+             * @param Closure(Binder): void $callback
+             */
+            public function __construct(private Closure $callback) {}
+
+            public function process(Binder $binder): void
+            {
+                ($this->callback)($binder);
+            }
+        };
     }
 }

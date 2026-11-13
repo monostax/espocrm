@@ -1,0 +1,50 @@
+body:not([data-navbar="side"]) {
+    @media screen and (min-width: @screen-sm-min) {
+        #navbar .navbar {
+            ul.tabs {
+                li.more > li > a {
+                    padding-right: 10px;
+                    padding-left: 0;
+                }
+            }
+
+            .navbar-right-container {
+                padding-right: 0;
+                padding-left: 18px;
+            }
+        }
+    }
+
+    @media screen and (max-width: @screen-xs-max) {
+        #navbar .navbar {
+            ul.tabs {
+                > li a > span.full-label {
+                    padding-right: 30px;
+                    padding-left: 0;
+                }
+            }
+        }
+    }
+
+    div.list-kanban > div > table {
+        th.group-header {
+            > div {
+                padding-left: 0;
+                padding-right: var(--table-cell-padding);
+            }
+
+            > div:before,
+            > div:after {
+                content: none;
+            }
+        }
+    }
+
+    .kanban-row {
+        .item-menu-container.pull-right {
+            left: -9px;
+            margin-left: -10px;
+            margin-right: 0;
+        }
+    }
+}

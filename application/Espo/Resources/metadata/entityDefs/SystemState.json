@@ -1,0 +1,15 @@
+{
+    "fields": {
+        "id": {
+            "type": "id",
+            "dbType": "string",
+            "maxLength": 1
+        },
+        "versionNumber": {
+            "type": "int",
+            "dbType": "bigint",
+            "default": 0
+        }
+    },
+    "noDeletedAttribute": true
+}

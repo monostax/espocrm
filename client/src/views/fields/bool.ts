@@ -54,7 +54,7 @@ export default class BoolFieldView<
     protected editTemplate = 'fields/bool/edit'
     protected searchTemplate = 'fields/bool/search'
 
-    protected validations = []
+    protected validations: BaseFieldView['validations'] = []
     initialSearchIsNotIdle = true
 
     data() {

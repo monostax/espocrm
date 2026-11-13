@@ -30,6 +30,7 @@
 namespace Espo\Controllers;
 
 use Espo\Core\Api\Response;
+use Espo\Core\Api\Route\ContentType;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Api\Request;
@@ -42,7 +43,7 @@ class User extends Record
 {
     public function postActionCreate(Request $request, Response $response): stdClass
     {
-        if ($request->getHeader('Content-Type') !== 'application/json') {
+        if ($request->getContentType() !== ContentType::APPLICATION_JSON) {
             throw new BadRequest("Not supported content type.");
         }
 
@@ -51,7 +52,7 @@ class User extends Record
 
     public function postActionCreateLink(Request $request): bool
     {
-        if (!$this->user->isAdmin()) {
+        if (!$this->user->isEffectiveAdmin()) {
             throw new Forbidden();
         }
 
@@ -60,7 +61,7 @@ class User extends Record
 
     public function deleteActionRemoveLink(Request $request): bool
     {
-        if (!$this->user->isAdmin()) {
+        if (!$this->user->isEffectiveAdmin()) {
             throw new Forbidden();
         }
 

@@ -29,8 +29,11 @@
 
 namespace Espo\Core\ApplicationRunners;
 
+use Espo\Core\Application\Exceptions\RunnerException;
 use Espo\Core\Application\Runner;
+use Espo\Core\Job\Exceptions\TooFrequentRun;
 use Espo\Core\Job\JobManager;
+use Espo\Core\Job\PrepareProcessor;
 use Espo\Core\Utils\Config\SystemConfig;
 use Espo\Core\Utils\Log;
 
@@ -43,19 +46,32 @@ class Cron implements Runner
     use SetupSystemUser;
 
     public function __construct(
+        private PrepareProcessor $prepareProcessor,
         private JobManager $jobManager,
         private SystemConfig $config,
-        private Log $log
+        private Log $log,
     ) {}
 
     public function run(): void
     {
         if (!$this->config->isCronEnabled()) {
-            $this->log->warning("Cron is not run because it's disabled with 'cronDisabled' param.");
+            $this->log->warning("Cron is skipped as 'cronDisabled' is set to true in the config.");
 
             return;
         }
 
-        $this->jobManager->process();
+        if ($this->config->isMaintenanceMode()) {
+            $this->log->warning("Cron run is skipped in maintenance mode.");
+
+            return;
+        }
+
+        try {
+            $this->prepareProcessor->process();
+        } catch (TooFrequentRun $e) {
+            throw new RunnerException('Too frequent run.', previous: $e);
+        }
+
+        $this->jobManager->processMainQueue();
     }
 }

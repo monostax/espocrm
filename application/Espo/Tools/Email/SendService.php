@@ -102,6 +102,7 @@ class SendService
         private PersonalAccountFactory $personalAccountFactory,
         private GroupAccountFactory $groupAccountFactory,
         private ConfigDataProvider $configDataProvider,
+        private GroupFolderApplier $groupFolderApplier,
     ) {}
 
     /**
@@ -410,7 +411,7 @@ class SendService
         if (
             $userId &&
             $userId !== $this->user->getId() &&
-            !$this->user->isAdmin()
+            !$this->user->isEffectiveAdmin()
         ) {
             throw new Forbidden();
         }
@@ -424,11 +425,11 @@ class SendService
             throw new NotFound("User not found.");
         }
 
-        /** @var Email $email */
-        $email = $this->entityManager->getNewEntity(Email::ENTITY_TYPE);
+        $email = $this->entityManager->getRDBRepositoryByClass(Email::class)->getNew();
 
         $email
             ->setSubject('EspoCRM: Test Email')
+            ->setBody('Email sending test.')
             ->setIsHtml(false)
             ->addToAddress($emailAddress);
 
@@ -558,7 +559,7 @@ class SendService
             $personalAccount = $this->personalAccountFactory->create($id);
 
             if (
-                !$this->user->isAdmin() &&
+                !$this->user->isEffectiveAdmin() &&
                 $personalAccount->getUser()->getId() !== $this->user->getId()
             ) {
                 throw new Forbidden();
@@ -569,7 +570,7 @@ class SendService
             return $smtpParams?->getPassword();
         }
 
-        if (!$this->user->isAdmin()) {
+        if (!$this->user->isEffectiveAdmin()) {
             throw new Forbidden();
         }
 
@@ -599,6 +600,8 @@ class SendService
 
         if ($replied && $replied->getGroupFolder()) {
             $entity->setGroupFolder($replied->getGroupFolder());
+
+            $this->groupFolderApplier->apply($entity, $replied->getGroupFolder());
         }
     }
 }

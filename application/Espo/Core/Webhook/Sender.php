@@ -29,6 +29,8 @@
 
 namespace Espo\Core\Webhook;
 
+use Espo\Core\Api\Method;
+use Espo\Core\Api\Route\ContentType;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Json;
@@ -37,6 +39,7 @@ use Espo\Entities\Webhook;
 use Espo\Core\HttpClient;
 use LogicException;
 use Psr\Http\Message\RequestInterface;
+use SensitiveParameter;
 
 /**
  * Sends a portion.
@@ -100,7 +103,7 @@ class Sender
         return $response->getStatusCode();
     }
 
-    private function buildSignature(Webhook $webhook, string $payload, string $secretKey): string
+    private function buildSignature(Webhook $webhook, string $payload, #[SensitiveParameter] string $secretKey): string
     {
         $webhookId = $webhook->getId();
         $hash = hash_hmac('sha256', $payload, $secretKey);
@@ -149,8 +152,8 @@ class Sender
         ?string $legacySignature,
     ): RequestInterface {
 
-        $request = HttpClient\RequestCreator::create('POST', $url)
-            ->withHeader('Content-Type', 'application/json')
+        $request = HttpClient\RequestCreator::create(Method::POST, $url)
+            ->withHeader('Content-Type', ContentType::APPLICATION_JSON)
             ->withHeader('Content-Length', (string) strlen($payload));
 
         if ($signature) {

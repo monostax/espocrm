@@ -124,7 +124,7 @@ class GetForAccountTest extends TestCase
         $acl->method('checkEntityRead')->willReturn($canRead);
 
         $user = $this->createMock(User::class);
-        $user->method('isAdmin')->willReturn($isAdmin);
+        $user->method('isAdmin')->willReturn($isAdmin); $user->method('isEffectiveAdmin')->willReturn($isAdmin);
 
         $resolver = $this->createMock(UserTenantResolver::class);
         $resolver->method('canActForTenant')->with($user, 'tenant-1')->willReturn($canAct);

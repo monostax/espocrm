@@ -53,8 +53,10 @@ class GetFile implements ActionAlias
 
         $fileData = $this->service->getFileData($id);
 
+        $fileName = str_replace("\"", "\\\"", $fileData->getName() ?? '');
+
         $response = ResponseComposer::empty()
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $fileData->getName() . '"')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"')
             ->setHeader('Content-Length', (string) $fileData->getSize())
             ->setBody($fileData->getStream());
 

@@ -61,7 +61,7 @@ class PrivateResponseTest extends TestCase
         $processor = $this->createMock(ControllerActionProcessor::class);
         $processor->method('process')->willReturn($response);
         $params = ['controller' => $controller, 'action' => $action];
-        $route = new Route('get', '/' . $controller, '/' . $controller, $params, false, null);
+        $route = new Route('get', '/' . $controller, '/' . $controller, $params, false, null, null, false);
         $handler = new ControllerActionHandler($controller, $action,
             new ProcessData($route, '/api/v1', $params), $response, $processor, $this->createMock(Config::class));
         $request = (new ServerRequestFactory())->createServerRequest('GET', '/api/v1/' . $controller . '?tenantId=tenant');
@@ -95,7 +95,7 @@ class PrivateResponseTest extends TestCase
         foreach (['country', 'override', 'accept', 'cancel', 'customer', 'charge', 'recoverCreation'] as $action) $routes[] = ['post', '/CreditBilling/' . $action];
         foreach (['cancel', 'reconcile'] as $action) $routes[] = ['post', '/CreditSubscriptions/' . $action];
         foreach ($routes as [$method, $path]) foreach ([400, 403, 404, 409, 503] as $status) {
-            $route = new Route($method, $path, $path, [], true, null);
+            $route = new Route($method, $path, $path, [], true, null, null, false);
             $handler = new class ($status) implements \Psr\Http\Server\RequestHandlerInterface {
                 public function __construct(private int $status) {}
                 public function handle(\Psr\Http\Message\ServerRequestInterface $request): \Psr\Http\Message\ResponseInterface {

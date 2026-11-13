@@ -342,7 +342,7 @@ class Saver implements SaverInterface
                 $entityPhoneNumber->set('id', Util::generateId());
             }
 
-            $entityPhoneNumber->set([
+            $entityPhoneNumber->setMultiple([
                 'entityId' => $entity->getId(),
                 'entityType' => $entity->getEntityType(),
                 'phoneNumberId' => $phoneNumber->getId(),

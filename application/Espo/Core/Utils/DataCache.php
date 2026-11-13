@@ -29,60 +29,82 @@
 
 namespace Espo\Core\Utils;
 
-use Espo\Core\Utils\File\Exceptions\FileError;
-use Espo\Core\Utils\File\Manager as FileManager;
-
-use InvalidArgumentException;
-use RuntimeException;
+use Espo\Core\Utils\Cache\CacheItem;
+use Espo\Core\Utils\Cache\Exceptions\InvalidArgument;
+use Espo\Core\Utils\Cache\Exceptions\PersistenceError;
+use Espo\Core\Utils\Cache\Exceptions\ReadError;
+use Psr\Cache\CacheItemPoolInterface;
+use Psr\Cache\InvalidArgumentException;
 use stdClass;
 
 class DataCache
 {
-    protected string $cacheDir = 'data/cache/application/';
+    /**
+     * DI qualifier. Can be applied to the DataCache and DataCacheAccess dependencies.
+     *
+     * @since 10.1.0
+     */
+    public const string QUALIFIER_SYSTEM = 'system';
 
-    public function __construct(protected FileManager $fileManager)
-    {}
+    public function __construct(
+        private CacheItemPoolInterface $pool,
+    ) {}
 
     /**
      * Whether is cached.
      */
     public function has(string $key): bool
     {
-        $cacheFile = $this->getCacheFile($key);
-
-        return $this->fileManager->isFile($cacheFile);
+        try {
+            return $this->pool->hasItem($key);
+        } catch (InvalidArgumentException $e) {
+            throw new InvalidArgument(previous: $e);
+        }
     }
 
     /**
-     * Get a stored value.
+     * Get a stored value. Returns null if not hit.
      *
-     * @return array<int|string, mixed>|stdClass
-     * @throws FileError
+     * @return array<int|string, mixed>|stdClass|null
+     * @throws ReadError If data is corrupted.
      */
-    public function get(string $key)
+    public function get(string $key): array|stdClass|null
     {
-        $cacheFile = $this->getCacheFile($key);
+        try {
+            $item = $this->pool->getItem($key);
+        } catch (InvalidArgumentException $e) {
+            throw new InvalidArgument(previous: $e);
+        }
 
-        return $this->fileManager->getPhpSafeContents($cacheFile);
+        if (!$item->isHit()) {
+            return null;
+        }
+
+        $value = $item->get();
+
+        if (!is_array($value) && !$value instanceof stdClass) {
+            throw new ReadError("Bad cache data by key '$key'.");
+        }
+
+        /** @var array<int|string, mixed>|stdClass */
+        return $value;
     }
 
     /**
-     * Try to get a stored value. Returns null if does not exist.
+     * Try to get a stored value. Does not throw ReadError.
      *
      * @return array<int|string, mixed>|stdClass|null
      * @since 9.3.0
      */
-    public function tryGet(string $key)
+    public function tryGet(string $key): array|stdClass|null
     {
         if (!$this->has($key)) {
             return null;
         }
 
-        $cacheFile = $this->getCacheFile($key);
-
         try {
-            return $this->fileManager->getPhpSafeContents($cacheFile);
-        } catch (FileError) {
+            return $this->get($key);
+        } catch (ReadError) {
             return null;
         }
     }
@@ -91,58 +113,57 @@ class DataCache
      * Store in cache.
      *
      * @param array<int|string, mixed>|stdClass $data
+     * @throws PersistenceError
      */
     public function store(string $key, $data): void
     {
         /** @phpstan-var mixed $data */
 
         if (!$this->checkDataIsValid($data)) {
-            throw new InvalidArgumentException("Bad cache data type.");
+            throw new InvalidArgument("Bad cache data type.");
         }
 
-        $cacheFile = $this->getCacheFile($key);
+        $item = new CacheItem(
+            key: $key,
+            value: $data,
+        );
 
-        $result = $this->fileManager->putPhpContents($cacheFile, $data, true, true);
+        $result = $this->pool->save($item);
 
         if ($result === false) {
-            throw new RuntimeException("Could not store '$key'.");
+            throw new PersistenceError("Could not store '$key'.");
         }
     }
 
     /**
      * Removes in cache.
+     *
+     * @throws InvalidArgument
      */
     public function clear(string $key): void
     {
-        $cacheFile = $this->getCacheFile($key);
-
-        $this->fileManager->removeFile($cacheFile);
+        $this->pool->deleteItem($key);
     }
 
     /**
-     * @param mixed $data
-     * @return bool
+     * Clears all cache.
+     *
+     * @since 10.1.0
+     * @throws PersistenceError
      */
-    private function checkDataIsValid($data)
+    public function clearAll(): void
     {
-        $isInvalid =
-            !is_array($data) &&
-            !$data instanceof stdClass;
+        $result = $this->pool->clear();
 
-        return !$isInvalid;
+        if ($result === false) {
+            throw new PersistenceError("Could not clear cache.");
+        }
     }
 
-    private function getCacheFile(string $key): string
+    private function checkDataIsValid(mixed $data): bool
     {
-        if (
-            $key === '' ||
-            preg_match('/[^a-zA-Z0-9_\/\-]/i', $key) ||
-            $key[0] === '/' ||
-            str_ends_with($key, '/')
-        ) {
-            throw new InvalidArgumentException("Bad cache key.");
-        }
+        $isInvalid = !is_array($data) && !$data instanceof stdClass;
 
-        return $this->cacheDir . $key . '.php';
+        return !$isInvalid;
     }
 }

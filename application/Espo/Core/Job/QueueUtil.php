@@ -37,32 +37,30 @@ use Espo\Core\Utils\DateTime as DateTimeUtil;
 use Espo\Core\Utils\System;
 use Espo\Core\Job\Job\Status;
 use Espo\Entities\Job as JobEntity;
-
-use DateTime;
 use Espo\ORM\Collection;
 use Espo\ORM\Name\Attribute;
+use DateTime;
 use Exception;
 use LogicException;
 
 class QueueUtil
 {
-    private const NOT_EXISTING_PROCESS_PERIOD = 300;
-    private const READY_NOT_STARTED_PERIOD = 60;
+    private const int NOT_EXISTING_PROCESS_PERIOD = 300;
+    private const int READY_NOT_STARTED_PERIOD = 600;
 
     public function __construct(
         private Config $config,
         private EntityManager $entityManager,
         private ScheduleUtil $scheduleUtil,
-        private MetadataProvider $metadataProvider
+        private MetadataProvider $metadataProvider,
     ) {}
 
-    public function isJobPending(string $id): bool
+    public function isJobPending(JobEntity $job): bool
     {
-        /** @var ?JobEntity $job */
         $job = $this->entityManager
             ->getRDBRepositoryByClass(JobEntity::class)
-            ->select([Attribute::ID, 'status'])
-            ->where([Attribute::ID => $id])
+            ->select([Attribute::ID, JobEntity::FIELD_STATUS])
+            ->where([Attribute::ID => $job->getId()])
             ->forUpdate()
             ->findOne();
 
@@ -111,16 +109,20 @@ class QueueUtil
         return $builder->sth()->find();
     }
 
-    public function isScheduledJobRunning(
-        string $scheduledJobId,
-        ?string $targetId = null,
-        ?string $targetType = null,
-        ?string $targetGroup = null
-    ): bool {
+    public function isScheduledJobRunning(JobEntity $job): bool
+    {
+        $scheduledJobId = $job->getScheduledJobId();
+        $targetId = $job->getTargetId();
+        $targetType = $job->getTargetType();
+        $targetGroup = $job->getTargetGroup();
+
+        if (!$scheduledJobId) {
+            return false;
+        }
 
         $where = [
             'scheduledJobId' => $scheduledJobId,
-            'status' => [
+            JobEntity::FIELD_STATUS => [
                 Status::RUNNING,
                 Status::READY,
             ],
@@ -474,7 +476,7 @@ class QueueUtil
             ])
             ->find();
 
-         foreach ($jobCollection as $job) {
+        foreach ($jobCollection as $job) {
             $failedAttempts = $job->getFailedAttempts();
             $attempts = $job->getAttempts();
 

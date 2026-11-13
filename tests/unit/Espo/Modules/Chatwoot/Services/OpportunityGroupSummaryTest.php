@@ -136,7 +136,7 @@ class OpportunityGroupSummaryTest extends TestCase
         $user = $this->createMock(User::class);
         $user->method('isActive')->willReturn(true);
         $user->method('isRegular')->willReturn(true);
-        $user->method('isAdmin')->willReturnCallback(fn () => $this->admin);
+        $user->method('isAdmin')->willReturnCallback(fn () => $this->admin); $user->method('isEffectiveAdmin')->willReturnCallback(fn () => $this->admin);
         $tenants = $this->createMock(UserTenantResolver::class);
         $tenants->method('canActForTenant')->willReturnCallback(fn () => $this->tenantMember);
         $account = new BaseEntity('ChatwootAccount', ['attributes' => array_fill_keys(['id', 'tenantId', 'platformId'], ['type' => 'varchar'])]);

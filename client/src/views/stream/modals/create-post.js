@@ -34,10 +34,6 @@ class CreatePostModalView extends ModalView {
         <div class="record no-side-margin">{{{record}}}</div>
     `
 
-    shortcutKeys = {
-        'Control+Enter': 'post',
-    }
-
     setup() {
         this.headerText = this.translate('Create Post');
 
@@ -76,13 +72,22 @@ class CreatePostModalView extends ModalView {
 
             this.wait(false);
         });
+
+        this.shortcutKeys = {
+            'Control+Enter': e => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                this.post();
+            }
+        };
     }
 
     /**
-     * @return {module:views/record/edit}
+     * @return {import('views/record/edit').default}
      */
     getRecordView() {
-        return this.getView('record');
+        return /** @type {import('views/record/edit').default} */this.getView('record');
     }
 
     post() {

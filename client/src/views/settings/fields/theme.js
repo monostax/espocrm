@@ -34,7 +34,7 @@ export default class ThemeSettingsFieldView extends EnumFieldView {
 
     // language=Handlebars
     editTemplateContent = `
-        <div class="grid-auto-fit-xxs">
+        <div>
             <div>
                 <select data-name="{{name}}" class="form-control main-element">
                     {{options
@@ -47,10 +47,19 @@ export default class ThemeSettingsFieldView extends EnumFieldView {
                     }}
                 </select>
             </div>
+        </div>
+        <div class="grid-auto-fit-xxs">
             {{#if navbarOptionList.length}}
             <div>
                 <select data-name="themeNavbar" class="form-control">
                     {{options navbarOptionList navbar translatedOptions=navbarTranslatedOptions}}
+                </select>
+            </div>
+            {{/if}}
+            {{#if directionOptionList.length}}
+            <div>
+                <select data-name="themeDirection" class="form-control">
+                    {{options directionOptionList direction translatedOptions=directionTranslatedOptions}}
                 </select>
             </div>
             {{/if}}
@@ -66,6 +75,14 @@ export default class ThemeSettingsFieldView extends EnumFieldView {
         data.navbarTranslatedOptions = {};
         data.navbarOptionList.forEach(item => {
             data.navbarTranslatedOptions[item] = this.translate(item, 'themeNavbars');
+        });
+
+        data.directionOptionList = this.getDirectionOptionList();
+        data.direction = this.getDirectionValue() || this.getDefaultDirection();
+
+        data.directionTranslatedOptions = {};
+        data.directionOptionList.forEach(item => {
+            data.directionTranslatedOptions[item] = this.translate(item, 'themeDirections');
         });
 
         return data;
@@ -88,10 +105,13 @@ export default class ThemeSettingsFieldView extends EnumFieldView {
 
     afterRenderEdit() {
         this.$navbar = this.$el.find('[data-name="themeNavbar"]');
+        this.$direction = this.$el.find('[data-name="themeDirection"]');
 
         this.$navbar.on('change', () => this.trigger('change'));
+        this.$direction.on('change', () => this.trigger('change'));
 
         Select.init(this.$navbar);
+        Select.init(this.$direction);
     }
 
     /**
@@ -153,6 +173,64 @@ export default class ThemeSettingsFieldView extends EnumFieldView {
     }
 
     /**
+     * @protected
+     * @return {string}
+     */
+    getDirectionValue() {
+        const params = this.model.get('themeParams') || {};
+
+        return params.direction;
+    }
+
+    /**
+     * @protected
+     * @return {Record|null}
+     */
+    getDirectionDefs() {
+        if (!this.themeManager) {
+            return null;
+        }
+
+        const params = this.themeManager.getParam('params');
+
+        if (!params || !params.direction) {
+            return null;
+        }
+
+        return Espo.Utils.cloneDeep(params.direction);
+    }
+
+    /**
+     * @private
+     * @return {string[]}
+     */
+    getDirectionOptionList() {
+        const defs = this.getDirectionDefs();
+
+        if (!defs) {
+            return [];
+        }
+
+        const optionList = defs.options || [];
+
+        if (!optionList.length || optionList.length === 1) {
+            return [];
+        }
+
+        return optionList;
+    }
+
+    /**
+     * @protected
+     * @return {string|null}
+     */
+    getDefaultDirection() {
+        const defs = this.getDirectionDefs() || {};
+
+        return defs.default || null;
+    }
+
+    /**
      * @private
      */
     initThemeManager() {
@@ -178,14 +256,9 @@ export default class ThemeSettingsFieldView extends EnumFieldView {
 
     setupOptions() {
         this.params.options = Object.keys(this.getMetadata().get('themes') || {})
-            .sort((v1, v2) => {
-                if (v2 === 'EspoRtl') {
-                    return -1;
-                }
-
-                return this.translate(v1, 'theme')
-                    .localeCompare(this.translate(v2, 'theme'));
-            });
+            .sort(
+                (v1, v2) => this.translate(v1, 'theme').localeCompare(this.translate(v2, 'theme'))
+            );
     }
 
     fetch() {
@@ -195,6 +268,10 @@ export default class ThemeSettingsFieldView extends EnumFieldView {
 
         if (this.$navbar.length) {
             params.navbar = this.$navbar.val();
+        }
+
+        if (this.$direction.length) {
+            params.direction = this.$direction.val();
         }
 
         data.themeParams = params;

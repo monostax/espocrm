@@ -18,6 +18,10 @@
             "tooltip": "urlStrip"
         },
         {
+            "name": "protocolRequired",
+            "type": "bool"
+        },
+        {
             "name": "audited",
             "type": "bool"
         },
@@ -28,6 +32,11 @@
         {
             "name": "readOnlyAfterCreate",
             "type": "bool"
+        },
+        {
+            "name": "maxItemLength",
+            "type": "int",
+            "hidden": true
         }
     ],
     "validationList": [
