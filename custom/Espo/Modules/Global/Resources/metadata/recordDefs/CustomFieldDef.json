@@ -1,5 +1,8 @@
 {
-    "beforeSaveHookClassNameList": [
+    "beforeCreateHookClassNameList": [
+        "Espo\\Modules\\Global\\Classes\\RecordHooks\\CustomFieldDef\\BeforeSave"
+    ],
+    "beforeUpdateHookClassNameList": [
         "Espo\\Modules\\Global\\Classes\\RecordHooks\\CustomFieldDef\\BeforeSave"
     ]
 }
