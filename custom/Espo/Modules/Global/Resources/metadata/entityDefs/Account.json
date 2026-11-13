@@ -1,5 +1,8 @@
 {
     "fields": {
+        "type": {
+            "options": ["", "Prospect", "Customer", "Investor", "Partner", "Reseller"]
+        },
         "industry": { "type": "varchar", "maxLength": 255 },
         "contactRole": {
             "options": [

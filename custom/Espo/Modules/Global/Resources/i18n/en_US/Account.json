@@ -17,5 +17,10 @@
     },
     "tooltips": {
         "customFields": "Tenant-defined custom attributes. Values follow this record's ACL."
+    },
+    "options": {
+        "type": {
+            "Prospect": "Prospect"
+        }
     }
 }

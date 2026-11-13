@@ -17,5 +17,10 @@
     },
     "tooltips": {
         "customFields": "Atributos personalizados do tenant. Os valores seguem o ACL do registro."
+    },
+    "options": {
+        "type": {
+            "Prospect": "Prospecto"
+        }
     }
 }
