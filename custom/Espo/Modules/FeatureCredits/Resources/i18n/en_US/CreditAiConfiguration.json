@@ -39,6 +39,7 @@
         "monthlyCredits": "Monthly credits (agreement reference; does not issue grants)",
         "aiModelCreditRateId": "Main model entity ID",
         "aiNativeSearchModelCreditRateId": "Native search overrun model entity ID (optional)",
+        "aiStreamModelCreditRateId": "Stream agent model entity ID: mentions and AI Session (optional)",
         "aiMaxRequests": "Maximum requests per operation (1–100)",
         "replacesId": "Original agreement entity ID being replaced"
     }

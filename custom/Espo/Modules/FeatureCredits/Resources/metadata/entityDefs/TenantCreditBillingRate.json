@@ -13,6 +13,7 @@
         "featureRestrictions": {"type": "jsonObject"},
         "aiModelCreditRate": {"type": "link"},
         "aiNativeSearchModelCreditRate": {"type": "link"},
+        "aiStreamModelCreditRate": {"type": "link"},
         "aiMaxRequests": {"type": "int", "min": 1, "max": 100},
         "configurationHash": {"type": "varchar", "maxLength": 64, "readOnly": true},
         "createdAt": {"type": "datetime", "notNull": true},
@@ -22,6 +23,7 @@
         "tenant": {"type": "belongsTo", "entity": "Tenant"},
         "aiModelCreditRate": {"type": "belongsTo", "entity": "AiModelCreditRate"},
         "aiNativeSearchModelCreditRate": {"type": "belongsTo", "entity": "AiModelCreditRate"},
+        "aiStreamModelCreditRate": {"type": "belongsTo", "entity": "AiModelCreditRate"},
         "createdBy": {"type": "belongsTo", "entity": "User"}
     },
     "indexes": {

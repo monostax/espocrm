@@ -11,6 +11,7 @@
 
 namespace Espo\Modules\FeatureSelfService\Tools\Workspace;
 
+use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureCredits\Accounting\CutoverInput;
@@ -34,8 +35,10 @@ use Throwable;
  *
  * Off until config `selfServiceCreditWallet` names the published model rate:
  *   {"aiModelCreditRateId": "...", "aiNativeSearchModelCreditRateId": "...",
- *    "creditUnitPrice": "0.50", "currency": "BRL", "aiMaxRequests": 100,
- *    "trialCredits": "100"}
+ *    "aiStreamModelCreditRateId": "...", "creditUnitPrice": "0.50", "currency": "BRL",
+ *    "aiMaxRequests": 100, "trialCredits": "100"}
+ * `aiStreamModelCreditRateId` (optional) is the stream agent's model: mural
+ * mentions and AI Session (Gemini 4 Hydrogen since 2026-11-13).
  * Without it, new workspaces keep the legacy run cap.
  */
 class WorkspaceWallet
@@ -87,8 +90,17 @@ class WorkspaceWallet
         if (!empty($settings['aiNativeSearchModelCreditRateId'])) {
             $agreement->aiNativeSearchModelCreditRateId = (string) $settings['aiNativeSearchModelCreditRateId'];
         }
+        if (!empty($settings['aiStreamModelCreditRateId'])) {
+            $agreement->aiStreamModelCreditRateId = (string) $settings['aiStreamModelCreditRateId'];
+        }
 
-        $this->configuration->publishAgreement($agreement);
+        try {
+            $this->configuration->publishAgreement($agreement);
+        } catch (Conflict $e) {
+            // A retry after the wallet settings changed keeps the agreement already
+            // published for this workspace; terms change only through replaceAgreement.
+            if (!$this->hasAgreement($tenantId)) throw $e;
+        }
 
         if ($this->hasCutover($tenantId)) {
             return;
@@ -165,6 +177,14 @@ class WorkspaceWallet
         $this->log->info("SelfService: trial credits granted to tenant {$tenantId}, expiring {$endsAt}.");
 
         return true;
+    }
+
+    private function hasAgreement(string $tenantId): bool
+    {
+        $query = $this->entityManager->getPDO()->prepare('SELECT 1 FROM tenant_credit_billing_rate WHERE tenant_id = ? AND version = ? AND deleted = FALSE');
+        $query->execute([$tenantId, self::AGREEMENT_VERSION]);
+
+        return (bool) $query->fetchColumn();
     }
 
     private function hasCutover(string $tenantId): bool

@@ -50,6 +50,41 @@ trait ConfigurationCases
         });
     }
 
+    #[DataProvider('dialects')]
+    public function testCrmStreamAgentModelIsSelectedByCallerModel(string $dialect): void
+    {
+        $this->executionDatabase($dialect, function (PDO $pdo): void {
+            $service = $this->configuration($pdo);
+            $main = $service->publishModel((object) ExecutionFixtures::policy());
+            $stream = $service->publishModel((object) (['model' => 'fixture-stream-model', 'multiplier' => '2'] + ExecutionFixtures::policy()));
+            $native = $service->publishModel((object) ['provider' => 'google', 'model' => 'gemini-3.8-flash',
+                'multiplier' => '1', 'inputTokenBound' => 1000, 'outputTokenLimit' => 2048,
+                'boundProfile' => \Espo\Modules\FeatureCredits\Accounting\NativeSearchDebt::PROFILE]);
+            foreach ([$main['id'], $native['id']] as $invalid) {
+                $rejected = $this->agreement($main['id'], 'invalid'); $rejected->aiStreamModelCreditRateId = $invalid;
+                try { $service->publishAgreement($rejected); $this->fail('Stream model equal to the main model or native accepted.'); } catch (Conflict) {}
+            }
+            $agreement = $this->agreement($main['id']); $agreement->aiStreamModelCreditRateId = $stream['id'];
+            $rate = $service->publishAgreement($agreement);
+            $this->assertSame($rate, $service->publishAgreement($agreement));
+            $plain = $this->agreement($main['id']);
+            try { $service->publishAgreement($plain); $this->fail('Dropping the stream model replayed the same version.'); } catch (Conflict) {}
+            $this->assertSame($stream['id'], $service->inspect('agreement', $rate['id'], 'tenant')['data']['aiStreamModelCreditRateId']);
+            $this->cutovers($pdo)->schedule(new CutoverInput('tenant', $this->now, (object) ['test' => true]));
+            $command = ExecutionFixtures::admission();
+            $command->operation = 'configuration'; unset($command->modelRateId, $command->billingRateId);
+            $command->provider = 'fixture-provider';
+            foreach (['fixture-model' => $main['policyId'], 'fixture-stream-model' => $stream['policyId']] as $model => $policyId) {
+                $command->model = $model;
+                $selection = $this->entityCommand($pdo, $command)['selection'];
+                $this->assertSame($policyId, $selection['modelRateId']);
+                $this->assertSame($rate['id'], $selection['billingRateId']);
+            }
+            $command->model = 'gemini-3.8-flash';
+            try { $this->entityCommand($pdo, $command); $this->fail('Unselected model configured.'); } catch (Conflict) {}
+        });
+    }
+
     private function configuration(PDO $pdo): Configuration
     {
         $manager = $this->createStub(EntityManager::class); $manager->method('getPDO')->willReturn($pdo);

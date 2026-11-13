@@ -54,7 +54,7 @@ final class Configuration
         }
         $q = $pdo->prepare('SELECT r.version, r.effective_from, r.effective_until, r.currency,
             r.credit_unit_price, r.monthly_credits, r.ai_model_credit_rate_id,
-            r.ai_native_search_model_credit_rate_id, r.ai_max_requests FROM tenant_credit_billing_rate r
+            r.ai_native_search_model_credit_rate_id, r.ai_stream_model_credit_rate_id, r.ai_max_requests FROM tenant_credit_billing_rate r
             INNER JOIN tenant t ON t.id=r.tenant_id AND t.deleted=FALSE
             WHERE r.id=? AND r.tenant_id=? AND r.deleted=FALSE');
         $q->execute([$id, $tenantId]);
@@ -67,6 +67,7 @@ final class Configuration
             'monthlyCredits' => (string) $row['monthly_credits'],
             'aiModelCreditRateId' => $row['ai_model_credit_rate_id'],
             'aiNativeSearchModelCreditRateId' => $row['ai_native_search_model_credit_rate_id'],
+            'aiStreamModelCreditRateId' => $row['ai_stream_model_credit_rate_id'],
             'aiMaxRequests' => (int) $row['ai_max_requests'],
         ]];
     }
@@ -103,7 +104,7 @@ final class Configuration
     {
         $fields = ['tenantId', 'version', 'effectiveFrom', 'effectiveUntil', 'currency', 'creditUnitPrice',
             'monthlyCredits', 'aiModelCreditRateId', 'aiMaxRequests'];
-        if (array_diff(array_keys(get_object_vars($input)), [...$fields, 'aiNativeSearchModelCreditRateId']) || array_diff($fields, array_keys(get_object_vars($input)))) {
+        if (array_diff(array_keys(get_object_vars($input)), [...$fields, 'aiNativeSearchModelCreditRateId', 'aiStreamModelCreditRateId']) || array_diff($fields, array_keys(get_object_vars($input)))) {
             throw new InvalidArgumentException('Complete agreement required.');
         }
         foreach (['tenantId', 'aiModelCreditRateId'] as $field) {
@@ -114,6 +115,14 @@ final class Configuration
         if ($nativeId !== null) {
             if (!is_string($nativeId)) throw new InvalidArgumentException('Invalid native-search policy identity.');
             GrantInput::identity($nativeId);
+        }
+        // Optional second model for the stream agent: mural mentions and AI Session
+        // (decided 2026-11-13: Gemini 4 Hydrogen). Configuration selects it when
+        // the caller asks for its model; conversation replies keep the main model.
+        $streamId = $input->aiStreamModelCreditRateId ?? null;
+        if ($streamId !== null) {
+            if (!is_string($streamId)) throw new InvalidArgumentException('Invalid stream-agent policy identity.');
+            GrantInput::identity($streamId);
         }
         if ($actorId !== null) GrantInput::identity($actorId);
         if ($replacesId !== null) GrantInput::identity($replacesId);
@@ -159,7 +168,18 @@ final class Configuration
             $q->execute([$input->aiModelCreditRateId]);
             $policyId = $q->fetchColumn();
             if (!is_string($policyId)) throw new NotFound('Unknown model policy.');
-            $this->catalog->resolve($policyId);
+            $main = $this->catalog->resolve($policyId);
+            if ($streamId !== null) {
+                $q->execute([$streamId]);
+                $streamPolicyId = $q->fetchColumn();
+                if (!is_string($streamPolicyId)) throw new NotFound('Unknown stream-agent policy.');
+                $stream = $this->catalog->resolve($streamPolicyId);
+                // Selection is by caller model, so the two must differ; native overrun policies are never a stream model.
+                if (NativeSearchDebt::permitted($stream->receipt()) ||
+                    ($stream->rate->provider === $main->rate->provider && $stream->rate->model === $main->rate->model)) {
+                    throw new Conflict('The stream-agent policy must be a different, non-native model.');
+                }
+            }
             if ($nativeId !== null) {
                 $q->execute([$nativeId]);
                 $nativePolicyId = $q->fetchColumn();
@@ -187,10 +207,11 @@ final class Configuration
             $id = RecordId::generate();
             $pdo->prepare('INSERT INTO tenant_credit_billing_rate
                 (id, tenant_id, version, effective_from, effective_until, currency, credit_unit_price, monthly_credits,
-                  ai_model_credit_rate_id, ai_max_requests, configuration_hash, created_at, created_by_id, ai_native_search_model_credit_rate_id)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute([$id, $input->tenantId, $input->version, $input->effectiveFrom,
+                  ai_model_credit_rate_id, ai_max_requests, configuration_hash, created_at, created_by_id, ai_native_search_model_credit_rate_id,
+                  ai_stream_model_credit_rate_id)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute([$id, $input->tenantId, $input->version, $input->effectiveFrom,
                     $input->effectiveUntil, $input->currency, (string) $price, (string) $monthly, $input->aiModelCreditRateId,
-                    $input->aiMaxRequests, $hash, $this->clock->now(), $actorId, $nativeId]);
+                    $input->aiMaxRequests, $hash, $this->clock->now(), $actorId, $nativeId, $streamId]);
             $pdo->commit();
             return ['id' => $id, 'version' => $input->version];
         } catch (Throwable $e) {

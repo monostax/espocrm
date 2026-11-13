@@ -56,11 +56,17 @@ final class AdmissionConfiguration
             $max = (int) ($rate['ai_max_requests'] ?? 0);
             if (!$rate['ai_model_credit_rate_id'] || $max < 1 || $max > 100) throw new ServiceUnavailable('CRM agreement has no approved AI execution policy.');
             $query = $pdo->prepare('SELECT policy_id FROM ai_model_credit_rate WHERE id=? AND deleted=FALSE');
-            $query->execute([$rate['ai_model_credit_rate_id']]);
-            $policyId = $query->fetchColumn();
-            if (!is_string($policyId)) throw new ServiceUnavailable('Approved model rate is unavailable.');
-            $policy = $this->catalog->resolve($policyId);
-            if ($policy->rate->provider !== $input->provider || $policy->rate->model !== $input->model) throw Conflict::createWithBody('Configured model does not match this caller.', '{"reason":"agreement_required"}');
+            // The main model, or the agreement's optional stream-agent model (mural
+            // mentions and AI Session), whichever the caller asks for.
+            $policyId = null;
+            foreach (array_filter([$rate['ai_model_credit_rate_id'], $rate['ai_stream_model_credit_rate_id'] ?? null]) as $rateId) {
+                $query->execute([$rateId]);
+                $candidate = $query->fetchColumn();
+                if (!is_string($candidate)) throw new ServiceUnavailable('Approved model rate is unavailable.');
+                $policy = $this->catalog->resolve($candidate);
+                if ($policy->rate->provider === $input->provider && $policy->rate->model === $input->model) { $policyId = $candidate; break; }
+            }
+            if ($policyId === null) throw Conflict::createWithBody('Configured model does not match this caller.', '{"reason":"agreement_required"}');
             $result = ['billingRateId' => $rate['id'], 'modelRateId' => $policyId, 'maxRequests' => $max];
             if ($rate['ai_native_search_model_credit_rate_id'] ?? null) {
                 $query->execute([$rate['ai_native_search_model_credit_rate_id']]);
