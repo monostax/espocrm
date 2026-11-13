@@ -18,6 +18,7 @@ use Espo\Entities\EmailAddress;
 use Espo\Modules\FeatureJourney\Services\ActionContext;
 use Espo\Modules\FeatureJourney\Services\JourneyEmailToken;
 use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
+use Espo\Modules\FeatureJourney\Services\JourneyUndeliveredNotice;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
 use Espo\Modules\Global\Tools\CustomField\ReceiverTemplateData;
 use Espo\ORM\Entity;
@@ -40,6 +41,7 @@ class SendEmail implements Action
         private EmailSender $emailSender,
         private TenantGuard $tenantGuard,
         private JourneyTargetPeople $people,
+        private JourneyUndeliveredNotice $notice,
         private ReceiverTemplateData $receiverTemplateData,
         private EmailTemplateService $emailTemplateService,
         private RecordServiceContainer $recordServiceContainer,
@@ -84,15 +86,29 @@ class SendEmail implements Action
         /** @var list<array{0: Entity, 1: list<string>}> $deliveries */
         $deliveries = [];
 
+        /** @var array<string, string> $undelivered person name => reason, for the record's mural */
+        $undelivered = [];
+        $what = 'O email';
+
         foreach ($people as $person) {
             $recipients = $this->resolveRecipients($person, $hasOverride ? $toOverride : null);
 
             if ($recipients !== []) {
                 $deliveries[] = [$person, $recipients];
+            } else {
+                $undelivered[self::personName($person)] = 'sem e-mail';
             }
         }
 
+        if ($emailTemplateId) {
+            $what = 'O email ' . JourneyUndeliveredNotice::code(
+                (string) ($this->entityManager->getEntityById('EmailTemplate', $emailTemplateId)?->get('name') ?? '')
+            );
+        }
+
         if ($deliveries === []) {
+            $this->notice->post($context, $what, $undelivered, count($people));
+
             $this->log->warning(
                 'SendEmail action: no recipient on ' . $context->target->getEntityType() . '/' .
                 $context->target->getId()
@@ -165,6 +181,8 @@ class SendEmail implements Action
                     );
                 } catch (Throwable $e) {
                     $errors[] = $person->get('name') . ': ' . $e->getMessage();
+                    $undelivered[self::personName($person)] = 'erro ao montar o email: ' .
+                        JourneyUndeliveredNotice::code(mb_substr($e->getMessage(), 0, 200));
                     $this->log->error('SendEmail: template process failed: ' . $e->getMessage());
 
                     continue;
@@ -193,7 +211,11 @@ class SendEmail implements Action
                 ];
 
                 if ($unfilled !== []) {
-                    $missing[(string) ($person->get('name') ?: $person->getId())] = $unfilled;
+                    $missing[self::personName($person)] = $unfilled;
+                    $undelivered[self::personName($person)] = 'sem valor em ' . implode(', ', array_map(
+                        static fn (string $item) => JourneyUndeliveredNotice::code($item),
+                        $unfilled,
+                    ));
                     $total -= count($recipients);
 
                     continue;
@@ -201,6 +223,8 @@ class SendEmail implements Action
             }
 
             $attachmentList = [...$attachmentList, ...$paramAttachments];
+            $sentToPerson = 0;
+            $personError = null;
 
             foreach ($recipients as $to) {
                 try {
@@ -216,12 +240,21 @@ class SendEmail implements Action
                         $senderParams,
                     );
                     $sent++;
+                    $sentToPerson++;
                 } catch (Throwable $e) {
                     $errors[] = $to . ': ' . $e->getMessage();
+                    $personError ??= $e->getMessage();
                     $this->log->error('SendEmail action failed for ' . $to . ': ' . $e->getMessage());
                 }
             }
+
+            if ($sentToPerson === 0 && $personError !== null) {
+                $undelivered[self::personName($person)] = 'falha no envio: ' .
+                    JourneyUndeliveredNotice::code(mb_substr($personError, 0, 200));
+            }
         }
+
+        $this->notice->post($context, $what, $undelivered, count($people));
 
         if ($missing !== []) {
             $summary = JourneyTargetPeople::missingSummary($missing);
@@ -493,6 +526,11 @@ class SendEmail implements Action
         }
 
         return [$smtpParams, $senderParams, $from];
+    }
+
+    private static function personName(Entity $person): string
+    {
+        return (string) ($person->get('name') ?: $person->getId());
     }
 
     private function isAddressNotSendable(string $email): bool

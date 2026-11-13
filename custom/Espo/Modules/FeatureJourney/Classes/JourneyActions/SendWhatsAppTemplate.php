@@ -8,6 +8,7 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureJourney\Services\ActionContext;
 use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
+use Espo\Modules\FeatureJourney\Services\JourneyUndeliveredNotice;
 use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
 use Espo\Modules\FeatureMetaWhatsAppBusiness\Tools\TemplateParameters;
@@ -28,6 +29,7 @@ class SendWhatsAppTemplate implements Action
         private JourneyWhatsAppOutbound $outbound,
         private TenantGuard $tenantGuard,
         private JourneyTargetPeople $people,
+        private JourneyUndeliveredNotice $notice,
         private Log $log,
     ) {}
 
@@ -108,6 +110,8 @@ class SendWhatsAppTemplate implements Action
         $errors = [];
         /** @var array<string, list<string>> $missing person name => empty parameters */
         $missing = [];
+        /** @var array<string, string> $undelivered person name => reason, for the record's mural */
+        $undelivered = [];
         $sent = 0;
         $attempted = 0;
 
@@ -115,6 +119,7 @@ class SendWhatsAppTemplate implements Action
             $name = $this->outbound->displayName($person);
 
             if ($this->outbound->isOptedOut($person)) {
+                $undelivered[$name] = 'saiu do WhatsApp (opt-out)';
                 $this->log->warning(
                     'SendWhatsAppTemplate: opted out of WhatsApp, skipping ' .
                     $person->getEntityType() . '/' . $person->getId()
@@ -126,6 +131,7 @@ class SendWhatsAppTemplate implements Action
             $phones = $this->outbound->resolvePhones($person, $phoneOverride);
 
             if ($phones === []) {
+                $undelivered[$name] = 'sem celular';
                 $this->log->info(
                     'SendWhatsAppTemplate: no phone on ' . $person->getEntityType() . '/' . $person->getId()
                 );
@@ -145,6 +151,7 @@ class SendWhatsAppTemplate implements Action
             } catch (Throwable $e) {
                 $attempted += count($phones);
                 $errors[] = $name . ': ' . $e->getMessage();
+                $undelivered[$name] = 'erro ao montar a mensagem: ' . JourneyUndeliveredNotice::code($e->getMessage());
 
                 continue;
             }
@@ -157,6 +164,10 @@ class SendWhatsAppTemplate implements Action
 
             if ($empty !== []) {
                 $missing[$name] = $empty;
+                $undelivered[$name] = 'sem valor em ' . implode(', ', array_map(
+                    static fn (string $item) => JourneyUndeliveredNotice::code($item),
+                    $empty,
+                ));
 
                 continue;
             }
@@ -167,6 +178,9 @@ class SendWhatsAppTemplate implements Action
             foreach ($resolved as $num => $value) {
                 $content = str_replace('{{' . $num . '}}', $value, $content);
             }
+
+            $sentToPerson = 0;
+            $personError = null;
 
             foreach ($phones as $phone) {
                 try {
@@ -185,14 +199,27 @@ class SendWhatsAppTemplate implements Action
                         $resolvedHeader,
                     );
                     $sent++;
+                    $sentToPerson++;
                 } catch (Throwable $e) {
                     $errors[] = $name . ' ' . $phone . ': ' . $e->getMessage();
+                    $personError ??= $e->getMessage();
                     $this->log->error(
                         'SendWhatsAppTemplate failed for ' . $phone . ': ' . $e->getMessage()
                     );
                 }
             }
+
+            if ($sentToPerson === 0 && $personError !== null) {
+                $undelivered[$name] = 'falha no envio: ' . JourneyUndeliveredNotice::code(mb_substr($personError, 0, 200));
+            }
         }
+
+        $this->notice->post(
+            $context,
+            'O WhatsApp ' . JourneyUndeliveredNotice::code($templateName),
+            $undelivered,
+            count($people),
+        );
 
         if ($missing !== []) {
             $summary = JourneyTargetPeople::missingSummary($missing);

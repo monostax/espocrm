@@ -8,6 +8,7 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureJourney\Services\ActionContext;
 use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
+use Espo\Modules\FeatureJourney\Services\JourneyUndeliveredNotice;
 use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
 use Espo\ORM\Entity;
@@ -28,6 +29,7 @@ class SendWhatsAppMessage implements Action
         private JourneyWhatsAppOutbound $outbound,
         private TenantGuard $tenantGuard,
         private JourneyTargetPeople $people,
+        private JourneyUndeliveredNotice $notice,
         private Log $log,
     ) {}
 
@@ -80,11 +82,16 @@ class SendWhatsAppMessage implements Action
         ];
 
         $errors = [];
+        /** @var array<string, string> $undelivered person name => reason, for the record's mural */
+        $undelivered = [];
         $sent = 0;
         $attempted = 0;
 
         foreach ($people as $person) {
+            $name = $this->outbound->displayName($person);
+
             if ($this->outbound->isOptedOut($person)) {
+                $undelivered[$name] = 'saiu do WhatsApp (opt-out)';
                 $this->log->warning(
                     'SendWhatsAppMessage: opted out of WhatsApp, skipping ' .
                     $person->getEntityType() . '/' . $person->getId()
@@ -96,6 +103,7 @@ class SendWhatsAppMessage implements Action
             $phones = $this->outbound->resolvePhones($person, $phoneOverride);
 
             if ($phones === []) {
+                $undelivered[$name] = 'sem celular';
                 $this->log->info(
                     'SendWhatsAppMessage: no phone on ' . $person->getEntityType() . '/' . $person->getId()
                 );
@@ -104,21 +112,30 @@ class SendWhatsAppMessage implements Action
             }
 
             $attempted += count($phones);
-            $name = $this->outbound->displayName($person);
             $templatePerson = $person === $context->target ? null : $person;
+            $sentToPerson = 0;
+            $personError = null;
 
             foreach ($phones as $phone) {
                 try {
                     $this->sendOne($conn, $phone, $name, $body, $params, $context, $journeyContext, $templatePerson);
                     $sent++;
+                    $sentToPerson++;
                 } catch (Throwable $e) {
                     $errors[] = $name . ' ' . $phone . ': ' . $e->getMessage();
+                    $personError ??= $e->getMessage();
                     $this->log->error(
                         'SendWhatsAppMessage failed for ' . $phone . ': ' . $e->getMessage()
                     );
                 }
             }
+
+            if ($sentToPerson === 0 && $personError !== null) {
+                $undelivered[$name] = 'falha no envio: ' . JourneyUndeliveredNotice::code(mb_substr($personError, 0, 200));
+            }
         }
+
+        $this->notice->post($context, 'O WhatsApp', $undelivered, count($people));
 
         if ($attempted === 0) {
             $this->log->warning('SendWhatsAppMessage: no phone on any recipient, skipping.');

@@ -7,6 +7,7 @@ use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureJourney\Classes\JourneyActions\SendWhatsAppTemplate;
 use Espo\Modules\FeatureJourney\Services\ActionContext;
 use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
+use Espo\Modules\FeatureJourney\Services\JourneyUndeliveredNotice;
 use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
 use Espo\ORM\Entity;
@@ -20,6 +21,9 @@ class SendWhatsAppTemplateFanOutTest extends TestCase
 {
     /** @var list<array{phone: string, name: string, params: array<string, string>}> */
     private array $sent = [];
+
+    /** @var array<string, string> person name => reason posted on the record's mural */
+    private array $posted = [];
 
     public function testAccountSendsToEachContactWithTheirOwnName(): void
     {
@@ -60,6 +64,7 @@ class SendWhatsAppTemplateFanOutTest extends TestCase
         $this->action($outbound, $people)->run($this->context($account, []));
 
         $this->assertSame(['+5511900000003'], array_column($this->sent, 'phone'));
+        $this->assertSame(['Out' => 'saiu do WhatsApp (opt-out)', 'Nophone' => 'sem celular'], $this->posted);
     }
 
     public function testAContactWithAnEmptyParameterIsSkippedAndTheOthersStillGetIt(): void
@@ -76,6 +81,7 @@ class SendWhatsAppTemplateFanOutTest extends TestCase
         $this->action($outbound, $people)->run($this->context($account, []));
 
         $this->assertSame(['+5511900000003'], array_column($this->sent, 'phone'));
+        $this->assertSame(['Sem nome' => 'sem valor em `{{1}}={{contact.firstName}}`'], $this->posted);
     }
 
     public function testWhenNobodyHasTheValueTheActionFailsNamingTheField(): void
@@ -156,10 +162,18 @@ class SendWhatsAppTemplateFanOutTest extends TestCase
 
     private function action(JourneyWhatsAppOutbound $outbound, JourneyTargetPeople $people): SendWhatsAppTemplate
     {
+        $notice = $this->createStub(JourneyUndeliveredNotice::class);
+        $notice->method('post')->willReturnCallback(
+            function ($context, string $what, array $missed) {
+                $this->posted = $missed;
+            }
+        );
+
         return new SendWhatsAppTemplate(
             $outbound,
             $this->createStub(TenantGuard::class),
             $people,
+            $notice,
             $this->createStub(Log::class),
         );
     }
