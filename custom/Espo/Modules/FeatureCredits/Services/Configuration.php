@@ -49,7 +49,7 @@ final class Configuration
                 'provider' => $policy->rate->provider, 'model' => $policy->rate->model,
                 'multiplier' => (string) $policy->rate->multiplier,
                 'inputTokenBound' => $policy->inputTokenBound, 'outputTokenLimit' => $policy->outputTokenLimit,
-                'boundProfile' => $policy->boundProfile,
+                'boundProfile' => $policy->boundProfile, 'formula' => $policy->rate->formula,
             ]];
         }
         $q = $pdo->prepare('SELECT r.version, r.effective_from, r.effective_until, r.currency,

@@ -61,19 +61,33 @@ final class Outcomes
                 throw new Conflict('Conflicting terminal request outcome.');
             }
 
+            $snapshot = json_decode($request['pricing_snapshot'], true, 512, JSON_THROW_ON_ERROR);
+            $pricesCacheWrites = ($snapshot['formula'] ?? null) === AiRate::FORMULA_V2;
+            // v1 never priced cache writes: accept no field or an explicit zero only. v2
+            // requires the field on every report so an omission can never read as zero.
+            if ($pricesCacheWrites ? !$input->reportsCacheWrites
+                : $input->reportsCacheWrites && $input->cacheWriteInputTokens !== 0) {
+                throw new Conflict($pricesCacheWrites ? 'This policy requires explicit cache-write metering.'
+                    : 'Cache-write input is not priced by this request policy.');
+            }
             $price = null;
             if ($input->measured()) {
-                $snapshot = json_decode($request['pricing_snapshot'], true, 512, JSON_THROW_ON_ERROR);
-                $rate = new AiRate($snapshot['id'], $snapshot['provider'], $snapshot['model'], $snapshot['multiplier']);
+                try {
+                    $rate = new AiRate($snapshot['id'], $snapshot['provider'], $snapshot['model'], $snapshot['multiplier'],
+                        $snapshot['formula']);
+                } catch (\InvalidArgumentException) {
+                    throw new Conflict('Unsupported applied pricing snapshot.');
+                }
                 foreach ($rate->jsonSerialize() as $key => $value) {
-                    if ($snapshot[$key] !== $value) {
+                    if (!array_key_exists($key, $snapshot) || $snapshot[$key] !== $value) {
                         throw new Conflict('Unsupported applied pricing snapshot.');
                     }
                 }
                 if ($snapshot['provider'] !== $request['provider'] || $snapshot['model'] !== $request['model']) {
                     throw new Conflict('Request pricing identity mismatch.');
                 }
-                $price = (new AiPricing())->request($rate, $input->inputTokens, $input->cachedInputTokens, $input->outputTokens);
+                $price = (new AiPricing())->request($rate, $input->inputTokens, $input->cachedInputTokens, $input->outputTokens,
+                    $pricesCacheWrites ? $input->cacheWriteInputTokens : 0);
                 // Only the explicitly selected native-search policy permits a
                 // measured overrun. Other provider-bound violations remain closed.
                 if ($input->outcome !== 'infrastructureFailure' && !NativeSearchDebt::permitted($snapshot) &&
@@ -92,7 +106,8 @@ final class Outcomes
                 ->execute([$input->outcome, $input->measured() ? 'measured' : 'unknown', $billing,
                     $waived ? 'infrastructure_failure' : null, $exact,
                     json_encode(['inputTokens' => $input->inputTokens, 'cachedInputTokens' => $input->cachedInputTokens,
-                        'outputTokens' => $input->outputTokens], JSON_THROW_ON_ERROR),
+                        'outputTokens' => $input->outputTokens] +
+                        ($input->reportsCacheWrites ? ['cacheWriteInputTokens' => $input->cacheWriteInputTokens] : []), JSON_THROW_ON_ERROR),
                     json_encode($payload['evidence'], JSON_THROW_ON_ERROR), $input->providerRequestId,
                     $request['completed_at'] ?? $now, json_encode($history, JSON_THROW_ON_ERROR), $input->requestId]);
             $query = $pdo->prepare('SELECT * FROM credit_request WHERE reservation_id = ?');

@@ -40,6 +40,8 @@ $entry = [
     'inputTokenBound' => $approvedConservativeInputCeiling,
     'outputTokenLimit' => $enforcedTotalOutputCeiling,
     'boundProfile' => $versionedProviderAdapterProfile,
+    // Optional; absent = 'ai-per-10000-v1'. 'ai-per-10000-v2' also prices cache writes.
+    'formula' => 'ai-per-10000-v2',
 ];
 $policy = new \Espo\Modules\FeatureCredits\Pricing\AiModelPolicy($entry);
 // Configuration::publishModel((object) $entry) stores the version and returns
@@ -48,6 +50,8 @@ $policy = new \Espo\Modules\FeatureCredits\Pricing\AiModelPolicy($entry);
 
 The reference hashes an ordered `ai-model-policy-v1` tuple containing provider,
 model, formula/base rates, normalized exact multiplier, both ceilings, and profile.
+v1 references are frozen; `ai-per-10000-v2` policies hash an `ai-model-policy-v2`
+tuple that adds the cache-write rate. See `components/crm/docs/ai-credit-cache-writes.md`.
 Changing any financial/bound identity requires a new reference; editing an entry
 under an old reference fails closed. Missing entries, unsafe/nonpositive integer
 ceilings, malformed identities/multipliers, extra fields, and amount overflow are
@@ -115,6 +119,9 @@ All terminal commands require string fields `operation`, `billingRegime` (exactl
 `outcome` additionally requires the persisted CRM `requestId` (not request key or
 provider ID), terminal `outcome`, `inputTokens`, `cachedInputTokens`, `outputTokens`,
 and nonempty object `evidence`. `providerRequestId` is an optional string/null.
+`cacheWriteInputTokens` is optional: absent keeps the v1 wire and canonical hash;
+`ai-per-10000-v2` requests require it (safe integer or null), v1 requests accept
+only absent or `0`. Cached plus written input cannot exceed `inputTokens`.
 Token counts must be explicit nonnegative safe integers or null. Output already
 includes reasoning exactly once; missing/unknown metering must never become zero.
 Successful, cancelled, superseded, and infrastructure-failed requests retain the

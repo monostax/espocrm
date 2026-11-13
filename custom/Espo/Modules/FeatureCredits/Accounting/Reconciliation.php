@@ -64,6 +64,7 @@ final class Reconciliation
                 if ($terminal->outcome->hash !== ($outcome['initial']['hash'] ?? null) || isset($outcome['resolution']) ||
                     $facts->requestId !== $request['id'] || $facts->outcome !== $request['outcome'] ||
                     $facts->inputTokens !== null || $facts->outputTokens !== null || $facts->cachedInputTokens !== null ||
+                    ($facts->cacheWriteInputTokens ?? null) !== null ||
                     ($facts->providerRequestId ?? null) !== null || ($facts->evidence->source ?? null) !== 'vercel-ai-sdk-v4' ||
                     ($facts->evidence->completion ?? null) !== 'stream-open-error' || ($facts->evidence->dispatched ?? null) !== true ||
                     ($facts->evidence->requestHash ?? null) !== $intent->requestHash) continue;

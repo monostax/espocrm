@@ -25,7 +25,8 @@ final readonly class TerminalInput
         if ($input->billingRegime !== ExecutionRouting::UNIFIED || !in_array($input->operation, ['outcome', 'settle', 'release'], true)) {
             throw new InvalidArgumentException('A unified terminal operation is required.');
         }
-        $outcomeFields = ['requestId', 'outcome', 'inputTokens', 'cachedInputTokens', 'outputTokens', 'evidence', 'providerRequestId'];
+        $outcomeFields = ['requestId', 'outcome', 'inputTokens', 'cachedInputTokens', 'outputTokens', 'evidence', 'providerRequestId',
+            'cacheWriteInputTokens'];
         $allowed = $input->operation === 'outcome' ? [...$common, ...$outcomeFields] : $common;
         if (array_diff(array_keys(get_object_vars($input)), $allowed)) throw new InvalidArgumentException('Unexpected terminal command fields.');
         GrantInput::identity($input->tenantId);
@@ -44,6 +45,12 @@ final readonly class TerminalInput
                 throw new InvalidArgumentException('Explicit safe integer or null metering is required.');
             }
         }
+        // Optional: absent keeps the v1 wire; present must be an explicit safe integer or null (unknown).
+        if (property_exists($input, 'cacheWriteInputTokens') && $input->cacheWriteInputTokens !== null &&
+            (!is_int($input->cacheWriteInputTokens) || $input->cacheWriteInputTokens < 0 ||
+                $input->cacheWriteInputTokens > 9007199254740991)) {
+            throw new InvalidArgumentException('Explicit safe integer or null metering is required.');
+        }
         if (!is_string($input->requestId ?? null) || !is_string($input->outcome ?? null) ||
             !($input->evidence ?? null) instanceof stdClass ||
             (isset($input->providerRequestId) && !is_string($input->providerRequestId))) {
@@ -51,6 +58,7 @@ final readonly class TerminalInput
         }
         $this->outcome = new OutcomeInput($this->tenantId, $this->usageId, $this->execution->executionId,
             $input->requestId, $input->outcome, $input->inputTokens, $input->cachedInputTokens, $input->outputTokens,
-            $input->evidence, $input->providerRequestId ?? null);
+            $input->evidence, $input->providerRequestId ?? null,
+            property_exists($input, 'cacheWriteInputTokens') ? $input->cacheWriteInputTokens : false);
     }
 }

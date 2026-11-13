@@ -39,7 +39,9 @@ final readonly class RequestInput
             throw new InvalidArgumentException('Valid provider/model and enforced token bounds are required.');
         }
         // Assume no cache discount. Output includes all billable reasoning tokens.
-        $this->credits = (string) Amount::reservation((new AiPricing())->request($rate, $inputTokenBound, 0, $outputTokenLimit));
+        // v2: every input token may be a (dearer) cache write, so hold the bound at the write rate.
+        $this->credits = (string) Amount::reservation((new AiPricing())->request($rate, $inputTokenBound, 0, $outputTokenLimit,
+            $rate->pricesCacheWrites() ? $inputTokenBound : 0));
         $snapshot = $rate->jsonSerialize();
         $snapshot['multiplier'] = (string) $rate->multiplier->strippedOfTrailingZeros();
         $snapshot['inputTokenBound'] = $inputTokenBound;

@@ -127,7 +127,8 @@ final readonly class DispatchInput
     public static function terminal(stdClass $scope, stdClass $facts): TerminalInput
     {
         // Validate facts separately: they must not override ownership fields.
-        $allowed = ['requestId', 'outcome', 'inputTokens', 'cachedInputTokens', 'outputTokens', 'evidence', 'providerRequestId'];
+        $allowed = ['requestId', 'outcome', 'inputTokens', 'cachedInputTokens', 'outputTokens', 'evidence', 'providerRequestId',
+            'cacheWriteInputTokens'];
         if (array_diff(array_keys(get_object_vars($facts)), $allowed)) throw new InvalidArgumentException('Unexpected outcome fields.');
         return new TerminalInput((object) [...get_object_vars($scope), ...get_object_vars($facts), 'operation' => 'outcome']);
     }

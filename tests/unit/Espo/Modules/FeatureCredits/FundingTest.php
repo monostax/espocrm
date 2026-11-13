@@ -59,6 +59,7 @@ require_once __DIR__ . '/LegacyMigrationCases.php';
 require_once __DIR__ . '/WorkspaceCases.php';
 require_once __DIR__ . '/AiUsageReportingCases.php';
 require_once __DIR__ . '/RequestHoldsCases.php';
+require_once __DIR__ . '/CacheWriteCases.php';
 
 class FundingTest extends TestCase
 {
@@ -89,6 +90,7 @@ class FundingTest extends TestCase
     use WorkspaceCases;
     use AiUsageReportingCases;
     use RequestHoldsCases;
+    use CacheWriteCases;
 
     private string $now = '2026-10-10 12:00:00';
 

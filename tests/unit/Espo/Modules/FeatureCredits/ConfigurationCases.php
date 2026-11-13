@@ -120,7 +120,7 @@ trait ConfigurationCases
             $this->assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM tenant_credit_billing_rate')->fetchColumn());
             $original = $service->inspect('model', $model['id']);
             $this->assertSame($model['id'], $original['id']);
-            $this->assertSame((array) $definition, $original['data']);
+            $this->assertSame([...(array) $definition, 'formula' => 'ai-per-10000-v1'], $original['data']);
             $original = $service->inspect('agreement', $rate['id'], 'tenant');
             $this->assertSame('0.50000000', $original['data']['creditUnitPrice']);
             $this->assertSame('0.0000', $original['data']['monthlyCredits']);

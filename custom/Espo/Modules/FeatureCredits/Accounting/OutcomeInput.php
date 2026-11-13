@@ -12,6 +12,10 @@ final readonly class OutcomeInput
 {
     public string $json;
     public string $hash;
+    /** Null is unknown cache-write metering, never zero. */
+    public ?int $cacheWriteInputTokens;
+    /** False: the worker sent no cache-write field (the original v1 wire and canonical form). */
+    public bool $reportsCacheWrites;
 
     public function __construct(
         public string $tenantId,
@@ -24,7 +28,10 @@ final readonly class OutcomeInput
         public ?int $outputTokens,
         stdClass $evidence,
         public ?string $providerRequestId = null,
+        int|false|null $cacheWriteInputTokens = false,
     ) {
+        $this->reportsCacheWrites = $cacheWriteInputTokens !== false;
+        $this->cacheWriteInputTokens = $cacheWriteInputTokens === false ? null : $cacheWriteInputTokens;
         foreach ([$tenantId, $usageId, $requestId] as $id) {
             GrantInput::identity($id);
         }
@@ -32,7 +39,7 @@ final readonly class OutcomeInput
             !in_array($outcome, ['success', 'cancelled', 'superseded', 'infrastructureFailure'], true)) {
             throw new InvalidArgumentException('Valid execution identity and terminal AI outcome required.');
         }
-        foreach ([$inputTokens, $cachedInputTokens, $outputTokens] as $tokens) {
+        foreach ([$inputTokens, $cachedInputTokens, $outputTokens, $this->cacheWriteInputTokens] as $tokens) {
             if ($tokens !== null && $tokens < 0) {
                 throw new InvalidArgumentException('Token counts must be nonnegative or unknown.');
             }
@@ -40,23 +47,34 @@ final readonly class OutcomeInput
         if ($cachedInputTokens !== null && $inputTokens !== null && $cachedInputTokens > $inputTokens) {
             throw new InvalidArgumentException('Cached input cannot exceed total input.');
         }
+        if ($this->cacheWriteInputTokens !== null && $inputTokens !== null &&
+            $this->cacheWriteInputTokens + ($cachedInputTokens ?? 0) > $inputTokens) {
+            throw new InvalidArgumentException('Cached and cache-written input cannot exceed total input.');
+        }
         if ($providerRequestId !== null && (trim($providerRequestId) === '' || strlen($providerRequestId) > 128)) {
             throw new InvalidArgumentException('Invalid provider request identity.');
         }
         if (get_object_vars($evidence) === []) {
             throw new InvalidArgumentException('Authoritative outcome evidence is required.');
         }
-        $this->json = json_encode(GrantInput::canonical((object) [
-            'version' => 'ai-outcome-v1', 'tenantId' => $tenantId, 'usageId' => $usageId,
+        // A report without the cache-write field keeps the original v1 canonical form and hash.
+        $canonical = [
+            'version' => $this->reportsCacheWrites ? 'ai-outcome-v2' : 'ai-outcome-v1', 'tenantId' => $tenantId, 'usageId' => $usageId,
             'executionId' => $executionId, 'requestId' => $requestId, 'outcome' => $outcome,
             'inputTokens' => $inputTokens, 'cachedInputTokens' => $cachedInputTokens, 'outputTokens' => $outputTokens,
             'providerRequestId' => $providerRequestId, 'evidence' => $evidence,
-        ]), JSON_THROW_ON_ERROR);
+        ];
+        if ($this->reportsCacheWrites) {
+            $canonical['cacheWriteInputTokens'] = $this->cacheWriteInputTokens;
+        }
+        $this->json = json_encode(GrantInput::canonical((object) $canonical), JSON_THROW_ON_ERROR);
         $this->hash = hash('sha256', $this->json);
     }
 
+    /** A reported-but-unknown cache-write count leaves the request unmeasured. */
     public function measured(): bool
     {
-        return $this->inputTokens !== null && $this->cachedInputTokens !== null && $this->outputTokens !== null;
+        return $this->inputTokens !== null && $this->cachedInputTokens !== null && $this->outputTokens !== null &&
+            (!$this->reportsCacheWrites || $this->cacheWriteInputTokens !== null);
     }
 }

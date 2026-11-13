@@ -13,21 +13,32 @@ use InvalidArgumentException;
 final class AiPricing
 {
     /**
-     * Input includes cached input; normalized output already includes reasoning.
-     * Null is unknown metering, never zero. The returned charge is NOT rounded.
+     * Input includes cached and cache-written input; normalized output already
+     * includes reasoning. Null is unknown metering, never zero. Cache writes are
+     * priced only by the v2 formula; a v1 rate accepts zero writes only.
+     * The returned charge is NOT rounded.
      */
-    public function request(AiRate $rate, ?int $input, ?int $cachedInput, ?int $output): BigDecimal
+    public function request(AiRate $rate, ?int $input, ?int $cachedInput, ?int $output, ?int $cacheWriteInput = 0): BigDecimal
     {
-        if ($input === null || $cachedInput === null || $output === null) {
+        if ($input === null || $cachedInput === null || $output === null || $cacheWriteInput === null) {
             throw new DomainException('Incomplete usage requires reconciliation.');
         }
-        if ($input < 0 || $cachedInput < 0 || $output < 0 || $cachedInput > $input) {
+        if ($input < 0 || $cachedInput < 0 || $output < 0 || $cacheWriteInput < 0 || $cachedInput > $input ||
+            $cacheWriteInput > $input - $cachedInput) {
             throw new InvalidArgumentException('Invalid normalized token counts.');
         }
+        if ($cacheWriteInput > 0 && !$rate->pricesCacheWrites()) {
+            throw new InvalidArgumentException('Cache-write input is not priced by this rate.');
+        }
 
-        return BigDecimal::of($input - $cachedInput)->multipliedBy(AiRate::UNCACHED_INPUT)
-            ->plus(BigDecimal::of($cachedInput)->multipliedBy(AiRate::CACHED_INPUT))
-            ->plus(BigDecimal::of($output)->multipliedBy(AiRate::OUTPUT))
+        $units = BigDecimal::of($input - $cachedInput - $cacheWriteInput)->multipliedBy(AiRate::UNCACHED_INPUT)
+            ->plus(BigDecimal::of($cachedInput)->multipliedBy(AiRate::CACHED_INPUT));
+        // v1 arithmetic (and so its exact decimal scale) is unchanged.
+        if ($rate->pricesCacheWrites()) {
+            $units = $units->plus(BigDecimal::of($cacheWriteInput)->multipliedBy(AiRate::CACHE_WRITE_INPUT));
+        }
+
+        return $units->plus(BigDecimal::of($output)->multipliedBy(AiRate::OUTPUT))
             ->multipliedBy($rate->multiplier)
             ->dividedByExact(AiRate::TOKENS_PER_UNIT);
     }
