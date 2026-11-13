@@ -35,6 +35,7 @@ use Espo\Entities\User;
 use Espo\Modules\Crm\Entities\Account;
 use Espo\Modules\Crm\Entities\Contact;
 use Espo\Modules\Crm\Entities\Lead;
+use Espo\Modules\Global\Tools\CustomField\ReceiverTemplateData;
 use Espo\Modules\Global\Tools\CustomField\TemplateBridge;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -72,6 +73,7 @@ class Processor extends CoreProcessor
         private PlaceholdersProvider $placeholdersProvider,
         private EntityMapProvider $entityMapProvider,
         private TemplateBridge $templateBridge,
+        private ReceiverTemplateData $receiverTemplateData,
     ) {
         parent::__construct(
             $formatter,
@@ -124,12 +126,26 @@ class Processor extends CoreProcessor
                 if ($handlebarsInSubject || $handlebarsInBody) {
                     $htmlizer = $this->createHtmlizer($params, $user);
 
+                    // {{contact.*}} is the receiver the caller pinned (a journey's recipient),
+                    // not the record's own `contact` link; paths stay relative to the record.
+                    $receiver = $data->getEntityHash()['Contact'] ?? null;
+                    $extra = null;
+
+                    if ($receiver instanceof Entity && ReceiverTemplateData::usesReceiver($subject . ' ' . $body)) {
+                        $extra = $this->receiverTemplateData->build(
+                            $parent,
+                            $receiver,
+                            $subject . ' ' . $body,
+                            $params->applyAcl() ? $user : null,
+                        );
+                    }
+
                     if ($handlebarsInSubject) {
-                        $subject = $htmlizer->render($parent, $subject);
+                        $subject = $htmlizer->render($parent, $subject, $extra, $extra !== null);
                     }
 
                     if ($handlebarsInBody) {
-                        $body = $htmlizer->render($parent, $body, null, false, true);
+                        $body = $htmlizer->render($parent, $body, $extra, $extra !== null, true);
                     }
                 }
             }

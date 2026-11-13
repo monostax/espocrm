@@ -19,6 +19,7 @@ use Espo\Modules\FeatureJourney\Services\ActionContext;
 use Espo\Modules\FeatureJourney\Services\JourneyEmailToken;
 use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\Modules\Global\Tools\CustomField\ReceiverTemplateData;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\Repositories\EmailAddress as EmailAddressRepository;
@@ -39,6 +40,7 @@ class SendEmail implements Action
         private EmailSender $emailSender,
         private TenantGuard $tenantGuard,
         private JourneyTargetPeople $people,
+        private ReceiverTemplateData $receiverTemplateData,
         private EmailTemplateService $emailTemplateService,
         private RecordServiceContainer $recordServiceContainer,
         private GroupAccountFactory $groupAccountFactory,
@@ -105,8 +107,13 @@ class SendEmail implements Action
             $tenantId,
         );
 
+        $templateText = '';
+
         if ($emailTemplateId) {
             $this->tenantGuard->assertEmailTemplateInTenant($emailTemplateId, $tenantId);
+
+            $template = $this->entityManager->getEntityById('EmailTemplate', $emailTemplateId);
+            $templateText = $template ? $template->get('subject') . ' ' . $template->get('body') : '';
 
             try {
                 $this->recordServiceContainer
@@ -172,8 +179,18 @@ class SendEmail implements Action
                 $templateIsHtml = $result->isHtml();
                 $attachmentList = $result->getAttachmentList();
 
-                // Never send "{Account.customFields.x}" as text: leave this person out.
-                $unfilled = JourneyTargetPeople::unresolvedPlaceholders($templateSubject . ' ' . $templateBody);
+                // Never send "{Account.customFields.x}" as text or a blank {{contact.firstName}}:
+                // leave this person out.
+                $unfilled = [
+                    ...JourneyTargetPeople::unresolvedPlaceholders($templateSubject . ' ' . $templateBody),
+                    ...(str_contains($templateText, '{{')
+                        ? $this->receiverTemplateData->emptyExpressions(
+                            $context->target,
+                            $person->getEntityType() === 'Contact' ? $person : null,
+                            $templateText,
+                        )
+                        : []),
+                ];
 
                 if ($unfilled !== []) {
                     $missing[(string) ($person->get('name') ?: $person->getId())] = $unfilled;

@@ -92,7 +92,7 @@ class SendWhatsAppTemplateFanOutTest extends TestCase
             $this->action($outbound, $people)->run($this->context($account, []));
             $this->fail('Expected the action to fail.');
         } catch (Error $e) {
-            $this->assertSame('Sem valor: {{1}}={{Contact.firstName}} (Sem nome)', $e->getMessage());
+            $this->assertSame('Sem valor: {{1}}={{contact.firstName}} (Sem nome)', $e->getMessage());
         }
 
         $this->assertSame([], $this->sent);
@@ -180,7 +180,7 @@ class SendWhatsAppTemplateFanOutTest extends TestCase
                 'templateName' => 'golden_sun_a',
                 'templateLanguage' => 'pt_BR',
                 'templateBody' => 'Oi {{1}}! Post {{2}}',
-                'parameterMapping' => ['1' => '{{Contact.firstName}}', '2' => '{{name}}'],
+                'parameterMapping' => ['1' => '{{contact.firstName}}', '2' => '{{name}}'],
             ],
             't1',
         );

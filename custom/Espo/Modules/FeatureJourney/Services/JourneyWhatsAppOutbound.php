@@ -494,9 +494,11 @@ class JourneyWhatsAppOutbound
     /**
      * Resolve WhatsAppCampaign-style handlebars mapping against the journey target.
      *
-     * `$person` is who this message goes to (see {@see JourneyTargetPeople}); it is
-     * exposed as `{{Contact.*}}` (its own type) and `{{Person.*}}`. A Contact, Lead or
-     * User target is its own person.
+     * Paths are relative to the journey's record (`{{name}}`, `{{account.name}}`,
+     * `{{customFields.x}}`). `{{contact.*}}` is the receiver: `$person`, one of the
+     * record's contacts (see {@see JourneyTargetPeople}), not an Opportunity's
+     * primary-contact link. A Contact, Lead or User target is its own receiver.
+     * `{{Contact.*}}` / `{{Person.*}}` still work for older mappings.
      *
      * @param array<string, mixed>|object $parameterMapping
      * @return array<string, string>
@@ -556,6 +558,11 @@ class JourneyWhatsAppOutbound
                         continue;
                     }
 
+                    // {{contact.*}} is the receiver, set below.
+                    if ($relation === 'contact' && $person?->getEntityType() === 'Contact') {
+                        continue;
+                    }
+
                     $needsSkipRelations = true;
 
                     try {
@@ -584,6 +591,16 @@ class JourneyWhatsAppOutbound
 
                 foreach (array_keys(JourneyTargetPeople::templateEntities($person)) as $key) {
                     $extraData[$key] = $personData;
+                }
+
+                if ($person->getEntityType() === 'Contact') {
+                    $extraData['contact'] = $personData;
+
+                    // Keep the renderer from loading the record's own `contact` link over it;
+                    // every other link the mapping uses was loaded above.
+                    if (str_contains($joinedExpressions, '{{contact.')) {
+                        $needsSkipRelations = true;
+                    }
                 }
             }
 

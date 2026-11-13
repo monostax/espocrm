@@ -14,6 +14,7 @@ use Espo\Core\Templates\Controllers\Base;
 use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
 use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\Modules\Global\Tools\CustomField\ReceiverTemplateData;
 use Espo\Tools\EmailTemplate\Params as EmailTemplateParams;
 use Espo\Tools\EmailTemplate\Service as EmailTemplateService;
 use stdClass;
@@ -178,8 +179,22 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
                 continue;
             }
 
+            $templateText = $template->get('subject') . ' ' . $template->get('body');
+            /** @var ReceiverTemplateData $receiverData */
+            $receiverData = $this->injectableFactory->create(ReceiverTemplateData::class);
+            $unresolved = [
+                ...$this->unresolvedPlaceholders(($map->subject ?? '') . ' ' . ($map->body ?? '')),
+                ...(str_contains($templateText, '{{')
+                    ? $receiverData->emptyExpressions(
+                        $target,
+                        $person->getEntityType() === 'Contact' ? $person : null,
+                        $templateText,
+                    )
+                    : []),
+            ];
+
             $previews[] = $this->personRef($outbound, $person) + [
-                'unresolved' => $this->unresolvedPlaceholders(($map->subject ?? '') . ' ' . ($map->body ?? '')),
+                'unresolved' => $unresolved,
                 'subject' => $map->subject ?? null,
                 'body' => $map->body ?? null,
                 'isHtml' => (bool) ($map->isHtml ?? true),
