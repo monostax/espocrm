@@ -87,6 +87,18 @@ class AssistantTest extends TestCase
         ], $this->sent);
     }
 
+    public function testOnlyThePersonsOwnWhatsAppTurnInTheirMainChatCanSwitchWorkspace(): void
+    {
+        $turn = $this->assistant($this->world())->turn('user1', 'source1');
+        $this->assertSame(['text' => 'Qual o faturamento?', 'messageId' => 501], ['text' => $turn['text'], 'messageId' => $turn['messageId']]);
+        $this->assertSame('sub1', $turn['subscription']->getId());
+        $this->assertNull($this->assistant($this->world())->turn('someoneElse', 'source1'));
+        $this->assertNull($this->assistant($this->world(['source' => (object) []]))->turn('user1', 'source1'));
+        $this->assertNull($this->assistant($this->world(['primarySlot' => null]))->turn('user1', 'source1'));
+        $this->assertNull($this->assistant($this->world(['subscriptionStatus' => 'stopped']))->turn('user1', 'source1'));
+        $this->assertNull($this->assistant($this->world(['lastInboundAt' => gmdate('Y-m-d H:i:s', time() - 90000)]))->turn('user1', 'source1'));
+    }
+
     public function testAVeryLongAnswerEndsWithALinkToTheChat(): void
     {
         $long = implode("\n\n", array_fill(0, 5, str_repeat('a', 3000)));
@@ -108,7 +120,7 @@ class AssistantTest extends TestCase
         return $entity;
     }
 
-    private function note(string $id, string $parentId, object $data, string $post = '', string $createdById = 'user1'): Note
+    private function note(string $id, string $parentId, object $data, string $post = 'Qual o faturamento?', string $createdById = 'user1'): Note
     {
         $note = $this->createMock(Note::class);
         $note->method('getId')->willReturn($id);
@@ -137,7 +149,8 @@ class AssistantTest extends TestCase
             'Note' => $source,
             'ChatwootAccountUserMembership' => $this->entity('kibu', ['name' => $overrides['agentName'] ?? '✦ IA - Kibu']),
             'User' => $this->entity('aiUser', ['name' => $overrides['aiUserName'] ?? 'IA - Kibu']),
-            'AiSession' => $this->entity('session1', ['assignedUserId' => $overrides['sessionOwner'] ?? 'user1', 'chatwootAccountId' => 'account1']),
+            'AiSession' => $this->entity('session1', ['assignedUserId' => $overrides['sessionOwner'] ?? 'user1', 'chatwootAccountId' => 'account1',
+                'primarySlot' => array_key_exists('primarySlot', $overrides) ? $overrides['primarySlot'] : 'main']),
             'WhatsAppNotificationSubscription' => $this->entity('sub1', [
                 'status' => $overrides['subscriptionStatus'] ?? 'active', 'userId' => $overrides['subscriptionUser'] ?? 'user1',
                 'chatwootAccountId' => $overrides['subscriptionAccount'] ?? 'account1', 'phone' => '+5591999990000',

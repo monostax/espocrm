@@ -232,8 +232,32 @@ class Inbound
         ]);
     }
 
+    /**
+     * The AI's switch_workspace, for a person who asked from WhatsApp for another of their workspaces: with one other,
+     * their message goes straight to its AI; with more, the picker goes out (buttons) and the message waits for the tap.
+     * The asking workspace's AI learns only the outcome, never the other workspaces.
+     *
+     * @return 'switched'|'picker_sent'|'single'
+     */
+    public function offerWorkspaces(Entity $subscription, string $text, int $messageId, string $key): string
+    {
+        $others = array_values(array_filter($this->subscriptions->activeForPhone((string) $subscription->get('phone')),
+            fn (Entity $each) => $each->getId() !== $subscription->getId()));
+        if (!$others) return 'single';
+        if (count($others) === 1) {
+            $this->assistant->ask($others[0], $text, $messageId);
+            return 'switched';
+        }
+        foreach ($others as $each) {
+            Sessions::setPending($each, $text, $messageId);
+            $this->em->saveEntity($each, ['silent' => true]);
+        }
+        $this->choose($others, 'choose.ai', $key);
+        return 'picker_sent';
+    }
+
     /** @param list<Entity> $subscriptions one number in several workspaces: which deck, or which AI? */
-    private function choose(array $subscriptions, string $copy = 'choose'): void
+    private function choose(array $subscriptions, string $copy = 'choose', ?string $key = null): void
     {
         $first = $subscriptions[0];
         $language = $this->workspaces->of($first)['language'];
@@ -242,7 +266,7 @@ class Inbound
             $items[] = [$this->workspaces->of($subscription)['name'] ?: '—', $this->tokens->subscription($subscription->getId(), 'w')];
         }
         // Two or three workspaces fit reply buttons; more become a list.
-        $this->avisos->buttons($first, 'reply', Copy::t($language, $copy), $items);
+        $this->avisos->buttons($first, 'reply', Copy::t($language, $copy), $items, null, $key);
     }
 
     private function markTapped(Entity $subscription, ?Entity $card): void

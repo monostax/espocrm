@@ -64,6 +64,27 @@ class Assistant
         $this->avisos->typing($subscription);
     }
 
+    /**
+     * A WhatsApp turn of this person in their main chat, still theirs: the subscription it came through (active, theirs,
+     * same workspace, window open), its text and the WhatsApp message. Null when any of that doesn't hold.
+     *
+     * @return ?array{subscription: Entity, text: string, messageId: int}
+     */
+    public function turn(string $userId, string $noteId): ?array
+    {
+        $note = $this->em->getEntityById('Note', $noteId);
+        if (!$note instanceof Note || $note->getParentType() !== 'AiSession' || $note->getCreatedById() !== $userId ||
+            $note->get('opportunityPostDeleted')) return null;
+        $origin = $note->getData();
+        $session = $this->em->getEntityById('AiSession', (string) $note->getParentId());
+        $subscription = ($origin->aiSessionChannel ?? null) === self::CHANNEL
+            ? $this->em->getEntityById('WhatsAppNotificationSubscription', (string) ($origin->whatsAppSubscriptionId ?? '')) : null;
+        if (!$session || !Primary::is($session) || $session->get('assignedUserId') !== $userId || !$subscription ||
+            $subscription->get('status') !== 'active' || $subscription->get('userId') !== $userId ||
+            $subscription->get('chatwootAccountId') !== $session->get('chatwootAccountId') || !Avisos::windowOpen($subscription)) return null;
+        return ['subscription' => $subscription, 'text' => (string) $note->getPost(), 'messageId' => (int) ($origin->whatsAppMessageId ?? 0)];
+    }
+
     /** The agent's finished answer to a WhatsApp turn, back to the number that asked. */
     public function reply(Note $reply): void
     {

@@ -40,6 +40,7 @@ When the agent's reply finishes (completed, failed, or blocked for credits), the
 
 - "em dia", "próximo" (and "cards") still open the deck; these and "trocar" are the only command words, matched exactly (`Inbound::command`).
 - With one number in several workspaces, text goes to the workspace of our last message to the person when it went out in the last 30 minutes (`Inbound::lastMessaged`, from the delivery log), else to the one whose AI they last talked to (`session.aiAt`). The first time, or after "trocar", they choose one and the waiting text (`session.pending`, 1 hour) goes there.
+- "Quero falar da outra empresa": in the main chat, on a WhatsApp turn, the agent has `switch_workspace` (backend `code-mode/session-agent.ts`). It calls `POST WhatsAppNotifications/switchWorkspace` as the person (`WhatsAppAssistant`, which checks the turn with `Assistant::turn`). With one other workspace on the number, the message goes straight to that workspace's AI (`Inbound::offerWorkspaces`). With more, the picker of the others goes out and the message waits for the tap. The asking workspace's agent learns only `switched` / `picker_sent` / `single`, never the other workspaces.
 - Voice notes and pictures without a caption get "por enquanto só entendo texto".
 - A frozen workspace answers that the AI is paused; a person without an AI agent gets `ai.unavailable`.
 

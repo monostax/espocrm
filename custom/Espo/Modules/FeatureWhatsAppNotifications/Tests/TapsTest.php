@@ -306,6 +306,41 @@ class TapsTest extends TestCase
             ->handle($this->incoming(735, 'E esse aí?'), 'acct6');
     }
 
+    public function testSwitchWorkspaceWithOneOtherSendsTheMessageStraightThere(): void
+    {
+        $asking = $this->subscription('sub1');
+        $other = $this->subscription('sub2');
+        $assistant = $this->createMock(Assistant::class);
+        $assistant->expects($this->once())->method('ask')->with($other, 'Qual o faturamento?', 801);
+        $this->assertSame('switched', $this->inbound([$asking, $other], $this->createMock(Taps::class), $assistant)
+            ->offerWorkspaces($asking, 'Qual o faturamento?', 801, 'workspaces:n1'));
+    }
+
+    public function testSwitchWorkspaceWithSeveralShowsTheOthersAndTheMessageWaits(): void
+    {
+        [$asking, $second, $third] = [$this->subscription('sub1'), $this->subscription('sub2'), $this->subscription('sub3')];
+        $assistant = $this->createMock(Assistant::class);
+        $assistant->expects($this->never())->method('ask');
+        $avisos = $this->createMock(Avisos::class);
+        $avisos->expects($this->once())->method('buttons')->with($second, 'reply', 'Em qual espaço eu procuro?',
+            $this->callback(fn (array $items) => count($items) === 2), null, 'workspaces:n1');
+        $workspaces = $this->createMock(Workspaces::class);
+        $workspaces->method('of')->willReturn(['language' => 'pt_BR', 'frozen' => false, 'name' => 'Clínica']);
+        $this->assertSame('picker_sent', $this->inbound([$asking, $second, $third], $this->createMock(Taps::class), $assistant, $avisos, $workspaces)
+            ->offerWorkspaces($asking, 'Qual o faturamento?', 801, 'workspaces:n1'));
+        $this->assertNull(Sessions::pending($asking));
+        $this->assertSame(['text' => 'Qual o faturamento?', 'messageId' => 801], Sessions::pending($third));
+    }
+
+    public function testSwitchWorkspaceWithOnlyThisWorkspaceChangesNothing(): void
+    {
+        $asking = $this->subscription('sub1');
+        $assistant = $this->createMock(Assistant::class);
+        $assistant->expects($this->never())->method('ask');
+        $this->assertSame('single', $this->inbound([$asking], $this->createMock(Taps::class), $assistant)
+            ->offerWorkspaces($asking, 'Qual o faturamento?', 801, 'workspaces:n1'));
+    }
+
     public function testChoosingAWorkspaceSendsTheWaitingTextThere(): void
     {
         $tokens = $this->tokens();
