@@ -13,10 +13,10 @@ use Throwable;
 /**
  * Who a journey message on a target is addressed to.
  *
- * - Account: every contact in its Contatos, the same set the relationships
- *   panel shows: native Account↔Contact links (inactive links left out) plus
- *   confirmed RecordRelation claims in either direction. Each contact must
- *   belong to the journey's tenant.
+ * - Account / Opportunity: every contact in its Contatos, the same set the
+ *   relationships panel shows: native links (an Opportunity's primary contact
+ *   first; inactive Account links left out) plus confirmed RecordRelation claims
+ *   in either direction. Each contact must belong to the journey's tenant.
  * - Any other target: the target itself.
  *
  * Senders loop over these people, render `{Contact.*}` / `{{Contact.*}}`
@@ -25,8 +25,11 @@ use Throwable;
  */
 class JourneyTargetPeople
 {
-    /** @var list<string> */
-    private const FAN_OUT_TYPES = ['Account'];
+    /** @var array<string, array<string, mixed>> target type => where on its `contacts` link */
+    private const FAN_OUT_TYPES = [
+        'Account' => ['@relation.isInactive' => false],
+        'Opportunity' => [],
+    ];
 
     public function __construct(
         private EntityManager $entityManager,
@@ -36,7 +39,7 @@ class JourneyTargetPeople
 
     public function fansOut(Entity $target): bool
     {
-        return in_array($target->getEntityType(), self::FAN_OUT_TYPES, true);
+        return array_key_exists($target->getEntityType(), self::FAN_OUT_TYPES);
     }
 
     /**
@@ -54,12 +57,18 @@ class JourneyTargetPeople
 
         $ids = [];
 
+        $primary = $target->hasAttribute('contactId') ? (string) ($target->get('contactId') ?? '') : '';
+
+        if ($primary !== '') {
+            $ids[$primary] = true;
+        }
+
         try {
             $native = $this->entityManager
                 ->getRDBRepository($target->getEntityType())
                 ->getRelation($target, 'contacts')
                 ->select(['id'])
-                ->where(['@relation.isInactive' => false])
+                ->where(self::FAN_OUT_TYPES[$target->getEntityType()])
                 ->order('createdAt')
                 ->find();
 
@@ -125,6 +134,69 @@ class JourneyTargetPeople
         }
 
         return $people;
+    }
+
+    /**
+     * The company a contact belongs to, for previewing an Account journey from the
+     * contact's side: their primary account, else the first Account whose Contatos
+     * list them (active native link, then a confirmed RecordRelation). Must be in
+     * the tenant.
+     */
+    public function companyOf(Entity $contact, string $tenantId): ?Entity
+    {
+        $ids = [];
+        $primary = (string) ($contact->get('accountId') ?? '');
+
+        if ($primary !== '') {
+            $ids[] = $primary;
+        }
+
+        try {
+            $native = $this->entityManager
+                ->getRDBRepository('Contact')
+                ->getRelation($contact, 'accounts')
+                ->select(['id'])
+                ->where(['@relation.isInactive' => false])
+                ->order('createdAt')
+                ->find();
+
+            foreach ($native as $account) {
+                $ids[] = $account->getId();
+            }
+        } catch (Throwable $e) {
+            $this->log->warning('JourneyTargetPeople: contact accounts: ' . $e->getMessage());
+        }
+
+        if ($this->entityManager->hasRepository('RecordRelation')) {
+            $relations = $this->entityManager
+                ->getRDBRepository('RecordRelation')
+                ->select(['subjectType', 'subjectId', 'objectId'])
+                ->where([
+                    'status' => 'confirmed',
+                    'OR' => [
+                        ['subjectType' => 'Contact', 'subjectId' => $contact->getId(), 'objectType' => 'Account'],
+                        ['subjectType' => 'Account', 'objectType' => 'Contact', 'objectId' => $contact->getId()],
+                    ],
+                ])
+                ->order('createdAt')
+                ->find();
+
+            foreach ($relations as $relation) {
+                $ids[] = $relation->get('subjectType') === 'Account'
+                    ? (string) $relation->get('subjectId')
+                    : (string) $relation->get('objectId');
+            }
+        }
+
+        foreach (array_unique($ids) as $id) {
+            $account = $this->entityManager->getEntityById('Account', $id);
+
+            if ($account && $this->tenantGuard->entityBelongsToTenant($account, $tenantId)) {
+                return $account;
+            }
+        }
+
+        return null;
     }
 
     /**

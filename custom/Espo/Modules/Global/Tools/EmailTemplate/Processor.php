@@ -572,9 +572,12 @@ class Processor extends CoreProcessor
         }
 
         if ($data->getParent()) {
+            // Records the caller pinned win over the parent's link map, e.g. a
+            // journey's recipient as {Contact.*} over an Opportunity's primary contact.
             $entityHash = array_merge(
                 $entityHash,
-                $this->entityMapProvider->get($data->getParent(), $user, $params->applyAcl())
+                $this->entityMapProvider->get($data->getParent(), $user, $params->applyAcl()),
+                $data->getEntityHash(),
             );
 
             $entityHash[$data->getParent()->getEntityType()] = $data->getParent();

@@ -90,7 +90,8 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
         renderError: null,
         renderResult: null,
         previewIndex: 0,
-        testScope: "Contact",
+        testScopes: ["Contact"],
+        journeyEntityType: null,
         testTenantId: null,
         _testModel: null,
         _htmlBody: null,
@@ -191,6 +192,7 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
             this._testModel = new Model();
             this._testModel.name = "JourneyEmailTemplateTest";
             this._testModel.set({
+                testTargetType: this.testScopes[0],
                 testTargetId: null,
                 testTargetName: null,
             });
@@ -202,15 +204,16 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                     const entityType = (ctx && ctx.entityType) || null;
                     this.testTenantId = (ctx && ctx.tenantId) || null;
 
-                    if (!entityType || entityType === this.testScope ||
-                        !this.getMetadata().get(["scopes", entityType, "entity"])) {
+                    if (!entityType || !this.getMetadata().get(["scopes", entityType, "entity"])) {
                         return;
                     }
 
-                    this.testScope = entityType;
+                    // An Account journey can also be previewed from one of its contacts.
+                    this.journeyEntityType = entityType;
+                    this.testScopes = entityType === "Account" ? ["Account", "Contact"] : [entityType];
                     this.renderResult = null;
                     this._htmlBody = null;
-                    this._testModel.set({testTargetId: null, testTargetName: null});
+                    this._testModel.set({testTargetType: this.testScopes[0], testTargetId: null, testTargetName: null});
 
                     if (this.isRendered()) {
                         this.reRender();
@@ -272,16 +275,16 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
 
             this.createView(
                 "testTarget",
-                "views/fields/link",
+                "views/fields/link-parent",
                 {
                     model: this._testModel,
                     name: "testTarget",
-                    foreignScope: this.testScope,
+                    foreignScopeList: this.testScopes,
                     el: this.getSelector() + " .journey-email-test-target",
                     mode: "edit",
                     defs: {
                         name: "testTarget",
-                        type: "link",
+                        type: "linkParent",
                     },
                     params: {},
                 },
@@ -380,7 +383,8 @@ define("feature-journey:views/journey-stage-action/fields/email-template", [
                 "JourneyStageAction/action/renderEmailTemplate",
                 {
                     emailTemplateId: templateId,
-                    targetEntityType: this.testScope,
+                    targetEntityType: this._testModel.get("testTargetType") || this.testScopes[0],
+                    journeyEntityType: this.journeyEntityType,
                     tenantId: this.testTenantId,
                     targetId: targetId,
                 }

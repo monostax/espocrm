@@ -40,7 +40,7 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
         }
 
         $data = $request->getParsedBody() ?? (object) [];
-        $target = $this->loadReadableTarget($data);
+        [$target, $people] = $this->previewSubject($this->loadReadableTarget($data), $data);
 
         $templateBody = isset($data->templateBody) ? (string) $data->templateBody : '';
         $mapping = $data->parameterMapping ?? [];
@@ -55,7 +55,7 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
         $previews = [];
         $firstError = null;
 
-        foreach ($this->previewPeople($target) as $person) {
+        foreach ($people as $person) {
             try {
                 $previews[] = $this->renderWhatsAppFor($outbound, $data, $mapping, $templateBody, $target, $person);
             } catch (Throwable $e) {
@@ -135,7 +135,7 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
             throw new Forbidden("No read access to EmailTemplate {$emailTemplateId}.");
         }
 
-        $target = $this->loadReadableTarget($data);
+        [$target, $people] = $this->previewSubject($this->loadReadableTarget($data), $data);
 
         try {
             /** @var RecordServiceContainer $recordServices */
@@ -160,7 +160,7 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
         $previews = [];
         $firstError = null;
 
-        foreach ($this->previewPeople($target) as $person) {
+        foreach ($people as $person) {
             $address = $person === $target ? $emailAddress : '';
 
             try {
@@ -214,8 +214,42 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
     }
 
     /**
+     * What a preview renders: the sample record as the journey target with its people,
+     * or, for a Contact picked on an Account journey, that contact inside their company.
+     *
+     * @return array{0: \Espo\ORM\Entity, 1: list<\Espo\ORM\Entity>}
+     */
+    private function previewSubject(\Espo\ORM\Entity $sample, object $data): array
+    {
+        $journeyType = isset($data->journeyEntityType) ? trim((string) $data->journeyEntityType) : '';
+
+        if ($journeyType === '' || $journeyType === $sample->getEntityType()) {
+            return [$sample, $this->previewPeople($sample)];
+        }
+
+        if ($journeyType !== 'Account' || $sample->getEntityType() !== 'Contact') {
+            throw $this->previewError('Escolha um registro do tipo da jornada.');
+        }
+
+        /** @var JourneyTargetPeople $people */
+        $people = $this->injectableFactory->create(JourneyTargetPeople::class);
+        /** @var TenantGuard $tenantGuard */
+        $tenantGuard = $this->injectableFactory->create(TenantGuard::class);
+        $tenantId = isset($data->tenantId) && trim((string) $data->tenantId) !== ''
+            ? trim((string) $data->tenantId)
+            : $tenantGuard->requireTenantId($sample, 'target');
+        $company = $people->companyOf($sample, $tenantId);
+
+        if (!$company || !$this->acl->check($company, 'read')) {
+            throw $this->previewError('Este contato não tem empresa; a jornada nunca enviaria para ele.');
+        }
+
+        return [$company, [$sample]];
+    }
+
+    /**
      * Who a preview renders for: the target, or the readable contacts in an
-     * Account's Contatos (the same people the action sends to).
+     * Account's or Opportunity's Contatos (the same people the action sends to).
      *
      * @return list<\Espo\ORM\Entity>
      */
@@ -236,7 +270,7 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
         ));
 
         if ($list === []) {
-            throw new BadRequest('This ' . $target->getEntityType() . ' has no contacts to send to.');
+            throw $this->previewError('Este registro não tem contatos em Contatos; a jornada não enviaria nada.');
         }
 
         return $list;
