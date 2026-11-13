@@ -1,5 +1,6 @@
 {
     "outputFilterClassNameList": ["__APPEND__", "Espo\\Modules\\Global\\Classes\\Record\\CrmTagOutputFilter"],
     "beforeLinkHookClassNameList": ["__APPEND__", "Espo\\Modules\\Global\\Classes\\RecordHooks\\ProtectPersonalTagRelationships"],
-    "beforeUnlinkHookClassNameList": ["__APPEND__", "Espo\\Modules\\Global\\Classes\\RecordHooks\\ProtectPersonalTagRelationships"]
+    "beforeUnlinkHookClassNameList": ["__APPEND__", "Espo\\Modules\\Global\\Classes\\RecordHooks\\ProtectPersonalTagRelationships"],
+    "earlyBeforeCreateHookClassNameList": ["__APPEND__", "Espo\\Modules\\Global\\Classes\\RecordHooks\\FillTeamAndTenantOnCreate"]
 }
