@@ -7,7 +7,7 @@
         "accountNumber": { "type": "int" },
         "phone": { "type": "varchar", "maxLength": 20 },
         "status": { "type": "enum", "options": ["active", "stopped"], "default": "active" },
-        "source": { "type": "enum", "options": ["settings", "signup"], "default": "settings" },
+        "source": { "type": "enum", "options": ["settings", "signup", "person"], "default": "settings" },
         "verifiedAt": { "type": "datetime" },
         "morningEnabled": { "type": "bool", "default": true },
         "morningTime": { "type": "varchar", "maxLength": 5, "default": "08:00" },

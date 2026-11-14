@@ -51,8 +51,8 @@ class Copy
             'done' => '🎉 Tudo em dia! Ninguém esperando resposta agora.',
             'pause' => '👍 Até mais! Escreva *em dia* aqui quando quiser ver os próximos.',
             'pause.morning' => '👍 Até mais! Seu card da manhã chega às {time}. Escreva *em dia* quando quiser ver os próximos.',
-            'welcome' => "✅ Pronto, {name}! Seu Em dia de *{workspace}* agora chega aqui.\nEscreva *em dia* quando quiser ver seus cards, ou me pergunte qualquer coisa sobre seus clientes e negócios.",
-            'welcome.morning' => "✅ Pronto, {name}! Seu Em dia de *{workspace}* agora chega aqui.\n☀️ Todo dia às {time} eu mando o primeiro card. Escreva *em dia* quando quiser ver mais, ou me pergunte qualquer coisa sobre seus clientes e negócios.",
+            'welcome' => "✅ Pronto, {name}! Seu Em dia de {workspace} agora chega aqui.\nEscreva *em dia* quando quiser ver seus cards, ou me pergunte qualquer coisa sobre seus clientes e negócios.",
+            'welcome.morning' => "✅ Pronto, {name}! Seu Em dia de {workspace} agora chega aqui.\n☀️ Todo dia às {time} eu mando o primeiro card. Escreva *em dia* quando quiser ver mais, ou me pergunte qualquer coisa sobre seus clientes e negócios.",
             'stopped' => '🔕 Avisos desligados. Para voltar, ative de novo no Monostax em Configurações › Notificações no WhatsApp.',
             'code.unknown' => 'Não reconheci esse código. Gere um novo no Monostax e envie de novo.',
             'signup.ok' => '✅ WhatsApp confirmado! Pode voltar para a página do Monostax.',
@@ -126,8 +126,8 @@ class Copy
             'done' => "🎉 You're all caught up! Nobody is waiting for a reply.",
             'pause' => '👍 See you! Write *em dia* here whenever you want the next ones.',
             'pause.morning' => '👍 See you! Your morning card comes at {time}. Write *em dia* whenever you want the next ones.',
-            'welcome' => "✅ Done, {name}! Your Em dia for *{workspace}* now comes here.\nWrite *em dia* whenever you want your cards, or ask me anything about your customers and deals.",
-            'welcome.morning' => "✅ Done, {name}! Your Em dia for *{workspace}* now comes here.\n☀️ Every day at {time} I send the first card. Write *em dia* whenever you want more, or ask me anything about your customers and deals.",
+            'welcome' => "✅ Done, {name}! Your Em dia for {workspace} now comes here.\nWrite *em dia* whenever you want your cards, or ask me anything about your customers and deals.",
+            'welcome.morning' => "✅ Done, {name}! Your Em dia for {workspace} now comes here.\n☀️ Every day at {time} I send the first card. Write *em dia* whenever you want more, or ask me anything about your customers and deals.",
             'stopped' => '🔕 Notifications off. To turn them back on, go to Settings › WhatsApp notifications in Monostax.',
             'code.unknown' => "I don't recognise that code. Create a new one in Monostax and send it again.",
             'signup.ok' => '✅ WhatsApp confirmed! You can go back to the Monostax page.',
@@ -166,6 +166,16 @@ class Copy
         $text = self::TEXT[self::language($language)][$key] ?? self::TEXT['pt_BR'][$key] ?? $key;
         foreach ($vars as $name => $value) $text = str_replace('{' . $name . '}', (string) $value, $text);
         return $text;
+    }
+
+    /** "*A*", "*A* e *B*", "*A*, *B* e mais 2": names already formatted, $more left out. */
+    public static function list(string $language, array $names, int $more = 0): string
+    {
+        $and = self::language($language) === 'en_US' ? ' and ' : ' e ';
+        if ($more > 0) $names[] = (self::language($language) === 'en_US' ? "{$more} more" : "mais {$more}");
+        if (count($names) < 2) return (string) ($names[0] ?? '');
+        $last = array_pop($names);
+        return implode(', ', $names) . $and . $last;
     }
 
     public static function language(?string $language): string

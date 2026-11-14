@@ -24,7 +24,10 @@ use Throwable;
  *   template when `digestTemplate` is configured (its "Ver agora" starts the deck), else the first card;
  * - reminders, when a card the person put off with "Me lembre mais tarde" comes due, if it is still a card;
  * - hot leads: a customer with buying intent waiting `hotLeadMinutes` on us while the person is away from Chatwoot,
- *   inside their alert hours, at most `hotLeadDailyCap` a day and once per customer message.
+ *   inside their alert hours, at most `hotLeadDailyCap` a day for the person across all their workspaces (one number)
+ *   and once per customer message.
+ *
+ * Each workspace sends its own (its morning card at its time, its hot leads), only while the person is still in it.
  *
  * Each has a send key, so a retried job never sends twice.
  */
@@ -49,6 +52,7 @@ class Pushes
 
     public function morning(Entity $subscription): void
     {
+        if (!$this->workspaces->live($subscription)) return;
         $workspace = $this->workspaces->of($subscription);
         if ($workspace['frozen'] || !$subscription->get('morningEnabled')) return;
         $now = $this->workspaces->now($subscription);
@@ -94,7 +98,8 @@ class Pushes
         $card->set('remindedAt', gmdate('Y-m-d H:i:s'));
         $this->em->saveEntity($card);
         $subscription = $this->em->getEntityById('WhatsAppNotificationSubscription', (string) $card->get('subscriptionId'));
-        if (!$subscription || $subscription->get('status') !== 'active' || $this->workspaces->of($subscription)['frozen']) return;
+        if (!$subscription || $subscription->get('status') !== 'active' || !$this->workspaces->live($subscription) ||
+            $this->workspaces->of($subscription)['frozen']) return;
         $verdicts = Avisos::windowOpen($subscription) ? Deck::DRAFT_VERDICTS : Deck::TEMPLATE_VERDICTS;
         $fresh = $this->deck->subject($subscription, (string) $card->get('lane'), (string) $card->get('subjectId'), $verdicts);
         if ($fresh) $this->cards->show($subscription, $fresh, 'reminder', "reminder:{$card->getId()}");
@@ -106,14 +111,19 @@ class Pushes
      */
     public function hotLeads(Entity $subscription): void
     {
+        if (!$this->workspaces->live($subscription)) return;
         $workspace = $this->workspaces->of($subscription);
         if ($workspace['frozen'] || !$subscription->get('hotLeadsEnabled')) return;
         $now = $this->workspaces->now($subscription);
         if (!self::inside($now->format('H:i'), (string) $subscription->get('alertStart'), (string) $subscription->get('alertEnd'))) return;
         $cap = $this->settings->hotLeadDailyCap();
         $midnight = $now->setTime(0, 0)->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+        // The cap is the person's (one number), whichever workspaces the alerts came from.
+        $rows = $this->em->getRDBRepository('WhatsAppNotificationSubscription')->select(['id'])
+            ->where(['userId' => $subscription->get('userId'), 'phone' => $subscription->get('phone')])->find();
         $sent = $this->em->getRDBRepository('WhatsAppNotification')->where([
-            'subscriptionId' => $subscription->getId(), 'kind' => 'hot_lead', 'createdAt>=' => $midnight, 'status!=' => 'failed',
+            'subscriptionId' => [$subscription->getId(), ...array_map(fn (Entity $row) => $row->getId(), iterator_to_array($rows))],
+            'kind' => 'hot_lead', 'createdAt>=' => $midnight, 'status!=' => 'failed',
         ])->count();
         if ($sent >= $cap || $this->online($subscription)) return;
         // One alert per customer a day; the send key below also keeps it to one per customer message.

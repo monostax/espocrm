@@ -183,8 +183,9 @@ class Inbound
         $card = $token['kind'] === 'c' ? $this->em->getEntityById('WhatsAppDeckCard', $token['id']) : null;
         $subscriptionId = $token['kind'] === 's' ? $token['id'] : (string) $card?->get('subscriptionId');
         $subscription = $subscriptionId !== '' ? $this->em->getEntityById('WhatsAppNotificationSubscription', $subscriptionId) : null;
-        // Only the verified number of an active subscription acts.
-        if (!$subscription || $subscription->get('status') !== 'active' || $subscription->get('phone') !== $phone) return;
+        // Only the verified number of an active subscription acts, while its person is still in the workspace.
+        if (!$subscription || $subscription->get('status') !== 'active' || $subscription->get('phone') !== $phone ||
+            !$this->workspaces->live($subscription)) return;
         if ($token['kind'] === 'c' && !$card) return;
         $this->markTapped($subscription, $card);
         // A workspace chosen for a text that was waiting: that text goes to this workspace's AI.
@@ -220,11 +221,19 @@ class Inbound
         $this->welcome($subscription);
     }
 
+    /** Names every workspace the number now reaches for this person (one code turns them all on). */
     public function welcome(Entity $subscription): void
     {
         $workspace = $this->workspaces->of($subscription);
         $user = $this->em->getEntityById('User', (string) $subscription->get('userId'));
-        $vars = ['name' => (string) ($user?->get('firstName') ?: $user?->get('name') ?: ''), 'workspace' => $workspace['name'],
+        $names = [$workspace['name'] ?: '—'];
+        foreach ($this->subscriptions->activeForPhone((string) $subscription->get('phone')) as $each) {
+            if ($each->getId() === $subscription->getId() || $each->get('userId') !== $subscription->get('userId')) continue;
+            $names[] = $this->workspaces->of($each)['name'] ?: '—';
+        }
+        $names = array_map(fn (string $name) => '*' . str_replace(['*', '_', '~', '`'], '', $name) . '*', array_values(array_unique($names)));
+        $vars = ['name' => (string) ($user?->get('firstName') ?: $user?->get('name') ?: ''),
+            'workspace' => Copy::list($workspace['language'], array_slice($names, 0, 5), max(0, count($names) - 5)),
             'time' => (string) $subscription->get('morningTime')];
         $text = Copy::t($workspace['language'], $subscription->get('morningEnabled') ? 'welcome.morning' : 'welcome', $vars);
         // No buttons (2026-11-13): the welcome says to write "em dia" for the cards.

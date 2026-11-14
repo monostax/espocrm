@@ -15,6 +15,7 @@ use Espo\Modules\FeatureWhatsAppNotifications\Tools\PhoneCodes;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Settings;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Subscriptions;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Workspaces;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Update;
@@ -73,12 +74,12 @@ class CascadeTest extends TestCase
         $subscription = $this->entity('sub1', ['chatwootAccountId' => 'acct1']);
         $noAccount = $this->createMock(EntityManager::class);
         $noAccount->method('getEntityById')->willReturn(null);
-        $this->assertFalse((new Workspaces($noAccount))->exists($subscription));
+        $this->assertFalse((new Workspaces($noAccount, $this->createMock(UserTenantResolver::class)))->exists($subscription));
 
         $noTenant = $this->createMock(EntityManager::class);
         $noTenant->method('getEntityById')->willReturnCallback(fn (string $type) =>
             $type === 'ChatwootAccount' ? $this->entity('acct1', ['tenantId' => 'gone']) : null);
-        $this->assertFalse((new Workspaces($noTenant))->exists($subscription));
+        $this->assertFalse((new Workspaces($noTenant, $this->createMock(UserTenantResolver::class)))->exists($subscription));
     }
 
     public function testANumberIgnoresSubscriptionsLeftByARemovedWorkspace(): void
@@ -93,7 +94,7 @@ class CascadeTest extends TestCase
         $em = $this->createMock(EntityManager::class);
         $em->method('getRDBRepository')->willReturn($repository);
         $workspaces = $this->createMock(Workspaces::class);
-        $workspaces->method('exists')->willReturnCallback(fn (Entity $subscription) => $subscription === $live);
+        $workspaces->method('live')->willReturnCallback(fn (Entity $subscription) => $subscription === $live);
         $subscriptions = new Subscriptions($em, $this->createMock(User::class), $this->createMock(Settings::class),
             $this->createMock(Workspace::class), $this->createMock(Rollout::class), $this->createMock(PhoneCodes::class),
             $this->createMock(Avisos::class), $workspaces);

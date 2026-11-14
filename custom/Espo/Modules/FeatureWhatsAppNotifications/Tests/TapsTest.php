@@ -56,6 +56,14 @@ class TapsTest extends TestCase
         return $entity;
     }
 
+    /** The person is still in every workspace (Workspaces::live). */
+    private function liveWorkspaces(bool $live = true): Workspaces
+    {
+        $workspaces = $this->createMock(Workspaces::class);
+        $workspaces->method('live')->willReturn($live);
+        return $workspaces;
+    }
+
     private function tokens(): Tokens
     {
         $config = $this->createMock(Config::class);
@@ -214,7 +222,7 @@ class TapsTest extends TestCase
         $taps = $this->createMock(Taps::class);
         $taps->expects($this->once())->method('cardTap')->with($subscription, $card, ['kind' => 'c', 'id' => 'card1', 'action' => 's']);
         $inbound = new Inbound($em, $avisos, $tokens, $this->createMock(PhoneCodes::class), $subscriptions, $taps,
-            $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class));
+            $this->liveWorkspaces(), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class));
         $inbound->handle((object) [
             'event' => 'message_created', 'message_type' => 'incoming', 'id' => 502, 'inbox' => (object) ['id' => 74],
             'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5591999990000'],
@@ -222,6 +230,29 @@ class TapsTest extends TestCase
         ], 'acct6');
         // The tap opened Meta's 24h window for that number.
         $this->assertNotNull($subscription->get('lastInboundAt'));
+    }
+
+    public function testATapFromAWorkspaceThePersonLeftDoesNothing(): void
+    {
+        $tokens = $this->tokens();
+        $card = $this->card();
+        $subscription = $this->subscription();
+        $em = $this->createMock(EntityManager::class);
+        $em->method('createEntity')->willReturn($this->entity('log', []));
+        $em->method('getEntityById')->willReturnCallback(fn (string $type, string $id) => match ($type) {
+            'WhatsAppDeckCard' => $card, 'WhatsAppNotificationSubscription' => $subscription, default => null,
+        });
+        $avisos = $this->createMock(Avisos::class);
+        $avisos->method('isAvisos')->willReturn(true);
+        $taps = $this->createMock(Taps::class);
+        $taps->expects($this->never())->method('cardTap');
+        $inbound = new Inbound($em, $avisos, $tokens, $this->createMock(PhoneCodes::class), $this->createMock(Subscriptions::class), $taps,
+            $this->liveWorkspaces(false), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class));
+        $inbound->handle((object) [
+            'event' => 'message_created', 'message_type' => 'incoming', 'id' => 503, 'inbox' => (object) ['id' => 74],
+            'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5591999990000'],
+            'content' => 'Ver sugestão de resposta', 'content_attributes' => (object) ['reply_payload' => $tokens->card('card1', 's')],
+        ], 'acct6');
     }
 
     public function testParadaWordsStopEveryWorkspaceOfTheNumber(): void
@@ -385,7 +416,7 @@ class TapsTest extends TestCase
         $list = $this->createMock(Subscriptions::class);
         $list->method('activeForPhone')->willReturn($subscriptions);
         return new Inbound($em, $avisos, $tokens ?? $this->tokens(), $this->createMock(PhoneCodes::class), $list, $taps,
-            $workspaces ?? $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $assistant,
+            $workspaces ?? $this->liveWorkspaces(), $this->createMock(Signups::class), $this->createMock(Charges::class), $assistant,
             $this->createMock(Log::class));
     }
 

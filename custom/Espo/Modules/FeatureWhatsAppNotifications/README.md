@@ -8,11 +8,13 @@ Off until the config says otherwise (see Config).
 
 Meta wants the recipient's own opt-in, and a card quotes customers, so nothing goes to a number until the person proves they hold it. They send a code FROM that number (`PhoneCodes`): a wa.me link with the text ready ("Ativar Em dia 7KQ2-M9XP"), or its QR code. The sender is the number, nothing typed is trusted, and the message opens Meta's 24h window.
 
-- **Settings › Notificações no WhatsApp** (Chatwoot, every member, workspaces with Em dia on): `POST /WhatsAppNotifications/code` gives the code; the incoming message activates the person's subscription in that workspace and sends a welcome that says to write *em dia* for the cards.
+- **Settings › Notificações no WhatsApp** (Chatwoot, every member, workspaces with Em dia on): `POST /WhatsAppNotifications/code` gives the code; the incoming message activates the person's subscription in that workspace and in their other workspaces (below), and sends a welcome naming them all that says to write *em dia* for the cards.
 - **Self-service signup** (FeatureSelfService `Signups`): right after the email code, the signup waits in status `phone` until the code arrives (`SelfService/signup/:id/phone` gives a new one). The verified number becomes the owner's phone, and the user and workspace are created then (by the webhook, so a closed tab still finishes; a status poll takes over after 90 s). One free trial per verified number: a number that verified another signup is refused, and the person may send from another one. When the workspace is ready, the owner's subscription is created with that number.
 - Codes: 8 characters without look-alikes, valid 15 minutes, used once; a number with 5 wrong codes in an hour is ignored for the rest of it.
 
-One subscription per person and workspace (`WhatsAppNotificationSubscription`). One number belongs to one person per workspace: verifying it for someone else stops the other (`moved`). "PARAR", "SAIR", "STOP" or "🔕 Parar avisos" stops every subscription of the number (`keyword`); only a new code turns it back on.
+**The verified number is the person's, not the workspace's** (the user, 2026-11-13). One code turns it on in every workspace the person belongs to (`UserTenantResolver`: tenantUser or teams) with Em dia on (`Subscriptions::spread`): same number, 24h window and Avisos thread, the person's preferences as a start. A new code also turns their stopped rows back on with the new number, keeping each workspace's switches. A workspace they join later gets its row the first time it's needed (any message from the number, `activeForPhone`, or opening Settings there), without turning a stopped row back on. A row whose person left the workspace counts for nothing (`Workspaces::live`: no pushes, not offered, not routed to).
+
+Rows stay one per person and workspace (`WhatsAppNotificationSubscription`, `source` = `person` when spread): each holds that workspace's morning card and hot-lead switches (Settings shows them as "deste espaço"), its deck cards, delivery log and charges, and goes with the workspace on offboarding. One number belongs to one person per workspace: verifying it for someone else stops the other (`moved`), and spreading skips a workspace where another person holds it. "PARAR", "SAIR", "STOP" or "🔕 Parar avisos" stops every subscription of the number (`keyword`), and Settings' "Parar avisos" stops all of the person's (`user`); only a new code turns it back on.
 
 ## The deck
 
@@ -40,7 +42,7 @@ When the agent's reply finishes (completed, failed, or blocked for credits), the
 
 - "em dia", "próximo" (and "cards") still open the deck; these and "trocar" are the only command words, matched exactly (`Inbound::command`).
 - With one number in several workspaces, text goes to the workspace of our last message to the person when it went out in the last 30 minutes (`Inbound::lastMessaged`, from the delivery log), else to the one whose AI they last talked to (`session.aiAt`). The first time, or after "trocar", they choose one and the waiting text (`session.pending`, 1 hour) goes there.
-- "Quero falar da outra empresa": in the main chat, on a WhatsApp turn, the agent has `switch_workspace` (backend `code-mode/session-agent.ts`). It calls `POST WhatsAppNotifications/switchWorkspace` as the person (`WhatsAppAssistant`, which checks the turn with `Assistant::turn`). With one other workspace on the number, the message goes straight to that workspace's AI (`Inbound::offerWorkspaces`). With more, the picker of the others goes out and the message waits for the tap. The asking workspace's agent learns only `switched` / `picker_sent` / `single`, never the other workspaces.
+- "Quero falar da outra empresa": in the main chat, on a WhatsApp turn, the agent has `switch_workspace` (it reaches every workspace of the person with Em dia on, since the number is theirs) (backend `code-mode/session-agent.ts`). It calls `POST WhatsAppNotifications/switchWorkspace` as the person (`WhatsAppAssistant`, which checks the turn with `Assistant::turn`). With one other workspace on the number, the message goes straight to that workspace's AI (`Inbound::offerWorkspaces`). With more, the picker of the others goes out and the message waits for the tap. The asking workspace's agent learns only `switched` / `picker_sent` / `single`, never the other workspaces.
 - Voice notes and pictures without a caption get "por enquanto só entendo texto".
 - A frozen workspace answers that the AI is paused; a person without an AI agent gets `ai.unavailable`.
 
@@ -50,7 +52,8 @@ Few, because Meta blocked 247 per-event alerts from this number in Jul–Aug 202
 
 - **Morning** (`SendMorning`, every 5 min): once a day at the person's time, within 3 hours of it. The digest template when `digestTemplate` is set (with the Em dia link, no buttons), else the first card. Nothing when there is nothing.
 - **Reminders** (`SendReminders`, every 5 min).
-- **Hot leads** (`SendHotLeads`, every 10 min): a reply card on which Em dia found a deal (prompt 15) waiting at least `hotLeadMinutes` on us, inside the person's alert hours, while they show offline in Chatwoot, at most `hotLeadDailyCap` a day, once per customer per day and per customer message.
+- **Hot leads** (`SendHotLeads`, every 10 min): a reply card on which Em dia found a deal (prompt 15) waiting at least `hotLeadMinutes` on us, inside the person's alert hours, while they show offline in Chatwoot, at most `hotLeadDailyCap` a day for the person across all their workspaces (one number), once per customer per day and per customer message.
+- Each workspace sends its own pushes (its morning card at its time, its hot leads); the person turns them off per workspace in that workspace's Settings.
 - A frozen workspace gets nothing.
 
 ## Meta's cost in credits

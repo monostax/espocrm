@@ -7,7 +7,9 @@ namespace Espo\Modules\FeatureWhatsAppNotifications\Tools;
 use DateTimeImmutable;
 use DateTimeZone;
 use Espo\Core\Exceptions\Error;
+use Espo\Entities\User;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAccess;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -16,8 +18,45 @@ class Workspaces
 {
     /** @var array<string, array<string, mixed>> */
     private array $cache = [];
+    /** @var array<string, array<string, true>> tenant ids per person */
+    private array $tenantsOf = [];
 
-    public function __construct(private EntityManager $em) {}
+    public function __construct(private EntityManager $em, private UserTenantResolver $tenants) {}
+
+    /**
+     * The person's workspaces: the Chatwoot accounts of the tenants they belong to (tenantUser or teams, the same check
+     * as the app's workspace switcher; an instance admin gets no more). An inactive user has none.
+     *
+     * @return list<Entity>
+     */
+    public function accountsOf(string $userId): array
+    {
+        $tenantIds = array_keys($this->tenantIdsOf($userId));
+        if (!$tenantIds) return [];
+        return array_values(iterator_to_array($this->em->getRDBRepository('ChatwootAccount')->where(['tenantId' => $tenantIds])->find()));
+    }
+
+    /**
+     * Whether the subscription still counts: its workspace exists and its person is still an active member of it.
+     * Someone removed from a workspace gets nothing more from it.
+     */
+    public function live(Entity $subscription): bool
+    {
+        try {
+            $tenantId = $this->of($subscription)['tenant']->getId();
+        } catch (Error) {
+            return false;
+        }
+        return isset($this->tenantIdsOf((string) $subscription->get('userId'))[$tenantId]);
+    }
+
+    /** @return array<string, true> */
+    private function tenantIdsOf(string $userId): array
+    {
+        if (isset($this->tenantsOf[$userId])) return $this->tenantsOf[$userId];
+        $user = $userId !== '' ? $this->em->getEntityById('User', $userId) : null;
+        return $this->tenantsOf[$userId] = $user instanceof User && $user->isActive() ? $this->tenants->resolveTenantIdSet($user) : [];
+    }
 
     /** Whether the subscription's Chatwoot account and tenant still exist (a removed workspace leaves neither). */
     public function exists(Entity $subscription): bool

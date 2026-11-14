@@ -16,13 +16,22 @@ use Espo\ORM\EntityManager;
 use Throwable;
 
 /**
- * One subscription per person and workspace. Each person turns it on for themselves (Meta wants the recipient's own
- * opt-in): Settings › Notificações no WhatsApp gives a code that the person sends from their WhatsApp, or the signup's
- * WhatsApp check does it for the owner. "PARAR" or the app's "Parar avisos" stops it; only a new code turns it back on.
+ * The verified number is the person's, not the workspace's (2026-11-13). Each person turns it on for themselves (Meta
+ * wants the recipient's own opt-in): Settings › Notificações no WhatsApp gives a code that the person sends from their
+ * WhatsApp, or the signup's WhatsApp check does it for the owner. One code turns it on in every workspace of theirs with
+ * Em dia on (`spread`); a workspace they join later gets it the first time it is needed. "PARAR" or the app's "Parar
+ * avisos" stops it everywhere; only a new code turns it back on.
+ *
+ * A row per person and workspace stays: it holds that workspace's morning card and hot-lead switches, its deck cards,
+ * its delivery log and charges, and goes with the workspace on offboarding.
  */
 class Subscriptions
 {
     private const KINDS = ['card', 'digest', 'hot_lead', 'reminder', 'reply'];
+    /** The person's number and its WhatsApp thread and window, the same in every workspace. */
+    private const NUMBER_FIELDS = ['phone', 'verifiedAt', 'lastInboundAt', 'avisosContactId', 'avisosConversationId'];
+    /** What a workspace added later starts with: the person's preferences where the number was verified. */
+    private const PREFERENCE_FIELDS = ['morningEnabled', 'morningTime', 'hotLeadsEnabled', 'alertStart', 'alertEnd'];
 
     public function __construct(
         private EntityManager $em,
@@ -39,7 +48,14 @@ class Subscriptions
     public function me(Request $request): array
     {
         ['account' => $account] = $this->workspace->account($request);
-        return $this->view($account, $this->available($account));
+        $available = $this->available($account);
+        // A workspace the person joined after verifying their number shows it on already.
+        if ($available && !$this->find($this->user->getId(), $account->getId())) {
+            $from = $this->em->getRDBRepository('WhatsAppNotificationSubscription')
+                ->where(['userId' => $this->user->getId(), 'status' => 'active'])->order('lastInboundAt', 'DESC')->findOne();
+            if ($from && $this->workspaces->live($from)) $this->spread($from);
+        }
+        return $this->view($account, $available);
     }
 
     /** POST /WhatsAppNotifications/code: a new code to send from WhatsApp (turning it on, a new number, or back on). */
@@ -74,12 +90,14 @@ class Subscriptions
         return $this->view($account, $this->available($account));
     }
 
-    /** POST /WhatsAppNotifications/stop */
+    /** POST /WhatsAppNotifications/stop: the person's number stops in every workspace. */
     public function stopMine(Request $request): array
     {
         ['account' => $account] = $this->workspace->account($request);
-        $subscription = $this->find($this->user->getId(), $account->getId()) ?? throw new NotFound();
-        $this->stop($subscription, 'user');
+        $this->find($this->user->getId(), $account->getId()) ?? throw new NotFound();
+        $active = $this->em->getRDBRepository('WhatsAppNotificationSubscription')
+            ->where(['userId' => $this->user->getId(), 'status' => 'active'])->find();
+        foreach ($active as $subscription) $this->stop($subscription, 'user');
         return $this->view($account, $this->available($account));
     }
 
@@ -93,8 +111,9 @@ class Subscriptions
     }
 
     /**
-     * A verified number: the person's subscription in that workspace, active with this number. Another person's active
-     * subscription with the same number in the same workspace stops (`moved`): one number, one person per workspace.
+     * A verified number: the person's subscription in that workspace, active with this number, and the same in their
+     * other workspaces (`spread`). Another person's active subscription with the same number in the workspace where it
+     * was verified stops (`moved`): one number, one person per workspace.
      */
     public function activate(string $userId, string $accountId, string $phone, string $source, ?int $contactId, ?int $conversationId): Entity
     {
@@ -103,9 +122,7 @@ class Subscriptions
         $subscription = $this->find($userId, $accountId) ?? $this->em->getNewEntity('WhatsAppNotificationSubscription');
         $now = gmdate('Y-m-d H:i:s');
         $subscription->set([
-            'userId' => $userId, 'chatwootAccountId' => $accountId, 'tenantId' => $account->get('tenantId'),
-            'accountNumber' => (int) $account->get('chatwootAccountId'),
-            'name' => mb_substr(trim($user->get('name') . ' · ' . ($account->get('name') ?? '')), 0, 150),
+            ...$this->identity($user, $account),
             'phone' => $phone, 'status' => 'active', 'source' => $source, 'verifiedAt' => $now,
             'stoppedAt' => null, 'stopReason' => null, 'lastInboundAt' => $now,
             'avisosContactId' => $contactId, 'avisosConversationId' => $conversationId,
@@ -115,7 +132,46 @@ class Subscriptions
             'phone' => $phone, 'chatwootAccountId' => $accountId, 'status' => 'active', 'id!=' => $subscription->getId(),
         ])->find();
         foreach ($others as $other) $this->stop($other, 'moved');
+        $this->spread($subscription, true);
         return $subscription;
+    }
+
+    /**
+     * The person's other workspaces with Em dia on get this number, its window and thread. Without $renew (a workspace
+     * joined later) only missing rows are added: a stopped one stays stopped. With $renew (a new verification) the rows
+     * they had turn back on with this number, keeping each workspace's own switches. A workspace where another person
+     * holds the number keeps it with them. Returns how many rows changed.
+     */
+    public function spread(Entity $from, bool $renew = false): int
+    {
+        $userId = (string) $from->get('userId');
+        $phone = (string) $from->get('phone');
+        if ($userId === '' || $phone === '' || $from->get('status') !== 'active') return 0;
+        $user = $this->em->getEntityById('User', $userId);
+        if (!$user) return 0;
+        $changed = 0;
+        foreach ($this->workspaces->accountsOf($userId) as $account) {
+            if ($account->getId() === $from->get('chatwootAccountId') || !$this->available($account)) continue;
+            $row = $this->find($userId, $account->getId());
+            if ($row && (!$renew || ($row->get('status') === 'active' && $row->get('phone') === $phone))) continue;
+            $taken = $this->em->getRDBRepository('WhatsAppNotificationSubscription')->where([
+                'phone' => $phone, 'chatwootAccountId' => $account->getId(), 'status' => 'active', 'userId!=' => $userId,
+            ])->findOne();
+            if ($taken) continue;
+            if (!$row) {
+                $row = $this->em->getNewEntity('WhatsAppNotificationSubscription');
+                $row->set(['source' => 'person', ...array_combine(self::PREFERENCE_FIELDS, array_map(fn (string $field) => $from->get($field), self::PREFERENCE_FIELDS))]);
+            }
+            $row->set([
+                ...$this->identity($user, $account),
+                ...array_combine(self::NUMBER_FIELDS, array_map(fn (string $field) => $from->get($field), self::NUMBER_FIELDS)),
+                'status' => 'active', 'stoppedAt' => null, 'stopReason' => null,
+            ]);
+            Sessions::setEditing($row, null);
+            $this->em->saveEntity($row);
+            $changed++;
+        }
+        return $changed;
     }
 
     /** "PARAR" or "🔕 Parar avisos" from the number: every active subscription of it stops, with one confirmation. */
@@ -144,16 +200,35 @@ class Subscriptions
     }
 
     /**
-     * The number's live subscriptions, latest used first. One left behind by a removed workspace is passed over, so it
-     * can't block the number's other workspaces (offboarding removes them; this covers any other way a workspace goes).
+     * The number's live subscriptions, latest used first, with the workspaces its people joined since they verified it
+     * (`spread`). One left behind by a removed workspace, or by a person no longer in it, is passed over, so it can't
+     * block the number's other workspaces (offboarding removes them; this covers any other way a workspace goes).
      *
      * @return list<Entity>
      */
     public function activeForPhone(string $phone): array
     {
-        $subscriptions = iterator_to_array($this->em->getRDBRepository('WhatsAppNotificationSubscription')
-            ->where(['phone' => $phone, 'status' => 'active'])->order('lastInboundAt', 'DESC')->find());
-        return array_values(array_filter($subscriptions, fn (Entity $subscription) => $this->workspaces->exists($subscription)));
+        $load = fn (): array => array_values(iterator_to_array($this->em->getRDBRepository('WhatsAppNotificationSubscription')
+            ->where(['phone' => $phone, 'status' => 'active'])->order('lastInboundAt', 'DESC')->find()));
+        $subscriptions = $load();
+        $people = [];
+        foreach ($subscriptions as $subscription) {
+            if ($this->workspaces->live($subscription)) $people[(string) $subscription->get('userId')] ??= $subscription;
+        }
+        $changed = 0;
+        foreach ($people as $from) $changed += $this->spread($from);
+        if ($changed) $subscriptions = $load();
+        return array_values(array_filter($subscriptions, fn (Entity $subscription) => $this->workspaces->live($subscription)));
+    }
+
+    /** @return array<string, mixed> who and where, the same on every row */
+    private function identity(Entity $user, Entity $account): array
+    {
+        return [
+            'userId' => $user->getId(), 'chatwootAccountId' => $account->getId(), 'tenantId' => $account->get('tenantId'),
+            'accountNumber' => (int) $account->get('chatwootAccountId'),
+            'name' => mb_substr(trim($user->get('name') . ' · ' . ($account->get('name') ?? '')), 0, 150),
+        ];
     }
 
     private function available(Entity $account): bool
