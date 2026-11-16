@@ -159,13 +159,14 @@ class ApplicationRecords
                 'options' => $definition['type'] === 'enum' ? array_values($definition['options'] ?? []) : [],
                 'maxLength' => $definition['maxLength'] ?? null];
         }
-        $teams = [];
+        $teams = []; $defaultTeams = [];
         $teamsAllowed = $this->acl->checkField('Contact','teams','edit') &&
             $this->acl->checkScope('Team','read') && $this->acl->checkField('Team','name','read');
         if ($teamsAllowed) {
             $owner = $this->em->getEntityById('Tenant',$tenant);
             if ($owner) {
-                $ids = [$owner->get('baseUserTeamId')];
+                $baseTeam = $owner->get('baseUserTeamId');
+                $ids = [$baseTeam];
                 foreach ($this->em->getRDBRepository('Tenant')->getRelation($owner,'otherUserTeams')->find() as $team) {
                     $ids[] = $team->getId();
                 }
@@ -173,13 +174,14 @@ class ApplicationRecords
                     $team = $this->em->getEntityById('Team',$id);
                     if ($team && !$team->get('deleted') && $this->acl->check($team,'read')) {
                         $teams[] = ['id' => $id,'name' => $team->get('name')];
+                        if ($id === $baseTeam) $defaultTeams = [$id];
                     }
                 }
             }
         }
         $teamsRequired = (bool) $this->metadata->get(['entityDefs','Contact','fields','teams','required'],false);
         if ($teamsRequired && !$teams) $available = false;
-        return ['available' => $available,'fields' => $fields,'teams' => $teams,
+        return ['available' => $available,'fields' => $fields,'teams' => $teams,'defaultTeamsIds' => $defaultTeams,
             'teamsAllowed' => $teamsAllowed,'teamsRequired' => $teamsRequired];
     }
 

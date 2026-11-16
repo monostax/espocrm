@@ -7,7 +7,7 @@ namespace Espo\Modules\FeatureCredits\Enrichment\Providers;
 use Espo\Modules\FeatureCredits\Enrichment\{CandidateProjection, DiscoverySupplier, DiscoveryResult, Quotes};
 use Espo\Modules\Global\Tools\BrazilianIdentifier;
 
-/** Package 6 QSA only; no package 19/25 or representative/contact expansion. */
+/** Package 6 QSA and identified individual proprietor; never infer ownership from a representative. */
 final class CpfCnpjDiscovery implements DiscoverySupplier
 {
     public function __construct(private Credentials $credentials, private Transport $transport) {}
@@ -17,7 +17,7 @@ final class CpfCnpjDiscovery implements DiscoverySupplier
     {
         $connection = $this->credentials->get('cpfcnpj');
         if (!$connection || $targetType !== 'Account' || $product !== 'socios' || BrazilianIdentifier::cnpj($identity['cnpj'] ?? null) === null) return null;
-        return Quotes::hash(['cpfcnpj-package6-qsa-v1', 'retention-reuse-approved-max90d', $tenantId, $connection, $this->retentionSeconds($product)]);
+        return Quotes::hash(['cpfcnpj-package6-qsa-owner-v2', 'retention-reuse-approved-max90d', $tenantId, $connection, $this->retentionSeconds($product)]);
     }
 
     public function execute(array $request, int $timeoutMs): DiscoveryResult
@@ -44,6 +44,18 @@ final class CpfCnpjDiscovery implements DiscoverySupplier
             try { $values = CandidateProjection::normalize('socios', $values); }
             catch (\InvalidArgumentException) { continue; }
             $items[] = ['candidateKey' => Quotes::hash(['cpfcnpj', $cpf]), 'values' => $values, 'naturalPerson' => true];
+        }
+        // EI/MEI has no conventional QSA. Package 6 documents the responsible
+        // person's own CPF and qualification; code 50 is Empresário. An attorney
+        // or a representative of a different legal form is not its owner.
+        if (!$items && (string) ($data['naturezaJuridica']['codigo'] ?? '') === '2135' &&
+            ($data['responsavelQualificacao']['id'] ?? null) === 50) {
+            $cpf = BrazilianIdentifier::cpf($data['responsavelCpf'] ?? null);
+            $name = $data['responsavel'] ?? null;
+            if ($cpf !== null && is_string($name) && trim($name) !== '') {
+                $values = CandidateProjection::normalize('socios', ['cpf' => $cpf, 'name' => $name, 'role' => 'Empresário Individual']);
+                $items[] = ['candidateKey' => Quotes::hash(['cpfcnpj', $cpf]), 'values' => $values, 'naturalPerson' => true];
+            }
         }
         return new DiscoveryResult($items ? 'succeeded' : 'no_match', $items);
     }

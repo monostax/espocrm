@@ -159,11 +159,18 @@ final class BatchApplication
         if (!$application['available'] || !($form['available'] ?? false) || $name === '') return null;
         $data = ['lastName' => $name];
         $fields = array_column($form['fields'], null, 'name');
+        if (isset($fields['firstName'])) {
+            $parts = preg_split('/\s+/u', $name, 2);
+            if (count($parts) === 2) $data = ['firstName' => $parts[0], 'lastName' => $parts[1]];
+        }
         if (isset($fields['dateOfBirth']) && is_string($values['dateOfBirth'] ?? null) && $values['dateOfBirth'] !== '') {
             $data['dateOfBirth'] = $values['dateOfBirth'];
         }
         foreach ($fields as $field) if ($field['required'] && !isset($data[$field['name']])) return null;
-        if ($form['teamsAllowed'] && count($form['teams']) === 1) $data['teamsIds'] = [$form['teams'][0]['id']];
+        // The tenant's readable base team is the creation default, even when extra teams exist.
+        $teams = array_values(array_intersect($form['defaultTeamsIds'] ?? [], array_column($form['teams'], 'id')));
+        if (!$teams && count($form['teams']) === 1) $teams = [$form['teams'][0]['id']];
+        if ($form['teamsAllowed'] && $teams) $data['teamsIds'] = $teams;
         elseif ($form['teamsRequired']) return null;
         return $data;
     }

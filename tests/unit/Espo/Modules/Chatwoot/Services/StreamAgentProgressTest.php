@@ -84,6 +84,7 @@ class StreamAgentProgressTest extends TestCase
         self::assertSame([['parentType' => 'Note', 'parentId' => 'source', 'userId' => 'ai-user', 'type' => '👀']], $reactions);
         self::assertSame('reply-0', $jobs[0]['data']->noteId);
         self::assertNull($jobs[0]['data']->workflowRunId);
+        self::assertEqualsWithDelta(time() + 55 * 60, strtotime($jobs[0]['executeTime'] . ' UTC'), 3);
         // Different AI profiles sharing a CRM user still produce just one eyes reaction.
         $service->queue($source, (object) ['aiAgentMembershipId' => 'other-ai']);
         self::assertCount(2, $saved);

@@ -96,6 +96,23 @@ class BulkEnrichmentTest extends TestCase
         $this->assertNull(BatchApplication::contactData(['name' => 'Maria'], ['available' => false, 'creationForm' => $form]));
     }
 
+    public function testPartnerCreationUsesTheTenantBaseTeamWithMultipleEligibleTeams(): void
+    {
+        $form = ['available' => true, 'teamsAllowed' => true, 'teamsRequired' => true,
+            'teams' => [['id' => 'base', 'name' => 'Workspace'], ['id' => 'admin', 'name' => 'Administrators']],
+            'defaultTeamsIds' => ['base'],
+            'fields' => [['name' => 'firstName', 'required' => false], ['name' => 'lastName', 'required' => true]]];
+        $application = ['available' => true, 'creationForm' => $form];
+        $this->assertSame(['firstName' => 'Maria', 'lastName' => 'Aparecida de Souza', 'teamsIds' => ['base']],
+            BatchApplication::contactData(['name' => ' Maria  Aparecida de Souza '], $application));
+        $this->assertSame(['lastName' => 'Maria', 'teamsIds' => ['base']],
+            BatchApplication::contactData(['name' => 'Maria'], $application));
+        $form['defaultTeamsIds'] = ['foreign'];
+        $this->assertNull(BatchApplication::contactData(['name' => 'Maria'], ['available' => true, 'creationForm' => $form]));
+        $form['defaultTeamsIds'] = ['base']; $form['teamsAllowed'] = false;
+        $this->assertNull(BatchApplication::contactData(['name' => 'Maria'], ['available' => true, 'creationForm' => $form]));
+    }
+
     public function testProjectionSumsCountsWithoutPurchasedValues(): void
     {
         $batch = ['id' => 'b', 'tenant_id' => 't', 'target_type' => 'Contact', 'product' => 'email', 'state' => 'running',

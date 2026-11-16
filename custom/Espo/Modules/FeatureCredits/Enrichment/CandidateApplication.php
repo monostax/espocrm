@@ -121,7 +121,7 @@ final class CandidateApplication
             $predicates = match (mb_strtolower($role)) {
                 'owner', 'sócio' => ['owns'],
                 'administrator', 'administrador', 'conselheiro de administração', 'diretor' => ['administers'],
-                'owner_administrator', 'sócio-administrador' => ['owns','administers'],
+                'owner_administrator', 'sócio-administrador', 'empresário individual' => ['owns','administers'],
                 default => ['part_of'],
             };
             foreach ($predicates as $predicate) {

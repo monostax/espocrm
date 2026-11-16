@@ -119,6 +119,33 @@ class EnrichmentDiscoveryAdaptersTest extends TestCase
         $this->assertArrayNotHasKey('incidental', $result->items[0]);
     }
 
+    public function testIndividualProprietorRequiresItsOwnFullCpfAndEntrepreneurQualification(): void
+    {
+        $credentials = $this->createStub(Credentials::class); $credentials->method('get')->willReturn(['token' => 'fixture']);
+        $owner = ['status' => 1, 'pacoteUsado' => 6, 'cnpj' => '11222333000181', 'socios' => [],
+            'naturezaJuridica' => ['codigo' => '2135'], 'responsavel' => 'Maria Souza',
+            'responsavelCpf' => '529.982.247-25', 'responsavelQualificacao' => ['id' => 50, 'descricao' => 'Empresário']];
+        foreach ([
+            [$owner, 'succeeded'],
+            [[...$owner, 'responsavelCpf' => '***.982.247-**'], 'no_match'],
+            [[...$owner, 'responsavelCpf' => '52998224726'], 'no_match'],
+            [[...$owner, 'responsavel' => ''], 'no_match'],
+            [[...$owner, 'responsavelQualificacao' => ['id' => 5, 'descricao' => 'Procurador']], 'no_match'],
+            [[...$owner, 'naturezaJuridica' => ['codigo' => '2062']], 'no_match'],
+        ] as [$data, $state]) {
+            $transport = $this->createMock(Transport::class);
+            $transport->expects($this->once())->method('send')->willReturn(new Response(200, $data));
+            $result = (new CpfCnpjDiscovery($credentials, $transport))->execute(
+                ['product' => 'socios', 'kind' => 'page', 'identity' => ['cnpj' => '11222333000181']], 1000);
+            $this->assertSame($state, $result->state);
+            if ($state === 'succeeded') {
+                $this->assertSame(['cpf' => '52998224725', 'name' => 'Maria Souza', 'role' => 'Empresário Individual'], $result->items[0]['values']);
+                $this->assertSame(['administers', 'owns'], array_column(
+                    \Espo\Modules\FeatureCredits\Enrichment\CandidateApplication::relationships('socios', [], ['Empresário Individual']), 'predicate'));
+            } else $this->assertSame([], $result->items);
+        }
+    }
+
     public function testApolloResolutionSearchAndDemographicCompletionAreSeparateBoundRequests(): void
     {
         $org = ['id' => str_repeat('a', 24), 'linkedin_url' => 'https://linkedin.com/company/example'];

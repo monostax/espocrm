@@ -54,6 +54,7 @@ class EnrichmentCreationFormTest extends TestCase
         self::assertTrue($result['fields'][0]['required']);
         self::assertSame(['A','B'],$result['fields'][2]['options']);
         self::assertSame(['base','other'],array_column($result['teams'],'id'));
+        self::assertSame(['base'],$result['defaultTeamsIds']);
     }
 
     public function testOptionalBirthDateIsAlwaysOfferedWithItsApplicationFieldName(): void
@@ -81,5 +82,6 @@ class EnrichmentCreationFormTest extends TestCase
         $result = $this->form(['teams' => ['required' => true]],'name');
         self::assertFalse($result['available']);
         self::assertSame([],$result['teams']);
+        self::assertSame([],$result['defaultTeamsIds']);
     }
 }
