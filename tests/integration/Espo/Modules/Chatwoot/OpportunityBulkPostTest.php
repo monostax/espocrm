@@ -55,6 +55,10 @@ class OpportunityBulkPostTest extends TestCase
         ]);
         $this->role = $this->create('Role', ['name' => 'Bulk test', 'mentionPermission' => 'all', 'data' => (object) [
             'Opportunity' => (object) ['read' => 'all', 'stream' => 'all', 'create' => 'yes', 'edit' => 'all', 'delete' => 'all'],
+            'Contact' => (object) ['read' => 'all', 'stream' => 'all', 'create' => 'yes', 'edit' => 'all', 'delete' => 'all'],
+            'Account' => (object) ['read' => 'all', 'stream' => 'all', 'create' => 'yes', 'edit' => 'all', 'delete' => 'all'],
+            'Initiative' => (object) ['read' => 'all', 'stream' => 'all', 'create' => 'yes', 'edit' => 'all', 'delete' => 'all'],
+            'InitiativeType' => (object) ['read' => 'all'],
             'Note' => (object) ['read' => 'all', 'create' => 'yes', 'edit' => 'own', 'delete' => 'own'],
             'ChatwootAccount' => (object) ['read' => 'all'],
             'User' => (object) ['read' => 'all'],
@@ -150,6 +154,47 @@ class OpportunityBulkPostTest extends TestCase
         }
         self::assertGreaterThanOrEqual($count, $native);
         self::assertSame(0, $accountBroadcasts, 'Account-wide invalidation jobs are retired; Notes have native transactional intent.');
+    }
+
+    public function testContactAccountAndInitiativeMuralsTakeBulkPosts(): void
+    {
+        $service = $this->service();
+        $opportunity = $service->submit($this->accountId(), $this->request($this->opportunities(1)));
+        // Initiatives are also bounded by their type's teams.
+        $initiativeType = $this->create('InitiativeType', ['name' => 'Bulk test', 'tenantId' => $this->tenant->getId()]);
+        $this->em->getRDBRepository('InitiativeType')->getRelation($initiativeType, 'teams')
+            ->relate($this->em->getEntityById('Team', $this->tenant->get('baseUserTeamId')));
+        foreach (['Contact', 'Account', 'Initiative'] as $type) {
+            $ids = [];
+            foreach ([1, 2] as $i) {
+                $ids[] = $this->create($type, [
+                    ...($type === 'Contact' ? ['lastName' => "Bulk $i"] : ['name' => "Bulk $i"]),
+                    ...($type === 'Initiative' ? ['initiativeTypeId' => $initiativeType->getId()] : []),
+                    'tenantId' => $this->tenant->getId(), 'assignedUserId' => $this->author->getId(),
+                ])->getId();
+            }
+            // The IDs are checked against the declared type, never another entity's table.
+            try {
+                $service->submit($this->accountId(), $this->request($ids));
+                self::fail("$type IDs were accepted as opportunities.");
+            } catch (Forbidden) {
+                self::assertTrue(true);
+            }
+            $operation = $service->submit($this->accountId(), (object) [...(array) $this->request($ids), 'parentType' => $type]);
+            $this->work($operation->id);
+            self::assertSame('Completed', $service->status($this->accountId(), $operation->id)->status);
+            $notes = $this->em->getRDBRepository('Note')->where(['parentType' => $type, 'parentId' => $ids, 'type' => 'Post'])->find();
+            self::assertCount(2, $notes);
+            foreach ($notes as $note) self::assertTrue((bool) $note->get('isInternal'));
+            self::assertSame([$operation->id], array_column($service->recent($this->accountId(), $type)->list, 'id'));
+        }
+        self::assertSame([$opportunity->id], array_column($service->recent($this->accountId())->list, 'id'));
+    }
+
+    public function testBulkPostsRejectUnknownRecordTypes(): void
+    {
+        $this->expectException(\Espo\Core\Exceptions\BadRequest::class);
+        $this->service()->submit($this->accountId(), (object) [...(array) $this->request($this->opportunities(1)), 'parentType' => 'User']);
     }
 
     public function testRejectsMixedTenantsEvenForAnAdministrator(): void

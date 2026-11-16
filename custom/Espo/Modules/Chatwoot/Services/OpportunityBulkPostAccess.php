@@ -50,20 +50,22 @@ class OpportunityBulkPostAccess
         }
     }
 
-    public function target(?Entity $opportunity, Entity $account): void
+    /** The mural record (Opportunity, Contact, Account or Initiative) a bulk post lands on. */
+    public function target(?Entity $record, Entity $account): void
     {
-        // Exact workspace match also applies to instance administrators.
-        if (!$opportunity || $opportunity->get('tenantId') !== $account->get('tenantId') ||
-            !$this->acl->checkEntityRead($opportunity) || !$this->acl->checkEntityStream($opportunity)) {
-            throw new Forbidden('Opportunity is unavailable in this workspace.');
+        // Exact workspace match also applies to instance administrators. Same checks as the record inboxes' stream access.
+        if (!$record || $record->get('tenantId') !== $account->get('tenantId') ||
+            !$this->acl->checkEntityRead($record) || !$this->acl->checkEntityStream($record) ||
+            !$this->acl->checkScope('Note', 'read')) {
+            throw new Forbidden('Record is unavailable in this workspace.');
         }
         $note = $this->em->getNewEntity('Note');
         $note->set([
-            'type' => 'Post', 'parentType' => 'Opportunity', 'parentId' => $opportunity->getId(),
+            'type' => 'Post', 'parentType' => $record->getEntityType(), 'parentId' => $record->getId(),
             'createdById' => $this->user->getId(),
         ]);
         if (!$this->acl->check('Note', 'create') || !$this->acl->check($note, 'create')) {
-            throw new Forbidden('No permission to post in this opportunity.');
+            throw new Forbidden('No permission to post in this record.');
         }
     }
 }

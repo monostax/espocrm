@@ -7,6 +7,7 @@
         "tenant": { "type": "link", "required": true },
         "platformId": { "type": "varchar", "maxLength": 64 },
         "chatwootAccountId": { "type": "int", "required": true },
+        "parentType": { "type": "varchar", "maxLength": 32, "default": "Opportunity" },
         "post": { "type": "text" },
         "postEditorState": { "type": "text" },
         "status": { "type": "enum", "options": ["Queued", "Running", "Completed", "Partial"], "default": "Queued" },

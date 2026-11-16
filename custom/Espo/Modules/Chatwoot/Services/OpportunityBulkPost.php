@@ -23,6 +23,8 @@ class OpportunityBulkPost
     public const OPERATION = 'OpportunityBulkPost';
     public const TARGET = 'OpportunityBulkPostTarget';
     public const CHUNK_SIZE = 50;
+    /** Records whose mural takes bulk posts. Targets keep the parent record ID in `opportunityId`. */
+    public const PARENT_TYPES = ['Opportunity', 'Contact', 'Account', 'Initiative'];
 
     public function __construct(
         private EntityManager $em,
@@ -36,6 +38,7 @@ class OpportunityBulkPost
     public function submit(int $accountId, object $data): object
     {
         $account = $this->access->workspace($accountId);
+        $parentType = $this->parentType($data->parentType ?? null);
         $ids = $data->ids ?? null;
         $post = $data->post ?? null;
         $key = $data->idempotencyKey ?? null;
@@ -53,9 +56,12 @@ class OpportunityBulkPost
         $postEditorState = $data->postEditorState ?? null;
         \Espo\Modules\Chatwoot\Tools\PostContent::validate($post, $postEditorState);
         $requestKey = hash('sha256', $this->user->getId() . ':' . $account->getId() . ':' . $key);
-        $payloadHash = hash('sha256', json_encode($postEditorState ? [$ids, $post, $postEditorState] : [$ids, $post], JSON_THROW_ON_ERROR));
+        $payload = $postEditorState ? [$ids, $post, $postEditorState] : [$ids, $post];
+        // Opportunity hashes keep their original shape.
+        if ($parentType !== 'Opportunity') $payload = ['parentType' => $parentType, 'payload' => $payload];
+        $payloadHash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
 
-        $operation = $this->em->getTransactionManager()->run(function () use ($account, $ids, $post, $postEditorState, $requestKey, $payloadHash): Entity {
+        $operation = $this->em->getTransactionManager()->run(function () use ($account, $parentType, $ids, $post, $postEditorState, $requestKey, $payloadHash): Entity {
             // Serialize submissions by the same actor, including the first use of a key.
             $this->em->getRDBRepository('User')->select('id')->where(['id' => $this->user->getId()])->forUpdate()->findOne();
             $existing = $this->em->getRDBRepository(self::OPERATION)->where(['requestKey' => $requestKey])->findOne();
@@ -66,12 +72,12 @@ class OpportunityBulkPost
             }
             // Validate the complete fixed selection before accepting any work. Never disclose which foreign ID failed.
             foreach (array_chunk($ids, 100) as $batch) {
-                $found = $this->em->getRDBRepository('Opportunity')->where(['id' => $batch])->find();
+                $found = $this->em->getRDBRepository($parentType)->where(['id' => $batch])->find();
                 if (count($found) !== count($batch)) throw new Forbidden('Selection is unavailable.');
-                foreach ($found as $opportunity) $this->access->target($opportunity, $account);
+                foreach ($found as $record) $this->access->target($record, $account);
             }
             $operation = $this->em->createEntity(self::OPERATION, [
-                'requestKey' => $requestKey, 'payloadHash' => $payloadHash, 'post' => $post,
+                'requestKey' => $requestKey, 'payloadHash' => $payloadHash, 'post' => $post, 'parentType' => $parentType,
                 'postEditorState' => $postEditorState,
                 'userId' => $this->user->getId(), 'accountId' => $account->getId(),
                 'tenantId' => $account->get('tenantId'), 'platformId' => $account->get('platformId'),
@@ -87,13 +93,13 @@ class OpportunityBulkPost
         return $this->summary($operation);
     }
 
-    public function recent(int $accountId): object
+    public function recent(int $accountId, ?string $parentType = null): object
     {
         $account = $this->access->workspace($accountId);
         $where = [
             'userId' => $this->user->getId(), 'accountId' => $account->getId(),
             'tenantId' => $account->get('tenantId'), 'platformId' => $account->get('platformId'),
-            'chatwootAccountId' => $accountId,
+            'chatwootAccountId' => $accountId, 'parentType' => $this->parentType($parentType),
         ];
         $list = [];
         foreach ($this->em->getRDBRepository(self::OPERATION)->where($where)
@@ -161,7 +167,7 @@ class OpportunityBulkPost
                 $this->publish($id, $generation, $target->getId());
             } catch (Throwable $e) {
                 $code = $e instanceof Forbidden || $e instanceof NotFound ? 'unavailable' : ($e instanceof BadRequest ? 'invalid_post' : 'send_failed');
-                $this->log->error('Bulk opportunity post failed.', ['operationId' => $id, 'targetId' => $target->getId(), 'exception' => $e]);
+                $this->log->error('Bulk mural post failed.', ['operationId' => $id, 'targetId' => $target->getId(), 'exception' => $e]);
                 // The publish transaction has rolled back, including Note, hooks, and outbox jobs.
                 $this->em->getTransactionManager()->run(function () use ($id, $generation, $target, $code): void {
                     $operation = $this->lock($id);
@@ -195,7 +201,7 @@ class OpportunityBulkPost
     {
         try {
             $this->em->getTransactionManager()->run(function () use ($id, $generation, $targetId): void {
-                // Uniform lock order: operation -> target -> opportunity. Only one short transaction per post.
+                // Uniform lock order: operation -> target -> parent record. Only one short transaction per post.
                 $operation = $this->lock($id);
                 if ((int) $operation->get('generation') !== $generation) return;
                 $target = $this->locked(self::TARGET, $targetId);
@@ -204,13 +210,16 @@ class OpportunityBulkPost
                 if (!$accountRecord) throw new Forbidden();
                 $account = $this->access->workspace((int) $accountRecord->get('chatwootAccountId'));
                 $this->access->operation($operation, $account);
-                $opportunity = $this->locked('Opportunity', $target->get('opportunityId'));
-                $this->access->target($opportunity, $account);
-                $this->context->opportunityId = $opportunity->getId();
+                $parentType = $this->parentType($operation->get('parentType'));
+                $parent = $this->locked($parentType, $target->get('opportunityId'));
+                $this->access->target($parent, $account);
+                if ($parentType === 'Opportunity') $this->context->opportunityId = $parent->getId();
                 $note = $this->records->create('Note')->create((object) [
-                    'type' => 'Post', 'parentType' => 'Opportunity', 'parentId' => $opportunity->getId(),
+                    'type' => 'Post', 'parentType' => $parentType, 'parentId' => $parent->getId(),
                     'post' => $operation->get('post'), 'opportunityChatwootAccountId' => (int) $account->get('chatwootAccountId'),
                     'postEditorState' => $operation->get('postEditorState'),
+                    // Same as a single post on a Contact, Account or Initiative mural.
+                    ...($parentType === 'Opportunity' ? [] : ['isInternal' => true]),
                 ])->getEntity();
                 $target->set(['status' => 'Succeeded', 'noteId' => $note->getId(), 'error' => null]);
                 $operation->set([
@@ -223,6 +232,13 @@ class OpportunityBulkPost
         } finally {
             $this->context->opportunityId = null;
         }
+    }
+
+    private function parentType(mixed $value): string
+    {
+        $value ??= 'Opportunity';
+        if (!in_array($value, self::PARENT_TYPES, true)) throw new BadRequest('Invalid record type.');
+        return $value;
     }
 
     private function schedule(Entity $operation): void

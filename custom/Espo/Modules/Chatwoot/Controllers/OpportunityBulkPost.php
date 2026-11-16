@@ -22,7 +22,9 @@ class OpportunityBulkPost
 
     public function getActionRecent(Request $request): object
     {
-        return $this->service->recent($this->accountId($request));
+        $parentType = $request->getQueryParam('parentType');
+        if ($parentType !== null && !is_string($parentType)) throw new BadRequest('Invalid record type.');
+        return $this->service->recent($this->accountId($request), $parentType);
     }
 
     public function getActionStatus(Request $request): object
