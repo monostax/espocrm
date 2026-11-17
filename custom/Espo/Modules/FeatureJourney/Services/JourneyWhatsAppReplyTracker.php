@@ -491,6 +491,32 @@ class JourneyWhatsAppReplyTracker
             }
         }
 
+        // Any conversation this enrollment sent to (each contact, each phone, WhatsApp and SMS).
+        $matched = $this->entityManager
+            ->getRDBRepository('JourneyRecord')
+            ->where([
+                'chatwootConversationTrail*' => '%"' .
+                    JourneyWhatsAppOutbound::trailKey($espoAccountId, $externalConversationId) . '"%',
+                'status' => ['Active', 'Processing'],
+            ])
+            ->order('modifiedAt', 'DESC')
+            ->findOne();
+
+        if ($matched) {
+            $tType = (string) ($matched->get('targetType') ?? '');
+            $tId = (string) ($matched->get('targetId') ?? '');
+
+            if ($tType !== '' && $tId !== '') {
+                return [
+                    $tType,
+                    $tId,
+                    $tType === 'Contact' ? $tId : null,
+                    (string) ($matched->get('journeyId') ?? ''),
+                    (string) $matched->getId(),
+                ];
+            }
+        }
+
         // 3) Fallback: CRM Contact linked on message/conversation (but only if journey already resolved).
         $contactId = null;
         if ($message) {

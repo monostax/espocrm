@@ -22,13 +22,16 @@ class CreditWorkspaceTest extends TestCase
     public static function denials(): iterable
     {
         foreach (['portal', 'api', 'system', 'scope', 'mapping', 'duplicate', 'record', 'membership'] as $kind) {
-            yield [$kind, false];
-            yield [$kind, true];
+            foreach ([false, true] as $admin) {
+                if ($admin && $kind === 'membership') continue;
+                yield [$kind, false, $admin];
+                yield [$kind, true, $admin];
+            }
         }
     }
 
     #[DataProvider('denials')]
-    public function testDeniedWorkspaceNeverReadsFinancialData(string $kind, bool $conversation): void
+    public function testDeniedWorkspaceNeverReadsFinancialData(string $kind, bool $conversation, bool $admin): void
     {
         $manager = $this->createMock(EntityManager::class);
         $manager->expects($this->never())->method('getPDO');
@@ -42,6 +45,7 @@ class CreditWorkspaceTest extends TestCase
         $manager->method('getRDBRepository')->willReturn($repository);
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn('user');
+        $user->method('isAdmin')->willReturn($admin);
         $user->method('isPortal')->willReturn($kind === 'portal');
         $user->method('isApi')->willReturn($kind === 'api');
         $user->method('isSystem')->willReturn($kind === 'system');
@@ -58,6 +62,41 @@ class CreditWorkspaceTest extends TestCase
         $this->expectException(Forbidden::class);
         $controller = new CreditWorkspace($user, $acl, $memberships, $manager, $this->createMock(Access::class), new BalanceStatus($manager, $clock), $clock);
         $conversation ? $controller->getActionConversation($request, $response) : $controller->getActionRead($request, $response);
+    }
+
+    public function testInstanceAdministratorCanReadModelsWithoutTenantMembership(): void
+    {
+        $account = new BaseEntity('ChatwootAccount', ['attributes' => ['tenantId' => ['type' => 'varchar']]]);
+        $account->set('tenantId', 'tenant');
+        $builder = $this->createMock(RDBSelectBuilder::class);
+        $builder->method('limit')->willReturnSelf();
+        $builder->method('find')->willReturn(new EntityCollection([$account]));
+        $repository = $this->createMock(RDBRepository::class);
+        $repository->method('where')->willReturn($builder);
+        $manager = $this->createMock(EntityManager::class);
+        $manager->method('getRDBRepository')->willReturn($repository);
+        $statement = $this->createMock(\PDOStatement::class);
+        $statement->expects($this->once())->method('execute')->with(['tenant']);
+        $statement->method('fetch')->willReturn(false); // A legacy workspace has no picker.
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->expects($this->once())->method('prepare')->willReturn($statement);
+        $manager->method('getPDO')->willReturn($pdo);
+        $user = $this->createMock(User::class);
+        $user->method('getId')->willReturn('admin');
+        $user->method('isAdmin')->willReturn(true);
+        $acl = $this->createMock(Acl::class);
+        $acl->method('checkScope')->willReturn(true);
+        $acl->expects($this->once())->method('check')->with($account, 'read')->willReturn(true);
+        $memberships = $this->createMock(UserTenantResolver::class);
+        $memberships->expects($this->never())->method('canActForTenant');
+        $request = $this->createMock(Request::class);
+        $request->method('getQueryParams')->willReturn(['accountId' => '8']);
+        $clock = new Clock();
+        $controller = new CreditWorkspace($user, $acl, $memberships, $manager, $this->createMock(Access::class), new BalanceStatus($manager, $clock), $clock);
+        $result = $controller->getActionModels($request, $this->createMock(Response::class));
+        $this->assertSame('tenant', $result->tenantId);
+        $this->assertNull($result->default);
+        $this->assertSame([], $result->models);
     }
 
     public static function conversationDenials(): iterable

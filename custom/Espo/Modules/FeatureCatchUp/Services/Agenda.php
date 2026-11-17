@@ -122,14 +122,15 @@ class Agenda
         $ids = $this->ids('SELECT DISTINCT c.id FROM catch_up_record r JOIN chatwoot_conversation c ON c.id = r.subject_id AND c.deleted = 0 '
             . 'JOIN chatwoot_account a ON a.id = c.chatwoot_account_id '
             . "WHERE r.deleted = 0 AND r.subject_type = 'ChatwootConversation' AND r.tenant_id = :tenant AND r.due_ts IS NOT NULL "
-            . 'AND r.due_ts <= :until AND c.chatwoot_account_id = :account AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ")$owner",
+            . 'AND r.due_ts <= :until AND c.chatwoot_account_id = :account AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
+            . ConversationCycle::CURRENT_SQL . $owner,
             ['tenant' => $tenantId, 'until' => $until->getTimestamp(), 'account' => $account->getId(), ...$params]);
         $items = [];
         foreach ($this->access->filter($this->readable('ChatwootConversation', $ids)) as $id => $conversation) {
             $subject = ['type' => 'conversation', 'id' => $id, 'name' => (string) ($conversation->get('contactDisplayName') ?: $conversation->get('name'))];
             $target = ['conversation' => ['conversationId' => (int) $conversation->get('chatwootConversationId'),
                 'accountId' => (int) $account->get('chatwootAccountId')]];
-            foreach ($this->upcoming($this->records->load('ChatwootConversation', $id, Records::scope([$id])), $now, $until) as $loop) {
+            foreach ($this->upcoming($this->records->load('ChatwootConversation', $id, ConversationCycle::scope($conversation)), $now, $until) as $loop) {
                 $items[] = ['kind' => 'loop', 'subject' => $subject, ...$loop, ...$target, 'nextAction' => null, 'canSchedule' => false];
             }
         }

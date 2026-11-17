@@ -50,6 +50,7 @@
     {"route": "/CreditEnrichmentBatches", "method": "post", "params": {"controller": "CreditEnrichmentBatches", "action": "create"}},
     {"route": "/CreditEnrichmentBatches/cancel", "method": "post", "params": {"controller": "CreditEnrichmentBatches", "action": "cancel"}},
     {"route": "/CreditEnrichmentBatches/resume", "method": "post", "params": {"controller": "CreditEnrichmentBatches", "action": "resume"}},
+    {"route": "/CreditEnrichmentBatches/retry", "method": "post", "params": {"controller": "CreditEnrichmentBatches", "action": "retry"}},
     {"route": "/CreditEnrichmentConfiguration", "method": "post", "params": {"controller": "CreditEnrichmentConfiguration", "action": "publish"}},
     {"route": "/CreditEnrichmentConfiguration", "method": "get", "params": {"controller": "CreditEnrichmentConfiguration", "action": "read"}},
     {"route": "/CreditConfiguration", "method": "post", "params": {"controller": "CreditConfiguration", "action": "publish"}},

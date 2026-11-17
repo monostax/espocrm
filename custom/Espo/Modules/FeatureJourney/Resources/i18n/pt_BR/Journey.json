@@ -118,6 +118,8 @@
         "actionTypeSendEmail": "Enviar e-mail",
         "actionTypeSendWhatsAppMessage": "Enviar mensagem WhatsApp",
         "actionTypeSendWhatsAppTemplate": "Enviar template WhatsApp",
+        "actionTypeOpenConversationWithNote": "Abrir conversa WhatsApp com nota privada",
+        "actionTypeSendSms": "Enviar SMS",
         "actionTypeCreateTask": "Criar tarefa",
         "actionTypeNotifyUser": "Notificar usuário",
         "actionTypeUpdateTarget": "Atualizar alvo",

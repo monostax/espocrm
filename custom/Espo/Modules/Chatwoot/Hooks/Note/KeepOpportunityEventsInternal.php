@@ -15,9 +15,9 @@ class KeepOpportunityEventsInternal
 
     public function beforeSave(Entity $entity, array $options): void
     {
-        if (in_array($entity->get('type'), OpportunityStreamEvents::EVENT_TYPES, true) ||
+        if (in_array($entity->get('type'), [...OpportunityStreamEvents::EVENT_TYPES, 'OpportunityStageChanged'], true) ||
             (in_array($entity->get('parentType'), ['Opportunity', ...ActivityDiscussion::PARENT_TYPES], true) &&
-                ($entity->get('data')->opportunityStreamAgent ?? null))) {
+                (($entity->get('data')->opportunityStreamAgent ?? null) || ($entity->get('data')->opportunityWatcher ?? null)))) {
             $entity->set('isInternal', true);
         }
     }

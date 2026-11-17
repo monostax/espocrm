@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "catchUpDiscardedAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "importDisabled": true,
+            "utility": true
+        }
+    }
+}

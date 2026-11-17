@@ -7,7 +7,6 @@ namespace Espo\Modules\FeatureCatchUp\Services;
 use Espo\Core\Acl;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
-use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Record\CreateParams;
 use Espo\Core\Record\ServiceContainer;
@@ -35,13 +34,11 @@ class Actions
         if (!in_array($status, ['Won', 'Lost'], true)) throw new BadRequest('Invalid status.');
         $deal = $this->feed->deal($id, $this->workspace->resolve($request)['tenant']->getId());
         if (!$this->acl->checkEntityEdit($deal)) throw new Forbidden();
-        if (in_array($deal->get('status'), ['Won', 'Lost'], true)) throw new Conflict('This deal is already closed.');
         $stage = $this->em->getRDBRepository('OpportunityStage')->where([
             'funnelId' => $deal->get('funnelId'), 'isActive' => true, 'probability' => $status === 'Won' ? 100 : 0,
         ])->order('order')->findOne();
         if (!$deal->get('funnelId') || !$stage) throw new BadRequest('This funnel has no stage for that outcome.');
         $this->records->get('Opportunity')->update($id, (object) ['opportunityStageId' => $stage->getId()], UpdateParams::create());
-        $this->verdicts->resolve('Opportunity', $id);
         return ['success' => true, 'status' => $status];
     }
 

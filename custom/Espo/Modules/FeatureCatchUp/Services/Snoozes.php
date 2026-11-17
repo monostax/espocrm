@@ -11,6 +11,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Entities\User;
+use Espo\Modules\FeatureCatchUp\Classes\CardGone;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Select;
@@ -55,6 +56,8 @@ class Snoozes
         if (!$this->acl->checkEntityRead($record) || $owner !== $tenant->getId()) {
             throw new Forbidden();
         }
+        if ($type === 'Opportunity' && in_array($record->get('status'), ['Won', 'Lost'], true)) throw new CardGone();
+        if ($type === 'ChatwootConversation') ConversationCycle::requireCurrent($record);
         $value = $time->format('Y-m-d H:i:s');
         $this->em->getTransactionManager()->run(function () use ($type, $id, $value): void {
             $where = ['userId' => $this->user->getId(), 'targetType' => $type, 'targetId' => $id];

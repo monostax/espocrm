@@ -18,6 +18,8 @@ trait EnrichmentExecutionCases
 {
     private array $supplierResults = [];
     private array $supplierCalls = [];
+    /** Unset: no platform key, so returned emails are not checked. */
+    private ?\Espo\Modules\FeatureCredits\Enrichment\Decisions $decisions = null;
 
     private function executor(PDO $pdo): Execution
     {
@@ -45,7 +47,10 @@ trait EnrichmentExecutionCases
             return $supplier;
         });
         $config = $this->createStub(Config::class); $config->method('get')->willReturn('enrichment-test-encryption-key');
-        return new Execution($manager,$lock,$actors,$registry,new FixedSettlement(new Funding($lock)),new Crypt($config),$clock);
+        return new Execution($manager,$lock,$actors,$registry,new FixedSettlement(new Funding($lock)),new Crypt($config),$clock,
+            // No Twilio credentials in tests: the Brazilian numbering plan decides, with no network I/O.
+            new \Espo\Modules\FeatureCredits\Enrichment\MobilePhones(new \Espo\Modules\FeatureCredits\Verification\TwilioCredentials(),new \Espo\Modules\FeatureCredits\Verification\TwilioTransport()),
+        new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners($this->decisions ?? new \Espo\Modules\FeatureCredits\Enrichment\Decisions()));
     }
 
     private function assertExecuted(PDO $pdo, string $credits): void
@@ -90,6 +95,59 @@ trait EnrichmentExecutionCases
             $this->assertExecuted($pdo,'2.7000');
             $this->assertSame([['cpfcnpj','email','lookup'],['cpfcnpj','phone','lookup']],$this->supplierCalls);
             $this->assertSame(['matched','waived'],$pdo->query('SELECT state FROM enrichment_attempt ORDER BY product')->fetchAll(PDO::FETCH_COLUMN));
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testContactLandlineIsNotAPhoneMatchAndIsNeverCharged(string $dialect): void
+    {
+        $this->database($dialect,function (PDO $pdo,Quotes $quotes): void {
+            $this->fundAdmission($pdo); $quote = $this->accepted($quotes,['products' => ['phone']]); $quotes->admit('tenant',$quote['id']);
+            $execution = $this->executor($pdo);
+            // First supplier only knows a landline; the next one has a mobile next to another landline.
+            $this->supplierResults = [new Result('match',['+551123456789']),new Result('match',['+551133334444','+5511999998888'])];
+            $execution->run('tenant',$quote['id']);
+            $this->assertSame(['phone','phone'],array_column($this->supplierCalls,1));
+            $attempts = $pdo->query('SELECT state,credits,result_ciphertext FROM enrichment_attempt ORDER BY claimed_at,id')->fetchAll(PDO::FETCH_ASSOC);
+            $this->assertSame(['no_match','matched'],array_column($attempts,'state'));
+            $this->assertNull($attempts[0]['result_ciphertext']);
+            $this->assertExecuted($pdo,$attempts[1]['credits']);
+            $config = $this->createStub(Config::class); $config->method('get')->willReturn('enrichment-test-encryption-key');
+            $this->assertSame(['+5511999998888'],json_decode((new Crypt($config))->decrypt($attempts[1]['result_ciphertext']),true));
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testOnlyTheContactsOwnEmailsAreBoughtAndALookupWithoutOneIsNeverCharged(string $dialect): void
+    {
+        $this->database($dialect,function (PDO $pdo,Quotes $quotes): void {
+            $pdo->exec("UPDATE contact SET last_name='Example', account_id='contact', date_of_birth='1990-05-15'");
+            $asked = [];
+            $this->decisions = $this->createStub(\Espo\Modules\FeatureCredits\Enrichment\Decisions::class);
+            $this->decisions->method('key')->willReturn('sk-fixture');
+            $this->decisions->method('ask')->willReturnCallback(function (string $key,array $bodies) use (&$asked): array {
+                return array_map(function (array $body) use (&$asked) {
+                    $asked[] = $body['state'];
+                    $own = str_starts_with($body['state']['email'],'person');
+                    return new \Espo\Modules\FeatureCredits\Enrichment\Providers\Response(200,['answers' => ['dono' => ['type' => 'choice',
+                        'choice' => $own ? 'proprio' : 'outra_pessoa','probabilities' => [$own ? 'proprio' : 'outra_pessoa' => 0.95]]]]);
+                },$bodies);
+            });
+            $this->fundAdmission($pdo); $quote = $this->accepted($quotes,['products' => ['email']]); $quotes->admit('tenant',$quote['id']);
+            // First supplier only knows a relative's address; the next one has the contact's own beside a company inbox.
+            $this->supplierResults = [new Result('match',['maria@family.test']),new Result('match',['contato@company.test','person.example@mail.test'])];
+            $this->executor($pdo)->run('tenant',$quote['id']);
+            $this->assertSame(['email','email'],array_column($this->supplierCalls,1));
+            $attempts = $pdo->query('SELECT state,credits,result_ciphertext FROM enrichment_attempt ORDER BY claimed_at,id')->fetchAll(PDO::FETCH_ASSOC);
+            // Both attempts share the frozen clock, so their order is not fixed.
+            usort($attempts,static fn (array $a,array $b): int => strcmp($b['state'],$a['state']));
+            $this->assertSame(['no_match','matched'],array_column($attempts,'state'));
+            $this->assertNull($attempts[0]['result_ciphertext']);
+            $this->assertExecuted($pdo,$attempts[1]['credits']);
+            $config = $this->createStub(Config::class); $config->method('get')->willReturn('enrichment-test-encryption-key');
+            $this->assertSame(['person.example@mail.test'],json_decode((new Crypt($config))->decrypt($attempts[1]['result_ciphertext']),true));
+            $this->assertSame(['nome' => 'Person Example','anoNascimento' => '1990'],$asked[0]['contato']);
+            $this->assertSame(['nome' => 'Company','site' => 'https://example.test'],$asked[0]['empresaDoContato']);
         });
     }
 

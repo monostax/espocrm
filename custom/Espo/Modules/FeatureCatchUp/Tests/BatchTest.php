@@ -8,6 +8,7 @@ use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Utils\Log;
+use Espo\Modules\FeatureCatchUp\Classes\CardGone;
 use Espo\Modules\FeatureCatchUp\Services\Batch;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
@@ -27,6 +28,7 @@ class BatchTest extends TestCase
         $feed = $this->createMock(Feed::class);
         $feed->method('snapshot')->willReturnCallback(function (string $id) use ($refused) {
             $this->snapshots[] = "deals:$id";
+            if ($id === 'gone') throw new CardGone();
             if (in_array($id, $refused, true)) throw new Forbidden('No conversation of this deal can be opened.');
             return ['id' => $id, 'type' => 'opportunity'];
         });
@@ -89,6 +91,17 @@ class BatchTest extends TestCase
         self::assertSame(['completed', 'pending', 'limited', 'expired'], array_column($result['items'], 'status'));
         self::assertSame('customer_waiting', $result['items'][0]['verdict']);
         self::assertSame(['lane' => 'service', 'id' => 'c1', 'status' => 'pending', 'requestId' => $waiting], $result['items'][1]);
+    }
+
+    public function testADealClosedAfterListingOrWhileAnalysingIsDiscarded(): void
+    {
+        $done = str_repeat('1', 64);
+        $batch = $this->batch([$done => 'completed']);
+        $item = ['lane' => 'deals', 'id' => 'gone'];
+        $discarded = [...$item, 'status' => 'discarded'];
+        self::assertSame([$discarded], $batch->start($this->request([$item]))['items']);
+        self::assertSame([$discarded], $batch->status($this->request([[...$item, 'requestId' => $done]]))['items']);
+        self::assertSame([], $this->analyses);
     }
 
     public function testRejectsMoreThanABatchAndMalformedItems(): void

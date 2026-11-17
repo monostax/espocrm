@@ -6,9 +6,12 @@ namespace Espo\Modules\FeatureCatchUp\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\NotFound;
+use Espo\Modules\FeatureCatchUp\Services\Revision;
 use Espo\Modules\FeatureCatchUp\Services\Actions;
 use Espo\Modules\FeatureCatchUp\Services\Agenda;
 use Espo\Modules\FeatureCatchUp\Services\Batch;
+use Espo\Modules\FeatureCatchUp\Services\ConversationDrafts;
 use Espo\Modules\FeatureCatchUp\Services\ConversationRecord;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\ProposedDeals;
@@ -31,6 +34,7 @@ class CatchUp
         private Agenda $agenda,
         private ProposedDeals $proposedDeals,
         private Batch $batch,
+        private ConversationDrafts $drafts,
     ) {}
 
     /** The Agenda tab: loops not due yet, pending next steps and armed AI follow-ups, from stored data only. */
@@ -43,6 +47,11 @@ class CatchUp
     public function getActionRecord(Request $request): object
     {
         return (object) $this->record->read($request);
+    }
+
+    public function getActionDrafts(Request $request): object
+    {
+        return (object) ['drafts' => $this->drafts->read($request)];
     }
 
     /** The deck's analyses, up to Batch::MAX_START subjects of either lane: snapshot plus stored verdict or queued analysis. */
@@ -60,6 +69,26 @@ class CatchUp
     public function getActionList(Request $request): object
     {
         return (object) $this->feed->list($request);
+    }
+
+    /** A card already on screen: recheck eligibility without re-reading the transcript or running an analysis. */
+    public function getActionCardStatus(Request $request): object
+    {
+        $workspace = $this->workspace->resolve($request);
+        $id = $this->id($request);
+        try {
+            if ($request->getQueryParam('lane') === 'service') {
+                $this->service->authorize();
+                $conversation = $this->service->conversation($id, $workspace['account']);
+                return (object) ['current' => Revision::ofConversation($conversation) === $request->getQueryParam('revision')];
+            }
+            if ($request->getQueryParam('lane') !== 'deals') throw new BadRequest('Invalid lane.');
+            $this->feed->authorize();
+            $this->feed->deal($id, $workspace['tenant']->getId());
+            return (object) ['current' => true];
+        } catch (NotFound) {
+            return (object) ['current' => false];
+        }
     }
 
     /**

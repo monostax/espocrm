@@ -96,7 +96,7 @@ class EnrichmentQuoteDatabaseTest extends TestCase
             $pdo->exec('CREATE TABLE tenant (id VARCHAR(17) PRIMARY KEY, deleted BOOLEAN NOT NULL DEFAULT FALSE)');
             $pdo->exec("INSERT INTO tenant (id) VALUES ('tenant'), ('other')");
             $pdo->exec('CREATE TABLE contact (id VARCHAR(17) PRIMARY KEY, tenant_id VARCHAR(17) NOT NULL,
-                deleted BOOLEAN NOT NULL DEFAULT FALSE, cpf VARCHAR(14), first_name VARCHAR(64), email_address VARCHAR(128), linkedin_url VARCHAR(512),
+                deleted BOOLEAN NOT NULL DEFAULT FALSE, cpf VARCHAR(14), first_name VARCHAR(64), last_name VARCHAR(64), account_id VARCHAR(17), email_address VARCHAR(128), linkedin_url VARCHAR(512),
                 date_of_birth VARCHAR(10), data_nascimento VARCHAR(10), email_enriched_at VARCHAR(19), email_enrichment_result VARCHAR(16),
                 phone_enriched_at VARCHAR(19), phone_enrichment_result VARCHAR(16))');
             $pdo->exec("INSERT INTO contact (id, tenant_id, cpf, first_name, email_address) VALUES

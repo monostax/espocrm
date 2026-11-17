@@ -190,6 +190,44 @@ class ValidateType implements BeforeSave
             );
         }
 
+        if ($type === 'openConversationWithNote') {
+            $inboxId = (string) ($params['chatwootInboxId'] ?? '');
+
+            if ($inboxId === '') {
+                throw new BadRequest('openConversationWithNote requires chatwootInboxId (WhatsApp Inbox).');
+            }
+
+            if (trim((string) ($params['note'] ?? '')) === '' && $this->paramFormulaScript($params, 'note') === '') {
+                throw new BadRequest('openConversationWithNote requires note (static text or dynamic/fx formula).');
+            }
+
+            $this->assertWhatsAppInboxChannel(
+                $inboxId,
+                ['whatsappQrcode', 'whatsappCloudApi', 'whatsappCoexistence'],
+                'openConversationWithNote'
+            );
+        }
+
+        if ($type === 'sendSms') {
+            $inboxId = (string) ($params['chatwootInboxId'] ?? '');
+
+            if ($inboxId === '') {
+                throw new BadRequest('sendSms requires chatwootInboxId (SMS Inbox).');
+            }
+
+            if (trim((string) ($params['body'] ?? '')) === '' && $this->paramFormulaScript($params, 'body') === '') {
+                throw new BadRequest('sendSms requires body (static text or dynamic/fx formula).');
+            }
+
+            $inbox = $this->entityManager->getEntityById('ChatwootInbox', $inboxId);
+            if (!$inbox) {
+                throw new BadRequest('sendSms: Chatwoot inbox not found.');
+            }
+            if ((string) $inbox->get('remoteChannelType') !== 'Channel::Sms') {
+                throw new BadRequest('sendSms: the inbox is not an SMS inbox.');
+            }
+        }
+
         if ($type === 'sendWhatsAppTemplate') {
             $inboxId = (string) ($params['chatwootInboxId'] ?? '');
             $templateName = trim((string) ($params['templateName'] ?? ''));

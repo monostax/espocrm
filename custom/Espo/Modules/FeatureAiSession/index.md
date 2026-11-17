@@ -23,7 +23,7 @@ In the main chat only, the agent has a `switch_agent` tool (backend `code-mode/s
 - CRM dispatch waits for earlier pending replies; Hatchet queues by tenant/session across agent handoffs. Queued placeholders expire after 24 hours, running ones after 15 minutes.
 - Model context includes Markdown, author identities and bounded UTF-8 text/Markdown/CSV/JSON attachment content. Other uploads retain rendering/download support and are explicitly marked as unavailable to the model.
 - Private invalidations use the owner's Chatwoot pubsub token. Account-wide activity and mention broadcasts exclude these sessions.
-- Agent eligibility also requires read access to its prompt. Private-session knowledge reads use human-authorized CRM APIs; provider-side file-search indexes are disabled because they cannot enforce the human's row/field ACL.
+- Agent eligibility also requires read access to its prompt. The selected agent's configured knowledge base is searchable in sessions (its file-search stores). On request, the agent can also change knowledge base articles and categories as the person: see `components/backend/docs/code-mode-knowledge-base.md`.
 
 ## Deployment
 

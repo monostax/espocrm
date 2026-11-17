@@ -17,7 +17,7 @@
     "tooltips": {
         "slug": "Stable, globally-unique URL slug for this tenant. Used to build per-tenant subdomains such as guest.<slug>.<gitops-domain>. Format: lowercase letters, digits, and hyphens (e.g. \"b2b\", \"clinica\").",
         "language": "Default language for this tenant. Applied to server-generated text (e.g. tracking event names) and set as the initial preference of users added to the tenant. Empty = instance default.",
-        "timeZone": "Default time zone for this tenant. Set as the initial preference of users added to the tenant. Empty = instance default."
+        "timeZone": "Default time zone for this tenant. Set as the initial preference of users added to the tenant, and used by AI agents that have no time zone of their own. Empty = instance default."
     },
     "links": {
         "baseUserTeam": "Base User Team",

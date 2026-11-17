@@ -112,7 +112,9 @@ class CandidateApplicationTest extends TestCase
             $supplier->method('lookup')->willReturnCallback(static fn ($type,$field) =>
                 new \Espo\Modules\FeatureCredits\Enrichment\Providers\Result('match',$product === 'emailPhone' ? $values[$field] : $values));
             $registry = $this->createStub(\Espo\Modules\FeatureCredits\Enrichment\Providers\Registry::class); $registry->method('get')->willReturn($supplier);
-            $execution = new \Espo\Modules\FeatureCredits\Enrichment\Execution($this->em,$lock,$actors,$registry,new FixedSettlement($funding),$crypt,$clock);
+            $execution = new \Espo\Modules\FeatureCredits\Enrichment\Execution($this->em,$lock,$actors,$registry,new FixedSettlement($funding),$crypt,$clock,
+                new \Espo\Modules\FeatureCredits\Enrichment\MobilePhones(new \Espo\Modules\FeatureCredits\Verification\TwilioCredentials(),new \Espo\Modules\FeatureCredits\Verification\TwilioTransport()),
+        new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners(new \Espo\Modules\FeatureCredits\Enrichment\Decisions()));
             $execution->run($this->tenant,$quote['id']);
             $q = $this->em->getPDO()->prepare('SELECT id,product FROM enrichment_attempt WHERE quote_id=? AND purchased_at IS NOT NULL'); $q->execute([$quote['id']]);
             $receipts = [];

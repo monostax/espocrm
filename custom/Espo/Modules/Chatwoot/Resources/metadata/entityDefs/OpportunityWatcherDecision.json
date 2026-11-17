@@ -1,0 +1,29 @@
+{
+    "fields": {
+        "opportunity": {"type": "link", "readOnly": true},
+        "tenantId": {"type": "varchar", "maxLength": 24, "readOnly": true},
+        "conversationId": {"type": "int", "readOnly": true},
+        "outcome": {
+            "type": "enum",
+            "options": ["none", "vetoed", "noCredits", "moved", "blocked", "stale", "reverted", "off"],
+            "readOnly": true
+        },
+        "fromStageId": {"type": "varchar", "maxLength": 24, "readOnly": true},
+        "toStageId": {"type": "varchar", "maxLength": 24, "readOnly": true},
+        "probability": {"type": "float", "readOnly": true},
+        "model": {"type": "varchar", "maxLength": 100, "readOnly": true},
+        "reason": {"type": "text", "readOnly": true},
+        "details": {"type": "jsonObject", "readOnly": true},
+        "runId": {"type": "varchar", "maxLength": 64, "readOnly": true},
+        "createdAt": {"type": "datetime", "readOnly": true}
+    },
+    "links": {
+        "opportunity": {"type": "belongsTo", "entity": "Opportunity"}
+    },
+    "indexes": {
+        "opportunityCreated": {"columns": ["opportunityId", "createdAt", "deleted"]},
+        "opportunityStageOutcome": {"columns": ["opportunityId", "toStageId", "outcome", "deleted"]},
+        "run": {"columns": ["runId", "opportunityId"], "unique": true}
+    },
+    "collection": {"orderBy": "createdAt", "order": "desc"}
+}

@@ -506,6 +506,20 @@ class ChatwootApiClient
      * @return array<string, mixed> Response data from Chatwoot API
      * @throws Error
      */
+    public function setAccountUserBillingAccess(
+        string $platformUrl, string $accessToken, int $accountId, int $userId, bool $disabled
+    ): array {
+        $url = rtrim($platformUrl, '/') . '/platform/api/v1/accounts/' . $accountId . '/account_users/billing_access';
+        $payload = json_encode(['user_id' => $userId, 'billing_disabled' => $disabled], JSON_THROW_ON_ERROR);
+        $response = $this->executeRequest($url, 'PATCH', $payload, [
+            'api_access_token: ' . $accessToken, 'Content-Type: application/json',
+        ]);
+        if ($response['code'] !== 200 || ($response['body']['billing_disabled'] ?? null) !== $disabled) {
+            throw new Error('Chatwoot did not confirm seat access: HTTP ' . $response['code']);
+        }
+        return $response['body'];
+    }
+
     public function attachUserToAccount(
         string $platformUrl,
         string $accessToken,

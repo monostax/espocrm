@@ -27,6 +27,9 @@ class JourneyPublishService
         'sendEmail',
         'sendWhatsAppMessage',
         'sendWhatsAppTemplate',
+        'sendSms',
+        // The note itself stays internal, but a mentioned AI agent acts on it.
+        'openConversationWithNote',
     ];
 
     public function __construct(
@@ -550,6 +553,44 @@ class JourneyPublishService
                 }
             }
 
+            if ($type === 'openConversationWithNote') {
+                if ((string) ($params['chatwootInboxId'] ?? '') === '') {
+                    $issues[] = $this->issue(
+                        'error',
+                        'note_no_inbox',
+                        "Private note \"{$name}\" on \"{$stageName}\" needs a WhatsApp inbox.",
+                        ['actionId' => $action->getId()]
+                    );
+                }
+                if (trim((string) ($params['note'] ?? '')) === '' && $this->paramFormulaScript($params, 'note') === '') {
+                    $issues[] = $this->issue(
+                        'error',
+                        'note_no_text',
+                        "Private note \"{$name}\" on \"{$stageName}\" needs the note text.",
+                        ['actionId' => $action->getId()]
+                    );
+                }
+            }
+
+            if ($type === 'sendSms') {
+                if ((string) ($params['chatwootInboxId'] ?? '') === '') {
+                    $issues[] = $this->issue(
+                        'error',
+                        'sms_no_inbox',
+                        "SMS \"{$name}\" on \"{$stageName}\" needs an SMS inbox.",
+                        ['actionId' => $action->getId()]
+                    );
+                }
+                if (trim((string) ($params['body'] ?? '')) === '' && $this->paramFormulaScript($params, 'body') === '') {
+                    $issues[] = $this->issue(
+                        'error',
+                        'sms_no_body',
+                        "SMS \"{$name}\" on \"{$stageName}\" needs a message.",
+                        ['actionId' => $action->getId()]
+                    );
+                }
+            }
+
             if ($type === 'sendWhatsAppTemplate') {
                 $inboxId = (string) ($params['chatwootInboxId'] ?? '');
                 $templateName = trim((string) ($params['templateName'] ?? ''));
@@ -679,6 +720,16 @@ class JourneyPublishService
                 60
             ) ?: 'WhatsApp message',
             'sendWhatsAppTemplate' => (string) ($params['templateName'] ?? 'WhatsApp template'),
+            'openConversationWithNote' => $this->truncate(
+                trim((string) ($params['note'] ?? ''))
+                    ?: $this->paramFormulaScript($params, 'note'),
+                60
+            ) ?: 'private note',
+            'sendSms' => $this->truncate(
+                trim((string) ($params['body'] ?? ''))
+                    ?: $this->paramFormulaScript($params, 'body'),
+                60
+            ) ?: 'SMS',
             'enrollToWhatsAppCampaign' => $this->firstNonEmpty([
                 (string) ($params['whatsAppCampaignName'] ?? ''),
                 !empty($params['whatsAppCampaignId'])

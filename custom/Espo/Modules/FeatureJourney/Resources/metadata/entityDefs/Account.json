@@ -1,0 +1,10 @@
+{
+    "links": {
+        "journeyRecords": {
+            "type": "hasChildren",
+            "entity": "JourneyRecord",
+            "foreign": "target",
+            "layoutRelationshipsDisabled": true
+        }
+    }
+}

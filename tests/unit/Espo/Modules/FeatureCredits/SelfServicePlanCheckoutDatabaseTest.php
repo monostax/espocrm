@@ -16,6 +16,11 @@ use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/SchemaTest.php';
+require_once __DIR__ . '/BillingFixtures.php';
+require_once __DIR__ . '/BillingAccountFixtures.php';
+require_once __DIR__ . '/AsaasFixtures.php';
+
 /**
  * FeatureSelfService's plan checkout on the real billing engine (both
  * dialects, fake Asaas): attendants × price + monthly credits as one card
@@ -238,7 +243,8 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
         $engine = new Checkout($accounts, $store, $connections, $transport);
         $subscriptions = new Subscriptions($accounts, $store, $connections, $transport);
         $creation = new Creation($store, new Adapter($transport));
-        $checkout = new PlanCheckout($accounts, $engine, $creation, $subscriptions, new PlanOffers($catalog));
+        $checkout = new PlanCheckout($accounts, $engine, $creation, $subscriptions, new PlanOffers($catalog),
+            $this->createStub(\Espo\Modules\FeatureSelfService\Tools\Plans\SeatRoster::class));
         $extra = new ExtraCredits($accounts, $catalog, $engine, $creation, $manager, $clock);
 
         return [$checkout, $transport, $engine, $pdo, $manager, $subscriptions, $extra];

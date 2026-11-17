@@ -397,7 +397,7 @@ class StreamAgent
         $initiator = $this->entityManager->getEntityById('User', $id);
         $parent = $this->entityManager->getEntityById($note->getParentType(), $note->getParentId());
         if (!$initiator instanceof User || !$initiator->isActive() || $initiator->isApi() || $initiator->isPortal() ||
-            !$parent || !$this->tenants->canActForTenant($initiator, $target->crmTenantId) ||
+            !$parent || (!$initiator->isAdmin() && !$this->tenants->canActForTenant($initiator, $target->crmTenantId)) ||
             !$this->aclManager->checkEntityRead($initiator, $parent) ||
             !$this->aclManager->checkEntityStream($initiator, $parent) ||
             !$this->aclManager->checkEntityRead($initiator, $note)) return null;

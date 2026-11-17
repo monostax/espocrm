@@ -47,6 +47,11 @@ final class CreditEnrichmentBatches
         return $this->call($response, fn () => $this->batches->resume($this->body($request)));
     }
 
+    public function postActionRetry(Request $request, Response $response): object
+    {
+        return $this->call($response, fn () => $this->batches->retry($this->body($request)));
+    }
+
     private function body(Request $request): stdClass
     {
         $raw = $request->getBodyContents() ?? '';

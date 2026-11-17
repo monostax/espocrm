@@ -440,7 +440,7 @@ class TenantGuard
      * provider / remoteChannelType heuristics.
      *
      * Supported outbound free-text types:
-     *   whatsappCloudApi | whatsappCoexistence | whatsappQrcode (WAHA)
+     *   whatsappCloudApi | whatsappCoexistence | whatsappQrcode (WAHA) | sms
      */
     private function resolveChatwootInboxChannelType(Entity $inbox): string
     {
@@ -473,6 +473,11 @@ class TenantGuard
             if ($provider === 'whatsapp_cloud') {
                 return 'whatsappCloudApi';
             }
+        }
+
+        // SMS inboxes (Android gateway, Vonage…) have no integration row.
+        if ($remote === 'Channel::Sms') {
+            return 'sms';
         }
 
         // WAHA / QR companion typically remote Channel::Api with null provider.

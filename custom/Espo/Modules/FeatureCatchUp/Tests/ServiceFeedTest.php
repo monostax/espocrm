@@ -9,6 +9,7 @@ use Espo\Core\Acl;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Modules\FeatureCatchUp\Classes\CardGone;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\DataCache;
 use Espo\Entities\User;
@@ -47,7 +48,7 @@ class ServiceFeedTest extends TestCase
         $acl->method('checkEntityRead')->willReturn($options['readable']);
         $em = $this->createMock(EntityManager::class);
         $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => $type === 'ChatwootConversation'
-            ? $this->entity(['chatwootAccountId' => $options['conversationAccount']], $id) : null);
+            ? $this->entity(['chatwootAccountId' => $options['conversationAccount']] + ($options['fields'] ?? []), $id) : null);
         if ($options['pdo']) $em->method('getPDO')->willReturn($options['pdo']);
         $workspace = $this->createMock(Workspace::class);
         $workspace->method('resolve')->willReturn([
@@ -96,6 +97,14 @@ class ServiceFeedTest extends TestCase
             }
             self::assertTrue($refused, json_encode($options));
         }
+    }
+
+    public function testServiceCardCannotReturnFromActivityOrTheOldFollowUpAfterLoss(): void
+    {
+        [$feed] = $this->feed(['fields' => ['lastMessageSentAt' => '2026-11-10 12:00:00', 'catchUpDiscardedAt' => '2026-11-11 10:00:00',
+            'lastActivityAt' => '2026-11-12 14:00:00']]);
+        $this->expectException(CardGone::class);
+        $feed->snapshot('conv', $this->request());
     }
 
     /** A follow_up_due card on a loop whose time passed, as Joe Neris's was on 2026-11-10. */

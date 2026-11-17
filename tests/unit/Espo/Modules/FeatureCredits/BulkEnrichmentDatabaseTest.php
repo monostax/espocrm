@@ -111,6 +111,54 @@ class BulkEnrichmentDatabaseTest extends TestCase
     }
 
     #[DataProvider('dialects')]
+    public function testRetryStartsOneRunForTheSearchesNoSupplierAnswered(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo): void {
+            $batches = $this->batches($pdo, $scheduled);
+            $command = (object) ['tenantId' => 'tenant', 'batchId' => 'b-done'];
+            $this->batch($pdo, 'b-done', 'running', '2026-11-04 11:00:00');
+            $this->item($pdo, 'i1', 'b-done', 0, 'failed');
+            $this->item($pdo, 'i2', 'b-done', 1, 'done');
+            $this->item($pdo, 'i3', 'b-done', 2, 'done');
+            $this->item($pdo, 'i4', 'b-done', 3, 'failed');
+            $pdo->exec("UPDATE enrichment_batch_item SET reason='no_answer', outcome='{\"searchesFailed\":1,\"unanswered\":[\"email\"]}' WHERE id='i1'");
+            $pdo->exec("UPDATE enrichment_batch_item SET outcome='{\"emailsFound\":0,\"phonesFound\":2,\"searchesFailed\":1,\"unanswered\":[\"email\"]}' WHERE id='i2'");
+            $pdo->exec("UPDATE enrichment_batch_item SET outcome='{\"emailsFound\":2}' WHERE id='i3'");
+            $pdo->exec("UPDATE enrichment_batch_item SET reason='timeout' WHERE id='i4'");
+            try {
+                $batches->retry($command);
+                $this->fail('A run still in progress was retried.');
+            } catch (Conflict) {}
+            $pdo->exec("UPDATE enrichment_batch SET state='completed', completed_at='2026-11-04 11:05:00' WHERE id='b-done'");
+
+            $retry = $batches->retry($command);
+            $this->assertSame(2, $retry['total']);
+            $this->assertSame(2, $retry['counts']['pending']);
+            $this->assertSame('running', $retry['state']);
+            $this->assertSame(['batchId' => $retry['id']], $scheduled[0]);
+            $row = $pdo->query("SELECT settings, product, target_type FROM enrichment_batch WHERE request_key='retry-b-done'")->fetch(PDO::FETCH_ASSOC);
+            $this->assertSame(['products' => ['email'], 'refresh' => true, 'sources' => [3],
+                'only' => ['c-i1' => ['email'], 'c-i2' => ['email']]], json_decode($row['settings'], true));
+            $this->assertSame(['c-i1', 'c-i2'], $pdo->query("SELECT target_id FROM enrichment_batch_item WHERE batch_id=" .
+                $pdo->quote($retry['id']) . ' ORDER BY position')->fetchAll(PDO::FETCH_COLUMN));
+            // A second click is the same retry, and another user cannot retry this run.
+            $this->assertSame($retry['id'], $batches->retry($command)['id']);
+            try {
+                $this->batches($pdo, $scheduled, 'other-user')->retry($command);
+                $this->fail('Another user retried the run.');
+            } catch (\Espo\Core\Exceptions\NotFound) {}
+
+            $this->batch($pdo, 'b-clean', 'completed', '2026-11-04 11:00:00');
+            $pdo->exec("UPDATE enrichment_batch SET completed_at='2026-11-04 11:05:00' WHERE id='b-clean'");
+            $this->item($pdo, 'i5', 'b-clean', 0, 'done');
+            try {
+                $batches->retry((object) ['tenantId' => 'tenant', 'batchId' => 'b-clean']);
+                $this->fail('A run with every search answered was retried.');
+            } catch (Conflict) {}
+        });
+    }
+
+    #[DataProvider('dialects')]
     public function testRunnerClosesStuckAndRevokedWorkAndFindsLostRuns(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo): void {

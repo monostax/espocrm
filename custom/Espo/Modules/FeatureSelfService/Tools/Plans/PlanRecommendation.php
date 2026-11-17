@@ -16,13 +16,15 @@ use Espo\ORM\EntityManager;
 
 /**
  * What the checkout preselects, from how the workspace was used:
- *  - attendants: the people answering in Chatwoot (no AI users, no concierge);
+ *  - attendants: the people answering in Chatwoot (no AI, concierge or Monostax staff);
  *  - monthly credits: the smallest step that, with the attendants' included
  *    credits, covers the AI conversations of the trial scaled to a month
  *    (none when the included credits are enough or there is too little to go by).
  */
 class PlanRecommendation
 {
+    private const INTERNAL_EMAIL_DOMAINS = ['monostax.com.br', 'monostax.com', 'monostax.ai', 'monostax-ext.com'];
+
     public function __construct(private EntityManager $entityManager) {}
 
     /**
@@ -68,7 +70,28 @@ class PlanRecommendation
             $where['chatwootUserId!='] = $account->get('conciergeUserId');
         }
 
-        return $this->entityManager->getRDBRepository('ChatwootAccountUserMembership')->where($where)->count();
+        $count = 0;
+
+        foreach ($this->entityManager->getRDBRepository('ChatwootAccountUserMembership')->where($where)->find() as $membership) {
+            if (!self::isInternalEmail((string) $membership->get('email'))) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    public static function isInternalEmail(string $email): bool
+    {
+        $domain = strtolower(substr(strrchr(trim($email), '@') ?: '', 1));
+
+        foreach (self::INTERNAL_EMAIL_DOMAINS as $internal) {
+            if ($domain === $internal || str_ends_with($domain, '.' . $internal)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

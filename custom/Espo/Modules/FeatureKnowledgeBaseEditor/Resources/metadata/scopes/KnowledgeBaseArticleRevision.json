@@ -1,0 +1,7 @@
+{
+    "entity": true,
+    "object": false,
+    "tab": false,
+    "acl": false,
+    "module": "FeatureKnowledgeBaseEditor"
+}

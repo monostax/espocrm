@@ -38,12 +38,12 @@ class Verdicts
     public function __construct(private EntityManager $em) {}
 
     /** @return ?array{verdict: string, reason: ?string, card: ?array<string, mixed>} */
-    public function find(string $type, string $id, string $revision, string $locale, string $evidenceScope): ?array
+    public function find(string $type, string $id, string $revision, string $locale, string $evidenceScope, bool $unresolvedOnly = false): ?array
     {
         $column = self::column($type);
         $query = $this->em->getPDO()->prepare(
             "SELECT verdict, reason, card FROM catch_up_verdict WHERE deleted = 0 AND $column = :id AND revision = :revision "
-            . 'AND locale = :locale AND evidence_scope = :scope LIMIT 1'
+            . 'AND locale = :locale AND evidence_scope = :scope' . ($unresolvedOnly ? ' AND resolved_at IS NULL' : '') . ' LIMIT 1'
         );
         $query->execute(['id' => $id, 'revision' => $revision, 'locale' => $locale, 'scope' => $evidenceScope]);
         $row = $query->fetch(\PDO::FETCH_ASSOC);
@@ -206,6 +206,12 @@ class Verdicts
         $column = self::column($type);
         $this->em->getPDO()->prepare("UPDATE catch_up_verdict SET resolved_at = UTC_TIMESTAMP(), flips_at = NULL WHERE $column = :id AND resolved_at IS NULL")
             ->execute(['id' => $id]);
+    }
+
+    /** Drop all copies, including scheduled flips. A reopened deal starts without the discarded verdict. */
+    public function discardDeal(string $id): void
+    {
+        $this->em->getPDO()->prepare('DELETE FROM catch_up_verdict WHERE opportunity_id = ?')->execute([$id]);
     }
 
     /**
@@ -406,6 +412,7 @@ class Verdicts
         . 'LEFT JOIN catch_up_party p ON p.chatwoot_account_id = c.chatwoot_account_id AND p.chatwoot_contact_id = ct.chatwoot_contact_id AND p.deleted = 0 ';
     /** Conversation `c` belongs in the reader's Atendimento deck (ServiceFeed::candidates()), minus the settle wait and the owner rule. */
     private const CONVERSATION_DECK_SQL = ServiceFeed::NOT_SYSTEM_CONTACT_SQL
+        . ConversationCycle::CURRENT_SQL
         . "AND (p.party_class IS NULL OR p.party_class IN ('customer', 'partner')) "
         . 'AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
         . 'AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '

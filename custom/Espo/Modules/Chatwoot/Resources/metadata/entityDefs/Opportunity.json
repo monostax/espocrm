@@ -21,7 +21,8 @@
         "whatsAppCampaigns": { "type": "linkMultiple", "readOnly": true },
         "whatsAppCampaignTargetLists": { "type": "linkMultiple", "readOnly": true },
         "callCampaigns": { "type": "linkMultiple", "readOnly": true },
-        "createdByAIAgent": { "type": "bool", "default": false }
+        "createdByAIAgent": { "type": "bool", "default": false },
+        "aiWatchEnabled": { "type": "bool", "default": true, "tooltip": true }
     },
     "links": {
         "chatwootConversations": {

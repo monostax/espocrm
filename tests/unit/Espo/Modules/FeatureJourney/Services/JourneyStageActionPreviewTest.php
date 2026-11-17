@@ -46,6 +46,22 @@ class JourneyStageActionPreviewTest extends TestCase
         );
     }
 
+    public function testSmsPreviewShowsTheTextAndMobilesOrWhyThePersonIsLeftOut(): void
+    {
+        $this->assertSame(
+            ['renderedBody' => 'Oi Ana!', 'phones' => ['+5511900000001'], 'length' => 7],
+            $this->call('smsPreview', ['text' => 'Oi Ana!', 'empty' => []], ['+5511900000001'], 'Ana'),
+        );
+        $this->assertSame(
+            ['error' => 'Sem valor para Ana: {{contact.emailAddress}}.'],
+            $this->call('smsPreview', ['text' => 'x', 'empty' => ['{{contact.emailAddress}}']], ['+5511900000001'], 'Ana'),
+        );
+        $this->assertSame(
+            ['error' => 'Ana não tem celular; a jornada não enviaria este SMS.'],
+            $this->call('smsPreview', ['text' => 'Oi Ana!', 'empty' => []], [], 'Ana'),
+        );
+    }
+
     public function testPreviewErrorCarriesTheMessageInAJsonBody(): void
     {
         /** @var BadRequest $error */

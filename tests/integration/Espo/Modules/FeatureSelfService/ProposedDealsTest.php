@@ -122,7 +122,7 @@ class ProposedDealsTest extends TestCase
             $this->request($workspace, ['snapshot' => $this->shown($workspace, $c)]), $c->getId()));
         $deal = $this->em->getEntityById('Opportunity', $result['id']);
         self::assertSame($workspace['funnel']->getId(), $deal->get('funnelId'));
-        self::assertSame('Em negociação', $this->em->getEntityById('OpportunityStage', $deal->get('opportunityStageId'))->get('name'));
+        self::assertSame('Em Qualificação', $this->em->getEntityById('OpportunityStage', $deal->get('opportunityStageId'))->get('name'));
     }
 
     public function testAConversationThatMovedSinceTheCardWasShownIsAConflict(): void

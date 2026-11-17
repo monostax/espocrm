@@ -89,7 +89,9 @@ class IndexInGemini implements AfterSave, AfterRemove
                               $entity->isAttributeChanged('description') ||
                               $entity->isAttributeChanged('language') ||
                               $entity->isAttributeChanged('status') ||
-                              $entity->isAttributeChanged('attachmentsIds');
+                              $entity->isAttributeChanged('attachmentsIds') ||
+                              // Each indexed category has its own store: moving an article changes who can find it.
+                              ($entity->has('categoriesIds') && $entity->isAttributeChanged('categoriesIds'));
 
             if (!$hasContentChange) {
                 $this->log->debug("GoogleGemini: Skipping indexing for article {$entity->getId()} - no content changes");

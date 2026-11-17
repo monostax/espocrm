@@ -1,5 +1,6 @@
 {
     "whereItemConverterClassNameMap": {
+        "id_recordQuery": "Espo\\Modules\\Chatwoot\\Classes\\Select\\RecordQuery\\Where",
         "hasLinkedin_isTrue": "Espo\\Modules\\Chatwoot\\Classes\\Select\\Contact\\Where\\HasLinkedin",
         "hasLinkedin_isFalse": "Espo\\Modules\\Chatwoot\\Classes\\Select\\Contact\\Where\\HasLinkedin"
     }

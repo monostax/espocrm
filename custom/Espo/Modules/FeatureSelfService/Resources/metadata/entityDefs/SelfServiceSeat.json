@@ -1,0 +1,19 @@
+{
+    "fields": {
+        "tenant": {"type": "link", "required": true},
+        "user": {"type": "link", "required": true},
+        "disabled": {"type": "bool", "default": false},
+        "syncedDisabled": {"type": "bool", "default": false},
+        "accessSnapshot": {"type": "jsonObject"},
+        "changedBy": {"type": "link"},
+        "changedAt": {"type": "datetime"}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "user": {"type": "belongsTo", "entity": "User"},
+        "changedBy": {"type": "belongsTo", "entity": "User"}
+    },
+    "indexes": {
+        "tenantUser": {"columns": ["tenantId", "userId"], "unique": true}
+    }
+}

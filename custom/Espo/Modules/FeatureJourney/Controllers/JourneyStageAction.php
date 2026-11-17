@@ -229,6 +229,87 @@ class JourneyStageAction extends Base implements \Espo\Core\Di\EntityManagerAwar
     }
 
     /**
+     * Fill an SMS text's `{{…}}` placeholders against a sample record without sending.
+     * One preview per person the action would send to, with their mobile numbers.
+     *
+     * POST /api/v1/JourneyStageAction/action/renderSms
+     *
+     * Body: { body, targetEntityType?, targetId, journeyEntityType?, tenantId? }
+     */
+    public function postActionRenderSms(Request $request, Response $response): stdClass
+    {
+        if (!$this->acl->checkScope('JourneyStageAction', 'read')) {
+            throw new Forbidden('No access to JourneyStageAction.');
+        }
+
+        $data = $request->getParsedBody() ?? (object) [];
+        $body = isset($data->body) ? trim((string) $data->body) : '';
+
+        if ($body === '') {
+            throw new BadRequest('body is required.');
+        }
+
+        [$target, $people] = $this->previewSubject($this->loadReadableTarget($data), $data);
+
+        /** @var JourneyWhatsAppOutbound $outbound */
+        $outbound = $this->injectableFactory->create(JourneyWhatsAppOutbound::class);
+
+        $previews = [];
+
+        foreach ($people as $person) {
+            try {
+                $previews[] = $this->personRef($outbound, $person) + $this->smsPreview(
+                    $outbound->renderText($body, $target, $person === $target ? null : $person),
+                    $outbound->resolvePhones($person, null, false),
+                    $outbound->displayName($person),
+                );
+            } catch (Throwable $e) {
+                $previews[] = $this->personRef($outbound, $person) + ['error' => $e->getMessage()];
+            }
+        }
+
+        $ok = array_values(array_filter($previews, static fn (array $p) => !isset($p['error'])));
+
+        if ($ok === []) {
+            throw $this->previewError($previews[0]['error'] ?? 'Nada para renderizar.');
+        }
+
+        return (object) [
+            'renderedBody' => $ok[0]['renderedBody'],
+            'people' => $previews,
+            'targetEntityType' => $target->getEntityType(),
+            'targetId' => $target->getId(),
+            'targetName' => $outbound->displayName($target),
+            'sent' => false,
+        ];
+    }
+
+    /**
+     * One person's SMS preview: the text and the mobiles it goes to, or why the
+     * action would leave this person out.
+     *
+     * @param array{text: string, empty: list<string>} $rendered
+     * @param list<string> $phones
+     * @return array<string, mixed>
+     */
+    private function smsPreview(array $rendered, array $phones, string $name): array
+    {
+        if ($rendered['empty'] !== []) {
+            return ['error' => 'Sem valor para ' . $name . ': ' . implode(', ', $rendered['empty']) . '.'];
+        }
+
+        if ($phones === []) {
+            return ['error' => $name . ' não tem celular; a jornada não enviaria este SMS.'];
+        }
+
+        return [
+            'renderedBody' => $rendered['text'],
+            'phones' => $phones,
+            'length' => mb_strlen($rendered['text']),
+        ];
+    }
+
+    /**
      * What a preview renders: the sample record as the journey target with its people,
      * or, for a Contact picked on an Account journey, that contact inside their company.
      *

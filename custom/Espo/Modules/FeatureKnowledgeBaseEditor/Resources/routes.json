@@ -3,5 +3,7 @@
     {"route": "/EditorReference/resolve", "method": "post", "params": {"controller": "EditorReference", "action": "resolve"}},
     {"route": "/EditorReference/recent", "method": "get", "params": {"controller": "EditorReference", "action": "recent"}},
     {"route": "/EditorReference/backlinks", "method": "get", "params": {"controller": "EditorReference", "action": "backlinks"}},
-    {"route": "/EditorReference/prompt", "method": "post", "params": {"controller": "EditorReference", "action": "prompt"}}
+    {"route": "/EditorReference/prompt", "method": "post", "params": {"controller": "EditorReference", "action": "prompt"}},
+    {"route": "/KnowledgeBaseArticle/:id/revisions", "method": "get", "params": {"controller": "KnowledgeBaseArticleRevision", "action": "list"}},
+    {"route": "/KnowledgeBaseArticle/:id/restoreRevision", "method": "post", "params": {"controller": "KnowledgeBaseArticleRevision", "action": "restore"}}
 ]

@@ -72,7 +72,7 @@ final class OpportunityFollowup implements MiddlewareInterface
                 $agentId = $record->get('followupAiAgentId');
                 $limit = $record->get('followupBreakoutLimit')
                     ?? ($agentId ? ($agentLimits[$agentId] ?? null) : null)
-                    ?? 3;
+                    ?? 1;
                 $row->followupEffectiveLimit = max(1, (int) $limit);
             }
             $row->canEdit = $record && $this->acl->checkEntityEdit($record);

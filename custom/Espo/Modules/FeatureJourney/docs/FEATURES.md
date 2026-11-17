@@ -96,6 +96,8 @@ See also: [Announcement](./PRODUCT_ANNOUNCEMENT.md) · [Tutorial](./TUTORIAL.md)
 | sendEmail | tenant | Send via tenant Group/Personal SMTP account only (no system SMTP); recipient allow-checks; multi-email (all sendable on target) |
 | sendWhatsAppMessage | tenant | Free-text WhatsApp via Chatwoot (WAHA QR / Cloud / Coexistence); optional Meta template fallback when 24h window closed; multi-phone |
 | sendWhatsAppTemplate | tenant | Meta template + parameter mapping (WhatsAppCampaign style); Cloud/Coexistence only; multi-phone |
+| sendSms | tenant | SMS via a Chatwoot SMS inbox (Android gateway, Vonage); `{{…}}` placeholders filled per person; every mobile of each person; a reply fires `whatsapp_replied` |
+| openConversationWithNote | tenant | Private note in the WhatsApp conversation of each person on the record (opened or reused), optional AI-agent mention; written as the run-as user; nothing reaches the customer |
 | enrollToWhatsAppCampaign | tenant | Enroll Contact into a running WhatsApp Campaign (Sending); multi-phone; schedules campaign chunks |
 | notifyUser | tenant | In-app user notification (user must be in tenant) |
 | makeFollowed | tenant | Stream follow for specified tenant users only |

@@ -44,6 +44,29 @@ class JourneyRelationships
         return $this->service->options($tenant, $target, trim($search), $this->offset($request));
     }
 
+    public function getActionJourneys(Request $request): object
+    {
+        $accountId = filter_var($request->getQueryParam('accountId'), FILTER_VALIDATE_INT);
+        if ($accountId === false || $accountId < 1) throw new BadRequest('Invalid workspace ID.');
+        $search = $request->getQueryParam('search') ?? '';
+        if (!is_string($search)) throw new BadRequest('Invalid search.');
+        return $this->service->journeys(
+            $accountId,
+            (string) $request->getRouteParam('type'),
+            trim($search),
+            $this->offset($request),
+            $request->getQueryParam('purpose') === 'exit',
+        );
+    }
+
+    public function deleteActionExitJourney(Request $request): object
+    {
+        [$tenant, $target] = $this->context($request);
+        $journeyId = $request->getQueryParam('journeyId');
+        if (!is_string($journeyId) || $journeyId === '') throw new BadRequest('Missing Journey ID.');
+        return $this->service->exitJourney($tenant, $target, $journeyId);
+    }
+
     public function postActionEnroll(Request $request): object
     {
         [$tenant, $target] = $this->context($request);

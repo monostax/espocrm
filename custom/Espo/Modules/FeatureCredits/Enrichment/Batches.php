@@ -132,6 +132,55 @@ final class Batches
         return $this->status(['tenantId' => $batch['tenant_id'], 'batchId' => $batch['id']]);
     }
 
+    /**
+     * Search again what a finished run got no answer for (a supplier refused or never replied; nothing was charged).
+     * One retry run per run: repeating the command returns the same retry.
+     */
+    public function retry(stdClass $body): array
+    {
+        $batch = $this->owned(self::command($body));
+        if ($batch['completed_at'] === null) throw new Conflict('Only a finished bulk enrichment can be retried.');
+        $tenant = $batch['tenant_id']; $actor = $this->access->actorId(); $key = 'retry-' . $batch['id'];
+        $id = $this->em->getTransactionManager()->run(function () use ($batch, $tenant, $actor, $key): string {
+            $pdo = $this->em->getPDO();
+            $q = $pdo->prepare('SELECT id FROM enrichment_batch WHERE tenant_id=? AND created_by_id=? AND request_key=? AND deleted=FALSE');
+            $q->execute([$tenant, $actor, $key]);
+            if ($existing = $q->fetchColumn()) return $existing;
+            $q = $pdo->prepare('SELECT target_id, state, reason, outcome FROM enrichment_batch_item
+                WHERE batch_id=? AND tenant_id=? AND deleted=FALSE ORDER BY position');
+            $q->execute([$batch['id'], $tenant]);
+            $only = [];
+            foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $item) {
+                $unanswered = self::unanswered($item);
+                if ($unanswered) $only[$item['target_id']] = $unanswered;
+            }
+            if (!$only) throw new Conflict('This bulk enrichment has nothing to retry.');
+            $settings = json_decode($batch['settings'], true, 8, JSON_THROW_ON_ERROR);
+            $settings['only'] = $only;
+            $id = RecordId::generate();
+            $pdo->prepare('INSERT INTO enrichment_batch (id, tenant_id, created_by_id, request_key, target_type, product,
+                settings, state, total, created_at, deleted) VALUES (?,?,?,?,?,?,?,?,?,?,FALSE)')
+                ->execute([$id, $tenant, $actor, $key, $batch['target_type'], $batch['product'],
+                    json_encode($settings, JSON_THROW_ON_ERROR), 'running', count($only), $this->clock->now()]);
+            $insert = $pdo->prepare('INSERT INTO enrichment_batch_item (id, batch_id, tenant_id, target_id, position, state, deleted)
+                VALUES (?,?,?,?,?,?,FALSE)');
+            foreach (array_keys($only) as $position => $targetId) {
+                $insert->execute([RecordId::generate(), $id, $tenant, (string) $targetId, $position, 'pending']);
+            }
+            return $id;
+        });
+        RunEnrichmentBatch::schedule($this->scheduler, $id);
+        return $this->status(['tenantId' => $tenant, 'batchId' => $id]);
+    }
+
+    /** @return list<string> products of a settled record that no supplier answered */
+    private static function unanswered(array $item): array
+    {
+        if (!in_array($item['state'], ['done', 'failed'], true) || $item['outcome'] === null) return [];
+        $list = json_decode($item['outcome'], true, 4, JSON_THROW_ON_ERROR)['unanswered'] ?? [];
+        return is_array($list) ? array_values(array_intersect(['email', 'phone'], $list)) : [];
+    }
+
     /** @return array{maximum?: string, reason?: string, available?: object} */
     private function plan(string $tenant, string $type, string $id, array $settings): array
     {
@@ -172,7 +221,7 @@ final class Batches
     public static function project(array $batch, array $items): array
     {
         $counts = array_fill_keys(['pending', 'running', 'done', 'skipped', 'no_credits', 'failed', 'cancelled'], 0);
-        $skipped = []; $totals = []; $review = []; $credits = Amount::fromString('0'); $found = 0;
+        $skipped = []; $totals = []; $review = []; $credits = Amount::fromString('0'); $found = 0; $retryable = 0; $noAnswer = 0;
         foreach ($items as $item) {
             $counts[$item['state']] = ($counts[$item['state']] ?? 0) + 1;
             if ($item['state'] === 'skipped') $skipped[$item['reason']] = ($skipped[$item['reason']] ?? 0) + 1;
@@ -180,12 +229,18 @@ final class Batches
             $outcome = $item['outcome'] === null ? [] : json_decode($item['outcome'], true, 4, JSON_THROW_ON_ERROR);
             foreach ($outcome as $key => $value) if (is_int($value)) $totals[$key] = ($totals[$key] ?? 0) + $value;
             if (($outcome['emailsFound'] ?? 0) + ($outcome['phonesFound'] ?? 0) + ($outcome['sociosFound'] ?? 0) > 0) $found++;
-            if (($outcome['needsReview'] ?? 0) > 0 || $item['state'] === 'failed') $review[] = $item['target_id'];
+            if (self::unanswered($item)) $retryable++;
+            if ($item['state'] === 'failed' && $item['reason'] === 'no_answer') $noAnswer++;
+            // An unanswered search left nothing behind to review.
+            if (($outcome['needsReview'] ?? 0) > 0 || ($item['state'] === 'failed' && $item['reason'] !== 'no_answer')) {
+                $review[] = $item['target_id'];
+            }
         }
         return ['id' => $batch['id'], 'tenantId' => $batch['tenant_id'], 'targetType' => $batch['target_type'],
             'product' => $batch['product'], 'state' => $batch['state'], 'pauseReason' => $batch['pause_reason'],
             'total' => (int) $batch['total'], 'createdAt' => $batch['created_at'], 'completedAt' => $batch['completed_at'],
             'counts' => $counts, 'skipped' => (object) $skipped, 'credits' => (string) $credits,
-            'recordsFound' => $found, 'totals' => (object) $totals, 'reviewTargetIds' => array_slice($review, 0, 100)];
+            'recordsFound' => $found, 'totals' => (object) $totals, 'reviewTargetIds' => array_slice($review, 0, 100),
+            'retryable' => $retryable, 'noAnswer' => $noAnswer];
     }
 }

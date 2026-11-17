@@ -64,12 +64,28 @@ class TenantTeamProvisioner
      */
     public function ensureTenantTeam(string $tenantId, string $purpose, string $name, string $roleId): string
     {
-        $key = self::provisioningKey($tenantId, $purpose);
-        $team = $this->findTeamByKey($key) ?? $this->createTeam($key, $name);
+        $team = $this->ensureTeam(self::provisioningKey($tenantId, $purpose), $name);
 
         $this->ensureRoleLinked($team, $roleId);
 
         return (string) $team->getId();
+    }
+
+    /**
+     * Find-or-create a Team by its unique provisioning key, with no role.
+     *
+     * For teams that carry tenancy only (e.g. the mirror of a Chatwoot team):
+     * their members already hold the tenant role through the base team.
+     * $name is used on creation only; an existing team keeps its name.
+     */
+    public function ensureTeam(string $key, string $name): Entity
+    {
+        return $this->findTeamByKey($key) ?? $this->createTeam($key, $name);
+    }
+
+    public function findTeam(string $key): ?Entity
+    {
+        return $this->findTeamByKey($key);
     }
 
     public static function provisioningKey(string $tenantId, string $purpose): string

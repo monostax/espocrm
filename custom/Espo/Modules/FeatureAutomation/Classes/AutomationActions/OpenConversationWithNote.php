@@ -27,11 +27,11 @@ use Throwable;
 class OpenConversationWithNote implements Action
 {
     public function __construct(
-        private JourneyWhatsAppOutbound $outbound,
+        protected JourneyWhatsAppOutbound $outbound,
         private TenantGuard $tenantGuard,
         private EntityManager $entityManager,
         private ChatwootApiClient $chatwootApiClient,
-        private Log $log,
+        protected Log $log,
     ) {}
 
     public function run(ActionContext $context): void
@@ -58,13 +58,6 @@ class OpenConversationWithNote implements Action
             throw new Error('OpenConversationWithNote: the automation needs a run-as user to write the note.');
         }
 
-        $person = $this->person($target);
-        if ($person && $this->outbound->isOptedOut($person)) {
-            $this->log->warning("OpenConversationWithNote: {$person->getId()} opted out of WhatsApp, skipping.");
-
-            return;
-        }
-
         $conn = $this->outbound->resolveConnection(
             $inboxId,
             $tenantId,
@@ -77,13 +70,6 @@ class OpenConversationWithNote implements Action
             throw new Error('OpenConversationWithNote: Chatwoot account not found.');
         }
 
-        $contactId = $this->chatwootContactId($person ?? $target, $account, $conn);
-        if ($contactId === null) {
-            $this->log->warning("OpenConversationWithNote: no WhatsApp number for {$target->getEntityType()}/{$target->getId()}, skipping.");
-
-            return;
-        }
-
         $mention = '';
         $aiAgentId = trim((string) ($params['aiAgentId'] ?? ''));
         if ($aiAgentId !== '') {
@@ -91,29 +77,66 @@ class OpenConversationWithNote implements Action
         }
 
         $token = $this->personToken($context->actor, $account, $conn['platformUrl']);
-
         $assigneeId = !empty($params['assignToOwner']) ? $this->ownerChatwootUserId($target, $account) : null;
 
-        $response = $this->chatwootApiClient->accountRequest(
-            $conn['platformUrl'],
-            $token,
-            'POST',
-            '/api/v1/accounts/' . $conn['externalAccountId'] . '/conversations',
-            self::requestBody($contactId, $conn['externalInboxId'], $mention . $note, $assigneeId),
-        );
+        foreach ($this->people($target, $tenantId) as $person) {
+            if ($person && $this->outbound->isOptedOut($person)) {
+                $this->log->warning("OpenConversationWithNote: {$person->getId()} opted out of WhatsApp, skipping.");
 
-        if ($response['code'] < 200 || $response['code'] >= 300) {
-            $detail = $response['body']['message'] ?? $response['body']['error'] ?? '';
-            throw new Error(
-                'OpenConversationWithNote: Chatwoot refused the conversation (HTTP ' . $response['code'] . ')' .
-                (is_string($detail) && $detail !== '' ? ': ' . $detail : '')
+                continue;
+            }
+
+            $text = $this->noteFor($note, $target, $person);
+            if ($text === null) {
+                continue;
+            }
+
+            $contactId = $this->chatwootContactId($person ?? $target, $account, $conn);
+            if ($contactId === null) {
+                $who = $person ?? $target;
+                $this->log->warning("OpenConversationWithNote: no WhatsApp number for {$who->getEntityType()}/{$who->getId()}, skipping.");
+
+                continue;
+            }
+
+            $response = $this->chatwootApiClient->accountRequest(
+                $conn['platformUrl'],
+                $token,
+                'POST',
+                '/api/v1/accounts/' . $conn['externalAccountId'] . '/conversations',
+                self::requestBody($contactId, $conn['externalInboxId'], $mention . $text, $assigneeId),
+            );
+
+            if ($response['code'] < 200 || $response['code'] >= 300) {
+                $detail = $response['body']['message'] ?? $response['body']['error'] ?? '';
+                throw new Error(
+                    'OpenConversationWithNote: Chatwoot refused the conversation (HTTP ' . $response['code'] . ')' .
+                    (is_string($detail) && $detail !== '' ? ': ' . $detail : '')
+                );
+            }
+
+            $this->log->info(
+                'OpenConversationWithNote: note posted in conversation ' . ($response['body']['id'] ?? '?') .
+                " for {$target->getEntityType()}/{$target->getId()}"
             );
         }
+    }
 
-        $this->log->info(
-            'OpenConversationWithNote: note posted in conversation ' . ($response['body']['id'] ?? '?') .
-            " for {$target->getEntityType()}/{$target->getId()}"
-        );
+    /**
+     * Whose conversations get the note. Here: the record's one person (null when the
+     * record is its own contact point). Journeys post to every contact on the record.
+     *
+     * @return list<?Entity>
+     */
+    protected function people(Entity $target, string $tenantId): array
+    {
+        return [$this->person($target)];
+    }
+
+    /** The note for one person; null leaves that person out. */
+    protected function noteFor(string $note, Entity $target, ?Entity $person): ?string
+    {
+        return $note;
     }
 
     /**

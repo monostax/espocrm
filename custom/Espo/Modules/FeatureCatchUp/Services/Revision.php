@@ -52,6 +52,7 @@ final class Revision
         return hash('sha256', json_encode([
             self::PROMPT_VERSION, self::EVIDENCE_VERSION, 'conversation',
             $conversation->get('lastMessageReceivedAt'), $conversation->get('lastMessageSentAt'),
+            ...($conversation->get('catchUpDiscardedAt') ? [$conversation->get('catchUpDiscardedAt')] : []),
         ], JSON_THROW_ON_ERROR));
     }
 

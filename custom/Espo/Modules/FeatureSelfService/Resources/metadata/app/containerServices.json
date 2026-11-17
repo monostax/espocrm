@@ -1,0 +1,5 @@
+{
+    "aclManager": {
+        "loaderClassName": "Espo\\Modules\\FeatureSelfService\\Tools\\Plans\\SeatAclLoader"
+    }
+}

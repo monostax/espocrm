@@ -140,6 +140,14 @@
             "layoutMassUpdateDisabled": true,
             "customizationDisabled": true
         },
+        "chatwootConversationTrail": {
+            "type": "jsonArray",
+            "readOnly": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "customizationDisabled": true
+        },
         "whatsAppLastReplyChatwootMessageId": {
             "type": "varchar",
             "maxLength": 64,

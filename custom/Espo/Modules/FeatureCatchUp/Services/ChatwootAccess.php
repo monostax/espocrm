@@ -120,7 +120,7 @@ class ChatwootAccess
     }
 
     /** The reader's Chatwoot user on a platform (ChatwootUser.assignedUserId); without one, Chatwoot shows them nothing. */
-    private function chatwootUserId(string $platformId): ?int
+    public function chatwootUserId(string $platformId): ?int
     {
         if (array_key_exists($platformId, $this->users)) return $this->users[$platformId];
         $query = $this->em->getPDO()->prepare('SELECT chatwoot_user_id FROM chatwoot_user WHERE deleted = 0 '

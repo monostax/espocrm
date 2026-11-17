@@ -11,6 +11,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Exceptions\ServiceUnavailable;
 use Espo\Core\Utils\Log;
+use Espo\Modules\FeatureCatchUp\Classes\CardGone;
 use Throwable;
 
 /**
@@ -64,6 +65,8 @@ class Batch
         try {
             $snapshot = $lane === 'service' ? $this->service->snapshot($id, $request) : $this->feed->snapshot($id, $request);
             return ['lane' => $lane, 'id' => $id, ...$this->summary->analyse($snapshot, $locale, $requestId), 'snapshot' => $snapshot];
+        } catch (CardGone) {
+            return ['lane' => $lane, 'id' => $id, 'status' => 'discarded'];
         } catch (Forbidden|NotFound|BadRequest|Conflict|ServiceUnavailable $e) {
             return ['lane' => $lane, 'id' => $id, 'status' => 'error', 'error' => $e->getMessage()];
         } catch (Throwable $e) {

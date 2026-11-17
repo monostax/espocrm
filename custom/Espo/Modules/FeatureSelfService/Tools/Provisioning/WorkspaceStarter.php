@@ -42,11 +42,12 @@ class WorkspaceStarter
 
     /**
      * The default funnel's stages. Ganho and Perdido are the Monostax default rule (gtm/06 §"Decided 2026-11-10"),
-     * written where the agent and the tracker both read them.
+     * written where the agent and the tracker both read them. Estacionada is a paused deal: still open, so it keeps
+     * the 50% of Em Qualificação.
      */
     private const STAGES = [
         [
-            'name' => 'Em negociação',
+            'name' => 'Em Qualificação',
             'order' => 1,
             'probability' => 50,
             'style' => 'default',
@@ -54,8 +55,17 @@ class WorkspaceStarter
                 . 'pedido de preço, orçamento enviado, objeções e escolha de data ou horário em andamento.',
         ],
         [
-            'name' => 'Ganho',
+            'name' => 'Estacionada',
             'order' => 2,
+            'probability' => 50,
+            'style' => 'warning',
+            'description' => 'A oportunidade está em pausa, sem recusa: o cliente pediu para retomar mais tarde ("agora não", '
+                . '"me procure no mês que vem") ou parou de responder depois das tentativas de contato. Continua aberta e '
+                . 'volta para Em Qualificação quando a conversa é retomada.',
+        ],
+        [
+            'name' => 'Ganho',
+            'order' => 3,
             'probability' => 100,
             'style' => 'success',
             'description' => 'A empresa confirmou o agendamento ou a compra, com data e horário definidos quando se aplica e o '
@@ -64,12 +74,12 @@ class WorkspaceStarter
         ],
         [
             'name' => 'Perdido',
-            'order' => 3,
+            'order' => 4,
             'probability' => 0,
             'style' => 'danger',
             'description' => 'O cliente recusou explicitamente, desistiu, escolheu outro fornecedor ou cancelou de vez, ou a '
                 . 'empresa confirmou que não pode atendê-lo. Silêncio sozinho não é Perdido. "Agora não", "vou pensar", '
-                . '"qualquer coisa, retorno" ou "só pesquisando preço" continuam em negociação.',
+                . '"qualquer coisa, retorno" ou "só pesquisando preço" continuam em qualificação ou vão para Estacionada.',
         ],
     ];
 

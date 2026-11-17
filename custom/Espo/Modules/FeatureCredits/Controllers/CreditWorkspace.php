@@ -129,7 +129,7 @@ class CreditWorkspace
         $account = array_values($rows)[0];
         $tenantId = $account->get('tenantId');
         if (!is_string($tenantId) || !$this->acl->check($account, 'read') ||
-            !$this->tenants->canActForTenant($this->user, $tenantId)) {
+            (!$this->user->isAdmin() && !$this->tenants->canActForTenant($this->user, $tenantId))) {
             throw new Forbidden('Workspace membership required.');
         }
         return $account;

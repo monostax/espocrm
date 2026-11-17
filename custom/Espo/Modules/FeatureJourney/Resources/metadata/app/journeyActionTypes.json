@@ -7,6 +7,8 @@
         "sendEmail",
         "sendWhatsAppMessage",
         "sendWhatsAppTemplate",
+        "sendSms",
+        "openConversationWithNote",
         "enrollToWhatsAppCampaign",
         "notifyUser",
         "makeFollowed",
@@ -280,6 +282,71 @@
                     "label": "Fallback header media type",
                     "options": ["", "image", "video", "document"],
                     "default": ""
+                }
+            ]
+        },
+        "sendSms": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\SendSms",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "chatwootInboxId",
+                    "type": "link",
+                    "entity": "ChatwootInbox",
+                    "label": "SMS Inbox",
+                    "nameKey": "chatwootInboxName",
+                    "primaryFilter": "sms",
+                    "required": true
+                },
+                {
+                    "name": "body",
+                    "type": "text",
+                    "label": "Message",
+                    "placeholder": "Oi {{contact.firstName}}! …",
+                    "required": true
+                },
+                {
+                    "name": "phone",
+                    "type": "varchar",
+                    "label": "Phone override (optional)",
+                    "placeholder": "Leave empty = every mobile of each person; or list"
+                }
+            ]
+        },
+        "openConversationWithNote": {
+            "implementationClassName": "Espo\\Modules\\FeatureJourney\\Classes\\JourneyActions\\OpenConversationWithNote",
+            "paramsView": "feature-journey:views/journey-stage-action/fields/params",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "chatwootInboxId",
+                    "type": "link",
+                    "entity": "ChatwootInbox",
+                    "label": "WhatsApp Inbox",
+                    "nameKey": "chatwootInboxName",
+                    "primaryFilter": "whatsappAll",
+                    "required": true
+                },
+                {
+                    "name": "aiAgentId",
+                    "type": "link",
+                    "entity": "ChatwootAccountUserMembership",
+                    "label": "Mention AI agent (optional)",
+                    "nameKey": "aiAgentName",
+                    "primaryFilter": "aiOnly"
+                },
+                {
+                    "name": "note",
+                    "type": "text",
+                    "label": "Private note (the customer never sees it)",
+                    "required": true
+                },
+                {
+                    "name": "assignToOwner",
+                    "type": "bool",
+                    "label": "Assign a new conversation to the record's owner",
+                    "default": false
                 }
             ]
         },

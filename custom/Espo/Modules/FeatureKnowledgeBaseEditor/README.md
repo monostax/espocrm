@@ -69,6 +69,10 @@ The `EditorState` ORM hook invalidates canonical state when a projection (or art
 
 Canonical attributes are included in their projection field's `additionalAttributeList`, so the projection field's ACL also covers the stored JSON.
 
+## Article history
+
+`KnowledgeBaseArticleRevision` (internal, no ACL scope, no CRUD) keeps what an article said before each change to its title, text, format or status; the `KeepRevision` hook writes it inside the article's save transaction and keeps the newest 30. `GET /KnowledgeBaseArticle/:id/revisions` lists the last ten for people who can read the article and its text. `POST /KnowledgeBaseArticle/:id/restoreRevision` with `{revisionId}` puts the article back through the record service (edit access, field access, hooks, reindex) and is itself recorded, so it can be undone. The AI chat's "undo" uses these endpoints as the person.
+
 ## Prompt execution
 
 `EditorReference/prompt` reads the saved membership prompt through the **runtime actor's CRM credentials**, rechecks referenced targets and returns readable identities such as `Acme [Account:abc123]`. It never expands page bodies. Failed resolution never falls back to cached target names. Legacy prompts without portable references retain the existing projection path.

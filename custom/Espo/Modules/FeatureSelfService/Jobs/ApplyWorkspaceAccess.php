@@ -14,6 +14,7 @@ namespace Espo\Modules\FeatureSelfService\Jobs;
 use Espo\Core\Job\JobDataLess;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAccess;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceWallet;
+use Espo\Modules\FeatureSelfService\Tools\Plans\SeatAccess;
 
 /**
  * Applies paid plans (active, past due, frozen after the grace days), freezes
@@ -23,7 +24,7 @@ use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceWallet;
  */
 class ApplyWorkspaceAccess implements JobDataLess
 {
-    public function __construct(private WorkspaceAccess $access, private WorkspaceWallet $wallet) {}
+    public function __construct(private WorkspaceAccess $access, private WorkspaceWallet $wallet, private SeatAccess $seats) {}
 
     public function run(): void
     {
@@ -31,5 +32,6 @@ class ApplyWorkspaceAccess implements JobDataLess
         $this->access->freezeEndedTrials();
         $this->wallet->grantStartedTrials();
         $this->access->syncChatwoot();
+        $this->seats->syncPending();
     }
 }

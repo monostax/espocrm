@@ -1,4 +1,5 @@
 [
+    {"route": "/SelfService/seat-access", "method": "post", "params": {"controller": "SelfServiceWorkspace", "action": "seatAccess"}},
     {"route": "/SelfService/config", "method": "get", "noAuth": true, "params": {"controller": "SelfService", "action": "config"}},
     {"route": "/SelfService/signup", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "signup"}},
     {"route": "/SelfService/signup/:id/resend", "method": "post", "noAuth": true, "params": {"controller": "SelfService", "action": "resend"}},

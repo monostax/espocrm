@@ -1,4 +1,5 @@
 {
+    "controller": "global:controllers/opportunity",
     "kanbanStatusField": "opportunityStageId",
     "kanbanViewMode": true,
     "modelDefaultsPreparator": "global:handlers/tenant/defaults-preparator",

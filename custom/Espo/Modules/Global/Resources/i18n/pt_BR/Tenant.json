@@ -37,6 +37,6 @@
     "tooltips": {
         "slug": "Slug de URL estável e globalmente único para este ambiente. Usado para construir subdomínios por ambiente, como guest.<slug>.<dominio-gitops>. Formato: letras minúsculas, dígitos e hífens (ex.: \"b2b\", \"clinica\").",
         "language": "Idioma padrão deste ambiente. Aplicado a textos gerados pelo servidor (ex.: nomes de eventos de rastreamento) e definido como preferência inicial de usuários adicionados ao ambiente. Vazio = padrão da instância.",
-        "timeZone": "Fuso horário padrão deste ambiente. Definido como preferência inicial de usuários adicionados ao ambiente. Vazio = padrão da instância."
+        "timeZone": "Fuso horário padrão deste ambiente. Definido como preferência inicial de usuários adicionados ao ambiente e usado pelos funcionários digitais sem fuso próprio. Vazio = padrão da instância."
     }
 }

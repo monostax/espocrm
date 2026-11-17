@@ -118,6 +118,8 @@
         "actionTypeSendEmail": "Send email",
         "actionTypeSendWhatsAppMessage": "Send WhatsApp message",
         "actionTypeSendWhatsAppTemplate": "Send WhatsApp template",
+        "actionTypeOpenConversationWithNote": "Open WhatsApp conversation with private note",
+        "actionTypeSendSms": "Send SMS",
         "actionTypeCreateTask": "Create task",
         "actionTypeNotifyUser": "Notify user",
         "actionTypeUpdateTarget": "Update target",

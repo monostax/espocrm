@@ -22,14 +22,27 @@ final class CpfCnpj extends Supplier
     {
         $connection = $this->connection($type, $product, $identity);
         if (!$connection) return new Result('failed');
+        return $this->resending($timeoutMs, function (int $left) use ($connection, $type, $product, $identity): array {
+            $status = 0;
+            $result = $this->once($connection, $type, $product, $identity, $left, $status);
+            // The supplier refuses bursts of parallel lookups; only a refused credential is certain to fail again.
+            return [$result, $status !== 401];
+        });
+    }
+
+    private function once(array $connection, string $type, string $product, array $identity, int $timeoutMs, int &$status): Result
+    {
         $package = $type === 'Contact' ? 21 : 6;
         $document = $type === 'Contact' ? BrazilianIdentifier::cpf($identity['cpf']) : BrazilianIdentifier::cnpj($identity['cnpj']);
         $response = $this->transport->send('cpfcnpj', 'GET', '/' . rawurlencode($connection['token']) . '/' . $package . '/' . $document,
             timeoutMs: $timeoutMs);
+        $status = $response->status;
         if ($failure = $this->httpFailure($response)) return $failure;
         $data = $response->data;
         if (($data['status'] ?? null) === 0) {
-            return new Result(in_array($data['erroCodigo'] ?? null, [102, 202], true) ? 'no_match' : 'failed');
+            $code = $data['erroCodigo'] ?? null;
+            if (in_array($code, [102, 202], true)) return new Result('no_match');
+            return $this->rejected($response, is_int($code) || is_string($code) ? $code : null);
         }
         $returned = $type === 'Contact' ? BrazilianIdentifier::cpf($data['cpf'] ?? null) : BrazilianIdentifier::cnpj($data['cnpj'] ?? null);
         if (($data['status'] ?? null) !== 1 || ($data['pacoteUsado'] ?? null) !== $package || $returned !== $document) return new Result('ambiguous');

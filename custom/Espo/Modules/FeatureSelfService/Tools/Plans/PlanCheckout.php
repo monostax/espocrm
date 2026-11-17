@@ -41,6 +41,7 @@ class PlanCheckout
         private Creation $creation,
         private Subscriptions $subscriptions,
         private PlanOffers $offers,
+        private SeatRoster $seatRoster,
     ) {}
 
     /**
@@ -55,6 +56,7 @@ class PlanCheckout
     public function start(string $tenantId, string $actorId, int $seats, string $credits, array $payer,
         ?string $returnUrl = null): array
     {
+        $this->seatRoster->assertCheckout($tenantId, $seats);
         $terms = $this->offers->find($tenantId, $credits)
             ?? throw new InvalidArgumentException('Unknown monthly credits.');
 

@@ -22,7 +22,7 @@ use Espo\Modules\FeatureCatchUp\Services\Ownership;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
 use Espo\Modules\FeatureCatchUp\Services\Records;
 use Espo\Modules\FeatureCatchUp\Services\Revision;
-use Espo\Modules\FeatureCatchUp\Services\Rollout;
+use Espo\Modules\FeatureCatchUp\Classes\CardGone;
 use Espo\Modules\FeatureCatchUp\Services\Summary;
 use Espo\Modules\FeatureCatchUp\Services\Transcript;
 use Espo\Modules\FeatureCatchUp\Services\Verdicts;
@@ -60,7 +60,8 @@ class FeedTest extends TestCase
     }
 
     /** @return array{Feed, DataCache, Verdicts, Entity} */
-    private function feed(bool $regular = true, bool $readable = true, string $dealTenant = 'tenant', ?\PDO $pdo = null, bool $opens = true): array
+    private function feed(bool $regular = true, bool $readable = true, string $dealTenant = 'tenant', ?\PDO $pdo = null, bool $opens = true,
+        ?string $status = 'Open'): array
     {
         $user = $this->createMock(User::class);
         $user->method('isRegular')->willReturn($regular);
@@ -69,7 +70,7 @@ class FeedTest extends TestCase
         $acl->method('checkScope')->willReturn(true);
         $acl->method('checkField')->willReturn(true);
         $acl->method('checkEntityRead')->willReturn($readable);
-        $deal = $this->deal(['tenantId' => $dealTenant]);
+        $deal = $status === null ? null : $this->deal(['tenantId' => $dealTenant, 'status' => $status]);
         $em = $this->createMock(EntityManager::class);
         $em->method('getEntityById')->willReturn($deal);
         $em->method('getPDO')->willReturn($pdo ?? $this->pdo());
@@ -84,7 +85,7 @@ class FeedTest extends TestCase
         $owners = $this->createMock(Ownership::class);
         $owners->method('clause')->willReturn(['', []]);
         $feed = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user, $workspace,
-            $this->createMock(Rollout::class), $owners, $states, $verdicts, $cache, $this->createMock(Metadata::class),
+            $owners, $states, $verdicts, $cache, $this->createMock(Metadata::class),
             $this->createMock(Transcript::class), $this->createMock(Records::class), $this->chatwoot($opens));
         return [$feed, $cache, $verdicts, $deal];
     }
@@ -134,7 +135,7 @@ class FeedTest extends TestCase
         $em->method('getPDO')->willReturn($pdo);
         $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => $entity($id, $deals[$id]));
         $feed = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $this->createMock(User::class), $this->createMock(Workspace::class),
-            $this->createMock(Rollout::class), $this->createMock(Ownership::class), $this->createMock(DealStates::class), $this->createMock(Verdicts::class),
+            $this->createMock(Ownership::class), $this->createMock(DealStates::class), $this->createMock(Verdicts::class),
             $this->createMock(DataCache::class), $this->createMock(Metadata::class), $this->createMock(Transcript::class), $this->createMock(Records::class),
             $this->chatwoot());
         $now = new DateTimeImmutable('2026-11-10 10:00:00', new DateTimeZone('America/Sao_Paulo'));
@@ -190,6 +191,22 @@ class FeedTest extends TestCase
         self::assertStringContainsString("$recent THEN s.last_customer_at END ASC, ", $queries[0], 'longest recent wait first');
         self::assertStringContainsString('s.last_customer_at > s.last_business_at) THEN s.last_customer_at END DESC, o.amount DESC', $queries[0],
             'older waits next, most recent first');
+    }
+
+    public function testClosedOrDeletedDealsCannotBeLoadedOrReviewedById(): void
+    {
+        foreach (['Lost', 'Won', null] as $status) {
+            [$feed, $cache] = $this->feed(status: $status);
+            $cache->expects(self::never())->method('tryGet');
+            foreach ([fn () => $feed->snapshot('deal', $this->request()), fn () => $feed->review('deal', 'token', $this->request())] as $call) {
+                try {
+                    $call();
+                    self::fail('Expected the deal card to be gone.');
+                } catch (CardGone $e) {
+                    self::assertSame(404, $e->getCode());
+                }
+            }
+        }
     }
 
     public function testReviewWithoutTheShownCardConflictsAndResolvesNothing(): void

@@ -22,7 +22,8 @@ use PDO;
 class Execution
 {
     public function __construct(private EntityManager $entityManager, private WalletLock $lock, private ActorAccess $actors,
-        private Registry $providers, private FixedSettlement $settlement, private Crypt $crypt, private Clock $clock) {}
+        private Registry $providers, private FixedSettlement $settlement, private Crypt $crypt, private Clock $clock,
+        private MobilePhones $mobiles, private EmailOwners $owners) {}
 
     /** Job entry. Persist every permission before supplier I/O, never hold database locks over HTTP. */
     public function run(string $tenantId, string $quoteId): void
@@ -32,17 +33,38 @@ class Execution
             if ($claim === null) return;
             $timeout = $this->dispatchWindow($tenantId, $quoteId, $claim['id'], $claim['token']);
             if ($timeout === null) continue;
+            $started = hrtime(true);
             try {
                 $provider = $this->providers->get($claim['provider']);
                 $result = $claim['action'] === 'poll' ?
                     $provider->poll($claim['requestId'], $claim['subjectId'], $timeout) :
                     $provider->lookup($claim['type'], $claim['product'], $claim['identity'], $timeout);
+                // Mobile checks share the attempt's lease, keeping a margin to record the result in time.
+                $result = $this->mobiles->apply($result, $claim['type'], $claim['product'],
+                    $timeout - intdiv(hrtime(true) - $started, 1_000_000) - 2000);
+                // Contact emails must be the contact's own; the check shares the same lease.
+                $result = $this->owners->apply($result, $claim['type'], $claim['product'], $claim['provider'],
+                    fn (): array => $this->subject($tenantId, $claim), $timeout - intdiv(hrtime(true) - $started, 1_000_000) - 2000);
             } catch (\Throwable) {
                 $result = new Result('ambiguous');
             }
             $this->record($tenantId, $quoteId, $claim['id'], $claim['token'], $result);
             if ($result->state === 'pending') return;
         }
+    }
+
+    /** Who a Contact's returned emails are read against. Server-side only; never returned to a user API. */
+    private function subject(string $tenantId, array $claim): array
+    {
+        if ($claim['type'] !== 'Contact') return [];
+        $q = $this->entityManager->getPDO()->prepare('SELECT c.first_name,c.last_name,c.date_of_birth,a.name,a.website FROM contact c
+            LEFT JOIN account a ON a.id=c.account_id AND a.tenant_id=c.tenant_id AND a.deleted=FALSE
+            WHERE c.id=? AND c.tenant_id=? AND c.deleted=FALSE');
+        $q->execute([$claim['targetId'], $tenantId]);
+        $row = $q->fetch(PDO::FETCH_ASSOC) ?: [];
+        return ['name' => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
+            'birthYear' => substr((string) ($row['date_of_birth'] ?? ''), 0, 4),
+            'company' => $row['name'] ?? null, 'website' => $row['website'] ?? null];
     }
 
     /** Internal claim includes protected identity. Never return this payload from a user API. */
@@ -326,7 +348,8 @@ class Execution
     private function claimReceipt(array $attempt, array $terms, string $token, string $action): array
     {
         return ['id' => $attempt['id'], 'token' => $token, 'action' => $action, 'provider' => $attempt['provider'],
-            'product' => $attempt['product'], 'type' => $terms['request']['targetType'], 'identity' => $terms['identity'],
+            'product' => $attempt['product'], 'type' => $terms['request']['targetType'],
+            'targetId' => $terms['request']['targetId'], 'identity' => $terms['identity'],
             'requestId' => $attempt['request_id'] ?? null, 'subjectId' => $attempt['subject_id'] ?? null];
     }
 

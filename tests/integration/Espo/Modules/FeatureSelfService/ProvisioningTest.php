@@ -112,7 +112,7 @@ class ProvisioningTest extends TestCase
             $stages[$stage->get('name')] = (int) $stage->get('probability');
             self::assertStringNotContainsString('{', (string) $stage->get('description'));
         }
-        self::assertSame(['Em negociação' => 50, 'Ganho' => 100, 'Perdido' => 0], $stages);
+        self::assertSame(['Em Qualificação' => 50, 'Estacionada' => 50, 'Ganho' => 100, 'Perdido' => 0], $stages);
 
         // The concierge is an AI membership too (an administrator); the managed agent is an agent.
         $agents = $this->em->getRDBRepository('ChatwootAccountUserMembership')

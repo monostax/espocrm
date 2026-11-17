@@ -254,6 +254,24 @@ class OpportunityStreamAgentTest extends TestCase
         self::assertNull($this->service->context('source', 'ai', $this->postHash)->initiatorUserId);
     }
 
+    public function testAdministratorDelegationRequiresCurrentSourceAccessWithoutExplicitTenantMembership(): void
+    {
+        $human = $this->createMock(User::class);
+        $human->method('isActive')->willReturn(true);
+        $human->method('isAdmin')->willReturn(true);
+        $this->records['User/human'] = $human;
+        $data = $this->source->getData();
+        $data->opportunityAiInitiatorUserId = 'human';
+        $this->source->setData($data);
+        $this->humanTenant = false;
+        self::assertSame('human', $this->service->context('source', 'ai', $this->postHash)->initiatorUserId);
+        $this->humanAccess = false;
+        self::assertNull($this->service->context('source', 'ai', $this->postHash)->initiatorUserId);
+        $this->humanAccess = true;
+        $this->source->set('createdById', 'other-human');
+        self::assertNull($this->service->context('source', 'ai', $this->postHash)->initiatorUserId);
+    }
+
     public function testLostResponseAndDeletedReplyDoNotCreateAnotherPost(): void
     {
         self::assertTrue($this->service->context('source', 'ai', $this->postHash)->shouldRespond);

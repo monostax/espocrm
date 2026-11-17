@@ -4,8 +4,12 @@
     },
     "fields": {
         "createdByAIAgent": "Created by AI Agent",
+        "aiWatchEnabled": "AI watch",
         "whatsAppCampaigns": "WhatsApp Campaigns",
         "whatsAppCampaignTargetLists": "Campaign Target Lists"
+    },
+    "tooltips": {
+        "aiWatchEnabled": "When on, the AI watches this deal's conversations and moves the stage by itself (including Won and Lost) while a person owns the conversation. Each move is explained on the stream."
     },
     "links": {
         "whatsAppCampaigns": "WhatsApp Campaigns",

@@ -27,6 +27,19 @@ final class EnrichmentStatus
         return in_array('no_match', $states, true) ? 'not_found' : null;
     }
 
+    /**
+     * Email/phone searches that were tried and ended with no answer from any supplier (refused, timed out, waived).
+     *
+     * @param list<string> $products
+     * @param array<string, list<string>> $states enrichment_attempt states per product
+     * @return list<string>
+     */
+    public static function unanswered(array $products, array $states): array
+    {
+        return array_values(array_filter($products, static fn ($product) => in_array($product, ['email', 'phone'], true) &&
+            ($states[$product] ?? []) && self::fieldOutcome($states[$product]) === null));
+    }
+
     public static function discoveryOutcome(int $candidates, ?string $stopReason): ?string
     {
         if ($candidates > 0) return 'found';

@@ -329,6 +329,93 @@ class JourneyRelationshipsTest extends TestCase
         self::assertArrayNotHasKey('status', $history);
     }
 
+    public function testBulkJourneysAreTenantTypeAndStatusScoped(): void
+    {
+        $this->journey(['allowReEnrollment' => true]);
+        $this->fixtures['Journey'][] = $this->entity('Journey', 'foreign', ['tenantId' => 'tenant-b', 'name' => 'Foreign']);
+        $result = $this->service->journeys(6, 'Opportunity', "' OR 1=1 --", 0);
+        self::assertEquals([(object) ['id' => 'journey-a', 'name' => 'Sales', 'allowReEnrollment' => true]], $result->list);
+        self::assertFalse($result->hasMore);
+        $where = $this->flatten($this->queries['Journey'][0]['whereClause']);
+        self::assertSame('tenant-a', $where['tenantId']);
+        self::assertSame('Opportunity', $where['targetEntityType']);
+        self::assertSame('Active', $where['status']);
+        self::assertSame("%' OR 1=1 --%", $where['name*']);
+    }
+
+    /** @dataProvider bulkJourneyPermissions */
+    public function testBulkJourneysRequireEnrollmentPermissions(string $permission): void
+    {
+        $this->denied = [$permission];
+        $this->em->expects($this->never())->method('getRDBRepository');
+        $this->expectException(Forbidden::class);
+        $this->service->journeys(6, 'Opportunity', '', 0);
+    }
+
+    public static function bulkJourneyPermissions(): array
+    {
+        return array_map(fn ($value) => [$value], [
+            'Opportunity:edit', 'Journey:read', 'Journey:name:read', 'JourneyRecord:read', 'JourneyRecord:create',
+            'JourneyRecord:target:read', 'JourneyRecord:target:edit', 'JourneyRecord:journey:edit',
+        ]);
+    }
+
+    public function testBulkJourneysRejectUnsupportedTypeBeforeAccess(): void
+    {
+        $this->access->expects($this->never())->method('workspace');
+        $this->expectException(BadRequest::class);
+        $this->service->journeys(6, 'User', '', 0);
+    }
+
+    public function testBulkJourneysCheckWorkspaceMembership(): void
+    {
+        $this->access->method('workspace')->willThrowException(new Forbidden());
+        $this->em->expects($this->never())->method('getRDBRepository');
+        $this->expectException(Forbidden::class);
+        $this->service->journeys(6, 'Opportunity', '', 0);
+    }
+
+    public function testBulkExitJourneysIncludePausedAndNeedExitPermissions(): void
+    {
+        $this->journey();
+        $this->denied = ['JourneyRecord:create'];
+        self::assertCount(1, $this->service->journeys(6, 'Opportunity', '', 0, true)->list);
+        $where = $this->flatten($this->queries['Journey'][0]['whereClause']);
+        self::assertSame(['Active', 'Paused'], $where['status']);
+        $this->denied = ['JourneyRecord:status:edit'];
+        $this->expectException(Forbidden::class);
+        $this->service->journeys(6, 'Opportunity', '', 0, true);
+    }
+
+    public function testExitJourneyEndsOnlyLiveCyclesOfThatJourneyAndTarget(): void
+    {
+        $this->enrollment();
+        $this->engine->expects($this->once())->method('exitRecord')->with('enrollment-a', 'operator-a', 'manual');
+        self::assertEquals((object) ['ok' => true, 'reason' => null], $this->service->exitJourney($this->tenant, $this->target, 'journey-a'));
+        $where = $this->flatten($this->queries['JourneyRecord'][0]['whereClause']);
+        self::assertSame('tenant-a', $where['tenantId']);
+        self::assertSame('journey-a', $where['journeyId']);
+        self::assertSame('Opportunity', $where['targetType']);
+        self::assertSame('opportunity-a', $where['targetId']);
+        self::assertSame(['Active', 'Processing', 'Paused'], $where['status']);
+    }
+
+    public function testExitJourneyReportsRecordsThatAreNotEnrolled(): void
+    {
+        $this->engine->expects($this->never())->method('exitRecord');
+        self::assertEquals((object) ['ok' => false, 'reason' => 'not_enrolled'], $this->service->exitJourney($this->tenant, $this->target, 'journey-a'));
+    }
+
+    /** @dataProvider exitPermissions */
+    public function testExitJourneyRequiresTargetAndEnrollmentEditAccess(string $permission): void
+    {
+        $this->enrollment();
+        $this->denied = [$permission];
+        $this->engine->expects($this->never())->method('exitRecord');
+        $this->expectException(Forbidden::class);
+        $this->service->exitJourney($this->tenant, $this->target, 'journey-a');
+    }
+
     public function testControllerIgnoresSpoofedTenantTargetAndRunIdentity(): void
     {
         $journey = $this->journey();

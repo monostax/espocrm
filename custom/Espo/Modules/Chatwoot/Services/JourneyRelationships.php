@@ -21,6 +21,7 @@ use Espo\ORM\Query\SelectBuilder;
 class JourneyRelationships
 {
     private const LIVE = ['Active', 'Processing', 'Paused'];
+    private const TYPES = ['Contact', 'Account', 'Lead', 'Opportunity'];
 
     public function __construct(
         private EntityManager $em,
@@ -34,7 +35,7 @@ class JourneyRelationships
 
     public function context(int $accountId, string $type, string $id): array
     {
-        if (!in_array($type, ['Contact', 'Account', 'Lead', 'Opportunity'], true) || $id === '') {
+        if (!in_array($type, self::TYPES, true) || $id === '') {
             throw new BadRequest('Unsupported enrollment target.');
         }
         $tenant = $this->access->workspace($accountId);
@@ -59,8 +60,23 @@ class JourneyRelationships
 
     private function canEnroll(Entity $target): bool
     {
-        return $this->acl->check($target, 'edit') &&
-            $this->acl->checkScope('Journey', 'read') &&
+        return $this->acl->check($target, 'edit') && $this->canEnrollAny();
+    }
+
+    /** The permissions to end an enrollment that do not depend on the record. */
+    private function canExitAny(): bool
+    {
+        return $this->acl->checkScope('Journey', 'read') &&
+            $this->acl->checkField('Journey', 'name', 'read') &&
+            $this->canReadEnrollments() &&
+            $this->acl->checkScope('JourneyRecord', 'edit') &&
+            $this->acl->checkField('JourneyRecord', 'status', 'edit');
+    }
+
+    /** The enrollment permissions that do not depend on the record. */
+    private function canEnrollAny(): bool
+    {
+        return $this->acl->checkScope('Journey', 'read') &&
             $this->acl->checkField('Journey', 'name', 'read') &&
             $this->canReadEnrollments() &&
             $this->acl->checkScope('JourneyRecord', 'create') &&
@@ -115,6 +131,34 @@ class JourneyRelationships
         ];
     }
 
+    /**
+     * Journeys a bulk selection of $type records can be enrolled in. Nothing here is
+     * per record: each enrollment still goes through enroll() with its own checks.
+     */
+    public function journeys(int $accountId, string $type, string $search, int $offset, bool $exit = false): object
+    {
+        if (!in_array($type, self::TYPES, true)) throw new BadRequest('Unsupported enrollment target.');
+        $tenant = $this->access->workspace($accountId);
+        if (!$this->acl->checkScope($type, 'edit') || !($exit ? $this->canExitAny() : $this->canEnrollAny())) {
+            throw new Forbidden();
+        }
+        $query = $this->query('Journey', $tenant)->where([
+            'targetEntityType' => $type,
+            // A paused journey takes nobody new, but its enrollments can still be ended.
+            'status' => $exit ? ['Active', 'Paused'] : 'Active',
+        ])->order('name')->order('id')->limit($offset, 51);
+        if ($search !== '') $query->where(['name*' => '%' . $search . '%']);
+        $records = iterator_to_array($this->em->getRDBRepository('Journey')->clone($query->build())->find(), false);
+        return (object) [
+            'list' => array_map(fn (Entity $journey) => (object) [
+                'id' => $journey->getId(),
+                'name' => $this->value($journey, 'name'),
+                'allowReEnrollment' => (bool) $journey->get('allowReEnrollment'),
+            ], array_slice($records, 0, 50)),
+            'hasMore' => count($records) > 50,
+        ];
+    }
+
     public function enroll(Entity $tenant, Entity $target, string $journeyId): object
     {
         if (!$this->canEnroll($target)) throw new Forbidden();
@@ -155,6 +199,24 @@ class JourneyRelationships
             $record = $this->enrollment->exitRecord($id, $this->user->getId(), 'manual');
         }
         return $this->present($record, $tenant, $target);
+    }
+
+    /** Ends the record's live enrollment in one journey, with unlink()'s checks. */
+    public function exitJourney(Entity $tenant, Entity $target, string $journeyId): object
+    {
+        if (!$this->canReadEnrollments() || !$this->acl->check($target, 'edit') ||
+            !$this->acl->checkField('JourneyRecord', 'status', 'edit')) throw new Forbidden();
+        $query = $this->query('JourneyRecord', $tenant)->where([
+            'journeyId' => $journeyId, 'status' => self::LIVE, ...$this->targetWhere($target),
+        ]);
+        $records = iterator_to_array($this->em->getRDBRepository('JourneyRecord')->clone($query->build())->find(), false);
+        foreach ($records as $record) {
+            if (!$this->acl->check($record, 'edit')) throw new Forbidden();
+        }
+        foreach ($records as $record) {
+            $this->enrollment->exitRecord($record->getId(), $this->user->getId(), 'manual');
+        }
+        return (object) ['ok' => $records !== [], 'reason' => $records ? null : 'not_enrolled'];
     }
 
     private function related(string $type, ?string $id, Entity $tenant): ?Entity

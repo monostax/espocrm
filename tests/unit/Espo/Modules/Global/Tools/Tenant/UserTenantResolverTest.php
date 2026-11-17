@@ -12,6 +12,7 @@ use Espo\ORM\EntityCollection;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\RDBRelation;
 use Espo\ORM\Repository\RDBRepository;
+use Espo\ORM\Repository\RDBSelectBuilder;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -39,6 +40,7 @@ class UserTenantResolverTest extends TestCase
         array $explicitTenantIds,
         array $teamIds,
         array $teamDerivedTenantIds,
+        array $disabledTenantIds = [],
     ): UserTenantResolver {
         $entityManager = $this->createMock(EntityManager::class);
 
@@ -46,6 +48,13 @@ class UserTenantResolverTest extends TestCase
         $relation->method('find')->willReturn($this->collection($explicitTenantIds));
 
         $repository = $this->createMock(RDBRepository::class);
+        $seatSelect = $this->createStub(RDBSelectBuilder::class);
+        $seatSelect->method('find')->willReturn(new EntityCollection(array_map(function ($id) {
+            $seat = $this->createStub(Entity::class);
+            $seat->method('get')->willReturn($id);
+            return $seat;
+        }, $disabledTenantIds)));
+        $repository->method('where')->willReturn($seatSelect);
         $repository->method('getRelation')->willReturnCallback(
             function (Entity $entity, string $link) use ($relation): RDBRelation {
                 $this->assertSame('tenants', $link);
@@ -147,6 +156,12 @@ class UserTenantResolverTest extends TestCase
         sort($ids);
 
         $this->assertSame(['tenant-a', 'tenant-b'], $ids);
+    }
+
+    public function testDisabledTenantIsDeniedEvenIfAnOldMembershipStillExists(): void
+    {
+        $resolver = $this->makeResolver(['tenant-a', 'tenant-b'], ['team-a'], ['tenant-a'], ['tenant-a']);
+        self::assertSame(['tenant-b'], $resolver->resolveTenantIds($this->user(['team-a'])));
     }
 
     public function testUserWithNoMembershipResolvesToNothing(): void

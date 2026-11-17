@@ -94,8 +94,8 @@ enabled = CRM_SELF_SERVICE_ENABLED is exactly "true"  AND  not paused
 4. `ownerMembership`: the owner's Chatwoot membership as `administrator`.
 5. What the workspace starts with (`WorkspaceStarter`, Self-Service PLG
    "Next steps to launch" §7, decided 2026-11-10):
-   - `salesFunnel`: the default "Vendas" funnel (Em negociação 50%, Ganho
-     100%, Perdido 0%), shared with the base team, AI follow-ups off. Ganho and
+   - `salesFunnel`: the default "Vendas" funnel (Em Qualificação 50%, Estacionada 50%,
+     Ganho 100%, Perdido 0%), shared with the base team, AI follow-ups off. Ganho and
      Perdido carry the Monostax default rule (gtm/06). A tenant that already
      has a funnel keeps it.
    - `aiAgent`: a managed AI agent ("IA <workspace>") through
@@ -148,13 +148,16 @@ Ferraz Veloso's private offer.
   the plan, the credit steps (labelled in conversations at ~6.5 credits each,
   rounded down to 25) and the preselection: the people answering in
   Chatwoot, and the smallest step that, with their included credits, covers
-  the trial's AI conversations scaled to a month.
+  the trial's AI conversations scaled to a month. `canPurchase` authorizes the
+  plan form independently of the administrative `canManage` capability.
 - `POST /SelfService/checkout {accountId, seats, credits, payer}`
-  (`PlanCheckout`, tenant administrators): one monthly Asaas subscription
+  (`PlanCheckout`, any active workspace agent): one monthly Asaas subscription
   charged to a card (`CREDIT_CARD`, so it renews by itself) for attendants ×
   249 plus the step. The accepted terms carry credits = step + 250 ×
   attendants, granted on each paid invoice and kept until the end of the
-  following period.
+  following period. The payer needs a human membership in the requested
+  Chatwoot account, account read access and access to its tenant; instance
+  administrators also qualify. Agent/custom roles do not need promotion.
 - The invoice says what is bought ("Plano Monostax: 2 atendentes, 2.500
   créditos de IA por mês"). With config `selfServiceCheckoutReturnEnabled`, the
   subscription carries an Asaas callback that sends the payer back to Chatwoot

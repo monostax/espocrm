@@ -6,6 +6,7 @@ namespace tests\unit\Espo\Modules\FeatureCredits;
 
 use Espo\Modules\FeatureCredits\Enrichment\BatchApplication;
 use Espo\Modules\FeatureCredits\Enrichment\BatchInput;
+use Espo\Modules\FeatureCredits\Enrichment\BatchRunner;
 use Espo\Modules\FeatureCredits\Enrichment\Batches;
 use Espo\Modules\FeatureCredits\Enrichment\EnrichmentEmails;
 use Espo\Modules\FeatureCredits\Enrichment\EnrichmentStatus;
@@ -111,6 +112,55 @@ class BulkEnrichmentTest extends TestCase
         $this->assertNull(BatchApplication::contactData(['name' => 'Maria'], ['available' => true, 'creationForm' => $form]));
         $form['defaultTeamsIds'] = ['base']; $form['teamsAllowed'] = false;
         $this->assertNull(BatchApplication::contactData(['name' => 'Maria'], ['available' => true, 'creationForm' => $form]));
+    }
+
+    public function testUnansweredSearchesAreNotCompletedSearches(): void
+    {
+        $states = ['email' => ['failed', 'failed'], 'phone' => ['failed', 'matched']];
+        $this->assertSame(['email'], EnrichmentStatus::unanswered(['email', 'phone'], $states));
+        $this->assertSame([], EnrichmentStatus::unanswered(['email'], ['email' => ['failed', 'no_match']]));
+        $this->assertSame(['email', 'phone'], EnrichmentStatus::unanswered(['email', 'phone'],
+            ['email' => ['waived'], 'phone' => ['skipped', 'failed']]));
+        // A search that was never tried, and partner searches, are not supplier silence.
+        $this->assertSame([], EnrichmentStatus::unanswered(['email', 'socios'], ['socios' => ['failed']]));
+    }
+
+    public function testRecordFailsOnlyWhenNoSearchWasAnswered(): void
+    {
+        $nothing = ['emailsFound' => 0, 'phonesFound' => 0];
+        $this->assertSame(['done', null, $nothing], BatchRunner::settled($nothing, ['email'], []));
+        $this->assertSame(['failed', 'no_answer', $nothing + ['searchesFailed' => 1, 'unanswered' => ['email']]],
+            BatchRunner::settled($nothing, ['email'], ['email']));
+        $partial = ['emailsFound' => 0, 'phonesFound' => 4];
+        $this->assertSame(['done', null, $partial + ['searchesFailed' => 1, 'unanswered' => ['email']]],
+            BatchRunner::settled($partial, ['email', 'phone'], ['email']));
+    }
+
+    public function testRetryRunsSearchOnlyWhatEachRecordMissed(): void
+    {
+        $settings = ['products' => ['email', 'phone'], 'refresh' => true, 'sources' => [2, 3], 'only' => ['c1' => ['email']]];
+        $this->assertSame(['products' => ['email'], 'refresh' => true, 'sources' => [2, 3]], BatchRunner::recordSettings($settings, 'c1'));
+        $this->assertSame(['products' => ['email', 'phone'], 'refresh' => true, 'sources' => [2, 3]],
+            BatchRunner::recordSettings($settings, 'c2'));
+    }
+
+    public function testProjectionSeparatesUnansweredSearchesFromFailuresAndReview(): void
+    {
+        $batch = ['id' => 'b', 'tenant_id' => 't', 'target_type' => 'Contact', 'product' => 'combined', 'state' => 'completed',
+            'pause_reason' => null, 'total' => '3', 'created_at' => '2026-11-17 13:34:29', 'completed_at' => '2026-11-17 13:34:47'];
+        $result = Batches::project($batch, [
+            ['target_id' => 'c1', 'state' => 'failed', 'reason' => 'no_answer', 'credits' => '0.0000',
+                'outcome' => '{"emailsFound":0,"phonesFound":0,"searchesFailed":2,"unanswered":["email","phone"]}'],
+            ['target_id' => 'c2', 'state' => 'done', 'reason' => null, 'credits' => '3.0000',
+                'outcome' => '{"emailsFound":0,"phonesFound":4,"searchesFailed":1,"unanswered":["email"]}'],
+            ['target_id' => 'c3', 'state' => 'failed', 'reason' => 'timeout', 'credits' => null, 'outcome' => null],
+        ]);
+        $this->assertSame(2, $result['retryable']);
+        $this->assertSame(1, $result['noAnswer']);
+        $this->assertSame(2, $result['counts']['failed']);
+        $this->assertSame(['c3'], $result['reviewTargetIds']);
+        $this->assertSame(3, ((array) $result['totals'])['searchesFailed']);
+        $this->assertArrayNotHasKey('unanswered', (array) $result['totals']);
     }
 
     public function testProjectionSumsCountsWithoutPurchasedValues(): void

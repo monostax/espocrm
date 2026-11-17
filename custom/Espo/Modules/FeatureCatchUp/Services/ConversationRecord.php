@@ -38,14 +38,9 @@ class ConversationRecord
     /** @return array{records: list<array<string, mixed>>} */
     public function read(Request $request): array
     {
-        if ((!$this->user->isRegular() && !$this->user->isAdmin()) || !$this->acl->checkScope('ChatwootConversation', 'read')) throw new Forbidden();
-        $display = (string) $request->getQueryParam('conversationId');
-        if (!ctype_digit($display) || (int) $display < 1) throw new BadRequest('Invalid conversation.');
         ['tenant' => $tenant, 'account' => $account] = $this->workspace->account($request);
-        $conversation = $this->conversation($account, (int) $display);
-        // The record is made of the conversation's messages: the reader must be able to read them, in the CRM and in Chatwoot.
-        if (!$conversation || !$this->acl->checkEntityRead($conversation) || !$this->transcript->readable($conversation)
-            || !$this->access->allows($conversation)) return ['records' => []];
+        $conversation = $this->readableConversation($request, $account);
+        if (!$conversation) return ['records' => []];
         $records = [];
         foreach ($this->deals($conversation, $tenant->getId()) as $deal) {
             $record = $this->records->load('Opportunity', $deal->getId(), Records::scope(array_keys($this->feed->conversations($deal))));
@@ -53,10 +48,21 @@ class ConversationRecord
         }
         if (!$records) {
             $id = $conversation->getId();
-            $record = $this->records->load('ChatwootConversation', $id, Records::scope([$id]));
+            $record = $this->records->load('ChatwootConversation', $id, ConversationCycle::scope($conversation));
             if ($record) $records[] = self::shown('conversation', $id, null, $record);
         }
         return ['records' => $records];
+    }
+
+    /** Resolve a conversation display id within its account, including access to its messages. */
+    public function readableConversation(Request $request, Entity $account): ?Entity
+    {
+        if ((!$this->user->isRegular() && !$this->user->isAdmin()) || !$this->acl->checkScope('ChatwootConversation', 'read')) throw new Forbidden();
+        $display = (string) $request->getQueryParam('conversationId');
+        if (!ctype_digit($display) || (int) $display < 1) throw new BadRequest('Invalid conversation.');
+        $conversation = $this->conversation($account, (int) $display);
+        return $conversation && $this->acl->checkEntityRead($conversation) && $this->transcript->readable($conversation)
+            && $this->access->allows($conversation) ? $conversation : null;
     }
 
     private function conversation(Entity $account, int $display): ?Entity

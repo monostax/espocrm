@@ -272,6 +272,8 @@ define("feature-journey:views/journey/modals/review-publish", ["views/modal"], f
                 sendEmail: this.translateScoped("actionTypeSendEmail"),
                 sendWhatsAppMessage: this.translateScoped("actionTypeSendWhatsAppMessage"),
                 sendWhatsAppTemplate: this.translateScoped("actionTypeSendWhatsAppTemplate"),
+                sendSms: this.translateScoped("actionTypeSendSms"),
+                openConversationWithNote: this.translateScoped("actionTypeOpenConversationWithNote"),
                 createTask: this.translateScoped("actionTypeCreateTask"),
                 notifyUser: this.translateScoped("actionTypeNotifyUser"),
                 updateTarget: this.translateScoped("actionTypeUpdateTarget"),

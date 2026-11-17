@@ -127,6 +127,12 @@
                 {
                     "name": "followupAiAgent"
                 }
+            ],
+            [
+                {
+                    "name": "aiWatchEnabled"
+                },
+                false
             ]
         ]
     },

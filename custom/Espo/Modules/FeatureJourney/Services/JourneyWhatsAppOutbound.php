@@ -59,6 +59,16 @@ class JourneyWhatsAppOutbound
         'whatsappCoexistence',
     ];
 
+    /**
+     * SMS inboxes (`sendSms`): Chatwoot Channel::Sms, any provider.
+     *
+     * @var list<string>
+     */
+    public const CHANNELS_SMS = ['sms'];
+
+    /** Conversations kept per enrollment for reply tracking. */
+    private const TRAIL_LIMIT = 100;
+
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $chatwootApiClient,
@@ -154,10 +164,11 @@ class JourneyWhatsAppOutbound
      *   WhatsApp, even if it is a landline on WhatsApp Business.
      *
      * Matches WhatsAppCampaign multi-number enrollment semantics.
+     * SMS passes `$whatsAppIdentities = false`: a WhatsApp identity can be a landline.
      *
      * @return list<string> E.164-normalized unique phones
      */
-    public function resolvePhones(Entity $target, ?string $override = null): array
+    public function resolvePhones(Entity $target, ?string $override = null, bool $whatsAppIdentities = true): array
     {
         if (is_string($override) && trim($override) !== '') {
             return $this->normalizePhoneList($override);
@@ -211,7 +222,7 @@ class JourneyWhatsAppOutbound
         }
 
         // WhatsApp channel identities (multi-number) when not yet mirrored to phoneNumber.
-        if ($target->hasId() && $target->getEntityType() === 'Contact') {
+        if ($whatsAppIdentities && $target->hasId() && $target->getEntityType() === 'Contact') {
             try {
                 $identities = $this->entityManager
                     ->getRDBRepository('ContactChannelIdentity')
@@ -461,6 +472,10 @@ class JourneyWhatsAppOutbound
             if ($record) {
                 $record->set('whatsAppChatwootConversationId', $conversationExternalId);
                 $record->set('whatsAppChatwootAccountId', $espoAccountId);
+                $record->set('chatwootConversationTrail', self::appendTrail(
+                    $record->get('chatwootConversationTrail'),
+                    self::trailKey($espoAccountId, $conversationExternalId),
+                ));
                 $this->entityManager->saveEntity($record, [SaveOption::SILENT => true]);
             }
         } catch (Throwable $e) {
@@ -489,6 +504,59 @@ class JourneyWhatsAppOutbound
                 $e->getMessage()
             );
         }
+    }
+
+    /**
+     * One enrollment talks to several conversations (each contact, each phone, WhatsApp
+     * and SMS). The record keeps them all so a reply on any of them is found.
+     */
+    public static function trailKey(string $espoAccountId, string $conversationExternalId): string
+    {
+        return $espoAccountId . ':' . $conversationExternalId;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function appendTrail(mixed $trail, string $key): array
+    {
+        $trail = array_values(array_filter(
+            is_array($trail) ? $trail : [],
+            static fn ($item): bool => is_string($item) && $item !== '' && $item !== $key,
+        ));
+        $trail[] = $key;
+
+        return array_slice($trail, -self::TRAIL_LIMIT);
+    }
+
+    /**
+     * Fill `{{…}}` placeholders in free text (SMS) the way a template mapping is filled:
+     * paths relative to the journey record, `{{contact.*}}` is the receiver.
+     *
+     * @return array{text: string, empty: list<string>} `empty` lists placeholders with no value
+     */
+    public function renderText(string $text, Entity $target, ?Entity $person = null): array
+    {
+        if (!preg_match_all('/\{\{[^{}]+\}\}/', $text, $matches)) {
+            return ['text' => $text, 'empty' => []];
+        }
+
+        $expressions = array_values(array_unique($matches[0]));
+        $resolved = $this->resolveParameterMapping($expressions, $target, $person);
+
+        $replace = [];
+        $empty = [];
+
+        foreach ($expressions as $i => $expression) {
+            $value = $resolved[(string) $i] ?? '';
+            $replace[$expression] = $value;
+
+            if ($value === '') {
+                $empty[] = $expression;
+            }
+        }
+
+        return ['text' => strtr($text, $replace), 'empty' => $empty];
     }
 
     /**

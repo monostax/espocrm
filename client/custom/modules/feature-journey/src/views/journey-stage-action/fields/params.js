@@ -532,7 +532,35 @@ define("feature-journey:views/journey-stage-action/fields/params", [
                 });
 
                 this.renderOrphanParamFormulas(params, defs);
+
+                if (this.model.get("type") === "sendSms") {
+                    this.renderSmsPreview();
+                }
             });
+        },
+
+        /**
+         * sendSms: dry-run render of the message against a sample record, below the form.
+         */
+        renderSmsPreview: function () {
+            this.$form.append($("<div>").addClass("journey-sms-preview-host"));
+            this._paramViews.push("smsPreview");
+            this.createView(
+                "smsPreview",
+                "feature-journey:views/journey-stage-action/fields/sms-preview",
+                {
+                    el: this.getSelector() + " .journey-sms-preview-host",
+                    getBody: () => {
+                        const ex = this._expressionInputs.body;
+
+                        return ex ? ex.getState() : null;
+                    },
+                    resolveJourneyContext: () => this.cfHelper.resolveContext(),
+                },
+                (view) => {
+                    view.render();
+                }
+            );
         },
 
         /**

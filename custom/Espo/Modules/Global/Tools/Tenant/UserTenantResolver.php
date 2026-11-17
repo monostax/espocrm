@@ -67,6 +67,11 @@ class UserTenantResolver
             $found[$tenantId] = true;
         }
 
+        foreach ($this->entityManager->getRDBRepository('SelfServiceSeat')
+            ->where(['userId' => $user->getId(), 'disabled' => true])->find() as $seat) {
+            unset($found[(string) $seat->get('tenantId')]);
+        }
+
         return array_keys($found);
     }
 

@@ -1,5 +1,6 @@
 {
     "whereItemConverterClassNameMap": {
+        "id_recordQuery": "Espo\\Modules\\Chatwoot\\Classes\\Select\\RecordQuery\\Where",
         "tags_linkedWith": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",
         "tags_notLinkedWith": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",
         "tags_linkedWithAll": "Espo\\Modules\\Global\\Classes\\Select\\CrmTag\\VisibleTagFilter",

@@ -211,9 +211,71 @@ class EnrichmentSuppliersTest extends TestCase
             $this->assertSame('ambiguous',$supplier->lookup('Contact','email',['cpf' => '52998224725'])->state);
         }
         $this->assertSame(5,count($this->calls));
-        foreach ([401,403,429] as $status) {
-            $this->responses[] = new Response($status,[]);
-            $this->assertSame('failed',$supplier->lookup('Contact','email',['cpf' => '52998224725'])->state);
+        // A refused credential fails again for certain, so it is sent once.
+        $this->responses[] = new Response(401,[]);
+        $this->assertSame('failed',$supplier->lookup('Contact','email',['cpf' => '52998224725'])->state);
+        $this->assertSame(6,count($this->calls));
+    }
+
+    public function testRefusedLookupsAreResentWhileTheLeaseLastsAndUnknownOutcomesNever(): void
+    {
+        $identity = ['cpf' => '52998224725'];
+        $found = new Response(200,['status' => 1,'cpf' => '529.982.247-25','pacoteUsado' => 21,'emails' => ['a@example.test'],'telefones' => []]);
+        $supplier = $this->supplier(CpfCnpj::class);
+        // A burst is refused (HTTP 429 or the supplier's own error body); the resend finds the data.
+        foreach ([new Response(429,[]),new Response(200,['status' => 0,'erroCodigo' => 1005])] as $refusal) {
+            $this->calls = [];
+            $this->responses = [$refusal,$found];
+            $this->assertSame(['a@example.test'],$supplier->lookup('Contact','email',$identity)->values);
+            $this->assertSame(2,count($this->calls));
         }
+        // Three refusals in a row end the lookup as failed: it bought nothing.
+        $this->calls = [];
+        $this->responses = [new Response(429,[]),new Response(403,[]),new Response(429,[]),$found];
+        $this->assertSame('failed',$supplier->lookup('Contact','email',$identity)->state);
+        $this->assertSame(3,count($this->calls));
+        // A real "not in the base" answer and an unknown outcome are final on the first call.
+        foreach ([[new Response(200,['status' => 0,'erroCodigo' => 102]),'no_match'],[new Response(500,null),'ambiguous']] as [$response,$state]) {
+            $this->calls = [];
+            $this->responses = [$response,$found];
+            $this->assertSame($state,$supplier->lookup('Contact','email',$identity)->state);
+            $this->assertSame(1,count($this->calls));
+        }
+        // No resend once too little of the attempt's lease is left to finish one.
+        $this->calls = [];
+        $this->responses = [new Response(429,[]),$found];
+        $this->assertSame('failed',$supplier->lookup('Contact','email',$identity,5000)->state);
+        $this->assertSame(1,count($this->calls));
+
+        // Hub's refusals other than throttling (credential, balance) are not resent.
+        $hub = $this->supplier(Hub::class);
+        $this->calls = [];
+        $this->responses = [new Response(200,['status' => false,'return' => 'NOK','message' => 'CPF 52998224725 recusado'])];
+        $this->assertSame('failed',$hub->lookup('Contact','email',$identity)->state);
+        $this->assertSame(1,count($this->calls));
+        $this->responses = [new Response(429,[]),new Response(200,['status' => true,'return' => 'OK','result' => [
+            'documento' => '52998224725','listaEmails' => [['enderecoEmail' => 'b@example.test']],'listaTelefones' => []]])];
+        $this->assertSame(['b@example.test'],$hub->lookup('Contact','email',$identity)->values);
+        $this->assertSame(3,count($this->calls));
+    }
+
+    public function testRefusalsLogOnlyTheStatusAndTheSuppliersCodeWithoutDocuments(): void
+    {
+        $logged = [];
+        $log = $this->createMock(\Espo\Core\Utils\Log::class);
+        $log->method('warning')->willReturnCallback(function ($message, array $context = []) use (&$logged): void { $logged[] = $context; });
+        $credentials = $this->createStub(Credentials::class);
+        $credentials->method('get')->willReturn($this->secrets);
+        $transport = $this->createStub(Transport::class);
+        $transport->method('send')->willReturnCallback(fn (): Response => array_shift($this->responses) ?? new Response(0,null));
+        $this->responses = [new Response(200,['status' => 0,'erroCodigo' => 1005]),new Response(401,[])];
+        (new CpfCnpj($credentials,$transport,$log))->lookup('Contact','email',['cpf' => '52998224725']);
+        $this->responses = [new Response(200,['status' => false,'return' => 'NOK','message' => 'CPF 52998224725 recusado'])];
+        (new Hub($credentials,$transport,$log))->lookup('Contact','email',['cpf' => '52998224725']);
+        $this->assertSame([
+            ['provider' => 'cpfcnpj','status' => 200,'code' => 1005],
+            ['provider' => 'cpfcnpj','status' => 401,'code' => null],
+            ['provider' => 'hub','status' => 200,'code' => 'CPF ########### recusado'],
+        ],$logged);
     }
 }

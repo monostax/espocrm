@@ -23,8 +23,11 @@ use Throwable;
  */
 final class BatchRunner
 {
-    /** In-flight (admitted, unsettled) records per run and across every run. */
-    public const WINDOW = 5;
+    /**
+     * In-flight (admitted, unsettled) records per run and across every run. Suppliers refuse bursts of
+     * parallel lookups (2026-11-17: one in five refused at 5), so a run keeps few records in flight.
+     */
+    public const WINDOW = 3;
     public const GLOBAL_WINDOW = 25;
     private const STEP_SECONDS = 8;
 
@@ -80,7 +83,8 @@ final class BatchRunner
         $quoteId = $item['quote_id'];
         try {
             if ($quoteId === null) {
-                $plan = $quotes->batchPlan(BatchInput::base($tenant, $batch['target_type'], $item['target_id'], $settings));
+                $plan = $quotes->batchPlan(BatchInput::base($tenant, $batch['target_type'], $item['target_id'],
+                    self::recordSettings($settings, $item['target_id'])));
                 if (isset($plan['reason'])) return $this->finishItem($item, 'skipped', $plan['reason']);
                 $receipt = $quotes->quote(new QuoteInput((object) [...$plan['request'], 'requestKey' => 'bulk-' . $item['id']]));
                 $quoteId = $receipt['id'];
@@ -133,7 +137,8 @@ final class BatchRunner
         $q = $this->em->getPDO()->prepare('SELECT settled_credits FROM credit_usage WHERE id=? AND tenant_id=?');
         $q->execute([$receipt['usageId'], $tenant]);
         $credits = $q->fetchColumn() ?: '0';
-        $request = ['products' => $settings['products'], 'targetId' => $item['target_id']];
+        $products = self::recordSettings($settings, $item['target_id'])['products'];
+        $request = ['products' => $products, 'targetId' => $item['target_id']];
         try {
             $outcome = $application->apply($tenant, $item['quote_id'], $request);
         } catch (Throwable $e) {
@@ -141,9 +146,41 @@ final class BatchRunner
             $this->log->warning('Bulk enrichment application failed.', ['batchId' => $batch['id'], 'exception' => $e]);
             $outcome = ['needsReview' => 1];
         }
-        $this->em->getPDO()->prepare("UPDATE enrichment_batch_item SET state='done', credits=?, outcome=?, finished_at=?
-            WHERE id=? AND state='running'")->execute([$credits, json_encode($outcome, JSON_THROW_ON_ERROR),
-                $this->clock->now(), $item['id']]);
+        [$state, $reason, $outcome] = self::settled($outcome, $products, $this->unanswered($tenant, $item['quote_id'], $products));
+        $this->em->getPDO()->prepare("UPDATE enrichment_batch_item SET state=?, reason=?, credits=?, outcome=?, finished_at=?
+            WHERE id=? AND state='running'")->execute([$state, $reason, $credits,
+                json_encode($outcome, JSON_THROW_ON_ERROR), $this->clock->now(), $item['id']]);
+    }
+
+    /**
+     * A search no supplier answered is not "nothing found": it cost nothing and can be tried again.
+     * The record fails only when none of its searches was answered.
+     *
+     * @return array{string, ?string, array} state, reason, outcome
+     */
+    public static function settled(array $outcome, array $products, array $unanswered): array
+    {
+        if (!$unanswered) return ['done', null, $outcome];
+        $outcome = [...$outcome, 'searchesFailed' => count($unanswered), 'unanswered' => $unanswered];
+        return count($unanswered) === count($products) ? ['failed', 'no_answer', $outcome] : ['done', null, $outcome];
+    }
+
+    /** A retry run searches, per record, only what the first run got no answer for. */
+    public static function recordSettings(array $settings, string $targetId): array
+    {
+        $only = $settings['only'][$targetId] ?? null;
+        unset($settings['only']);
+        return $only === null ? $settings : ['products' => $only] + $settings;
+    }
+
+    /** @return list<string> email/phone searches of the quote that ended without found or not-found */
+    private function unanswered(string $tenant, string $quoteId, array $products): array
+    {
+        $q = $this->em->getPDO()->prepare('SELECT product, state FROM enrichment_attempt WHERE quote_id=? AND tenant_id=? AND deleted=FALSE');
+        $q->execute([$quoteId, $tenant]);
+        $states = [];
+        foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $attempt) $states[$attempt['product']][] = $attempt['state'];
+        return EnrichmentStatus::unanswered($products, $states);
     }
 
     /** Close the run when nothing is in flight and nothing more may start. */

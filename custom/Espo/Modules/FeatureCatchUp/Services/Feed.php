@@ -11,11 +11,11 @@ use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
-use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\DataCache;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
+use Espo\Modules\FeatureCatchUp\Classes\CardGone;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -58,7 +58,6 @@ class Feed
         private Acl $acl,
         private User $user,
         private Workspace $workspace,
-        private Rollout $rollout,
         private Ownership $owners,
         private DealStates $states,
         private Verdicts $verdicts,
@@ -69,7 +68,7 @@ class Feed
         private ChatwootAccess $access,
     ) {}
 
-    public function list(Request $request): array
+    public function list(Request $request, ?string $conversationId = null): array
     {
         $this->authorize();
         $tenantId = $this->workspace->resolve($request)['tenant']->getId();
@@ -78,7 +77,7 @@ class Feed
         if ($cursor !== '' && !ctype_digit($cursor)) throw new BadRequest('Invalid cursor.');
         $offset = (int) $cursor;
         $limit = Workspace::limit($request, self::PAGE_SIZE);
-        $ids = $this->candidateIds($tenantId, $offset, $limit);
+        $ids = $this->candidateIds($tenantId, $offset, $limit, $conversationId);
         $deals = $this->readable($ids);
         // Only deals with a conversation the reader may open in Chatwoot (its inbox rules, not the CRM's copy of them).
         $deals = array_intersect_key($deals, $this->access->dealsWithOpenConversation(array_keys($deals)));
@@ -160,13 +159,11 @@ class Feed
     public function review(string $id, string $token, Request $request): void
     {
         $this->authorize();
-        $this->rollout->forOpportunity($id);
-        $tenantId = (string) $this->em->getEntityById('Opportunity', $id)?->get('tenantId');
+        $deal = $this->deal($id, $this->workspace->resolve($request)['tenant']->getId());
         $snapshot = $this->cache->tryGet($this->snapshotKey($id));
         if (!$snapshot || $snapshot['expires'] < time() || !hash_equals($snapshot['token'], $token)) {
             throw new Conflict('Refresh this card before acting on it.');
         }
-        $deal = $this->deal($id, $tenantId);
         if ($this->context([$id => $deal])[$id]['revision'] !== $snapshot['revision']) {
             throw new Conflict('This deal changed since the card was shown.');
         }
@@ -189,8 +186,9 @@ class Feed
     {
         if (!preg_match('/^[a-zA-Z0-9_-]{1,36}$/D', $id)) throw new BadRequest('Invalid deal.');
         $deal = $this->em->getEntityById('Opportunity', $id);
-        if (!$deal) throw new NotFound();
+        if (!$deal) throw new CardGone();
         if ($deal->get('tenantId') !== $tenantId || !$this->acl->checkEntityRead($deal)) throw new Forbidden();
+        if (in_array($deal->get('status'), ['Won', 'Lost'], true)) throw new CardGone();
         return $deal;
     }
 
@@ -203,7 +201,7 @@ class Feed
      *
      * @return list<string>
      */
-    private function candidateIds(string $tenantId, int $offset, int $limit): array
+    private function candidateIds(string $tenantId, int $offset, int $limit, ?string $conversationId = null): array
     {
         [$owner, $params] = $this->owners->clause();
         $waiting = 's.last_customer_at IS NOT NULL AND (s.last_business_at IS NULL OR s.last_customer_at > s.last_business_at)';
@@ -211,7 +209,8 @@ class Feed
         $query = $this->em->getPDO()->prepare(
             'SELECT o.id FROM opportunity o LEFT JOIN catch_up_deal_state s ON s.id = o.id AND s.deleted = 0 '
             . "WHERE o.deleted = 0 AND o.tenant_id = :tenant AND o.status NOT IN ('Won','Lost') "
-            . 'AND EXISTS (SELECT 1 FROM chatwoot_conversation_opportunity r WHERE r.opportunity_id = o.id AND r.deleted = 0) '
+            . 'AND EXISTS (SELECT 1 FROM chatwoot_conversation_opportunity r WHERE r.opportunity_id = o.id AND r.deleted = 0'
+            . ($conversationId === null ? '' : ' AND r.chatwoot_conversation_id = :conversation') . ') '
             . 'AND o.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '
             . "AND z.target_type = 'Opportunity' AND z.snoozed_until > UTC_TIMESTAMP()) "
             . 'AND (s.last_message_at IS NULL OR s.last_message_at <= UTC_TIMESTAMP() - INTERVAL ' . self::SETTLE_MINUTES . ' MINUTE)' . $owner . ' '
@@ -226,6 +225,7 @@ class Feed
             . 'LIMIT :limit OFFSET :offset'
         );
         foreach (['tenant' => $tenantId, 'user' => $this->user->getId(), ...$params] as $name => $value) $query->bindValue($name, $value);
+        if ($conversationId !== null) $query->bindValue('conversation', $conversationId);
         $query->bindValue('limit', $limit, \PDO::PARAM_INT);
         $query->bindValue('offset', $offset, \PDO::PARAM_INT);
         $query->execute();
@@ -501,7 +501,7 @@ class Feed
         return (new DateTimeImmutable($utc, new DateTimeZone('UTC')))->setTimezone($now->getTimezone())->format('Y-m-d H:i');
     }
 
-    private function authorize(): void
+    public function authorize(): void
     {
         if ((!$this->user->isRegular() && !$this->user->isAdmin()) ||
             !$this->acl->checkScope('Opportunity', 'read') || !$this->acl->checkField('Opportunity', 'name')) throw new Forbidden();

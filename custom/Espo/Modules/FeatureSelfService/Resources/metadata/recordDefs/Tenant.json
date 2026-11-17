@@ -1,3 +1,4 @@
 {
-    "deletedRestorerClassName": "Espo\\Modules\\FeatureSelfService\\Classes\\Record\\Deleted\\TenantRestorer"
+    "deletedRestorerClassName": "Espo\\Modules\\FeatureSelfService\\Classes\\Record\\Deleted\\TenantRestorer",
+    "beforeLinkHookClassNameList": ["__APPEND__", "Espo\\Modules\\FeatureSelfService\\Tools\\Plans\\SeatGuard"]
 }

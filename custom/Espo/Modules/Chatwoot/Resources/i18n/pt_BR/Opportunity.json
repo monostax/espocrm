@@ -4,8 +4,12 @@
     },
     "fields": {
         "createdByAIAgent": "Criado por Agente de IA",
+        "aiWatchEnabled": "Acompanhamento da IA",
         "whatsAppCampaigns": "Campanhas WhatsApp",
         "whatsAppCampaignTargetLists": "Listas Alvo das Campanhas"
+    },
+    "tooltips": {
+        "aiWatchEnabled": "Quando ligado, a IA acompanha as conversas deste negócio e move a etapa sozinha (incluindo Ganho e Perdido) quando uma pessoa atende a conversa. Cada movimento é explicado no mural."
     },
     "links": {
         "whatsAppCampaigns": "Campanhas WhatsApp",

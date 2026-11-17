@@ -105,7 +105,9 @@ $cryptConfig = new class extends \Espo\Core\Utils\Config {
 };
 $execution = new \Espo\Modules\FeatureCredits\Enrichment\Execution($manager,$lock,$actorAccess,$registry,
     new \Espo\Modules\FeatureCredits\Accounting\FixedSettlement(new \Espo\Modules\FeatureCredits\Accounting\Funding($lock)),
-    new \Espo\Core\Utils\Crypt($cryptConfig),$clock);
+    new \Espo\Core\Utils\Crypt($cryptConfig),$clock,
+    new \Espo\Modules\FeatureCredits\Enrichment\MobilePhones(new \Espo\Modules\FeatureCredits\Verification\TwilioCredentials(),new \Espo\Modules\FeatureCredits\Verification\TwilioTransport()),
+        new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners(new \Espo\Modules\FeatureCredits\Enrichment\Decisions()));
 $purchases = new \Espo\Modules\FeatureCredits\Enrichment\Purchases($lock,
     new \Espo\Modules\FeatureCredits\Accounting\FixedSettlement(new \Espo\Modules\FeatureCredits\Accounting\Funding($lock)),
     $actorAccess,$availability,new \Espo\Core\Utils\Crypt($cryptConfig));
@@ -115,7 +117,9 @@ $cacheCryptConfig = new class extends \Espo\Core\Utils\Config {
 };
 $cacheCrypt = new \Espo\Core\Utils\Crypt($cacheCryptConfig);
 $cachedExecution = new \Espo\Modules\FeatureCredits\Enrichment\Execution($manager,$lock,$actorAccess,$registry,
-    new \Espo\Modules\FeatureCredits\Accounting\FixedSettlement(new \Espo\Modules\FeatureCredits\Accounting\Funding($lock)),$cacheCrypt,$clock);
+    new \Espo\Modules\FeatureCredits\Accounting\FixedSettlement(new \Espo\Modules\FeatureCredits\Accounting\Funding($lock)),$cacheCrypt,$clock,
+    new \Espo\Modules\FeatureCredits\Enrichment\MobilePhones(new \Espo\Modules\FeatureCredits\Verification\TwilioCredentials(),new \Espo\Modules\FeatureCredits\Verification\TwilioTransport()),
+        new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners(new \Espo\Modules\FeatureCredits\Enrichment\Decisions()));
 $cache = new \Espo\Modules\FeatureCredits\Enrichment\CandidateCache($lock,$cacheCrypt,$actorAccess,$availability);
 $cachedPurchases = new \Espo\Modules\FeatureCredits\Enrichment\Purchases($lock,
     new \Espo\Modules\FeatureCredits\Accounting\FixedSettlement(new \Espo\Modules\FeatureCredits\Accounting\Funding($lock)),

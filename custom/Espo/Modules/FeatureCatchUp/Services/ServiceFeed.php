@@ -65,7 +65,7 @@ class ServiceFeed
         private ChatwootAccess $access,
     ) {}
 
-    public function list(Request $request): array
+    public function list(Request $request, ?string $conversationId = null): array
     {
         $this->authorize();
         ['tenant' => $tenant, 'account' => $account] = $this->workspace->resolve($request);
@@ -74,7 +74,7 @@ class ServiceFeed
         if ($cursor !== '' && !ctype_digit($cursor)) throw new BadRequest('Invalid cursor.');
         $offset = (int) $cursor;
         $limit = Workspace::limit($request, self::PAGE_SIZE);
-        $rows = $this->candidates($account->getId(), $offset, $limit);
+        $rows = $this->candidates($account->getId(), $offset, $limit, $conversationId);
         // The CRM's inbox filter, then Chatwoot's own rules (teams, participation, custom roles, admins' own inboxes).
         $conversations = $this->access->filter($this->readable(array_keys($rows)));
         $this->verdicts->flipDue($tenant->getId());
@@ -129,6 +129,10 @@ class ServiceFeed
         $now = Workspace::now($request);
         $conversation = $this->conversation($id, $account);
         ['evidence' => $messages, 'participants' => $participants] = $this->transcript->read([$id => $conversation], $now, true);
+        if ($cutoff = $conversation->get('catchUpDiscardedAt')) {
+            $after = strtotime($cutoff . ' UTC');
+            $messages = array_filter($messages, fn ($entry) => $entry['ts'] > $after);
+        }
         $this->parties->remember($participants);
         usort($messages, fn ($a, $b) => [$a['ts'], $a['id']] <=> [$b['ts'], $b['id']]);
         $evidence = array_map(fn ($entry) => array_diff_key($entry, ['ts' => true]), $messages);
@@ -137,7 +141,7 @@ class ServiceFeed
         $candidate = $this->candidate($conversation, $owner ? ($this->userNames([$owner])[$owner] ?? null) : null, (bool) ($own['group'] ?? false), $now);
         $revision = Revision::ofConversation($conversation);
         $scope = Feed::evidenceScope($evidence);
-        $sourceScope = Records::scope([$id]);
+        $sourceScope = ConversationCycle::scope($conversation);
         $closed = $this->closedDeals($id, (string) $tenant->getId());
         $result = [
             ...$candidate,
@@ -261,7 +265,7 @@ class ServiceFeed
             if (is_array($loop) && $this->records->keep('ChatwootConversation', $id, $loop, 'user:' . $this->user->getId())) $kept = true;
         }
         if (!$kept) return;
-        $open = Loops::open($this->records->load('ChatwootConversation', $id, Records::scope([$id])));
+        $open = Loops::open($this->records->load('ChatwootConversation', $id, ConversationCycle::scope($conversation)));
         $basis = Loops::basis($open, [], $conversation->get('lastActivityAt'));
         $picked = $basis ? Loops::pick($open, Loops::factsAt($basis, $now), $now) : ['verdict' => 'none', 'loop' => null];
         if (!in_array($picked['verdict'], Loops::QUIET, true)) return;
@@ -295,7 +299,7 @@ class ServiceFeed
      *
      * @return array<string, array{owner: ?string, grp: int, contact: ?string}> keyed by conversation id, in order
      */
-    private function candidates(string $accountId, int $offset, int $limit): array
+    private function candidates(string $accountId, int $offset, int $limit, ?string $conversationId = null): array
     {
         [$owner, $params] = $this->owners->conversationClause();
         $query = $this->em->getPDO()->prepare(
@@ -305,11 +309,13 @@ class ServiceFeed
             . 'LEFT JOIN chatwoot_contact ct ON ct.id = c.chatwoot_contact_id AND ct.deleted = 0 '
             . 'LEFT JOIN catch_up_party p ON p.chatwoot_account_id = c.chatwoot_account_id AND p.chatwoot_contact_id = ct.chatwoot_contact_id AND p.deleted = 0 '
             . 'WHERE c.deleted = 0 AND c.chatwoot_account_id = :account '
+            . ($conversationId === null ? '' : 'AND c.id = :conversation ')
             . 'AND c.last_activity_at >= UTC_TIMESTAMP() - INTERVAL ' . self::WINDOW_DAYS . ' DAY '
             . 'AND c.last_activity_at <= UTC_TIMESTAMP() - INTERVAL ' . Feed::SETTLE_MINUTES . ' MINUTE '
             . self::NOT_SYSTEM_CONTACT_SQL
             . "AND (p.party_class IS NULL OR p.party_class IN ('customer', 'partner')) "
             . 'AND NOT EXISTS (' . self::OPEN_DEAL_SQL . ') '
+            . ConversationCycle::CURRENT_SQL
             . 'AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '
             . "AND z.target_type = 'ChatwootConversation' AND z.snoozed_until > UTC_TIMESTAMP())" . $owner . ' '
             // Recent waits first, longest first; older waits next, most recent first; then quiet, then the rest.
@@ -320,6 +326,7 @@ class ServiceFeed
             . 'LIMIT :limit OFFSET :offset'
         );
         foreach (['account' => $accountId, 'user' => $this->user->getId(), ...$params] as $name => $value) $query->bindValue($name, $value);
+        if ($conversationId !== null) $query->bindValue('conversation', $conversationId);
         $query->bindValue('limit', $limit, \PDO::PARAM_INT);
         $query->bindValue('offset', $offset, \PDO::PARAM_INT);
         $query->execute();
@@ -350,13 +357,14 @@ class ServiceFeed
     }
 
     /** A conversation of the deck's account that the reader may open. */
-    private function conversation(string $id, Entity $account): Entity
+    public function conversation(string $id, Entity $account): Entity
     {
         if (!preg_match('/^[a-zA-Z0-9_-]{1,36}$/D', $id)) throw new BadRequest('Invalid conversation.');
         $conversation = $this->em->getEntityById('ChatwootConversation', $id);
         if (!$conversation) throw new NotFound();
         if ($conversation->get('chatwootAccountId') !== $account->getId() || !$this->acl->checkEntityRead($conversation)) throw new Forbidden();
         if (!$this->access->allows($conversation)) throw new Forbidden();
+        ConversationCycle::requireCurrent($conversation);
         return $conversation;
     }
 

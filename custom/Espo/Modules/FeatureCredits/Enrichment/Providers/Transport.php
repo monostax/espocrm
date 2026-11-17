@@ -52,4 +52,10 @@ class Transport
             curl_close($curl);
         }
     }
+
+    /** Wait between resends of a refused request. */
+    public function pause(int $milliseconds): void
+    {
+        usleep($milliseconds * 1000);
+    }
 }

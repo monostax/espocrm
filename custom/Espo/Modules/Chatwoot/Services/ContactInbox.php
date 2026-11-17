@@ -17,9 +17,11 @@ use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
+use Espo\Modules\FeatureCatchUp\Services\Parties;
 use Espo\Modules\Global\Tools\CrmTags;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\Part\Condition as Cond;
 use Espo\ORM\Query\Part\Expression as Expr;
 use Espo\ORM\Query\Select;
 use Espo\ORM\Query\SelectBuilder;
@@ -106,12 +108,41 @@ class ContactInbox
                 ->where(['crmTag.id=s' => $this->tags->query()->select(['id'])->where(['id' => $tag])->build()])->build();
             $query->where(['id=s' => $tagged]);
         }
+        $party = $request->getQueryParam('party');
+        if (static::ENTITY_TYPE === 'Contact' && is_string($party) && $party !== '') {
+            if (!isset(Parties::LABELS[$party])) throw new BadRequest('Invalid contact type.');
+            $query->where(['id=s' => $this->partyScope($workspace, $party)]);
+        }
         if ($request->getQueryParam('view') === 'mentions') $query->where(['id=s' => $this->unreadScope($scope, false)]);
         $read = $request->getQueryParam('read_status');
         if (in_array($read, ['read', 'unread'], true)) {
             $query->where([$read === 'unread' ? 'id=s' : 'id!=s' => $this->unreadScope($scope)]);
         }
         return $query->build();
+    }
+
+    /**
+     * The contacts Em dia labeled with this class in the workspace. As on the card badge, a contact linked to
+     * several Chatwoot contacts counts under its latest label only.
+     */
+    private function partyScope(Entity $workspace, string $party): Select
+    {
+        $labels = fn (string $contact, string $label) => SelectBuilder::create()->from('ChatwootContact', $contact)
+            ->join('CatchUpParty', $label, [
+                "$label.chatwootAccountId:" => "$contact.chatwootAccountId",
+                "$label.chatwootContactId:" => "$contact.chatwootContactId",
+                "$label.deleted" => false,
+            ])
+            ->where([
+                "$contact.chatwootAccountId" => $workspace->getId(),
+                "$label.tenantId" => (string) $workspace->get('tenantId'),
+                "$label.partyClass!=" => null,
+            ]);
+        $newer = $labels('newerContact', 'newerLabel')->select(['newerContact.id'])
+            ->where(['newerContact.contactId:' => 'partyContact.contactId', 'newerLabel.modifiedAt>:' => 'partyLabel.modifiedAt']);
+        return $labels('partyContact', 'partyLabel')->select(['partyContact.contactId'])
+            ->where(['partyLabel.partyClass' => $party])
+            ->where(Cond::not(Cond::exists($newer->build())))->build();
     }
 
     private function groupBy(Request $request): string

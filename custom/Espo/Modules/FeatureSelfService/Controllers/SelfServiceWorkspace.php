@@ -29,6 +29,8 @@ use Espo\Modules\FeatureSelfService\Tools\Plans\PlanCheckout;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanOffers;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanRecommendation;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanSubscription;
+use Espo\Modules\FeatureSelfService\Tools\Plans\SeatAccess;
+use Espo\Modules\FeatureSelfService\Tools\Plans\SeatRoster;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAccess;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceWallet;
@@ -54,7 +56,7 @@ use Espo\ORM\EntityManager;
  *        monthly-credit steps and what the checkout preselects.
  *   POST /SelfService/checkout {accountId, seats, credits, payer: {name, cpfCnpj, email}}
  *        Starts the monthly subscription; returns the secure payment page.
- *        Billing administrators only (the tenant-admin role). Errors are
+ *        Any active workspace agent can be the payer. Errors are
  *        {"code": ...}: ALREADY_SUBSCRIBED, CHECKOUT_IN_PROGRESS, PAYER_CHANGED,
  *        INVALID_DOCUMENT, INVALID_REQUEST, PLANS_UNAVAILABLE, PAYMENT_PENDING.
  *        With config `selfServiceCheckoutReturnEnabled`, the payment page sends
@@ -172,8 +174,14 @@ class SelfServiceWorkspace
 
         $recommendation = $this->injectableFactory->create(PlanRecommendation::class)
             ->recommend($tenant, $account, $offer['plan'], $offer['credits']);
+        $roster = $this->injectableFactory->create(SeatRoster::class)->read((string) $tenant->getId(), (string) $this->user->getId());
+        $recommendation['seats'] = max($offer['plan']['minSeats'], $roster['minimumSeats']);
+        $recommendation['attendants'] = $roster['enabledUsers'];
 
         return (object) ($offer + [
+            'canPurchase' => $this->canPurchasePlan($account),
+            'seatRoster' => $roster,
+            'canManage' => $this->canManageBilling((string) $tenant->getId()),
             'recommendation' => $recommendation,
             'payer' => ['name' => (string) $tenant->get('name'), 'email' => (string) $this->user->get('emailAddress')],
         ]);
@@ -185,8 +193,11 @@ class SelfServiceWorkspace
         [$account, $tenant] = $this->resolve($body->accountId ?? null);
         $tenantId = (string) $tenant->getId();
 
-        // The billing engine's own rule for who may buy: tenant administrators.
-        $this->injectableFactory->create(BillingAccess::class)->assertTenant($tenantId);
+        // Buying a plan does not require an administrator role. resolve() still
+        // enforces the account ACL and tenant boundary before checking membership.
+        if (!$this->canPurchasePlan($account)) {
+            throw new Forbidden('Active workspace membership is required to choose a plan.');
+        }
 
         $payer = $body->payer ?? null;
         $seats = $body->seats ?? null;
@@ -208,7 +219,8 @@ class SelfServiceWorkspace
 
             throw BadRequest::createWithBody($code, $this->code($code));
         } catch (Conflict $e) {
-            $code = in_array($e->getMessage(), ['ALREADY_SUBSCRIBED', 'CHECKOUT_IN_PROGRESS', 'PAYER_CHANGED'], true)
+            $code = in_array($e->getMessage(), ['ALREADY_SUBSCRIBED', 'CHECKOUT_IN_PROGRESS', 'PAYER_CHANGED',
+                'SEAT_ACCESS_PENDING', 'SEATS_BELOW_ENABLED_USERS'], true)
                 ? $e->getMessage() : 'CHECKOUT_IN_PROGRESS';
 
             throw Conflict::createWithBody($code, $this->code($code));
@@ -223,7 +235,24 @@ class SelfServiceWorkspace
         $tenantId = (string) $tenant->getId();
 
         return (object) ($this->injectableFactory->create(PlanSubscription::class)->read($tenantId)
-            + ['canManage' => $this->canManageBilling($tenantId)]);
+            + ['canManage' => $this->canManageBilling($tenantId),
+                'seatRoster' => $this->injectableFactory->create(SeatRoster::class)->read($tenantId, (string) $this->user->getId())]);
+    }
+
+    public function postActionSeatAccess(Request $request): object
+    {
+        $body = $request->getParsedBody();
+        [, $tenant] = $this->resolve($body->accountId ?? null);
+        if (!is_string($body->userId ?? null) || !is_bool($body->enabled ?? null)) {
+            throw BadRequest::createWithBody('INVALID_REQUEST', $this->code('INVALID_REQUEST'));
+        }
+        try {
+            return (object) $this->injectableFactory->create(SeatAccess::class)->change(
+                (string) $tenant->getId(), $body->userId, $body->enabled, (string) $this->user->getId()
+            );
+        } catch (Conflict $e) {
+            throw Conflict::createWithBody($e->getMessage(), $this->code($e->getMessage()));
+        }
     }
 
     public function postActionSubscriptionCancel(Request $request): object
@@ -293,6 +322,27 @@ class SelfServiceWorkspace
         } catch (ServiceUnavailable) {
             throw ServiceUnavailable::createWithBody('PAYMENT_PENDING', $this->code('PAYMENT_PENDING'));
         }
+    }
+
+    private function canPurchasePlan(Entity $account): bool
+    {
+        if (!$this->user->isActive()) {
+            return false;
+        }
+        if ($this->user->isAdmin()) {
+            return true;
+        }
+        if (!$this->user->isRegular()) {
+            return false;
+        }
+
+        return $this->entityManager->getRDBRepository('ChatwootAccountUserMembership')
+            ->join('chatwootUser')
+            ->where([
+                'chatwootAccountId' => $account->getId(),
+                'chatwootUser.assignedUserId' => $this->user->getId(),
+                'isAI' => false,
+            ])->findOne() !== null;
     }
 
     private function canManageBilling(string $tenantId): bool

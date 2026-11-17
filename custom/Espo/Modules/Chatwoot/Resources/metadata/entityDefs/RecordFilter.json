@@ -1,0 +1,21 @@
+{
+    "fields": {
+        "name": { "type": "varchar", "required": true, "maxLength": 80 },
+        "entityType": { "type": "varchar", "required": true, "maxLength": 40 },
+        "definition": { "type": "jsonObject" },
+        "shared": { "type": "bool", "default": false },
+        "user": { "type": "link", "required": true },
+        "account": { "type": "link", "required": true },
+        "tenant": { "type": "link", "required": true },
+        "createdAt": { "type": "datetime", "readOnly": true },
+        "modifiedAt": { "type": "datetime", "readOnly": true }
+    },
+    "links": {
+        "user": { "type": "belongsTo", "entity": "User" },
+        "account": { "type": "belongsTo", "entity": "ChatwootAccount" },
+        "tenant": { "type": "belongsTo", "entity": "Tenant" }
+    },
+    "indexes": {
+        "workspace": { "columns": ["accountId", "entityType", "deleted"] }
+    }
+}

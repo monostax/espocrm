@@ -113,7 +113,7 @@
             "view": "views/preferences/fields/time-zone",
             "tooltip": true,
             "audited": true,
-            "comment": "IANA timezone of this AI agent. Used for conversation-history timestamps and Current Date/Time in prompts (empty = UTC)."
+            "comment": "IANA timezone of this AI agent. Used for conversation-history timestamps and Current Date/Time in prompts, and for the 08:00-20:00 local hours AI-scheduled follow-ups are kept in (empty = Tenant.timeZone, then the backend default America/Sao_Paulo)."
         },
         "ignoreGroups": {
             "type": "bool",
@@ -137,7 +137,7 @@
             "min": 1,
             "tooltip": true,
             "audited": true,
-            "comment": "Agent-level default for the per-deal follow-up breakout limit. Empty = non-deterministic: each deal keeps its own value or falls back to the server constant (3); the AI may choose per opportunity."
+            "comment": "Agent-level default for the per-deal follow-up breakout limit. Empty = non-deterministic: each deal keeps its own value or falls back to the server constant (1); the AI may choose per opportunity."
         },
         "aiDebounceSeconds": {
             "type": "int",
