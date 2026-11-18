@@ -95,7 +95,14 @@ final class CandidateApplication
             $relationships = self::relationships($quote->data['products'][0],$facts,array_keys($roles));
             if ($contact === null) {
                 if (!$data['createIfUnmatched']) throw new BadRequest('No matching Contact; enable contact creation and complete the required fields.');
-                $contact = $this->records->create($tenant,$facts,$data['contactData']);
+                $fields = $data['contactData'];
+                // Older Sócios forms submit the reviewed full name as lastName alone.
+                if ($quote->data['products'] === ['socios'] && $permissions['application']['contactNameWriteAllowed'] &&
+                    is_string($fields['firstName'] ?? '') && trim($fields['firstName'] ?? '') === '' &&
+                    CandidateProjection::equivalent($fields['lastName'] ?? null, $selected['values']['name'] ?? null)) {
+                    $fields = [...$fields, ...CandidateProjection::contactName($fields['lastName'])];
+                }
+                $contact = $this->records->create($tenant,$facts,$fields);
             } else {
                 $this->records->update($tenant,$contact,$facts,$data['contactData']);
             }

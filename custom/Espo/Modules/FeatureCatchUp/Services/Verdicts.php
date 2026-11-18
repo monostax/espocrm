@@ -201,11 +201,12 @@ class Verdicts
     }
 
     /** Someone acted on the subject's card: it leaves the deck and the counts until the subject moves, the clock included. */
-    public function resolve(string $type, string $id): void
+    public function resolve(string $type, string $id, ?string $revision = null): void
     {
         $column = self::column($type);
-        $this->em->getPDO()->prepare("UPDATE catch_up_verdict SET resolved_at = UTC_TIMESTAMP(), flips_at = NULL WHERE $column = :id AND resolved_at IS NULL")
-            ->execute(['id' => $id]);
+        $this->em->getPDO()->prepare("UPDATE catch_up_verdict SET resolved_at = UTC_TIMESTAMP(), flips_at = NULL WHERE $column = :id AND resolved_at IS NULL"
+            . ($revision === null ? '' : ' AND revision = :revision'))
+            ->execute(['id' => $id] + ($revision === null ? [] : ['revision' => $revision]));
     }
 
     /** Drop all copies, including scheduled flips. A reopened deal starts without the discarded verdict. */
@@ -358,30 +359,28 @@ class Verdicts
     }
 
     /**
-     * The verdict each open deal of the reader's deck has now, for the tab counts: in the deck's window (not dormant), not
-     * snoozed by the reader, unresolved and not overtaken by a message since. A deal judged for several readers or locales
-     * counts by its newest verdict. The caller keeps the deals with a conversation the reader may open and counts the card
-     * verdicts by tab.
+     * Settled deals with a stored card worth checking for the badge. A deal can change without a new message:
+     * Feed checks the current revision and the reader's access exactly as it does when listing the deck.
      *
-     * @return array<string, string> deal id => newest verdict
+     * @return list<string>
      */
-    public function cardDeals(string $tenantId, string $ownerSql, array $ownerParams, string $userId): array
+    public function cardDealIds(string $tenantId, string $ownerSql, array $ownerParams, string $userId): array
     {
         $this->flipDue($tenantId);
         $query = $this->em->getPDO()->prepare(
-            'SELECT v.opportunity_id, v.verdict FROM catch_up_verdict v '
+            'SELECT v.opportunity_id FROM catch_up_verdict v '
             . 'JOIN opportunity o ON o.id = v.opportunity_id AND o.deleted = 0 AND o.tenant_id = :tenant '
             . "AND o.status NOT IN ('Won','Lost') LEFT JOIN catch_up_deal_state s ON s.id = o.id AND s.deleted = 0 "
             . 'WHERE v.deleted = 0 AND v.tenant_id = :verdictTenant AND v.resolved_at IS NULL '
+            . "AND v.verdict NOT IN ('none','scheduled') "
             . 'AND (s.last_message_at IS NULL OR s.last_message_at <= v.created_at) '
+            . 'AND (s.last_message_at IS NULL OR s.last_message_at <= UTC_TIMESTAMP() - INTERVAL ' . Feed::SETTLE_MINUTES . ' MINUTE) '
             . 'AND (s.last_message_at IS NULL OR s.last_message_at >= UTC_TIMESTAMP() - INTERVAL ' . Feed::DORMANT_DAYS . ' DAY) '
             . self::DEAL_DECK_SQL . $ownerSql
-            . ' ORDER BY v.created_at DESC LIMIT ' . self::COUNT_LIMIT
+            . ' GROUP BY v.opportunity_id ORDER BY MAX(v.created_at) DESC, v.opportunity_id LIMIT ' . self::COUNT_LIMIT
         );
         $query->execute(['tenant' => $tenantId, 'verdictTenant' => $tenantId, 'user' => $userId, ...$ownerParams]);
-        $found = [];
-        foreach ($query->fetchAll(\PDO::FETCH_NUM) as [$id, $verdict]) $found[(string) $id] ??= (string) $verdict;
-        return $found;
+        return array_map('strval', $query->fetchAll(\PDO::FETCH_COLUMN));
     }
 
     /**

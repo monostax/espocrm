@@ -42,8 +42,8 @@ use Espo\ORM\EntityManager;
  * The Team is registered under `Tenant.otherUserTeams`, which is what every
  * team->tenant resolver matches (see TenantAdminTeamProvisioner). It holds NO
  * role: tenant users get their role from the base team, and roles merge to the
- * most permissive grant, so a role here could only widen access. Membership is
- * not managed here.
+ * most permissive grant, so a role here could only widen access. TeamMemberMirror
+ * projects the account's linked agents onto Team.users during the team sync.
  */
 class TenantTeamMirror
 {

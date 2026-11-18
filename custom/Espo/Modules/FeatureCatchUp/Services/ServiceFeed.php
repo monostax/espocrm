@@ -7,12 +7,12 @@ namespace Espo\Modules\FeatureCatchUp\Services;
 use DateTimeImmutable;
 use Espo\Core\Acl;
 use Espo\Core\Api\Request;
+use Espo\Modules\FeatureCatchUp\Classes\CardGone;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Select\SelectBuilderFactory;
-use Espo\Core\Utils\DataCache;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -60,7 +60,6 @@ class ServiceFeed
         private Verdicts $verdicts,
         private Transcript $transcript,
         private Parties $parties,
-        private DataCache $cache,
         private Records $records,
         private ChatwootAccess $access,
     ) {}
@@ -160,34 +159,23 @@ class ServiceFeed
             'party' => $own ? ['id' => $own['id'], 'label' => $own['label'] ?? null] : null,
         ];
         $result['snapshot'] = hash('sha256', json_encode([$id, $this->user->getId(), $revision, $scope], JSON_THROW_ON_ERROR));
-        $this->cache->store($this->snapshotKey($id), [
-            'token' => $result['snapshot'], 'revision' => $revision, 'expires' => time() + 86400, 'participants' => $participants,
-        ]);
         return $result;
     }
 
-    /** Acting on a card first confirms the conversation hasn't moved since the card was shown. */
-    public function review(string $id, string $token, Request $request): void
-    {
-        $this->shownConversation($id, $token, $request);
-        $this->verdicts->resolve('ChatwootConversation', $id);
-    }
-
-    /**
-     * The conversation of a card the reader was shown, when it hasn't moved since: in the deck's account, open to the
-     * reader in the CRM and in Chatwoot, at the revision the card was built from.
-     *
-     * @return array{conversation: Entity, revision: string}
-     * @throws Conflict when the conversation moved, or the card wasn't shown (or expired)
-     */
-    public function shownConversation(string $id, string $token, Request $request): array
+    public function review(string $id, Request $request): void
     {
         $this->authorize();
         $conversation = $this->conversation($id, $this->workspace->resolve($request)['account']);
-        $snapshot = $this->shown($id, $token);
-        $revision = Revision::ofConversation($conversation);
-        if ($revision !== $snapshot['revision']) throw new Conflict('This conversation changed since the card was shown.');
-        return ['conversation' => $conversation, 'revision' => $revision];
+        $body = $request->getParsedBody();
+        if (isset($body->replyTo)) {
+            if ((int) $conversation->get('chatwootConversationId') !== $body->replyTo) throw new CardGone();
+            return;
+        }
+        if (!isset($body->revision)) {
+            $snapshot = $this->snapshot($id, $request);
+            if (!hash_equals($snapshot['snapshot'], (string) ($body->snapshot ?? ''))) throw new Conflict('This conversation changed since the card was shown.');
+        }
+        $this->verdicts->resolve('ChatwootConversation', $id, $body->revision ?? $snapshot['revision']);
     }
 
     /** The CRM user behind the conversation's Chatwoot assignee when that is a person (not an AI agent). */
@@ -257,6 +245,12 @@ class ServiceFeed
         $conversation = $this->conversation($id, $this->workspace->resolve($request)['account']);
         $now = Workspace::now($request);
         $revision = Revision::ofConversation($conversation);
+        // Resolving the displayed card must not complete a newer promise.
+        $actedOn = $request->getParsedBody()->revision ?? $revision;
+        if ($actedOn !== $revision) {
+            $this->verdicts->resolve('ChatwootConversation', $id, $actedOn);
+            return;
+        }
         $shown = $this->verdicts->cards('ChatwootConversation', $id, $revision);
         $this->verdicts->resolve('ChatwootConversation', $id);
         $kept = false;
@@ -277,13 +271,14 @@ class ServiceFeed
      * "Não é cliente" / "é da equipe" from a card: a person labels a contact or group shown on it. Only a
      * participant of the shown card can be labeled, and only by someone who may open the conversation.
      */
-    public function label(string $id, string $contactId, string $class, string $token, Request $request): array
+    public function label(string $id, string $contactId, string $class, Request $request): array
     {
         $this->authorize();
-        $this->conversation($id, $this->workspace->resolve($request)['account']);
+        $conversation = $this->conversation($id, $this->workspace->resolve($request)['account']);
         if (!isset(Parties::LABELS[$class])) throw new BadRequest('Unknown class.');
         $participant = null;
-        foreach ($this->shown($id, $token)['participants'] ?? [] as $candidate) {
+        $transcript = $this->transcript->read([$id => $conversation], Workspace::now($request), true);
+        foreach ($transcript['participants'] as $candidate) {
             if ((string) $candidate['id'] === $contactId) $participant = $candidate;
         }
         if (!$participant) throw new BadRequest('This contact is not on the card.');
@@ -368,15 +363,6 @@ class ServiceFeed
         return $conversation;
     }
 
-    private function shown(string $id, string $token): array
-    {
-        $snapshot = $this->cache->tryGet($this->snapshotKey($id));
-        if (!$snapshot || $snapshot['expires'] < time() || !hash_equals($snapshot['token'], $token)) {
-            throw new Conflict('Refresh this card before acting on it.');
-        }
-        return $snapshot;
-    }
-
     private function owner(string $id): ?string
     {
         $query = $this->em->getPDO()->prepare('SELECT ' . Ownership::CONVERSATION_OWNER_SQL
@@ -436,8 +422,4 @@ class ServiceFeed
         if ((!$this->user->isRegular() && !$this->user->isAdmin()) || !$this->acl->checkScope('ChatwootConversation', 'read')) throw new Forbidden();
     }
 
-    private function snapshotKey(string $id): string
-    {
-        return 'catchUp/snapshots/v2/service/' . hash('sha256', $this->user->getId() . ':' . $id);
-    }
 }

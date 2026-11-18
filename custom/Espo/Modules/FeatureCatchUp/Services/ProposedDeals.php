@@ -56,17 +56,37 @@ class ProposedDeals
     public function create(Request $request, string $id): array
     {
         if (!$this->acl->checkScope('Opportunity', 'create')) throw new Forbidden();
-        $body = $request->getParsedBody();
-        ['revision' => $revision] = $this->service->shownConversation($id, (string) ($body->snapshot ?? ''), $request);
-        $tenant = $this->workspace->resolve($request)['tenant'];
-        $tenantId = (string) $tenant->getId();
-        if ($this->service->hasOpenDeal($id)) throw new Conflict('This conversation already has an open deal.');
+        $this->service->authorize();
+        $workspace = $this->workspace->resolve($request);
+        $conversation = $this->service->conversation($id, $workspace['account']);
+        $tenant = $workspace['tenant'];
+        return $this->em->getTransactionManager()->run(function () use ($id, $request, $conversation, $tenant): array {
+            // Two readers accepting the same proposal must not create two opportunities.
+            $locked = $this->em->getRDBRepository('ChatwootConversation')->where(['id' => $id,
+                'chatwootAccountId' => $conversation->get('chatwootAccountId')])->forUpdate()->findOne();
+            if (!$locked) throw new Forbidden();
+            ConversationCycle::requireCurrent($locked);
+            if ($this->service->hasOpenDeal($id)) {
+                $deals = $this->em->getRDBRepository('Opportunity')->where(['tenantId' => $tenant->getId(),
+                    'chatwootConversations.id' => $id, 'status!=' => ['Won', 'Lost']])->join('chatwootConversations')->find();
+                foreach ($deals as $deal) {
+                    if ($this->acl->checkEntityRead($deal)) return ['existing' => true, 'id' => $deal->getId()];
+                }
+                return ['existing' => true];
+            }
+            return $this->createFromProposal($id, Revision::ofConversation($locked), $tenant, $request->getParsedBody());
+        });
+    }
+
+    private function createFromProposal(string $id, string $revision, Entity $tenant, object $body): array
+    {
+        $tenantId = $tenant->getId();
         $card = $this->verdicts->proposals([$id => $revision])[$id]['card'] ?? null;
         $proposal = $card['proposedDeal'] ?? null;
-        if (!is_array($proposal)) throw new Conflict('This conversation changed since the card was shown.');
+        if (!is_array($proposal)) throw new Conflict('No current deal proposal.');
         // A deal closed on the conversation since the card was made may be this one: the card is analysed again first.
         if (Verdicts::missesClosedDeal($card, ServiceFeed::dealKeys($this->service->closedDeals($id, $tenantId)))) {
-            throw new Conflict('This conversation changed since the card was shown.');
+            throw new Conflict('A linked deal has already closed.');
         }
 
         $name = property_exists($body, 'name') ? (is_string($body->name) ? trim($body->name) : '') : (string) ($proposal['name'] ?? '');

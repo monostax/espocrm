@@ -8,7 +8,6 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Espo\Core\Acl;
 use Espo\Core\Select\SelectBuilderFactory;
-use Espo\Core\Utils\DataCache;
 use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\FeatureCatchUp\Services\DealTargets;
@@ -57,7 +56,7 @@ class ClosedDealsTest extends TestCase
         $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => isset($deals[$id]) ? $this->entity($id, $deals[$id]) : null);
         return new ServiceFeed($em, $this->createMock(SelectBuilderFactory::class), $acl, $this->createMock(User::class),
             $this->createMock(Workspace::class), $this->createMock(Ownership::class), $this->createMock(Verdicts::class),
-            $this->createMock(Transcript::class), $this->createMock(Parties::class), $this->createMock(DataCache::class),
+            $this->createMock(Transcript::class), $this->createMock(Parties::class),
             $this->createMock(Records::class), $this->createMock(ChatwootAccess::class));
     }
 

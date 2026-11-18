@@ -143,17 +143,13 @@ class IdentityOwnership
         if (!$this->acl->check($conversation, 'read')) {
             throw new Forbidden();
         }
-        $identity = $conversation->get('channelIdentityId')
-            ? $this->entityManager->getEntityById('ContactChannelIdentity', $conversation->get('channelIdentityId')) : null;
         $contact = $conversation->get('contactId')
             ? $this->entityManager->getEntityById('Contact', $conversation->get('contactId')) : null;
-        if (!$identity || !$contact) {
+        if (!$contact) {
             throw new Conflict('The conversation has no linked contact identity yet.');
         }
-        if ($identity->get('contactId') !== $contact->getId() || $identity->get('tenantId') !== $account->get('tenantId') ||
-            $contact->get('tenantId') !== $account->get('tenantId') ||
-            !$this->acl->check($contact, 'read') || !$this->acl->check($identity, 'read') ||
-            !$this->acl->check($contact, 'edit') || !$this->acl->check($identity, 'edit')) {
+        if (!$account->get('tenantId') || $contact->get('tenantId') !== $account->get('tenantId') ||
+            !$this->acl->check($contact, 'read') || !$this->acl->check($contact, 'edit')) {
             throw new Forbidden();
         }
         $platform = $this->entityManager->getEntityById('ChatwootPlatform', $account->get('platformId'));
@@ -172,6 +168,23 @@ class IdentityOwnership
         }
         // The viewer's token authorizes actual conversation access, including participant ACL.
         $remote = $this->api->identityOwnership($platform->get('backendUrl'), $token, $accountId, $conversationId);
+        $bridge = $conversation->get('chatwootContactId')
+            ? $this->entityManager->getEntityById('ChatwootContact', $conversation->get('chatwootContactId')) : null;
+        if (!$bridge || $bridge->get('chatwootAccountId') !== $account->getId() || $bridge->get('contactId') !== $contact->getId() ||
+            (int) $bridge->get('chatwootContactId') !== (int) $remote['contact_id']) {
+            throw new Conflict('The conversation identity does not match its destination.');
+        }
+
+        $identity = $conversation->get('channelIdentityId')
+            ? $this->entityManager->getEntityById('ContactChannelIdentity', $conversation->get('channelIdentityId'))
+            : $this->findDestinationIdentity($contact, $remote);
+        if (!$identity) {
+            throw new Conflict('The conversation has no unique matching contact identity.');
+        }
+        if ($identity->get('contactId') !== $contact->getId() || $identity->get('tenantId') !== $account->get('tenantId') ||
+            !$this->acl->check($identity, 'read') || !$this->acl->check($identity, 'edit')) {
+            throw new Forbidden();
+        }
         $source = (string) $identity->get('sourceId');
         if ($remote['identity_kind'] === 'phone') {
             if (!in_array($identity->get('channelType'), ['whatsapp', 'sms'], true)) {
@@ -179,13 +192,33 @@ class IdentityOwnership
             }
             $source = PhoneNormalizer::normalize($source);
         }
-        $bridge = $this->entityManager->getEntityById('ChatwootContact', $conversation->get('chatwootContactId'));
-        if (!$bridge || $bridge->get('chatwootAccountId') !== $account->getId() || $bridge->get('contactId') !== $contact->getId() ||
-            (int) $bridge->get('chatwootContactId') !== (int) $remote['contact_id'] || $source !== $remote['source_id'] ||
+        if ($source !== $remote['source_id'] ||
             ($remote['identity_kind'] === 'email' && $identity->get('channelType') !== 'email')) {
             throw new Conflict('The conversation identity does not match its destination.');
         }
         return [$conversation, $identity, $account, $platform, $token, $remote];
+    }
+
+    // Synced conversations need not have an explicitly selected channelIdentity.
+    // Only phone and email are canonical across inboxes; never guess from a profile.
+    private function findDestinationIdentity(Entity $contact, array $remote): ?Entity
+    {
+        $channels = match ($remote['identity_kind']) {
+            'phone' => ['whatsapp', 'sms'],
+            'email' => ['email'],
+            default => [],
+        };
+        if (!$channels || empty($remote['source_id'])) {
+            return null;
+        }
+        $matches = $this->entityManager->getRDBRepository('ContactChannelIdentity')->where([
+            'contactId' => $contact->getId(),
+            'tenantId' => $contact->get('tenantId'),
+            'channelType' => $channels,
+            'sourceId' => $remote['source_id'],
+        ])->limit(0, 2)->find();
+        $matches = iterator_to_array($matches, false);
+        return count($matches) === 1 ? $matches[0] : null;
     }
 
     private function mirror(Entity $identity, array $report): void

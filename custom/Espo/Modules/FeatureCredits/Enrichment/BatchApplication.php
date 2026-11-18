@@ -157,12 +157,8 @@ final class BatchApplication
         $form = $application['creationForm'] ?? null;
         $name = trim((string) ($values['name'] ?? ''));
         if (!$application['available'] || !($form['available'] ?? false) || $name === '') return null;
-        $data = ['lastName' => $name];
         $fields = array_column($form['fields'], null, 'name');
-        if (isset($fields['firstName'])) {
-            $parts = preg_split('/\s+/u', $name, 2);
-            if (count($parts) === 2) $data = ['firstName' => $parts[0], 'lastName' => $parts[1]];
-        }
+        $data = isset($fields['firstName']) ? CandidateProjection::contactName($name) : ['lastName' => $name];
         if (isset($fields['dateOfBirth']) && is_string($values['dateOfBirth'] ?? null) && $values['dateOfBirth'] !== '') {
             $data['dateOfBirth'] = $values['dateOfBirth'];
         }

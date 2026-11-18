@@ -8,6 +8,7 @@ use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Modules\FeatureCatchUp\Services\Revision;
+use Espo\Modules\FeatureCatchUp\Services\ConversationCycle;
 use Espo\Modules\FeatureCatchUp\Services\Actions;
 use Espo\Modules\FeatureCatchUp\Services\Agenda;
 use Espo\Modules\FeatureCatchUp\Services\Batch;
@@ -80,6 +81,9 @@ class CatchUp
             if ($request->getQueryParam('lane') === 'service') {
                 $this->service->authorize();
                 $conversation = $this->service->conversation($id, $workspace['account']);
+                if ($scope = $request->getQueryParam('sourceScope')) {
+                    return (object) ['current' => ConversationCycle::scope($conversation) === $scope];
+                }
                 return (object) ['current' => Revision::ofConversation($conversation) === $request->getQueryParam('revision')];
             }
             if ($request->getQueryParam('lane') !== 'deals') throw new BadRequest('Invalid lane.');
@@ -127,7 +131,7 @@ class CatchUp
 
     public function postActionServiceReview(Request $request): object
     {
-        $this->service->review($this->id($request), (string) ($request->getParsedBody()->snapshot ?? ''), $request);
+        $this->service->review($this->id($request), $request);
         return (object) ['success' => true];
     }
 
@@ -147,7 +151,7 @@ class CatchUp
     {
         $body = $request->getParsedBody();
         return (object) $this->service->label($this->id($request), (string) ($body->contactId ?? ''), (string) ($body->class ?? ''),
-            (string) ($body->snapshot ?? ''), $request);
+            $request);
     }
 
     public function getActionRead(Request $request): object
@@ -157,7 +161,7 @@ class CatchUp
 
     public function postActionReview(Request $request): object
     {
-        $this->feed->review($this->id($request), (string) ($request->getParsedBody()->snapshot ?? ''), $request);
+        $this->feed->review($this->id($request), $request);
         return (object) ['success' => true];
     }
 

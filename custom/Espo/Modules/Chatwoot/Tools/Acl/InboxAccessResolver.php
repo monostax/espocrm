@@ -13,6 +13,8 @@ namespace Espo\Modules\Chatwoot\Tools\Acl;
 
 use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Entities\User;
+use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 class InboxAccessResolver
@@ -20,8 +22,12 @@ class InboxAccessResolver
     /** @var array<string, string[]> */
     private array $allowedInboxIdListByUserId = [];
 
+    /** CRM user -> CRM account -> linked Chatwoot users eligible for task management. */
+    private array $taskActors = [];
+
     public function __construct(
         private EntityManager $entityManager,
+        private ChatwootApiClient $api,
     ) {}
 
     /**
@@ -64,6 +70,10 @@ class InboxAccessResolver
         foreach ($membershipCollection as $membership) {
             if (!$membership instanceof CoreEntity) {
                 continue;
+            }
+
+            if ($membership->get('isAI') && $membership->get('tasksEnabled')) {
+                $this->taskActors[$userId][$membership->get('chatwootAccountId')][$membership->get('chatwootUserId')] = true;
             }
 
             if ($membership->get('role') === 'administrator' && $membership->get('globalAdmin')) {
@@ -131,6 +141,40 @@ class InboxAccessResolver
         }
 
         return $this->canAccessInboxId($user, $conversation->get('inboxId'));
+    }
+
+    /** A mention grants one conversation in Chatwoot, not membership of its inbox. */
+    public function canReadTaskConversation(User $user, Entity $conversation): bool
+    {
+        $this->getAllowedInboxIdList($user);
+        $accountId = $conversation->get('chatwootAccountId');
+        $displayId = (int) $conversation->get('chatwootConversationId');
+        $actors = $this->taskActors[$user->getId()][$accountId] ?? [];
+        if (count($actors) !== 1 || $displayId <= 0) {
+            return false;
+        }
+
+        $actor = $this->entityManager->getEntityById('ChatwootUser', array_key_first($actors));
+        $account = $this->entityManager->getEntityById('ChatwootAccount', $accountId);
+        if (!$actor || !$account || $actor->get('assignedUserId') !== $user->getId() ||
+            !$account->get('platformId') || $actor->get('platformId') !== $account->get('platformId')) {
+            return false;
+        }
+
+        $platform = $this->entityManager->getEntityById('ChatwootPlatform', $account->get('platformId'));
+        $remoteAccount = (int) $account->get('chatwootAccountId');
+        $remoteUser = (int) $actor->get('chatwootUserId');
+        if (!$platform?->get('backendUrl') || !$platform->get('accessToken') || $remoteAccount <= 0 || $remoteUser <= 0) {
+            return false;
+        }
+
+        try {
+            $allowed = $this->api->getAccessibleConversationIds($platform->get('backendUrl'),
+                $platform->get('accessToken'), $remoteAccount, $remoteUser, [$displayId]);
+            return in_array($displayId, $allowed, true);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function canAccessContactId(User $user, ?string $chatwootContactId): bool

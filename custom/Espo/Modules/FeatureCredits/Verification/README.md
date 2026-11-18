@@ -56,10 +56,10 @@ email tasks may finish through free status retrieval; authorization revocation a
 erasure still stop delivery. Shared operational diagnostics are available through
 the existing instance-admin `CreditPhoneVerificationConfiguration` GET endpoint.
 
-All kinds allow unlimited concurrent operations. They share the admission rates
-configured through `CreditPhoneVerificationConfiguration`: 10 admissions/minute,
-100/day per tenant by default, with a 60-second same-fingerprint cooldown. The legacy
-`maxOutstandingPerTenant` setting is ignored. Email activation does not require phone
+All kinds share a per-tenant burst limit (10 new checks/minute by default) and a
+same-input cooldown (60 seconds by default). There is no daily or concurrent quota;
+each new paid check still requires sufficient available credits. Legacy
+`maxPerDayPerTenant` and `maxOutstandingPerTenant` settings are ignored. Email activation does not require phone
 activation; its availability ignores phone-specific approval and allowlist settings.
 
 Account-wide submit and status limits each default to 25 requests/second. Set

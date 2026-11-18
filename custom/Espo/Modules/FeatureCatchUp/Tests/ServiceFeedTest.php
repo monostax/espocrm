@@ -11,7 +11,6 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Modules\FeatureCatchUp\Classes\CardGone;
 use Espo\Core\Select\SelectBuilderFactory;
-use Espo\Core\Utils\DataCache;
 use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\FeatureCatchUp\Services\Ownership;
@@ -36,7 +35,7 @@ class ServiceFeedTest extends TestCase
         return $entity;
     }
 
-    /** @return array{ServiceFeed, Verdicts, Parties, DataCache} */
+    /** @return array{ServiceFeed, Verdicts, Parties, Transcript} */
     private function feed(array $options = []): array
     {
         $options += ['readable' => true, 'conversationAccount' => 'crm-account', 'pdo' => null, 'seesAll' => false, 'opens' => true, 'records' => null];
@@ -59,10 +58,10 @@ class ServiceFeedTest extends TestCase
         $owners->method('conversationClause')->willReturn($options['seesAll'] ? ['', []] : [' AND OWNER = :deckOwner', ['deckOwner' => 'erivania']]);
         $verdicts = $this->createMock(Verdicts::class);
         $parties = $this->createMock(Parties::class);
-        $cache = $this->createMock(DataCache::class);
+        $transcript = $this->createMock(Transcript::class);
         $feed = new ServiceFeed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user, $workspace, $owners, $verdicts,
-            $this->createMock(Transcript::class), $parties, $cache, $options['records'] ?? $this->createMock(Records::class), $this->chatwoot($options['opens']));
-        return [$feed, $verdicts, $parties, $cache];
+            $transcript, $parties, $options['records'] ?? $this->createMock(Records::class), $this->chatwoot($options['opens']));
+        return [$feed, $verdicts, $parties, $transcript];
     }
 
     /** Chatwoot's answer for every conversation: all open (the default) or none. */
@@ -186,19 +185,19 @@ class ServiceFeedTest extends TestCase
         self::assertSame(['crm-account', 'erivania', 'erivania'], [$bound['account'], $bound['user'], $bound['deckOwner']]);
     }
 
-    public function testOnlyAParticipantOfTheShownCardCanBeLabeled(): void
+    public function testOnlyACurrentParticipantCanBeLabeled(): void
     {
-        [$feed, $verdicts, $parties, $cache] = $this->feed();
+        [$feed, $verdicts, $parties, $transcript] = $this->feed();
         $participants = [['id' => '7', 'own' => true, 'account' => 'crm-account', 'accountId' => 12], ['id' => '20094', 'account' => 'crm-account', 'accountId' => 12]];
-        $cache->method('tryGet')->willReturn(['token' => 'token', 'expires' => time() + 60, 'revision' => 'r', 'participants' => $participants]);
+        $transcript->method('read')->willReturn(['participants' => $participants, 'evidence' => []]);
         $parties->expects(self::exactly(2))->method('set');
         $verdicts->expects(self::once())->method('resolve')->with('ChatwootConversation', 'conv');
 
-        self::assertSame('Pessoal', $feed->label('conv', '7', 'personal', 'token', $this->request())['label'],
+        self::assertSame('Pessoal', $feed->label('conv', '7', 'personal', $this->request())['label'],
             'marking the chat\'s own contact as not a customer also clears its card');
-        $feed->label('conv', '20094', 'team', 'token', $this->request());
+        $feed->label('conv', '20094', 'team', $this->request());
         $this->expectException(BadRequest::class);
-        $feed->label('conv', '999', 'team', 'token', $this->request());
+        $feed->label('conv', '999', 'team', $this->request());
     }
 
     public function testAGroupMirroredOnSeveralNumbersIsOneCard(): void
@@ -244,7 +243,7 @@ class ServiceFeedTest extends TestCase
         $owners->method('conversationClause')->willReturn(['', []]);
         $request = $this->createMock(Request::class);
         $feed = new ServiceFeed($em, $factory, $acl, $user, $workspace, $owners, $this->createMock(Verdicts::class),
-            $this->createMock(Transcript::class), $this->createMock(Parties::class), $this->createMock(DataCache::class),
+            $this->createMock(Transcript::class), $this->createMock(Parties::class),
             $this->createMock(Records::class), $this->chatwoot());
 
         self::assertSame(['copy-a', 'direct'], array_column($feed->list($request)['items'], 'id'));

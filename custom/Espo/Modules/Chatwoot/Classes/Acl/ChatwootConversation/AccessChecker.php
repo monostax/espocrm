@@ -55,7 +55,8 @@ class AccessChecker implements AccessEntityCREDSChecker
             return false;
         }
 
-        return $this->inboxAccessResolver->canAccessInboxId($user, $entity->get('inboxId'));
+        return $this->inboxAccessResolver->canAccessInboxId($user, $entity->get('inboxId'))
+            || $this->inboxAccessResolver->canReadTaskConversation($user, $entity);
     }
 
     public function checkEntityEdit(User $user, Entity $entity, ScopeData $data): bool
@@ -78,6 +79,7 @@ class AccessChecker implements AccessEntityCREDSChecker
 
     public function checkEntityStream(User $user, Entity $entity, ScopeData $data): bool
     {
-        return $this->checkEntityRead($user, $entity, $data);
+        return $this->defaultAccessChecker->checkEntityRead($user, $entity, $data)
+            && $this->inboxAccessResolver->canAccessInboxId($user, $entity->get('inboxId'));
     }
 }

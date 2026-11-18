@@ -74,6 +74,14 @@ export class EnrichmentSession {
     }
 }
 
+export function creationName(name, fields) {
+    const [firstName, ...surname] = name.trim().split(/\s+/);
+    if (surname.length && fields.some(field => field.name === 'firstName')) {
+        return {firstName, lastName: surname.join(' ')};
+    }
+    return {lastName: name.trim()};
+}
+
 export function fieldChoices(review) {
     const product = review.receipt.product;
     const values = review.values || {};

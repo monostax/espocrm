@@ -203,7 +203,7 @@ class ChatwootApiClient
      * @param string $method
      * @param string|null $payload
      * @param array<string> $headers
-     * @return array{code: int, body: array<string, mixed>}
+     * @return array{code: int, body: mixed, isJsonList?: bool}
      * @throws Error
      */
     protected function executeRequest(
@@ -271,7 +271,9 @@ class ChatwootApiClient
 
         return [
             'code' => (int) $httpCode,
-            'body' => $body ?? []
+            'body' => $body ?? [],
+            // Associative JSON decoding alone cannot distinguish [] from {}.
+            'isJsonList' => is_array($body) && array_is_list($body) && str_starts_with(ltrim($result), '['),
         ];
     }
 
@@ -1214,7 +1216,7 @@ class ChatwootApiClient
             throw new Error($errorMsg);
         }
 
-        return $response['body'];
+        return $this->accountRoster($response, $accountId);
     }
 
     /**
@@ -1437,6 +1439,22 @@ class ChatwootApiClient
 
             $this->log->error('Chatwoot API Error (listTeamMembers): ' . json_encode($response));
             throw new Error($errorMsg);
+        }
+
+        return $this->accountRoster($response, $accountId);
+    }
+
+    /** Only a complete JSON list from this account may drive membership removals. */
+    private function accountRoster(array $response, int $accountId): array
+    {
+        if ($response['code'] !== 200 || empty($response['isJsonList'])) {
+            throw new Error('Expected a Chatwoot team roster as a JSON list.');
+        }
+
+        foreach ($response['body'] as $row) {
+            if (!is_int($row['id'] ?? null) || $row['id'] <= 0 || ($row['account_id'] ?? null) !== $accountId) {
+                throw new Error('Invalid entry in Chatwoot team roster.');
+            }
         }
 
         return $response['body'];

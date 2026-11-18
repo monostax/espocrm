@@ -100,7 +100,7 @@ class ApplicationRecords
             }
             $this->field($field === 'teamsIds' ? 'teams' : $field,'edit');
         }
-        // Do not split supplier names or invent required fields. Normal CRM validation owns the form.
+        // Normal CRM validation still requires a submitted surname.
         if (!is_string($fields['lastName'] ?? null) || trim($fields['lastName']) === '') throw new BadRequest('Contact lastName is required.');
         $data = [...$fields,'tenantId' => $tenant];
         $this->field('tenant','edit');

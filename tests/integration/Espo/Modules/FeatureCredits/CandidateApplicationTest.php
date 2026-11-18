@@ -335,6 +335,19 @@ class CandidateApplicationTest extends TestCase
         $this->assertSame('1982-02-28',$this->em->getEntityById('Contact',$result['contactId'])->get('dataNascimento'));
     }
 
+    public function testSocioFullNameSubmittedAsLastNameIsSavedInSeparateFields(): void
+    {
+        $name = 'João da Silva';
+        $purchase = $this->purchased(['name' => $name]);
+        $receipt = $this->service(CandidateApplication::class)->apply(new ApplicationInput((object) [
+            'tenantId' => $this->tenant, 'purchaseId' => $purchase['id'], 'createIfUnmatched' => true,
+            'contactData' => (object) ['lastName' => $name, 'teamsIds' => [$this->team]],
+        ]));
+        $contact = $this->em->getEntityById('Contact',$receipt['contactId']);
+        $this->assertSame('João',$contact->get('firstName'));
+        $this->assertSame('da Silva',$contact->get('lastName'));
+    }
+
     public function testPurchasedBirthDateDoesNotEraseAnExistingDateWhenUpdateIsBlank(): void
     {
         $purchase = $this->purchased(['dateOfBirth' => '1982-02-28']);

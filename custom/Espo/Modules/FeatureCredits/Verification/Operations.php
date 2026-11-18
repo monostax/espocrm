@@ -952,18 +952,6 @@ class Operations
                 '{"reason":"rate_limited","limit":"per_minute"}',
             );
         }
-
-        $dayStart = substr($now, 0, 10) . ' 00:00:00';
-        $dayEnd = substr($now, 0, 10) . ' 23:59:59';
-        $q = $pdo->prepare('SELECT COUNT(*) FROM phone_verification_operation
-            WHERE tenant_id = ? AND admitted_at >= ? AND admitted_at <= ? AND deleted = FALSE');
-        $q->execute([$tenantId, $dayStart, $dayEnd]);
-        if ((int) $q->fetchColumn() >= $limits['maxPerDayPerTenant']) {
-            throw Conflict::createWithBody(
-                'Daily phone verification limit reached.',
-                '{"reason":"rate_limited","limit":"per_day"}',
-            );
-        }
     }
 
     private function insertRequestBinding(

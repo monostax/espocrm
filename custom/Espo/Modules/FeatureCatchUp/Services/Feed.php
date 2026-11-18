@@ -12,7 +12,6 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
-use Espo\Core\Utils\DataCache;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Classes\CardGone;
@@ -61,7 +60,6 @@ class Feed
         private Ownership $owners,
         private DealStates $states,
         private Verdicts $verdicts,
-        private DataCache $cache,
         private Metadata $metadata,
         private Transcript $transcript,
         private Records $records,
@@ -84,7 +82,7 @@ class Feed
         $context = $this->context($deals);
         // Judged at this revision: quiet ones stay out; a card's verdict tells the deck its tab before it is opened.
         $this->verdicts->flipDue($tenantId);
-        $judged = $this->verdicts->judged('Opportunity', array_map(fn ($entry) => $entry['revision'], $context));
+        $judged = $this->judged($context);
         $items = [];
         foreach ($deals as $id => $deal) {
             if (in_array($judged[$id] ?? null, Loops::QUIET, true)) continue;
@@ -104,10 +102,15 @@ class Feed
         $this->authorize();
         $tenantId = $this->workspace->resolve($request)['tenant']->getId();
         [$sql, $params] = $this->owners->clause();
-        $cards = array_filter($this->verdicts->cardDeals($tenantId, $sql, $params, $this->user->getId()), fn ($verdict) => isset(Loops::BUCKETS[$verdict]));
+        $ids = $this->verdicts->cardDealIds($tenantId, $sql, $params, $this->user->getId());
         $pending = $this->verdicts->pendingDeals($tenantId, $sql, $params, $this->user->getId());
-        $open = $this->access->dealsWithOpenConversation(array_values(array_unique([...array_keys($cards), ...$pending])));
-        return self::tally(array_intersect_key($cards, $open), count(array_filter($pending, fn ($id) => isset($open[$id]))));
+        $open = $this->access->dealsWithOpenConversation(array_values(array_unique([...$ids, ...$pending])));
+        $cards = [];
+        foreach (array_chunk(array_filter($ids, fn ($id) => isset($open[$id])), 100) as $batch) {
+            $judged = $this->judged($this->revisionContext($this->readable($batch)));
+            $cards += array_filter($judged, fn ($verdict) => isset(Loops::BUCKETS[$verdict]));
+        }
+        return self::tally($cards, count(array_filter($pending, fn ($id) => isset($open[$id]))));
     }
 
     /**
@@ -149,25 +152,30 @@ class Feed
             'conversation' => $this->target($conversations), 'closable' => $this->closable($deal),
         ];
         $result['snapshot'] = hash('sha256', json_encode([$id, $this->user->getId(), $context['revision'], $scope], JSON_THROW_ON_ERROR));
-        $this->cache->store($this->snapshotKey($id), [
-            'token' => $result['snapshot'], 'revision' => $context['revision'], 'expires' => time() + 86400,
-        ]);
         return $result;
     }
 
-    /** Acting on a card first confirms the deal hasn't moved since the card was shown. The deal's own tenant must be opted in. */
-    public function review(string $id, string $token, Request $request): void
+    public function review(string $id, Request $request): void
     {
         $this->authorize();
-        $deal = $this->deal($id, $this->workspace->resolve($request)['tenant']->getId());
-        $snapshot = $this->cache->tryGet($this->snapshotKey($id));
-        if (!$snapshot || $snapshot['expires'] < time() || !hash_equals($snapshot['token'], $token)) {
-            throw new Conflict('Refresh this card before acting on it.');
+        $workspace = $this->workspace->resolve($request);
+        $deal = $this->deal($id, $workspace['tenant']->getId());
+        $body = $request->getParsedBody();
+        $conversations = $this->conversations($deal);
+        if (!$conversations) throw new Forbidden();
+        if (isset($body->replyTo)) {
+            foreach ($conversations as $conversation) {
+                if ($conversation->get('chatwootAccountId') === $workspace['account']->getId() &&
+                    (int) $conversation->get('chatwootConversationId') === $body->replyTo) return;
+            }
+            throw new CardGone();
         }
-        if ($this->context([$id => $deal])[$id]['revision'] !== $snapshot['revision']) {
-            throw new Conflict('This deal changed since the card was shown.');
+        if (!isset($body->revision)) {
+            // Older clients still review before acting. Validate their evidence without a pod-local cache.
+            $snapshot = $this->snapshot($id, $request);
+            if (!hash_equals($snapshot['snapshot'], (string) ($body->snapshot ?? ''))) throw new Conflict('This deal changed since the card was shown.');
         }
-        $this->verdicts->resolve('Opportunity', $id);
+        $this->verdicts->resolve('Opportunity', $id, $body->revision ?? $snapshot['revision']);
     }
 
     /**
@@ -260,7 +268,7 @@ class Feed
      * @param array<string, Entity> $deals
      * @return array<string, array<string, mixed>>
      */
-    private function context(array $deals): array
+    private function revisionContext(array $deals): array
     {
         $ids = array_keys($deals);
         $states = $this->states->load($ids);
@@ -272,8 +280,21 @@ class Feed
             $context[$id] = [
                 'state' => $state, 'nextAction' => $nextAction,
                 'revision' => Revision::of($deal, $state, $nextAction, $posts[$id] ?? null),
-                'ownerId' => $this->owners->deckOwnerId($deal->get('assignedUserId'), $state['staff_user_id'] ?? null),
             ];
+        }
+        return $context;
+    }
+
+    private function judged(array $context): array
+    {
+        return $this->verdicts->judged('Opportunity', array_map(fn ($entry) => $entry['revision'], $context));
+    }
+
+    private function context(array $deals): array
+    {
+        $context = $this->revisionContext($deals);
+        foreach ($deals as $id => $deal) {
+            $context[$id]['ownerId'] = $this->owners->deckOwnerId($deal->get('assignedUserId'), $context[$id]['state']['staff_user_id'] ?? null);
         }
         $names = $this->userNames(array_filter(array_column($context, 'ownerId')));
         foreach ($context as $id => $entry) $context[$id]['ownerName'] = $names[$entry['ownerId']] ?? null;
@@ -507,8 +528,4 @@ class Feed
             !$this->acl->checkScope('Opportunity', 'read') || !$this->acl->checkField('Opportunity', 'name')) throw new Forbidden();
     }
 
-    private function snapshotKey(string $id): string
-    {
-        return 'catchUp/snapshots/v2/' . hash('sha256', $this->user->getId() . ':' . $id);
-    }
 }

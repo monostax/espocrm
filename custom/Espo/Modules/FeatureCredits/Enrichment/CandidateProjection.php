@@ -54,6 +54,14 @@ final class CandidateProjection
         return $values;
     }
 
+    /** Contact requires a surname; keep a single-word name intact. */
+    public static function contactName(string $fullName): array
+    {
+        $name = trim(preg_replace('/\s+/u', ' ', $fullName));
+        $parts = explode(' ', $name, 2);
+        return isset($parts[1]) ? ['firstName' => $parts[0], 'lastName' => $parts[1]] : ['lastName' => $name];
+    }
+
     /** Formatting alone is never a useful second contribution. Identity fields are already canonical. */
     public static function equivalent(mixed $left, mixed $right): bool
     {

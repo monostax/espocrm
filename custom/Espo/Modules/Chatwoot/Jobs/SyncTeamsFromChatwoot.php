@@ -28,18 +28,20 @@ use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Tools\Team\TeamMemberMirror;
 
 /**
  * Scheduled job to sync teams from Chatwoot to EspoCRM.
  * Iterates through all ChatwootAccount records with contactSyncEnabled = true
- * and pulls teams from Chatwoot.
+     * and pulls teams and their agent rosters from Chatwoot.
  */
 class SyncTeamsFromChatwoot implements JobDataLess
 {
     public function __construct(
         private EntityManager $entityManager,
         private ChatwootApiClient $apiClient,
-        private Log $log
+        private Log $log,
+        private TeamMemberMirror $memberMirror,
     ) {}
 
     public function run(): void
@@ -112,7 +114,7 @@ class SyncTeamsFromChatwoot implements JobDataLess
                 $platformUrl,
                 $apiKey,
                 $chatwootAccountId,
-                $account->getId(),
+                $account,
                 $espoTeamsIds
             );
 
@@ -138,7 +140,7 @@ class SyncTeamsFromChatwoot implements JobDataLess
         string $platformUrl,
         string $apiKey,
         int $chatwootAccountId,
-        string $espoAccountId,
+        Entity $account,
         array $espoTeamsIds = []
     ): array {
         $stats = ['synced' => 0, 'errors' => 0];
@@ -154,24 +156,25 @@ class SyncTeamsFromChatwoot implements JobDataLess
         );
 
         // Track which team IDs we've seen for cleanup
-        $seenTeamIds = [];
+        $seenTeamIds = array_column($teams, 'id');
 
         foreach ($teams as $chatwootTeam) {
             try {
-                $this->syncSingleTeam($chatwootTeam, $espoAccountId, $espoTeamsIds);
+                $team = $this->syncSingleTeam($chatwootTeam, $account->getId(), $espoTeamsIds);
+                $members = $this->apiClient->listTeamMembers($platformUrl, $apiKey, $chatwootAccountId, $chatwootTeam['id']);
+                $this->memberMirror->sync($account, $team, array_column($members, 'id'));
                 $stats['synced']++;
-                $seenTeamIds[] = (int) $chatwootTeam['id'];
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $stats['errors']++;
                 $teamId = $chatwootTeam['id'] ?? 'unknown';
-                $this->log->debug(
+                $this->log->warning(
                     "SyncTeamsFromChatwoot: Failed to sync team {$teamId}: " . $e->getMessage()
                 );
             }
         }
 
         // Mark teams not in response as removed
-        $this->markRemovedTeams($espoAccountId, $seenTeamIds);
+        $this->markRemovedTeams($account, $seenTeamIds);
 
         return $stats;
     }
@@ -181,7 +184,7 @@ class SyncTeamsFromChatwoot implements JobDataLess
      *
      * @param array<string> $espoTeamsIds EspoCRM Team IDs to assign to synced entities
      */
-    private function syncSingleTeam(array $chatwootTeam, string $espoAccountId, array $espoTeamsIds = []): void
+    private function syncSingleTeam(array $chatwootTeam, string $espoAccountId, array $espoTeamsIds = []): Entity
     {
         $chatwootTeamId = (int) $chatwootTeam['id'];
 
@@ -196,9 +199,10 @@ class SyncTeamsFromChatwoot implements JobDataLess
 
         if ($existingTeam) {
             $this->updateExistingTeam($existingTeam, $chatwootTeam, $espoTeamsIds);
-        } else {
-            $this->createNewTeam($chatwootTeam, $espoAccountId, $espoTeamsIds);
+            return $existingTeam;
         }
+
+        return $this->createNewTeam($chatwootTeam, $espoAccountId, $espoTeamsIds);
     }
 
     /**
@@ -229,7 +233,7 @@ class SyncTeamsFromChatwoot implements JobDataLess
      *
      * @param array<string> $espoTeamsIds EspoCRM Team IDs to assign to synced entities
      */
-    private function createNewTeam(array $chatwootTeam, string $espoAccountId, array $espoTeamsIds = []): void
+    private function createNewTeam(array $chatwootTeam, string $espoAccountId, array $espoTeamsIds = []): Entity
     {
         $data = [
             'name' => $chatwootTeam['name'] ?? 'Team #' . $chatwootTeam['id'],
@@ -247,7 +251,7 @@ class SyncTeamsFromChatwoot implements JobDataLess
             $data['teamsIds'] = $espoTeamsIds;
         }
 
-        $this->entityManager->createEntity('ChatwootTeam', $data, ['silent' => true]);
+        return $this->entityManager->createEntity('ChatwootTeam', $data, ['silent' => true]);
     }
 
     /**
@@ -255,23 +259,18 @@ class SyncTeamsFromChatwoot implements JobDataLess
      *
      * @param array<int> $seenTeamIds Chatwoot team IDs that were seen in the sync
      */
-    private function markRemovedTeams(string $espoAccountId, array $seenTeamIds): void
+    private function markRemovedTeams(Entity $account, array $seenTeamIds): void
     {
-        if (empty($seenTeamIds)) {
-            return;
-        }
-
-        // Find teams that weren't in the API response
-        $removedTeams = $this->entityManager
-            ->getRDBRepository('ChatwootTeam')
-            ->where([
-                'accountId' => $espoAccountId,
-                'chatwootTeamId!=' => $seenTeamIds,
-                'syncStatus!=' => 'error',
-            ])
-            ->find();
+        $removedTeams = $this->entityManager->getRDBRepository('ChatwootTeam')->where([
+            'accountId' => $account->getId(),
+            'chatwootTeamId!=' => $seenTeamIds ?: null,
+        ])->find();
 
         foreach ($removedTeams as $team) {
+            $this->memberMirror->sync($account, $team, []);
+            if ($team->get('syncStatus') === 'error') {
+                continue;
+            }
             $team->set('syncStatus', 'error');
             $team->set('lastSyncError', 'Team no longer exists in Chatwoot');
             $team->set('lastSyncedAt', date('Y-m-d H:i:s'));

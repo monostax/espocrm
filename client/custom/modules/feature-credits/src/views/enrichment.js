@@ -1,5 +1,5 @@
 import BottomPanelView from 'views/record/panels/bottom';
-import {EnrichmentSession, fieldChoices, groupEnrichmentEmails} from 'feature-credits:helpers/enrichment';
+import {EnrichmentSession, creationName, fieldChoices, groupEnrichmentEmails} from 'feature-credits:helpers/enrichment';
 import {formatCredits} from 'feature-credits:helpers/presentation';
 
 export default class extends BottomPanelView {
@@ -225,6 +225,8 @@ export default class extends BottomPanelView {
     data() {
         const products = ['email', 'phone', ...(this.model.entityType === 'Account' ? ['company', 'employees', 'socios'] : [])];
         const receipt = this.receipt;
+        const fields = this.detail?.application.creationForm?.fields || [];
+        const names = creationName(this.detail?.values.name || '', fields);
         return {...super.data(), busy: this.busy, error: this.error, hasContext: !!this.session, saved: this.saved,
             canQuote: !this.saved, receipt, canConfirm: receipt?.confirmable && receipt.admission === 'not_admitted',
             canReset: this.saved?.stage === 'quote' || ['admitted', 'settled', 'released'].includes(receipt?.admission),
@@ -238,9 +240,9 @@ export default class extends BottomPanelView {
             emailNotices: (this.emailReviews || []).filter(review => review.application.reason).map(review => ({source: review.receipt.source, reason: review.application.reason})),
             currentEmail: this.current?.emailAddress || '',
             creationTeams: (this.detail?.application.creationForm?.teams || []).map((team, index, teams) => ({...team, selected: teams.length === 1})),
-            creationFields: (this.detail?.application.creationForm?.fields || []).map(field => ({...field,
+            creationFields: fields.map(field => ({...field,
                 label: this.translate(field.name, 'fields', 'Contact'),
-                value: field.name === 'lastName' ? this.detail?.values.name || '' : '',
+                value: names[field.name] ?? '',
                 isEnum: field.type === 'enum', isBool: field.type === 'bool', isText: field.type === 'text',
                 inputType: field.type === 'int' ? 'number' : field.type === 'date' ? 'date' : 'text',
             })),

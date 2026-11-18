@@ -573,7 +573,8 @@ final class PhoneVerificationDatabaseTest extends TestCase
     {
         $this->database($dialect, function (PDO $pdo, Operations $operations, Execution $execution, CapabilityGate $gate): void {
             $pdo->exec("UPDATE contact SET email_address = 'person@example.com' WHERE id = 'contact'");
-            $gate->publish((object) ['enabled' => false], 'admin');
+            // Legacy admin payloads must not cap funded checks across verification kinds.
+            $gate->publish((object) ['enabled' => false, 'maxPerDayPerTenant' => 1], 'admin');
             $first = $this->emailStart($operations, 'email-independent');
             $this->deniedFields = ['Contact.emailAddress'];
             $execution->run('tenant', $first['operation']['id']);

@@ -8,10 +8,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Espo\Core\Acl;
 use Espo\Core\Api\Request;
-use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
-use Espo\Core\Utils\DataCache;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
@@ -33,13 +31,13 @@ use PHPUnit\Framework\TestCase;
 
 class FeedTest extends TestCase
 {
-    private function deal(array $values = []): Entity
+    private function deal(array $values = [], string $id = 'deal'): Entity
     {
         $values += ['tenantId' => 'tenant', 'opportunityStageId' => 'stage', 'amount' => 4800, 'assignedUserId' => 'ai',
             'followupStatus' => null, 'nextActionType' => null, 'nextActionId' => null];
         $deal = $this->createMock(Entity::class);
         $deal->method('get')->willReturnCallback(fn ($field) => $values[$field] ?? null);
-        $deal->method('getId')->willReturn('deal');
+        $deal->method('getId')->willReturn($id);
         return $deal;
     }
 
@@ -59,9 +57,9 @@ class FeedTest extends TestCase
         return $pdo;
     }
 
-    /** @return array{Feed, DataCache, Verdicts, Entity} */
+    /** @return array{Feed, Verdicts, Entity} */
     private function feed(bool $regular = true, bool $readable = true, string $dealTenant = 'tenant', ?\PDO $pdo = null, bool $opens = true,
-        ?string $status = 'Open'): array
+        ?string $status = 'Open', array $listedDeals = []): array
     {
         $user = $this->createMock(User::class);
         $user->method('isRegular')->willReturn($regular);
@@ -80,14 +78,27 @@ class FeedTest extends TestCase
         $workspace->method('resolve')->willReturn(['tenant' => $tenant, 'policy' => ['enabled' => true]]);
         $states = $this->createMock(DealStates::class);
         $states->method('load')->willReturn(['deal' => $this->state()]);
-        $cache = $this->createMock(DataCache::class);
         $verdicts = $this->createMock(Verdicts::class);
         $owners = $this->createMock(Ownership::class);
         $owners->method('clause')->willReturn(['', []]);
-        $feed = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user, $workspace,
-            $owners, $states, $verdicts, $cache, $this->createMock(Metadata::class),
+        $factory = $this->createMock(SelectBuilderFactory::class);
+        if ($listedDeals) {
+            $builder = $this->createMock(\Espo\Core\Select\SelectBuilder::class);
+            $builder->method('from')->willReturnSelf();
+            $builder->method('withStrictAccessControl')->willReturnSelf();
+            $builder->method('buildQueryBuilder')->willReturn(\Espo\ORM\Query\SelectBuilder::create()->from('Opportunity'));
+            $factory->method('create')->willReturn($builder);
+            $select = $this->createMock(\Espo\ORM\Repository\RDBSelectBuilder::class);
+            $select->method('find')->willReturn(new \Espo\ORM\EntityCollection($listedDeals));
+            $repository = $this->createMock(\Espo\ORM\Repository\RDBRepository::class);
+            $repository->method('clone')->willReturn($select);
+            $repository->method('where')->willReturn($select);
+            $em->method('getRDBRepository')->willReturn($repository);
+        }
+        $feed = new Feed($em, $factory, $acl, $user, $workspace,
+            $owners, $states, $verdicts, $this->createMock(Metadata::class),
             $this->createMock(Transcript::class), $this->createMock(Records::class), $this->chatwoot($opens));
-        return [$feed, $cache, $verdicts, $deal];
+        return [$feed, $verdicts, $deal];
     }
 
     /** Chatwoot's answer for every conversation: all open (the default) or none. */
@@ -136,7 +147,7 @@ class FeedTest extends TestCase
         $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => $entity($id, $deals[$id]));
         $feed = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $this->createMock(User::class), $this->createMock(Workspace::class),
             $this->createMock(Ownership::class), $this->createMock(DealStates::class), $this->createMock(Verdicts::class),
-            $this->createMock(DataCache::class), $this->createMock(Metadata::class), $this->createMock(Transcript::class), $this->createMock(Records::class),
+            $this->createMock(Metadata::class), $this->createMock(Transcript::class), $this->createMock(Records::class),
             $this->chatwoot());
         $now = new DateTimeImmutable('2026-11-10 10:00:00', new DateTimeZone('America/Sao_Paulo'));
         $deal = $entity('deal', ['tenantId' => 'tenant', 'createdAt' => '2026-11-01 12:00:00']);
@@ -196,9 +207,9 @@ class FeedTest extends TestCase
     public function testClosedOrDeletedDealsCannotBeLoadedOrReviewedById(): void
     {
         foreach (['Lost', 'Won', null] as $status) {
-            [$feed, $cache] = $this->feed(status: $status);
-            $cache->expects(self::never())->method('tryGet');
-            foreach ([fn () => $feed->snapshot('deal', $this->request()), fn () => $feed->review('deal', 'token', $this->request())] as $call) {
+            [$feed, $verdicts] = $this->feed(status: $status);
+            $verdicts->expects(self::never())->method('resolve');
+            foreach ([fn () => $feed->snapshot('deal', $this->request()), fn () => $feed->review('deal', $this->request())] as $call) {
                 try {
                     $call();
                     self::fail('Expected the deal card to be gone.');
@@ -209,22 +220,12 @@ class FeedTest extends TestCase
         }
     }
 
-    public function testReviewWithoutTheShownCardConflictsAndResolvesNothing(): void
+    public function testReviewRequiresCurrentTenantAndReadAccess(): void
     {
-        [$feed, $cache, $verdicts] = $this->feed();
-        $cache->method('tryGet')->willReturn(null);
+        [$feed, $verdicts] = $this->feed(dealTenant: 'another-tenant');
         $verdicts->expects(self::never())->method('resolve');
-        $this->expectException(Conflict::class);
-        $feed->review('deal', 'token', $this->request());
-    }
-
-    public function testReviewOfADealThatMovedSinceTheCardConflicts(): void
-    {
-        [$feed, $cache, $verdicts] = $this->feed();
-        $cache->method('tryGet')->willReturn(['token' => 'token', 'revision' => 'older', 'expires' => time() + 60]);
-        $verdicts->expects(self::never())->method('resolve');
-        $this->expectException(Conflict::class);
-        $feed->review('deal', 'token', $this->request());
+        $this->expectException(Forbidden::class);
+        $feed->review('deal', $this->request());
     }
 
     public function testRevisionMovesWithTheDealButNotWithTime(): void
@@ -294,13 +295,20 @@ class FeedTest extends TestCase
         self::assertSame(['deckOwner' => 'manuella'], $params);
     }
 
-    public function testTheTabCountsTakeOnlyCardsWhoseConversationChatwootOpensForTheReader(): void
+    public function testTheBadgeOnlyCountsReadableCardsAtTheCurrentDealRevision(): void
     {
-        foreach ([true => ['us' => 2, 'customer' => 1, 'found' => 1, 'pending' => 1], false => ['us' => 0, 'customer' => 0, 'found' => 0, 'pending' => 0]] as $opens => $expected) {
-            [$feed, , $verdicts] = $this->feed(opens: (bool) $opens);
-            $verdicts->method('cardDeals')->willReturn(['a' => 'customer_waiting', 'b' => 'promise_due', 'c' => 'follow_up_due', 'd' => 'none', 'e' => 'scheduled', 'g' => 'new_deal']);
+        // Both had a follow-up due. One has since armed its automatic follow-up without a new message.
+        $unchanged = $this->deal([], 'current');
+        $changed = $this->deal(['followupStatus' => 'FollowupActive'], 'changed');
+        $stored = Revision::of($unchanged, null, null, null);
+        foreach ([true => 1, false => 0] as $opens => $expected) {
+            [$feed, $verdicts] = $this->feed(opens: (bool) $opens, listedDeals: [$unchanged, $changed]);
+            $verdicts->method('cardDealIds')->willReturn(['current', 'changed', 'unreadable']);
+            $verdicts->expects($opens ? self::once() : self::never())->method('judged')
+                ->with('Opportunity', ['current' => $stored, 'changed' => Revision::of($changed, null, null, null)])
+                ->willReturnCallback(fn ($type, $revisions) => array_map(fn () => 'follow_up_due', array_filter($revisions, fn ($r) => $r === $stored)));
             $verdicts->method('pendingDeals')->willReturn(['f']);
-            self::assertSame($expected, $feed->count($this->request()), 'not even a tenant admin counts what Chatwoot closes');
+            self::assertSame(['us' => 0, 'customer' => $expected, 'found' => 0, 'pending' => $expected], $feed->count($this->request()));
         }
     }
 

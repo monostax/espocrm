@@ -24,7 +24,6 @@ class CapabilityGate
     public const FRESH_REUSE_SECONDS = 2592000; // 30 days
     public const RETENTION_SECONDS = 7776000; // 90 days
     public const DEFAULT_MAX_PER_MINUTE = 10;
-    public const DEFAULT_MAX_PER_DAY = 100;
     public const DEFAULT_COOLDOWN_SECONDS = 60;
 
     private ?array $published = null;
@@ -60,7 +59,6 @@ class CapabilityGate
                 ? $data['releaseApprovalRef'] : null,
             'allowlistedTenantIds' => $allowlist,
             'maxPerMinutePerTenant' => $this->boundedInt($data['maxPerMinutePerTenant'] ?? null, self::DEFAULT_MAX_PER_MINUTE, 1, 1000),
-            'maxPerDayPerTenant' => $this->boundedInt($data['maxPerDayPerTenant'] ?? null, self::DEFAULT_MAX_PER_DAY, 1, 10000),
             'sameInputCooldownSeconds' => $this->boundedInt($data['sameInputCooldownSeconds'] ?? null, self::DEFAULT_COOLDOWN_SECONDS, 1, 3600),
             'updatedAt' => is_string($data['updatedAt'] ?? null) ? $data['updatedAt'] : null,
             'updatedById' => is_string($data['updatedById'] ?? null) ? $data['updatedById'] : null,
@@ -81,8 +79,7 @@ class CapabilityGate
             };
             return ['available' => $reason === null, 'reason' => $reason,
                 'priceCredits' => Kind::price($kind), 'policyVersion' => $this->policyVersion($kind),
-                'limits' => array_intersect_key($cfg, array_flip(['maxPerMinutePerTenant',
-                    'maxPerDayPerTenant', 'sameInputCooldownSeconds']))];
+                'limits' => array_intersect_key($cfg, array_flip(['maxPerMinutePerTenant', 'sameInputCooldownSeconds']))];
         }
         $creds = $kind === Kind::EMAIL ? ($this->emailCredentials ?? new BounceBanCredentials())->get() : $this->credentials->get();
         $hasCreds = $creds !== [];
@@ -107,7 +104,6 @@ class CapabilityGate
             'policyVersion' => $this->policyVersion($kind),
             'limits' => [
                 'maxPerMinutePerTenant' => $cfg['maxPerMinutePerTenant'],
-                'maxPerDayPerTenant' => $cfg['maxPerDayPerTenant'],
                 'sameInputCooldownSeconds' => $cfg['sameInputCooldownSeconds'],
             ],
         ];
@@ -143,7 +139,7 @@ class CapabilityGate
             'releaseApprovalRef',
             'allowlistedTenantIds',
             'maxPerMinutePerTenant',
-            'maxPerDayPerTenant',
+            'maxPerDayPerTenant', // Accepted but ignored for older admin clients.
             'sameInputCooldownSeconds',
         ];
         if (array_diff(array_keys($vars), $allowedKeys)) {
@@ -183,7 +179,6 @@ class CapabilityGate
         }
         foreach ([
             'maxPerMinutePerTenant' => [1, 1000],
-            'maxPerDayPerTenant' => [1, 10000],
             'sameInputCooldownSeconds' => [1, 3600],
         ] as $intKey => [$min, $max]) {
             if (array_key_exists($intKey, $vars)) {
