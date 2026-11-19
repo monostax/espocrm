@@ -271,8 +271,105 @@ class PersonWideTest extends TestCase
         $deck->expects($this->never())->method('next');
         $pushes = new Pushes($em, $settings, $workspaces, $this->createMock(Taps::class), $deck, $this->createMock(Cards::class),
             $this->createMock(Avisos::class), $this->createMock(Tokens::class), $this->createMock(ActorScope::class),
-            $this->createMock(ChatwootApiClient::class), $this->createMock(Log::class));
+            $this->createMock(ChatwootApiClient::class), $this->createMock(Log::class), $this->personSubscriptions($em, $workspaces));
         $pushes->hotLeads($here);
+    }
+
+    private function pushes(EntityManager $em, Workspaces $workspaces, ?Taps $taps = null): Pushes
+    {
+        $settings = $this->createMock(Settings::class);
+        $settings->method('pushTimes')->willReturn(Settings::DEFAULT_PUSH_TIMES);
+        $settings->method('hotLeadDailyCap')->willReturn(2);
+        return new Pushes($em, $settings, $workspaces, $taps ?? $this->createMock(Taps::class), $this->createMock(Deck::class),
+            $this->createMock(Cards::class), $this->createMock(Avisos::class), $this->createMock(Tokens::class),
+            $this->createMock(ActorScope::class), $this->createMock(ChatwootApiClient::class), $this->createMock(Log::class),
+            $this->personSubscriptions($em, $workspaces));
+    }
+
+    private function personSubscriptions(EntityManager $em, Workspaces $workspaces): Subscriptions
+    {
+        return new Subscriptions($em, $this->user(), $this->createMock(Settings::class), $this->createMock(Workspace::class),
+            $this->createMock(Rollout::class), $this->createMock(PhoneCodes::class), $this->createMock(Avisos::class), $workspaces);
+    }
+
+    private function workspacesAt(string $time, ?callable $live = null): Workspaces
+    {
+        $workspaces = $this->createMock(Workspaces::class);
+        $workspaces->method('live')->willReturnCallback($live ?? fn () => true);
+        $workspaces->method('exists')->willReturn(true);
+        $workspaces->method('of')->willReturn(['frozen' => false]);
+        $workspaces->method('now')->willReturn(new DateTimeImmutable($time, new DateTimeZone('America/Sao_Paulo')));
+        return $workspaces;
+    }
+
+    /** The user, 2026-11-19: with several workspaces, the cards come from the first one the person turned Avisos on in. */
+    public function testPushesComeFromTheFirstWorkspaceThePersonTurnedOnThatTheyStillBelongTo(): void
+    {
+        $em = $this->em($this->user());
+        $newer = $this->row('WhatsAppNotificationSubscription', ['id' => 's1', 'userId' => 'u1', 'chatwootAccountId' => 'a1',
+            'phone' => self::PHONE, 'status' => 'active', 'createdAt' => '2026-11-15 19:00:00']);
+        $older = $this->row('WhatsAppNotificationSubscription', ['id' => 's2', 'userId' => 'u1', 'chatwootAccountId' => 'a2',
+            'phone' => self::PHONE, 'status' => 'active', 'createdAt' => '2026-11-13 21:30:00']);
+        $stopped = $this->row('WhatsAppNotificationSubscription', ['id' => 's0', 'userId' => 'u1', 'chatwootAccountId' => 'a3',
+            'phone' => self::PHONE, 'status' => 'stopped', 'createdAt' => '2026-11-01 10:00:00']);
+        $this->store['WhatsAppNotificationSubscription'] = [$newer, $older, $stopped];
+        $subscriptions = $this->personSubscriptions($em, $this->workspacesAt('2026-11-19 08:00'));
+        $this->assertSame('s2', $subscriptions->primary($newer)?->getId());
+        $this->assertSame('s2', $subscriptions->primary($older)?->getId());
+        $left = $this->personSubscriptions($em, $this->workspacesAt('2026-11-19 08:00', fn (Entity $row) => $row->getId() !== 's2'));
+        $this->assertSame('s1', $left->primary($newer)?->getId());
+        // Only the first workspace pushes: the other one's push time passes without a card.
+        $taps = $this->createMock(Taps::class);
+        $taps->expects($this->never())->method('next');
+        $newer->set('morningEnabled', true);
+        $this->pushes($em, $this->workspacesAt('2026-11-19 08:00'), $taps)->morning($newer);
+    }
+
+    /** One card at each push time, never one the person already had today, and only once per push time. */
+    public function testEachPushTimeSendsOneCardThePersonHasNotHadToday(): void
+    {
+        $em = $this->em($this->user());
+        $here = $this->row('WhatsAppNotificationSubscription', ['id' => 's1', 'userId' => 'u1', 'chatwootAccountId' => 'a1',
+            'phone' => self::PHONE, 'status' => 'active', 'morningEnabled' => true, 'createdAt' => '2026-11-13 21:30:00']);
+        $this->store['WhatsAppNotificationSubscription'] = [$here];
+        $this->store['WhatsAppDeckCard'] = [
+            $this->row('WhatsAppDeckCard', ['id' => 'c1', 'lane' => 'service', 'subjectId' => 'conv1']),
+            $this->row('WhatsAppDeckCard', ['id' => 'c2', 'lane' => 'deals', 'subjectId' => 'deal1']),
+            $this->row('WhatsAppDeckCard', ['id' => 'c3', 'lane' => 'service', 'subjectId' => 'conv3']),
+        ];
+        $this->store['WhatsAppNotification'] = [
+            // 08:00 local today: counts.
+            $this->row('WhatsAppNotification', ['id' => 'n1', 'subscriptionId' => 's1', 'direction' => 'out', 'cardId' => 'c1',
+                'createdAt' => '2026-11-19 11:00:05', 'status' => 'read']),
+            // Yesterday: may come again.
+            $this->row('WhatsAppNotification', ['id' => 'n2', 'subscriptionId' => 's1', 'direction' => 'out', 'cardId' => 'c2',
+                'createdAt' => '2026-11-18 18:00:00', 'status' => 'read']),
+            // Failed: may go again.
+            $this->row('WhatsAppNotification', ['id' => 'n3', 'subscriptionId' => 's1', 'direction' => 'out', 'cardId' => 'c3',
+                'createdAt' => '2026-11-19 12:00:00', 'status' => 'failed']),
+        ];
+        $taps = $this->createMock(Taps::class);
+        $taps->expects($this->once())->method('next')
+            ->with($here, 'card', 'push:s1:2026-11-19 11:00', false, null, ['service:conv1'])->willReturn(true);
+        $pushes = $this->pushes($em, $this->workspacesAt('2026-11-19 11:05'), $taps);
+        $pushes->morning($here);
+        $pushes->morning($here);
+        $this->assertSame('2026-11-19 11:00', $here->get('lastPushSlot'));
+    }
+
+    public function testThePushTimeIsTheLatestReachedWithinTheHour(): void
+    {
+        $at = fn (string $time) => Pushes::slot(new DateTimeImmutable("2026-11-19 {$time}", new DateTimeZone('America/Sao_Paulo')), Settings::DEFAULT_PUSH_TIMES);
+        $this->assertNull($at('07:59'));
+        $this->assertSame('08:00', $at('08:00'));
+        $this->assertSame('08:00', $at('09:00'));
+        $this->assertNull($at('09:01'));
+        $this->assertSame('11:00', $at('11:30'));
+        $this->assertSame('15:00', $at('15:59'));
+        $this->assertNull($at('16:01'));
+        $this->assertSame('8h, 11h e 15h', Copy::times('pt_BR', Settings::DEFAULT_PUSH_TIMES));
+        $this->assertSame('8h30', Copy::times('pt_BR', ['08:30']));
+        $this->assertSame('8:00, 11:00 and 15:00', Copy::times('en_US', Settings::DEFAULT_PUSH_TIMES));
     }
 
     public function testTheWelcomeNamesEveryWorkspace(): void

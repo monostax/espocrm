@@ -90,7 +90,7 @@ class TapsTest extends TestCase
         $em = $this->createMock(EntityManager::class);
         $em->method('getEntityById')->willReturn(null);
         return new Taps($em, $this->deck, $this->cards, $this->acting, $this->avisos, $workspaces,
-            $this->createMock(Subscriptions::class), $this->tokens(), $this->createMock(Log::class));
+            $this->createMock(Subscriptions::class), $this->tokens(), $this->createMock(Log::class), new Settings($this->createMock(Config::class)));
     }
 
     private function card(array $values = []): Entity
@@ -196,7 +196,7 @@ class TapsTest extends TestCase
         $taps->expects($this->never())->method('cardTap');
         $taps->expects($this->never())->method('next');
         $inbound = new Inbound($em, $avisos, $tokens, $this->createMock(PhoneCodes::class), $subscriptions, $taps,
-            $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class));
+            $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class), new Settings($this->createMock(Config::class)));
         $handled = $inbound->handle((object) [
             'event' => 'message_created', 'message_type' => 'incoming', 'id' => 501, 'inbox' => (object) ['id' => 74],
             'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5511988887777'],
@@ -222,7 +222,7 @@ class TapsTest extends TestCase
         $taps = $this->createMock(Taps::class);
         $taps->expects($this->once())->method('cardTap')->with($subscription, $card, ['kind' => 'c', 'id' => 'card1', 'action' => 's']);
         $inbound = new Inbound($em, $avisos, $tokens, $this->createMock(PhoneCodes::class), $subscriptions, $taps,
-            $this->liveWorkspaces(), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class));
+            $this->liveWorkspaces(), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class), new Settings($this->createMock(Config::class)));
         $inbound->handle((object) [
             'event' => 'message_created', 'message_type' => 'incoming', 'id' => 502, 'inbox' => (object) ['id' => 74],
             'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5591999990000'],
@@ -247,7 +247,7 @@ class TapsTest extends TestCase
         $taps = $this->createMock(Taps::class);
         $taps->expects($this->never())->method('cardTap');
         $inbound = new Inbound($em, $avisos, $tokens, $this->createMock(PhoneCodes::class), $this->createMock(Subscriptions::class), $taps,
-            $this->liveWorkspaces(false), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class));
+            $this->liveWorkspaces(false), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class), new Settings($this->createMock(Config::class)));
         $inbound->handle((object) [
             'event' => 'message_created', 'message_type' => 'incoming', 'id' => 503, 'inbox' => (object) ['id' => 74],
             'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5591999990000'],
@@ -268,7 +268,7 @@ class TapsTest extends TestCase
             $taps = $this->createMock(Taps::class);
             $taps->expects($this->never())->method('next');
             $inbound = new Inbound($em, $avisos, $this->tokens(), $this->createMock(PhoneCodes::class), $subscriptions, $taps,
-                $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class));
+                $this->createMock(Workspaces::class), $this->createMock(Signups::class), $this->createMock(Charges::class), $this->createMock(Assistant::class), $this->createMock(Log::class), new Settings($this->createMock(Config::class)));
             $inbound->handle((object) [
                 'event' => 'message_created', 'message_type' => 'incoming', 'id' => 600 + $index, 'inbox' => (object) ['id' => 74],
                 'conversation' => (object) ['id' => 9], 'sender' => (object) ['id' => 3, 'phone_number' => '+5591999990000'], 'content' => $text,
@@ -417,7 +417,7 @@ class TapsTest extends TestCase
         $list->method('activeForPhone')->willReturn($subscriptions);
         return new Inbound($em, $avisos, $tokens ?? $this->tokens(), $this->createMock(PhoneCodes::class), $list, $taps,
             $workspaces ?? $this->liveWorkspaces(), $this->createMock(Signups::class), $this->createMock(Charges::class), $assistant,
-            $this->createMock(Log::class));
+            $this->createMock(Log::class), new Settings($this->createMock(Config::class)));
     }
 
     private function incoming(int $id, string $text, array $extra = []): object

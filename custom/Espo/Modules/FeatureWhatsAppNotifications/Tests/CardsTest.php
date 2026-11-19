@@ -29,7 +29,7 @@ class CardsTest extends TestCase
     private function cards(Avisos $avisos, array $config = [], ?string $png = null): Cards
     {
         $workspaces = $this->createMock(Workspaces::class);
-        $workspaces->method('of')->willReturn(['language' => 'pt_BR']);
+        $workspaces->method('of')->willReturn(['language' => 'pt_BR', 'name' => 'Instituto Ferraz Veloso']);
         $workspaces->method('cardLink')->willReturn(self::LINK);
         $configMock = $this->createMock(Config::class);
         $configMock->method('get')->willReturnCallback(fn (string $name) => $name === 'whatsAppNotifications' ? $config : null);
@@ -95,6 +95,45 @@ class CardsTest extends TestCase
         $avisos->expects($this->never())->method('image');
         $avisos->expects($this->once())->method('text')->with($subscription, 'card', self::CAPTION, $card, null)->willReturn(null);
         $this->cards($avisos, ['cardImage' => true], null)->show($subscription, $card, 'card');
+    }
+
+    private const IMAGE = 'https://app.monostax.ai/api/v1/WhatsAppNotifications/cardImage/card1.png';
+    private const BUTTON = ['cardImage' => true, 'cardButton' => true, 'cardTemplate' => 'monostax_emdia_card_button'];
+
+    /** The user's format (2026-11-19): the picture, nothing written under it, the workspace and "Abrir no Em dia". */
+    public function testInsideTheWindowTheCardIsThePictureWithTheLinkButton(): void
+    {
+        $subscription = $this->entity(['id' => 'sub1', 'lastInboundAt' => gmdate('Y-m-d H:i:s')]);
+        $card = $this->card();
+        $avisos = $this->createMock(Avisos::class);
+        $avisos->expects($this->never())->method('template');
+        $avisos->expects($this->never())->method('image');
+        $avisos->expects($this->once())->method('cta')->with($subscription, 'card', self::CAPTION, "\u{3164}", 'Abrir no Em dia',
+            self::LINK . '&utm_source=whatsapp', self::IMAGE, 'Instituto Ferraz Veloso', $card, 'k1')->willReturn(null);
+        $this->cards($avisos, self::BUTTON)->show($subscription, $card, 'card', 'k1');
+    }
+
+    /** Outside the window the UTILITY template: who and how long in the body, the link after /app/accounts/ in its button. */
+    public function testOutsideTheWindowTheTemplateButtonCarriesTheLink(): void
+    {
+        $subscription = $this->entity(['id' => 'sub1', 'lastInboundAt' => null]);
+        $card = $this->card();
+        $avisos = $this->createMock(Avisos::class);
+        $avisos->expects($this->never())->method('cta');
+        $avisos->expects($this->once())->method('template')->with($subscription, 'card', 'monostax_emdia_card_button',
+            "🔥 *Sara Ferreira* está esperando resposta há mais de *algum tempo*. 👇\n\n" . self::LINK . '&utm_source=whatsapp',
+            ['Sara Ferreira', 'algum tempo'], [], $card, null, self::IMAGE,
+            '6/catch-up?card=service:conv1&utm_source=whatsapp')->willReturn(null);
+        $this->cards($avisos, self::BUTTON)->show($subscription, $card, 'card');
+    }
+
+    public function testTheLinkButtonNeedsTheCardImage(): void
+    {
+        $subscription = $this->entity(['id' => 'sub1', 'lastInboundAt' => gmdate('Y-m-d H:i:s')]);
+        $avisos = $this->createMock(Avisos::class);
+        $avisos->expects($this->never())->method('cta');
+        $avisos->expects($this->once())->method('text')->willReturn(null);
+        $this->cards($avisos, ['cardButton' => true])->show($subscription, $this->card(), 'card');
     }
 
     public function testATapFromAnOlderMessageAnswersWithTheCardLink(): void

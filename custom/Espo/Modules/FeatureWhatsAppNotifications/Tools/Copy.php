@@ -50,9 +50,9 @@ class Copy
             'sendFailed' => '⚠️ Não consegui enviar a mensagem. Tente pelo Monostax: {link}',
             'done' => '🎉 Tudo em dia! Ninguém esperando resposta agora.',
             'pause' => '👍 Até mais! Escreva *em dia* aqui quando quiser ver os próximos.',
-            'pause.morning' => '👍 Até mais! Seu card da manhã chega às {time}. Escreva *em dia* quando quiser ver os próximos.',
+            'pause.morning' => '👍 Até mais! Seus cards chegam às {time}. Escreva *em dia* quando quiser ver os próximos.',
             'welcome' => "✅ Pronto, {name}! Seu Em dia de {workspace} agora chega aqui.\nEscreva *em dia* quando quiser ver seus cards, ou me pergunte qualquer coisa sobre seus clientes e negócios.",
-            'welcome.morning' => "✅ Pronto, {name}! Seu Em dia de {workspace} agora chega aqui.\n☀️ Todo dia às {time} eu mando o primeiro card. Escreva *em dia* quando quiser ver mais, ou me pergunte qualquer coisa sobre seus clientes e negócios.",
+            'welcome.morning' => "✅ Pronto, {name}! Seu Em dia de {workspace} agora chega aqui.\n☀️ Todo dia às {time} eu mando um card. Escreva *em dia* quando quiser ver mais, ou me pergunte qualquer coisa sobre seus clientes e negócios.",
             'stopped' => '🔕 Avisos desligados. Para voltar, ative de novo no Monostax em Configurações › Notificações no WhatsApp.',
             'code.unknown' => 'Não reconheci esse código. Gere um novo no Monostax e envie de novo.',
             'signup.ok' => '✅ WhatsApp confirmado! Pode voltar para a página do Monostax.',
@@ -75,6 +75,7 @@ class Copy
             'wait.some' => 'algum tempo',
             'image.idle' => 'Parado há {wait}',
             'card.templateOpen' => "Abra o card no Em dia: {link}\n\nA sugestão de resposta já está pronta lá.",
+            'btn.openCard' => 'Abrir no Em dia',
             'suggestion.open' => '👉 Para enviar, abra o card: {link}',
             'later.open' => '⏰ Para adiar, abra o card: {link}',
             'edit.open' => '✏️ Para editar e enviar, abra o card: {link}',
@@ -125,9 +126,9 @@ class Copy
             'sendFailed' => "⚠️ I couldn't send the message. Try it in Monostax: {link}",
             'done' => "🎉 You're all caught up! Nobody is waiting for a reply.",
             'pause' => '👍 See you! Write *em dia* here whenever you want the next ones.',
-            'pause.morning' => '👍 See you! Your morning card comes at {time}. Write *em dia* whenever you want the next ones.',
+            'pause.morning' => '👍 See you! Your cards come at {time}. Write *em dia* whenever you want the next ones.',
             'welcome' => "✅ Done, {name}! Your Em dia for {workspace} now comes here.\nWrite *em dia* whenever you want your cards, or ask me anything about your customers and deals.",
-            'welcome.morning' => "✅ Done, {name}! Your Em dia for {workspace} now comes here.\n☀️ Every day at {time} I send the first card. Write *em dia* whenever you want more, or ask me anything about your customers and deals.",
+            'welcome.morning' => "✅ Done, {name}! Your Em dia for {workspace} now comes here.\n☀️ Every day at {time} I send you a card. Write *em dia* whenever you want more, or ask me anything about your customers and deals.",
             'stopped' => '🔕 Notifications off. To turn them back on, go to Settings › WhatsApp notifications in Monostax.',
             'code.unknown' => "I don't recognise that code. Create a new one in Monostax and send it again.",
             'signup.ok' => '✅ WhatsApp confirmed! You can go back to the Monostax page.',
@@ -150,6 +151,7 @@ class Copy
             'wait.some' => 'a while',
             'image.idle' => 'Idle for {wait}',
             'card.templateOpen' => "Open the card in Em dia: {link}\n\nThe suggested reply is ready there.",
+            'btn.openCard' => 'Open in Em dia',
             'suggestion.open' => '👉 To send it, open the card: {link}',
             'later.open' => '⏰ To put it off, open the card: {link}',
             'edit.open' => '✏️ To edit and send it, open the card: {link}',
@@ -176,6 +178,16 @@ class Copy
         if (count($names) < 2) return (string) ($names[0] ?? '');
         $last = array_pop($names);
         return implode(', ', $names) . $and . $last;
+    }
+
+    /** The push times as people say them: "8h, 11h e 15h", "8:00, 11:00 and 15:00". */
+    public static function times(string $language, array $times): string
+    {
+        $en = self::language($language) === 'en_US';
+        return self::list($language, array_map(function (string $time) use ($en): string {
+            [$hour, $minute] = array_map('intval', explode(':', $time) + [1 => '0']);
+            return $en ? sprintf('%d:%02d', $hour, $minute) : ($minute ? sprintf('%dh%02d', $hour, $minute) : "{$hour}h");
+        }, $times));
     }
 
     public static function language(?string $language): string

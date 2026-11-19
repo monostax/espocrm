@@ -11,7 +11,7 @@ use Espo\Modules\FeatureWhatsAppNotifications\Tools\Settings;
 use Espo\ORM\EntityManager;
 use Throwable;
 
-/** Every 5 minutes: the morning push for each active subscription whose time has come today (Pushes::morning). */
+/** Every 5 minutes: the day's card for each active subscription whose push time (08:00, 11:00, 15:00) has come (Pushes::morning). */
 class SendMorning implements JobDataLess
 {
     public function __construct(private EntityManager $em, private Settings $settings, private Pushes $pushes, private Log $log) {}

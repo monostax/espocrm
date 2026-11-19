@@ -30,6 +30,7 @@ class Taps
         private Subscriptions $subscriptions,
         private Tokens $tokens,
         private Log $log,
+        private Settings $settings,
     ) {}
 
     /**
@@ -38,7 +39,8 @@ class Taps
      *
      * @param ?callable(array<string, mixed>): bool $accept an extra filter on the stored card (hot leads)
      */
-    public function next(Entity $subscription, string $kind = 'card', ?string $key = null, bool $sayDone = true, ?callable $accept = null): bool
+    public function next(Entity $subscription, string $kind = 'card', ?string $key = null, bool $sayDone = true, ?callable $accept = null,
+        array $exclude = []): bool
     {
         $workspace = $this->workspaces->of($subscription);
         $language = $workspace['language'];
@@ -48,7 +50,7 @@ class Taps
             return false;
         }
         try {
-            $card = $this->deck->next($subscription, $open ? Deck::DRAFT_VERDICTS : Deck::TEMPLATE_VERDICTS, $accept)['card'];
+            $card = $this->deck->next($subscription, $open ? Deck::DRAFT_VERDICTS : Deck::TEMPLATE_VERDICTS, $accept, $exclude)['card'];
         } catch (Throwable $e) {
             $this->log->warning("WhatsApp notifications: deck for subscription {$subscription->getId()} failed: " . $e->getMessage());
             $card = null;
@@ -68,7 +70,7 @@ class Taps
         match ($token['action']) {
             'n', 'w' => $this->next($subscription),
             'p' => $this->avisos->text($subscription, 'reply', $subscription->get('morningEnabled')
-                ? Copy::t($language, 'pause.morning', ['time' => (string) $subscription->get('morningTime')])
+                ? Copy::t($language, 'pause.morning', ['time' => Copy::times($language, $this->settings->pushTimes())])
                 : Copy::t($language, 'pause')),
             'q' => $this->subscriptions->stopPhone((string) $subscription->get('phone'), 'keyword'),
             default => null,

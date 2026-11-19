@@ -46,6 +46,7 @@ class Inbound
         private Charges $charges,
         private Assistant $assistant,
         private Log $log,
+        private Settings $settings,
     ) {}
 
     /** Whether the event was the Avisos inbox's (then nothing else should handle it). */
@@ -234,7 +235,7 @@ class Inbound
         $names = array_map(fn (string $name) => '*' . str_replace(['*', '_', '~', '`'], '', $name) . '*', array_values(array_unique($names)));
         $vars = ['name' => (string) ($user?->get('firstName') ?: $user?->get('name') ?: ''),
             'workspace' => Copy::list($workspace['language'], array_slice($names, 0, 5), max(0, count($names) - 5)),
-            'time' => (string) $subscription->get('morningTime')];
+            'time' => Copy::times($workspace['language'], $this->settings->pushTimes())];
         $text = Copy::t($workspace['language'], $subscription->get('morningEnabled') ? 'welcome.morning' : 'welcome', $vars);
         // No buttons (2026-11-13): the welcome says to write "em dia" for the cards.
         $this->avisos->text($subscription, 'welcome', $text);

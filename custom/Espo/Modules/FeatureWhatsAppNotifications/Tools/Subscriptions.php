@@ -200,6 +200,22 @@ class Subscriptions
     }
 
     /**
+     * The workspace that pushes the person's cards and hot leads (the user, 2026-11-19): of their active subscriptions
+     * on this number, the oldest whose workspace they still belong to.
+     */
+    public function primary(Entity $subscription): ?Entity
+    {
+        $rows = iterator_to_array($this->em->getRDBRepository('WhatsAppNotificationSubscription')->where([
+            'userId' => $subscription->get('userId'), 'phone' => $subscription->get('phone'), 'status' => 'active',
+        ])->find());
+        usort($rows, fn (Entity $a, Entity $b) => [(string) $a->get('createdAt'), $a->getId()] <=> [(string) $b->get('createdAt'), $b->getId()]);
+        foreach ($rows as $row) {
+            if ($this->workspaces->live($row)) return $row;
+        }
+        return null;
+    }
+
+    /**
      * The number's live subscriptions, latest used first, with the workspaces its people joined since they verified it
      * (`spread`). One left behind by a removed workspace, or by a person no longer in it, is passed over, so it can't
      * block the number's other workspaces (offboarding removes them; this covers any other way a workspace goes).
@@ -242,6 +258,18 @@ class Subscriptions
         }
     }
 
+    private function pushesFrom(?Entity $subscription): ?string
+    {
+        if (!$subscription || $subscription->get('status') !== 'active') return null;
+        $primary = $this->primary($subscription);
+        if (!$primary || $primary->getId() === $subscription->getId()) return null;
+        try {
+            return $this->workspaces->of($primary)['name'] ?: null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     private function view(Entity $account, bool $available): array
     {
         $subscription = $this->find($this->user->getId(), $account->getId());
@@ -253,6 +281,11 @@ class Subscriptions
             'available' => $available,
             'number' => $this->settings->displayNumber(),
             'timeZone' => (string) ($tenant?->get('timeZone') ?: 'America/Sao_Paulo'),
+            // The day's cards: when, and the workspace they come from when it isn't this one.
+            'pushes' => [
+                'times' => Copy::times(Copy::language((string) $tenant?->get('language')), $this->settings->pushTimes()),
+                'from' => $this->pushesFrom($subscription),
+            ],
             'subscription' => $subscription ? [
                 'status' => $subscription->get('status'), 'phone' => $subscription->get('phone'),
                 'verifiedAt' => $at($subscription->get('verifiedAt')),

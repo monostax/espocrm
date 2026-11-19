@@ -15,7 +15,12 @@ use Espo\Core\Utils\Config;
  *   cardTemplate         Meta template for a card outside the 24h window (monostax_catchup_card)
  *   cardImage            the card template has an IMAGE header: the rendered card goes there and the body takes
  *                        {{1}} who, {{2}} how long, {{3}} the card link (monostax_catchup_card_link); default false
- *   digestTemplate       Meta template for the morning digest; null sends the first card instead
+ *   cardButton           with cardImage, the card opens through Meta's link button (the user, 2026-11-19): inside the
+ *                        window an interactive cta_url (card image, invisible body, workspace footer); outside it the
+ *                        cardTemplate takes {{1}} who, {{2}} how long and a URL button
+ *                        https://chat.app.monostax.ai/app/accounts/{{1}} (monostax_emdia_card_button); default false
+ *   pushTimes            when the day's cards go out, workspace time zone (the user, 2026-11-19: 08:00, 11:00, 15:00)
+ *   digestTemplate       Meta template for the morning digest at the first push time; null sends a card instead
  *   templateLanguage     pt_BR
  *   hotLeadMinutes       minimum wait before a hot-lead alert (60)
  *   hotLeadDailyCap      hot-lead alerts per person per day (2)
@@ -26,6 +31,7 @@ use Espo\Core\Utils\Config;
 class Settings
 {
     public const DEFAULT_INBOX_ID = '6a67d0d1a74fd5632';
+    public const DEFAULT_PUSH_TIMES = ['08:00', '11:00', '15:00'];
     public const DEFAULT_NUMBER = '+559140403376';
     /** Meta's Brazil rates from 2026-10-01, per delivered message (the user, 2026-11-12). */
     public const DEFAULT_RATES = ['marketing' => '0.3217', 'utility' => '0.035', 'authentication' => '0.035', 'service' => '0.035'];
@@ -70,6 +76,21 @@ class Settings
     public function cardImage(): bool
     {
         return ($this->all()['cardImage'] ?? false) === true;
+    }
+
+    public function cardButton(): bool
+    {
+        return $this->cardImage() && ($this->all()['cardButton'] ?? false) === true;
+    }
+
+    /** @return list<string> "HH:MM", in order */
+    public function pushTimes(): array
+    {
+        $times = $this->all()['pushTimes'] ?? null;
+        $times = is_array($times) ? array_values(array_filter(array_map('strval', $times), fn (string $time) => (bool) preg_match('/^\d{2}:\d{2}$/', $time))) : [];
+        if (!$times) $times = self::DEFAULT_PUSH_TIMES;
+        sort($times);
+        return $times;
     }
 
     public function digestTemplate(): ?string

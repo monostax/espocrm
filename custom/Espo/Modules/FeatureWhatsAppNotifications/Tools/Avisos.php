@@ -25,6 +25,7 @@ class Avisos
     public const WINDOW_SECONDS = 86400 - 900;
     public const BODY_LIMIT = 1024;
     private const BUTTON_TITLE = 20;
+    private const FOOTER_LIMIT = 60;
     private const ROW_TITLE = 24;
 
     /** @var ?array{platformUrl: string, apiKey: string, accountNumber: int, inboxNumber: int, accountId: string} */
@@ -95,14 +96,14 @@ class Avisos
 
     /**
      * An approved template. $params are the body's {{1}}, {{2}}… in order; $payloads are the quick-reply buttons'
-     * payloads in the template's button order; $imageUrl fills an IMAGE header (Meta fetches it when it sends). $content
-     * is what Chatwoot shows in the thread.
+     * payloads in the template's button order; $imageUrl fills an IMAGE header (Meta fetches it when it sends); $urlSuffix
+     * fills the {{1}} at the end of a URL button that comes after them. $content is what Chatwoot shows in the thread.
      *
      * @param list<string> $params
      * @param list<string> $payloads
      */
     public function template(Entity $subscription, string $kind, string $name, string $content, array $params, array $payloads,
-        ?Entity $card = null, ?string $key = null, ?string $imageUrl = null): ?Entity
+        ?Entity $card = null, ?string $key = null, ?string $imageUrl = null, ?string $urlSuffix = null): ?Entity
     {
         $body = [];
         // A link goes as it is: stripping formatting characters would break it (utm_source).
@@ -111,7 +112,10 @@ class Avisos
         }
         $processed = [
             'body' => $body ?: new \stdClass(),
-            'buttons' => array_map(fn (string $payload) => ['type' => 'quick_reply', 'parameter' => $payload], $payloads),
+            'buttons' => [
+                ...array_map(fn (string $payload) => ['type' => 'quick_reply', 'parameter' => $payload], $payloads),
+                ...($urlSuffix !== null ? [['type' => 'url', 'parameter' => $urlSuffix]] : []),
+            ],
         ];
         if ($imageUrl !== null) $processed['header'] = ['media_url' => $imageUrl, 'media_type' => 'image'];
         return $this->send($subscription, $kind, [
@@ -121,6 +125,20 @@ class Avisos
                 'processed_params' => $processed,
             ],
         ], $card, $key, $name);
+    }
+
+    /**
+     * Meta's link button (interactive cta_url), inside the 24h window only: an image header (Meta fetches $imageUrl when it
+     * sends), the body WhatsApp shows, one button that opens $url, a footer. $content is what Chatwoot shows in the thread.
+     */
+    public function cta(Entity $subscription, string $kind, string $content, string $body, string $button, string $url,
+        ?string $imageUrl = null, ?string $footer = null, ?Entity $card = null, ?string $key = null): ?Entity
+    {
+        $cta = ['body' => self::cut($body, self::BODY_LIMIT), 'display_text' => self::cut($button, self::BUTTON_TITLE), 'url' => $url];
+        if ($imageUrl !== null) $cta['image_url'] = $imageUrl;
+        if ($footer !== null && $footer !== '') $cta['footer'] = self::cut($footer, self::FOOTER_LIMIT);
+        return $this->send($subscription, $kind, ['content' => self::cut($content, 4096), 'content_attributes' => ['cta_url' => $cta]],
+            $card, $key);
     }
 
     /**

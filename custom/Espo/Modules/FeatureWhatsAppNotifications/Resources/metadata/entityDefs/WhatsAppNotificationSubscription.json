@@ -12,6 +12,7 @@
         "morningEnabled": { "type": "bool", "default": true },
         "morningTime": { "type": "varchar", "maxLength": 5, "default": "08:00" },
         "lastMorningOn": { "type": "date" },
+        "lastPushSlot": { "type": "varchar", "maxLength": 16 },
         "hotLeadsEnabled": { "type": "bool", "default": true },
         "alertStart": { "type": "varchar", "maxLength": 5, "default": "08:00" },
         "alertEnd": { "type": "varchar", "maxLength": 5, "default": "20:00" },
