@@ -83,6 +83,26 @@ class FirstReadTest extends TestCase
             $firstRead->run($tenant->getId(), wait: false));
     }
 
+    public function testCopiesTheNewWorkspacesConversationsAtOnceInsteadOfWaitingForTheScheduledSync(): void
+    {
+        $tenant = $this->tenant('Leitura Imediata');
+        $account = $this->em->getRDBRepository('ChatwootAccount')->where(['tenantId' => $tenant->getId()])->findOne();
+        $conversation = fn (int $n) => [
+            'id' => 9100 + $n, 'inbox_id' => 501, 'status' => 'open', 'last_activity_at' => time() - $n * 60, 'created_at' => time(),
+            'meta' => ['sender' => ['id' => 7100 + $n, 'name' => "Cliente {$n}", 'phone_number' => '+55119' . str_pad((string) $n, 8, '0', STR_PAD_LEFT)]],
+        ];
+        $context = stream_context_create(['http' => ['method' => 'POST', 'header' => 'Content-Type: application/json',
+            'content' => json_encode(['accountId' => (int) $account->get('chatwootAccountId'), 'conversations' => array_map($conversation, [1, 2, 3])])]]);
+        self::assertNotFalse(file_get_contents($this->fake . '/__seed', false, $context));
+        $tenant->set('onboardingStep', WorkspaceTrial::STEP_DONE);
+        $this->em->saveEntity($tenant, ['silent' => true, 'skipHooks' => true]);
+
+        $this->app->getInjectableFactory()->create(FirstRead::class)->run($tenant->getId());
+
+        self::assertSame(3, $this->em->getRDBRepository('ChatwootConversation')->where(['chatwootAccountId' => $account->getId()])->count());
+        self::assertNotContains(1, $this->jobs($tenant), 'It reads now instead of looking again in 15 seconds.');
+    }
+
     public function testNothingIsReadForAWorkspaceThatIsNotSelfService(): void
     {
         $tenant = $this->tenant('Sem Plano');

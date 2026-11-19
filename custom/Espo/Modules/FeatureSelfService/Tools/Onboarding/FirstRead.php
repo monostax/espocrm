@@ -12,7 +12,9 @@
 namespace Espo\Modules\FeatureSelfService\Tools\Onboarding;
 
 use DateInterval;
+use Espo\Core\InjectableFactory;
 use Espo\Core\Job\JobSchedulerFactory;
+use Espo\Modules\Chatwoot\Jobs\SyncConversationsFromChatwoot;
 use Espo\Modules\FeatureCatchUp\Services\Prefetch;
 use Espo\Modules\FeatureCredits\Enrichment\ActorScope;
 use Espo\Modules\FeatureSelfService\Jobs\RunFirstRead;
@@ -55,6 +57,7 @@ class FirstRead
         private EntityManager $entityManager,
         private JobSchedulerFactory $jobs,
         private ActorScope $actors,
+        private InjectableFactory $injectableFactory,
     ) {}
 
     /**
@@ -89,6 +92,12 @@ class FirstRead
 
         if (!$account || !$ownerId) {
             return null;
+        }
+
+        // The scheduled conversation sync walks every account in turn and can be minutes away (8 on 2026-11-19, so
+        // a new workspace's Em dia sat empty): this account's conversations are copied now instead.
+        if (!$poll && $wait && !$this->conversationsSynced($account)) {
+            $this->injectableFactory->create(SyncConversationsFromChatwoot::class)->syncAccount($account);
         }
 
         if (!$poll && $wait && !$this->conversationsSynced($account) && ($attempt + 1) * self::RECHECK_SECONDS < self::MAX_WAIT_SECONDS) {

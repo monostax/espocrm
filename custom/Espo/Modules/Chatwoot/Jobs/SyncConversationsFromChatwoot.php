@@ -64,6 +64,15 @@ class SyncConversationsFromChatwoot implements JobDataLess
         }
     }
 
+    /**
+     * One account now, outside the scheduled run: a new self-service workspace whose onboarding just opened can't
+     * wait for the run, which walks every account in turn and can take minutes.
+     */
+    public function syncAccount(Entity $account): void
+    {
+        $this->syncAccountConversations($account);
+    }
+
     /** Ensure a historical episode's parent uses the same contact/inbox reconciliation as normal sync. */
     public function syncEpisodeParent(Entity $account, array $payload): void
     {
