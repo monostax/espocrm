@@ -23,12 +23,15 @@ final class PreviewCarry
 {
     public const VERSION = 1;
     public const MAX_OPEN_STAGES = 6;
+    public const MAX_LOADING_LINES = 20;
 
     /**
      * @param list<array{title: string, body: string}> $knowledge
      * @param list<array{name: string, description: string}> $openStages In funnel order.
      * @param array{name: string, description: string} $won
      * @param array{name: string, description: string} $lost
+     * @param list<string> $loadingLines The onboarding's import lines, written for this business (additive in
+     *     version 1: older carries have none).
      */
     private function __construct(
         public readonly string $companyName,
@@ -38,6 +41,7 @@ final class PreviewCarry
         public readonly array $openStages,
         public readonly array $won,
         public readonly array $lost,
+        public readonly array $loadingLines = [],
     ) {}
 
     /**
@@ -109,14 +113,28 @@ final class PreviewCarry
             $open,
             $won ?? ['name' => 'Ganho', 'description' => ''],
             $lost ?? ['name' => 'Perdido', 'description' => ''],
+            self::lines($data['loadingLines'] ?? null),
         );
     }
 
     /**
-     * The same shape the site serves, so a stored carry reads back through fromArray().
-     *
-     * @return array<string, mixed>
+     * @return list<string> Up to MAX_LOADING_LINES short single lines; anything else is dropped.
      */
+    private static function lines(mixed $value): array
+    {
+        $lines = [];
+
+        foreach (is_array($value) ? $value : [] as $line) {
+            $line = self::text($line, 80);
+
+            if ($line !== '' && !in_array($line, $lines, true)) {
+                $lines[] = $line;
+            }
+        }
+
+        return array_slice($lines, 0, self::MAX_LOADING_LINES);
+    }
+
     /**
      * The carry as SelfServiceProvisioning.previewCarry keeps it (a JSON string, or decoded); null when there is none
      * or it was stored as unavailable.
@@ -132,6 +150,11 @@ final class PreviewCarry
         return is_array($value) ? self::fromArray($value) : null;
     }
 
+    /**
+     * The same shape the site serves, so a stored carry reads back through fromArray().
+     *
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         return [
@@ -145,6 +168,7 @@ final class PreviewCarry
                     [...$this->lost, 'kind' => 'lost'],
                 ],
             ],
+            ...($this->loadingLines !== [] ? ['loadingLines' => $this->loadingLines] : []),
         ];
     }
 

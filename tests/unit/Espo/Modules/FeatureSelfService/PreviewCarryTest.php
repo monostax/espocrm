@@ -127,4 +127,24 @@ class PreviewCarryTest extends TestCase
         self::assertFalse(PreviewClient::isPreviewId('GWD3E64SAK3PVQYXZRU9'));
         self::assertFalse(PreviewClient::isPreviewId(null));
     }
+
+    public function testKeepsTheImportLinesShortSingleAndDistinct(): void
+    {
+        $lines = array_map(fn (int $i) => "Separando pedidos de cozinha {$i}…", range(1, 25));
+        $lines[1] = $lines[0];
+        $lines[2] = "Linha com\nquebra";
+        $lines[3] = ['not', 'a', 'string'];
+        $lines[4] = str_repeat('x', 200);
+
+        $carry = PreviewCarry::fromArray([...$this->carry(), 'loadingLines' => $lines]);
+
+        self::assertCount(PreviewCarry::MAX_LOADING_LINES, $carry->loadingLines);
+        self::assertSame('Separando pedidos de cozinha 1…', $carry->loadingLines[0]);
+        self::assertSame('Linha com quebra', $carry->loadingLines[1]);
+        self::assertSame(80, mb_strlen($carry->loadingLines[2]));
+        self::assertSame($carry->loadingLines, PreviewCarry::fromArray($carry->toArray())->loadingLines);
+        // A carry from before the lines existed reads as before.
+        self::assertSame([], PreviewCarry::fromArray($this->carry())->loadingLines);
+        self::assertArrayNotHasKey('loadingLines', PreviewCarry::fromArray($this->carry())->toArray());
+    }
 }

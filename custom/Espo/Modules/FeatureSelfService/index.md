@@ -41,7 +41,10 @@ and checked by `Tools/Signup/SignupOrigin` (unknown values are dropped):
 They are kept on `SelfServiceSignup` (`job`, `connect`, `attribution`), go
 into `ProvisioningRequest` (only when set, so older requests keep their hash)
 and land on the tenant at creation: `Tenant.signupJob`, `signupConnect` and
-`signupAttribution`. `GET SelfService/workspace` returns `job` and `connect`;
+`signupAttribution`. `GET SelfService/workspace` returns `job` and `connect`,
+and, while onboarding, `loadingLines`: up to 20 import lines the site preview
+wrote for the business (`PreviewCarry.loadingLines`, read through
+`Tools/Workspace/WorkspacePreview`; absent without a preview);
 the onboarding opens that connect screen and, for `agente`, offers
 "Ligar a IA neste número" after the import (see Workspace agent below).
 

@@ -34,6 +34,7 @@ use Espo\Modules\FeatureSelfService\Tools\Plans\SeatAccess;
 use Espo\Modules\FeatureSelfService\Tools\Plans\SeatRoster;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAccess;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAgent;
+use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspacePreview;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceWallet;
 use InvalidArgumentException;
@@ -180,11 +181,20 @@ class SelfServiceWorkspace
 
     /**
      * The workspace state; for a signup from the site's agent funnel, also its AI agent (name, and whether it is on
-     * a number yet), for the "Ligar a IA" screen.
+     * a number yet), for the "Ligar a IA" screen; while onboarding, the import lines the site preview wrote for the
+     * business, if it came from one.
      */
     private function stateOf(Entity $tenant): object
     {
         $state = $this->trial->state($tenant);
+
+        if (in_array($state['onboardingStep'] ?? null, [WorkspaceTrial::STEP_CONNECT_WHATSAPP, WorkspaceTrial::STEP_IMPORT_HISTORY], true)) {
+            $lines = $this->injectableFactory->create(WorkspacePreview::class)->carry($tenant)?->loadingLines ?? [];
+
+            if ($lines !== []) {
+                $state['loadingLines'] = $lines;
+            }
+        }
 
         if (($state['job'] ?? null) === 'agente') {
             $state['agent'] = $this->injectableFactory->create(WorkspaceAgent::class)->state($tenant);

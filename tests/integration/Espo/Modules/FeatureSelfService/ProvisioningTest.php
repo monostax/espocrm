@@ -16,6 +16,7 @@ use Espo\Modules\FeatureSelfService\Tools\Provisioning\ProvisioningRequest;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\WorkspaceStarter;
 use Espo\Modules\FeatureSelfService\Tools\Signup\SignupOrigin;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAgent;
+use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspacePreview;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
 use Espo\Modules\Global\Classes\Utils\FeatureVerticalChecker;
 use Espo\Modules\Global\Tools\Tenant\TenantAdminTeamProvisioner;
@@ -232,6 +233,7 @@ class ProvisioningTest extends TestCase
                 ['name' => 'Contrato assinado', 'description' => 'Fechou.', 'kind' => 'won'],
                 ['name' => 'Não fechado', 'description' => 'Desistiu.', 'kind' => 'lost'],
             ]],
+            'loadingLines' => ['Separando os pedidos de cozinha…', 'Procurando quem pediu projeto 3D…'],
         ]]]);
 
         $owner = $this->owner();
@@ -249,6 +251,10 @@ class ProvisioningTest extends TestCase
             $stages[$stage->get('name')] = (int) $stage->get('probability');
         }
         self::assertSame(['Contato inicial' => 10, 'Projeto 3D' => 50, 'Proposta enviada' => 90, 'Contrato assinado' => 100, 'Não fechado' => 0], $stages);
+        self::assertSame(
+            ['Separando os pedidos de cozinha…', 'Procurando quem pediu projeto 3D…'],
+            $this->app->getInjectableFactory()->create(WorkspacePreview::class)->carry($tenant)?->loadingLines,
+        );
 
         $account = $this->em->getEntityById('ChatwootAccount', $done->get('chatwootAccountId'));
         $agent = $this->em->getRDBRepository('ChatwootAccountUserMembership')
