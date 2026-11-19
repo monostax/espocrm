@@ -78,6 +78,10 @@
             "type": "varchar",
             "maxLength": 36
         },
+        "previewId": {
+            "type": "varchar",
+            "maxLength": 20
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

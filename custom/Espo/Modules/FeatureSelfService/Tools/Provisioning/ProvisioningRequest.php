@@ -28,10 +28,13 @@ final class ProvisioningRequest
     public readonly string $language;
     public readonly string $timeZone;
     public readonly bool $ownerEmailVerified;
+    public readonly ?string $previewId;
 
     /**
      * @param bool $ownerEmailVerified The owner proved their email (signup code
      *     or a provider-verified sign-in), so their Chatwoot user is confirmed.
+     * @param ?string $previewId The monostax.ai site preview the signup came
+     *     from; the workspace starts with its funnel and agent setup.
      */
     public function __construct(
         string $dedupeKey,
@@ -40,6 +43,7 @@ final class ProvisioningRequest
         string $language = 'pt_BR',
         string $timeZone = 'America/Sao_Paulo',
         bool $ownerEmailVerified = false,
+        ?string $previewId = null,
     ) {
         if (!preg_match('/^[a-z0-9][a-z0-9._:\/-]{0,127}$/', $dedupeKey)) {
             throw new InvalidArgumentException('The dedupe key must be 1-128 lowercase letters, digits or ._:/-.');
@@ -64,16 +68,23 @@ final class ProvisioningRequest
             throw new InvalidArgumentException('Unknown time zone.');
         }
 
+        if ($previewId !== null && !preg_match('/^[a-z0-9]{20}$/', $previewId)) {
+            throw new InvalidArgumentException('The preview id must be 20 lowercase letters or digits.');
+        }
+
         $this->dedupeKey = $dedupeKey;
         $this->ownerUserId = $ownerUserId;
         $this->workspaceName = $workspaceName;
         $this->language = $language;
         $this->timeZone = $timeZone;
         $this->ownerEmailVerified = $ownerEmailVerified;
+        $this->previewId = $previewId;
     }
 
     /**
-     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified: bool}
+     * `previewId` appears only when set, so requests recorded before it existed keep the same hash.
+     *
+     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified: bool, previewId?: string}
      */
     public function toArray(): array
     {
@@ -83,6 +94,7 @@ final class ProvisioningRequest
             'language' => $this->language,
             'timeZone' => $this->timeZone,
             'ownerEmailVerified' => $this->ownerEmailVerified,
+            ...($this->previewId !== null ? ['previewId' => $this->previewId] : []),
         ];
     }
 

@@ -12,6 +12,9 @@
         "input": {
             "type": "jsonObject"
         },
+        "previewCarry": {
+            "type": "jsonObject"
+        },
         "status": {
             "type": "enum",
             "options": [
@@ -33,6 +36,10 @@
                 "owner",
                 "chatwootAccount",
                 "ownerMembership",
+                "preview",
+                "salesFunnel",
+                "aiAgent",
+                "emDia",
                 "done"
             ],
             "default": "tenant"

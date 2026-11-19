@@ -37,7 +37,7 @@ class WorkspaceStarterTest extends TestCase
         foreach (['tenant', 'owner', 'chatwootAccount', 'ownerMembership'] as $step) {
             self::assertFalse(Provisioner::ownerCanEnter($this->entity('running', $step)), $step);
         }
-        foreach (['salesFunnel', 'aiAgent', 'emDia', 'done'] as $step) {
+        foreach (['preview', 'salesFunnel', 'aiAgent', 'emDia', 'done'] as $step) {
             self::assertTrue(Provisioner::ownerCanEnter($this->entity('failed', $step)), $step);
         }
         self::assertTrue(Provisioner::ownerCanEnter($this->entity('completed', 'done')));

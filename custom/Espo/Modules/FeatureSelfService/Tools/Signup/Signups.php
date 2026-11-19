@@ -19,6 +19,7 @@ use Espo\Modules\Chatwoot\Services\ManagedIdentityPolicy;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Provisioner;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\ProvisioningRequest;
+use Espo\Modules\FeatureSelfService\Tools\Provisioning\Preview\PreviewClient;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\PhoneCodes;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Settings as WhatsAppSettings;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Subscriptions;
@@ -96,6 +97,7 @@ class Signups
             'phone' => $request->phone,
             'company' => $request->company,
             'language' => $request->language,
+            'previewId' => $request->previewId,
             'passwordHash' => $this->passwordHash->hash($request->password),
             'tokenHash' => hash('sha256', $token),
             'codeSentAt' => $this->at($now),
@@ -211,6 +213,7 @@ class Signups
             'phone' => $request->phone,
             'company' => $request->company,
             'language' => $request->language,
+            'previewId' => $request->previewId,
             'passwordHash' => $this->passwordHash->hash($request->password),
             'tokenHash' => hash('sha256', $token),
             'codeSends' => 0,
@@ -245,6 +248,7 @@ class Signups
             (string) $signup->get('company'),
             (string) $signup->get('language'),
             ownerEmailVerified: true,
+            previewId: PreviewClient::isPreviewId($signup->get('previewId')) ? (string) $signup->get('previewId') : null,
         ));
 
         $signup->set('provisioningId', $provisioning->getId());

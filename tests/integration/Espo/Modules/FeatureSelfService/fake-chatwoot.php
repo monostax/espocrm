@@ -14,6 +14,10 @@
  *     GET  /__users                    the users, with their `confirmed` flag
  *     POST /__fault {"call": "POST /platform/api/v1/users", "times": 1, "status": 500}
  *     POST /__reset
+ *
+ * It also stands in for the monostax.ai site preview read at provisioning
+ * (config `selfServicePreviewUrl` = <fake>/api/previa/): seed with
+ * POST /__seed {"previews": {"<id>": <carry>}}; other ids answer 404.
  */
 
 $stateFile = getenv('FAKE_CHATWOOT_STATE') ?: sys_get_temp_dir() . '/fake-chatwoot.json';
@@ -49,6 +53,11 @@ if ($path === '/__reset') {
 
 // Seeds an account's inboxes and conversations: {accountId, inboxes?, conversations?, deniedConversations?}.
 if ($path === '/__seed') {
+    if (isset($body['previews'])) {
+        $state['previews'] = [...($state['previews'] ?? []), ...$body['previews']];
+        $reply(200, []);
+    }
+
     foreach (['inboxes', 'conversations', 'deniedConversations'] as $kind) {
         if (isset($body[$kind])) {
             $state[$kind][(string) $body['accountId']] = $body[$kind];
@@ -60,6 +69,12 @@ if ($path === '/__seed') {
 if ($path === '/__fault') {
     $state['faults'][] = $body;
     $reply(200, []);
+}
+
+if (preg_match('#^/api/previa/([a-z0-9]{20})$#', $path, $m) && $method === 'GET') {
+    $state['calls'][] = 'GET /api/previa/:id';
+    $carry = $state['previews'][$m[1]] ?? null;
+    $carry === null ? $reply(404, ['error' => 'not_found']) : $reply(200, ['preview' => ['id' => $m[1], 'carry' => $carry], 'carryOver' => true]);
 }
 
 $call = $method . ' ' . preg_replace('#/\d+#', '/:id', $path);

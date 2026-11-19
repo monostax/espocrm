@@ -147,6 +147,7 @@ class SocialSignIn
         bool $acceptTerms,
         string $language,
         string $ipAddress,
+        string $previewId = '',
     ): array {
         $claims = $this->verify($identity, 'identity');
 
@@ -160,6 +161,7 @@ class SocialSignIn
             bin2hex(random_bytes(24)),
             $acceptTerms,
             $language,
+            $previewId,
         ), $ipAddress);
     }
 

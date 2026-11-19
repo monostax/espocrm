@@ -144,6 +144,87 @@ class ProvisioningTest extends TestCase
         self::assertSame(1, $this->callCount('POST /platform/api/v1/accounts/:id/machine_identities'));
     }
 
+    /** Needs the runtime's `selfServicePreviewUrl` pointed at the fake (<fake>/api/previa/). */
+    public function testASitePreviewSeedsTheFunnelAndTheSilentAgent(): void
+    {
+        $previewId = substr(str_repeat($this->suffix(), 3), 0, 20);
+        $this->http('POST', '/__seed', ['previews' => [$previewId => [
+            'version' => 1,
+            'companyName' => 'Linea Planejados',
+            'agent' => [
+                'name' => 'Camila',
+                'instructions' => "Você é Camila, da Linea Planejados.\nNunca invente preço & prazo.",
+                'knowledge' => [
+                    ['title' => 'Sobre a Linea', 'body' => 'Móveis planejados em Campinas, com projeto 3D.'],
+                    ['title' => 'Atendimento', 'body' => 'Segunda a sexta, das 9h às 18h.'],
+                ],
+            ],
+            'funnel' => ['stages' => [
+                ['name' => 'Contato inicial', 'description' => 'Primeira mensagem.', 'kind' => 'open'],
+                ['name' => 'Projeto 3D', 'description' => 'Projeto em andamento.', 'kind' => 'open'],
+                ['name' => 'Proposta enviada', 'description' => 'Proposta com o cliente.', 'kind' => 'open'],
+                ['name' => 'Contrato assinado', 'description' => 'Fechou.', 'kind' => 'won'],
+                ['name' => 'Não fechado', 'description' => 'Desistiu.', 'kind' => 'lost'],
+            ]],
+        ]]]);
+
+        $owner = $this->owner();
+        $request = new ProvisioningRequest('signup:preview-' . $this->suffix(), (string) $owner->getId(), 'Linea Planejados', previewId: $previewId);
+        $done = $this->provisioner()->run($this->provisioner()->start($request)->getId());
+
+        self::assertSame('completed', $done->get('status'), (string) $done->get('lastError'));
+        self::assertSame(1, $this->callCount('GET /api/previa/:id'));
+        self::assertSame('Linea Planejados', $done->get('previewCarry')->companyName ?? null);
+
+        $tenant = $this->em->getEntityById('Tenant', $done->get('tenantId'));
+        $funnel = $this->em->getRDBRepository('Funnel')->where(['tenantId' => $tenant->getId()])->findOne();
+        $stages = [];
+        foreach ($this->em->getRDBRepository('OpportunityStage')->where(['funnelId' => $funnel->getId()])->order('order')->find() as $stage) {
+            $stages[$stage->get('name')] = (int) $stage->get('probability');
+        }
+        self::assertSame(['Contato inicial' => 10, 'Projeto 3D' => 50, 'Proposta enviada' => 90, 'Contrato assinado' => 100, 'Não fechado' => 0], $stages);
+
+        $account = $this->em->getEntityById('ChatwootAccount', $done->get('chatwootAccountId'));
+        $agent = $this->em->getRDBRepository('ChatwootAccountUserMembership')
+            ->where(['chatwootAccountId' => $account->getId(), 'isAI' => true, 'role' => 'agent'])->findOne();
+        self::assertSame('Você é Camila, da Linea Planejados.<br />' . "\n" . 'Nunca invente preço &amp; prazo.', $agent->get('aiPrompt'));
+        self::assertSame([], $agent->getLinkMultipleIdList('chatwootInboxes'), 'The agent stays silent.');
+
+        $categories = iterator_to_array($this->em->getRDBRepository('ChatwootAccountUserMembership')
+            ->getRelation($agent, 'knowledgeBaseCategories')->find(), false);
+        self::assertCount(1, $categories);
+        self::assertSame('Sobre a Linea Planejados', $categories[0]->get('name'));
+        self::assertSame([$tenant->get('baseUserTeamId')], $categories[0]->getLinkMultipleIdList('teams'));
+        $articles = iterator_to_array($this->em->getRDBRepository('KnowledgeBaseCategory')
+            ->getRelation($categories[0], 'articles')->find(), false);
+        self::assertEqualsCanonicalizing(['Sobre a Linea', 'Atendimento'], array_map(fn (Entity $a) => $a->get('name'), $articles));
+        foreach ($articles as $article) {
+            self::assertSame('Published', $article->get('status'));
+            self::assertSame([$tenant->get('baseUserTeamId')], $article->getLinkMultipleIdList('teams'));
+        }
+
+        // A rerun reads the stored copy and adds nothing.
+        $record = $this->em->getEntityById('SelfServiceProvisioning', $done->getId());
+        $this->em->getQueryExecutor()->execute($this->em->getQueryBuilder()->update()->in('SelfServiceProvisioning')
+            ->set(['status' => 'pending', 'step' => 'salesFunnel'])->where(['id' => $record->getId()])->build());
+        self::assertSame('completed', $this->provisioner()->run($record->getId())->get('status'));
+        self::assertSame(1, $this->callCount('GET /api/previa/:id'));
+        self::assertSame(2, $this->em->getRDBRepository('KnowledgeBaseCategory')->getRelation($categories[0], 'articles')->count());
+        self::assertSame(1, $this->em->getRDBRepository('ChatwootAccountUserMembership')->getRelation($agent, 'knowledgeBaseCategories')->count());
+    }
+
+    public function testAPreviewThatCannotBeReadStartsWithTheDefaults(): void
+    {
+        $owner = $this->owner();
+        $request = new ProvisioningRequest('signup:nopreview-' . $this->suffix(), (string) $owner->getId(), 'Sem Prévia', previewId: 'zzzzzzzzzzzzzzzzzzzz');
+        $done = $this->provisioner()->run($this->provisioner()->start($request)->getId());
+
+        self::assertSame('completed', $done->get('status'), (string) $done->get('lastError'));
+        self::assertTrue($done->get('previewCarry')->unavailable ?? false);
+        $funnel = $this->em->getRDBRepository('Funnel')->where(['tenantId' => $done->get('tenantId')])->findOne();
+        self::assertSame(4, $this->em->getRDBRepository('OpportunityStage')->where(['funnelId' => $funnel->getId()])->count());
+    }
+
     public function testTheOwnerEntersWhileTheStarterRetriesAndTheRetryMakesOneAgent(): void
     {
         $this->http('POST', '/__fault', [

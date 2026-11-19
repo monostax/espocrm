@@ -61,6 +61,16 @@ class SignupRequestTest extends TestCase
         $this->assertSame('pt_BR', $request->language);
     }
 
+    public function testKeepsOnlyARealPreviewId(): void
+    {
+        $args = ['Maria', 'm@example.com', '11912345678', 'Acme', 'segredo-forte', true, 'pt_BR'];
+
+        $this->assertSame('gwd3e64sak3pvqyxzru9', (new SignupRequest(...[...$args, 'gwd3e64sak3pvqyxzru9']))->previewId);
+        $this->assertNull((new SignupRequest(...$args))->previewId);
+        $this->assertNull((new SignupRequest(...[...$args, 'linte.com']))->previewId);
+        $this->assertNull((new SignupRequest(...[...$args, "gwd3e64sak3pvqyxzru9'--"]))->previewId);
+    }
+
     /**
      * @return array<string, array{0: string, 1: array<int, mixed>}>
      */

@@ -243,7 +243,7 @@ export default class extends LoginView {
             `<form data-role="self-service-details" class="login-form" novalidate>
                 ${this.selfServiceHeader('detailsTitle', this.selfServiceEmphasis('detailsSignedInAs', '{email}', result.email))}
                 ${this.selfServiceField('phone', 'tel', 'tel', 'maxlength="20" placeholder="(11) 91234-5678"')}
-                ${this.selfServiceField('company', 'text', 'organization', 'maxlength="100"')}
+                ${this.selfServiceField('company', 'text', 'organization', 'maxlength="100"', this.selfServicePreview().company)}
                 ${this.selfServiceTermsCheckbox(false)}
                 ${this.selfServiceActions('submit')}
             </form>
@@ -267,6 +267,7 @@ export default class extends LoginView {
                 company: form.querySelector('[name="company"]').value,
                 acceptTerms: form.querySelector('[name="acceptTerms"]').checked,
                 language: this.getConfig().get('language') === 'en_US' ? 'en_US' : 'pt_BR',
+                preview: this.selfServicePreview().preview,
             })
                 .then(started => {
                     Espo.Ui.notify(false);
@@ -386,8 +387,27 @@ export default class extends LoginView {
         });
     }
 
+    /**
+     * What the monostax.ai site preview (/previa) put in the signup link: the preview id, which the new workspace
+     * starts from (its funnel and AI agent setup), and the company name to prefill. Sign-in with Google or
+     * Microsoft runs in a popup, so this tab's address, and these, stay put.
+     */
+    selfServicePreview() {
+        const params = new URLSearchParams(window.location.search);
+        const preview = params.get('preview') || '';
+
+        return {
+            preview: /^[a-z0-9]{20}$/.test(preview) ? preview : '',
+            company: (params.get('company') || '').replace(/\s+/g, ' ').trim().slice(0, 100),
+        };
+    }
+
     selfServiceShowForm(values) {
         values = values || {};
+
+        if (values.company === undefined && this.selfServicePreview().company) {
+            values = {...values, company: this.selfServicePreview().company};
+        }
 
         const field = (name, type, autocomplete, attributes, hintKey) =>
             this.selfServiceField(name, type, autocomplete, attributes, values[name], hintKey);
@@ -431,6 +451,7 @@ export default class extends LoginView {
             password: value('password'),
             acceptTerms: form.querySelector('[name="acceptTerms"]').checked,
             language: this.getConfig().get('language') === 'en_US' ? 'en_US' : 'pt_BR',
+            preview: this.selfServicePreview().preview,
         };
 
         const button = form.querySelector('[type="submit"]');

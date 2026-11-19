@@ -18,6 +18,8 @@ use Espo\Core\Utils\Log;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ChatwootAccountMembershipOrchestrator;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
+use Espo\Modules\FeatureSelfService\Tools\Provisioning\Preview\PreviewCarry;
+use Espo\Modules\FeatureSelfService\Tools\Provisioning\Preview\PreviewClient;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceWallet;
 use Espo\Modules\Global\Tools\Tenant\TenantAdminTeamProvisioner;
@@ -65,14 +67,15 @@ class Provisioner
         'creditWallet' => 'owner',
         'owner' => 'chatwootAccount',
         'chatwootAccount' => 'ownerMembership',
-        'ownerMembership' => 'salesFunnel',
+        'ownerMembership' => 'preview',
+        'preview' => 'salesFunnel',
         'salesFunnel' => 'aiAgent',
         'aiAgent' => 'emDia',
         'emDia' => 'done',
     ];
 
     /** Steps that run once the owner can already use the workspace. */
-    private const AFTER_ENTRY = ['salesFunnel', 'aiAgent', 'emDia', 'done'];
+    private const AFTER_ENTRY = ['preview', 'salesFunnel', 'aiAgent', 'emDia', 'done'];
 
     /**
      * The trial's AI: 100 credits, about 15 AI conversations (measured in prod,
@@ -99,6 +102,7 @@ class Provisioner
         private Log $log,
         private WorkspaceWallet $wallet,
         private WorkspaceStarter $starter,
+        private PreviewClient $previews,
     ) {}
 
     /**
@@ -237,12 +241,17 @@ class Provisioner
                 'owner' => $this->ensureOwner($record),
                 'chatwootAccount' => $this->ensureChatwootAccount($record),
                 'ownerMembership' => $this->ensureOwnerMembership($record),
-                'salesFunnel' => $this->starter->ensureSalesFunnel($this->tenant($record)),
-                'aiAgent' => $this->starter->ensureAiAgent(
-                    $this->chatwootAccount($record),
-                    $this->starter->ensureSalesFunnel($this->tenant($record)),
-                    (string) $record->getId(),
-                    $this->input($record)['workspaceName'],
+                'preview' => $this->ensurePreviewCarry($record, $lease),
+                'salesFunnel' => $this->starter->ensureSalesFunnel($this->tenant($record), $this->previewCarry($record)),
+                'aiAgent' => $this->starter->applyPreview(
+                    $this->starter->ensureAiAgent(
+                        $this->chatwootAccount($record),
+                        $this->starter->ensureSalesFunnel($this->tenant($record), $this->previewCarry($record)),
+                        (string) $record->getId(),
+                        $this->input($record)['workspaceName'],
+                    ),
+                    $this->tenant($record),
+                    $this->previewCarry($record),
                 ),
                 'emDia' => $this->starter->ensureEmDia($this->chatwootAccount($record)),
                 default => throw new ProvisioningFailure("Unknown step '{$step}'."),
@@ -483,12 +492,44 @@ class Provisioner
     }
 
     /**
-     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified?: bool}
+     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified?: bool, previewId?: string}
      */
     private function input(Entity $record): array
     {
-        /** @var array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified?: bool} */
+        /** @var array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified?: bool, previewId?: string} */
         return (array) $record->get('input');
+    }
+
+    /**
+     * Fetches the site preview the signup came from, once, and keeps it on the record: the funnel and the agent
+     * steps read the same copy on every attempt. A preview that can't be read is stored as unavailable and the
+     * workspace starts with the defaults; it never holds the provisioning back.
+     */
+    private function ensurePreviewCarry(Entity $record, string $lease): void
+    {
+        $previewId = $this->input($record)['previewId'] ?? null;
+
+        if (!PreviewClient::isPreviewId($previewId) || $record->get('previewCarry') !== null) {
+            return;
+        }
+
+        $carry = $this->previews->fetch((string) $previewId);
+        $this->persist($record, $lease, [
+            'previewCarry' => json_encode($carry?->toArray() ?? ['unavailable' => true], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+        ]);
+    }
+
+    private function previewCarry(Entity $record): ?PreviewCarry
+    {
+        $value = $record->get('previewCarry');
+
+        if (is_string($value)) {
+            $value = json_decode($value, true);
+        } elseif (is_object($value)) {
+            $value = json_decode((string) json_encode($value), true);
+        }
+
+        return is_array($value) ? PreviewCarry::fromArray($value) : null;
     }
 
     private function findByKey(string $dedupeKey): ?Entity

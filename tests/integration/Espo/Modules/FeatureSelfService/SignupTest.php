@@ -101,6 +101,20 @@ class SignupTest extends TestCase
         self::assertNotSame($result['ticket'], $again['ticket']);
     }
 
+    public function testTheSitePreviewTheVisitorCameFromReachesTheProvisioning(): void
+    {
+        $email = $this->email();
+        $request = new SignupRequest('Maria Souza', $email, '+55 11 98888-7777', 'Clínica Signup', 'segredo-forte', true, 'pt_BR', 'abcdefghij0123456789');
+        $started = $this->signups()->begin($request, $this->ip());
+        $this->signups()->verify($started['signupId'], $started['token'], $this->codes[$email]);
+
+        $signup = $this->em->getEntityById('SelfServiceSignup', $started['signupId']);
+        self::assertSame('abcdefghij0123456789', $signup->get('previewId'));
+        $provisioning = $this->em->getEntityById('SelfServiceProvisioning', $signup->get('provisioningId'));
+        self::assertSame('abcdefghij0123456789', $provisioning->get('input')->previewId ?? null);
+        self::assertSame('completed', $provisioning->get('status'), (string) $provisioning->get('lastError'));
+    }
+
     public function testWrongCodesAreCountedThenLocked(): void
     {
         $email = $this->email();

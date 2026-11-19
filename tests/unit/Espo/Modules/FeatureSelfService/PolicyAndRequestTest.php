@@ -130,6 +130,27 @@ class PolicyAndRequestTest extends TestCase
         $this->assertNotSame($a->hash(), $c->hash());
     }
 
+    public function testAPreviewIdJoinsTheInputOnlyWhenSet(): void
+    {
+        $plain = new ProvisioningRequest('signup:abc', 'user1', 'Acme', ownerEmailVerified: true);
+        $withPreview = new ProvisioningRequest('signup:abc', 'user1', 'Acme', ownerEmailVerified: true, previewId: 'gwd3e64sak3pvqyxzru9');
+
+        // Requests recorded before previews existed hash exactly as before.
+        $this->assertArrayNotHasKey('previewId', $plain->toArray());
+        $this->assertSame(
+            hash('sha256', json_encode(['signup:abc', [
+                'ownerUserId' => 'user1', 'workspaceName' => 'Acme', 'language' => 'pt_BR',
+                'timeZone' => 'America/Sao_Paulo', 'ownerEmailVerified' => true,
+            ]], JSON_THROW_ON_ERROR)),
+            $plain->hash(),
+        );
+        $this->assertSame('gwd3e64sak3pvqyxzru9', $withPreview->toArray()['previewId']);
+        $this->assertNotSame($plain->hash(), $withPreview->hash());
+
+        $this->expectException(InvalidArgumentException::class);
+        new ProvisioningRequest('signup:abc', 'user1', 'Acme', previewId: 'linte.com');
+    }
+
     /**
      * @return array<string, array{0: string, 1: string, 2: string, 3: string, 4: string}>
      */

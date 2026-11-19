@@ -77,6 +77,7 @@ class SelfService
             ($body->acceptTerms ?? false) === true,
             (string) ($body->language ?? 'pt_BR'),
             $this->ipAddress($request),
+            is_string($body->preview ?? null) ? $body->preview : '',
         ));
     }
 
@@ -93,6 +94,7 @@ class SelfService
                 (string) ($body->password ?? ''),
                 ($body->acceptTerms ?? false) === true,
                 (string) ($body->language ?? 'pt_BR'),
+                is_string($body->preview ?? null) ? $body->preview : '',
             ),
             $this->ipAddress($request),
         ));

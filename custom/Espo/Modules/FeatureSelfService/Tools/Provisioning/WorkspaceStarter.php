@@ -15,10 +15,13 @@ use Espo\Core\InjectableFactory;
 use Espo\Core\Utils\Metadata;
 use Espo\Modules\Chatwoot\Services\AiAgentProvisioning;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Core\Utils\Log;
+use Espo\Modules\FeatureSelfService\Tools\Provisioning\Preview\PreviewCarry;
 use Espo\Modules\Global\Classes\Utils\FeatureVerticalChecker;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use RuntimeException;
+use Throwable;
 
 /**
  * What a new workspace starts with so its first minutes show value (Self-Service PLG, "Next steps to launch" §7):
@@ -30,6 +33,9 @@ use RuntimeException;
  * - Em dia switched on, so the first read can analyse the imported conversations;
  * - the feature packs the plan includes (campaigns, journeys, playbooks, calls, meetings): one plan with everything
  *   since 2026-11-11 (gtm/07), so nothing a trial uses disappears after paying.
+ *
+ * A signup that came from the monostax.ai site preview (/previa) starts with what the visitor saw there instead:
+ * the funnel stages it proposed, and the agent's instructions and knowledge base (the agent stays silent).
  *
  * Each step finds what an earlier attempt made and finishes it, so the provisioning can rerun it.
  */
@@ -45,6 +51,14 @@ class WorkspaceStarter
      * written where the agent and the tracker both read them. Estacionada is a paused deal: still open, so it keeps
      * the 50% of Em Qualificação.
      */
+    /**
+     * Perdido for a funnel the site preview proposed: the default rule without the default stage names, which such a
+     * funnel may not have.
+     */
+    private const PREVIEW_LOST_RULE = 'O cliente recusou explicitamente, desistiu, escolheu outro fornecedor ou cancelou de vez, ou a '
+        . 'empresa confirmou que não pode atendê-lo. Silêncio sozinho não é Perdido. "Agora não", "vou pensar", '
+        . '"qualquer coisa, retorno" ou "só pesquisando preço" continuam abertos.';
+
     private const STAGES = [
         [
             'name' => 'Em Qualificação',
@@ -89,6 +103,7 @@ class WorkspaceStarter
         private ChatwootApiClient $apiClient,
         private Metadata $metadata,
         private FeatureVerticalChecker $verticals,
+        private Log $log,
     ) {}
 
     /**
@@ -121,9 +136,9 @@ class WorkspaceStarter
 
     /**
      * The workspace's funnel. A tenant that already has one keeps it; otherwise "Vendas" and its stages are created
-     * together, so a retry never finds half of them.
+     * together, so a retry never finds half of them. With a site preview, its stages replace the default ones.
      */
-    public function ensureSalesFunnel(Entity $tenant): Entity
+    public function ensureSalesFunnel(Entity $tenant, ?PreviewCarry $preview = null): Entity
     {
         $existing = $this->findFunnel((string) $tenant->getId());
 
@@ -134,7 +149,7 @@ class WorkspaceStarter
         $baseTeamId = (string) $tenant->get('baseUserTeamId')
             ?: throw new RuntimeException('Tenant ' . $tenant->getId() . ' has no base team.');
 
-        return $this->entityManager->getTransactionManager()->run(function () use ($tenant, $baseTeamId): Entity {
+        return $this->entityManager->getTransactionManager()->run(function () use ($tenant, $baseTeamId, $preview): Entity {
             $funnel = $this->entityManager->createEntity('Funnel', [
                 'name' => self::FUNNEL_NAME,
                 'tenantId' => $tenant->getId(),
@@ -143,7 +158,7 @@ class WorkspaceStarter
                 'isDefault' => true,
             ]);
 
-            foreach (self::STAGES as $stage) {
+            foreach ($preview ? self::previewStages($preview) : self::STAGES as $stage) {
                 $this->entityManager->createEntity('OpportunityStage', [
                     ...$stage,
                     'funnelId' => $funnel->getId(),
@@ -184,6 +199,113 @@ class WorkspaceStarter
         }
 
         return $membership;
+    }
+
+    /**
+     * Gives the silent agent what the site preview built: its instructions, when it has none yet, and a knowledge
+     * base category with the preview's articles, when it has no category yet. Both checks make a rerun finish what
+     * an earlier attempt started without duplicating it. The agent still has no inbox, so it answers nobody.
+     */
+    public function applyPreview(Entity $membership, Entity $tenant, ?PreviewCarry $preview): void
+    {
+        if (!$preview) {
+            return;
+        }
+
+        if ($preview->instructions !== '' && trim(strip_tags((string) $membership->get('aiPrompt'))) === '') {
+            // Same encoding AiAgentProvisioning uses for the instructions it is given.
+            $membership->set('aiPrompt', nl2br(htmlspecialchars($preview->instructions, ENT_QUOTES)));
+            $this->entityManager->saveEntity($membership, ['silent' => true, 'skipAssignedUserApiKeyProvision' => true]);
+        }
+
+        if (!$preview->knowledge) {
+            return;
+        }
+
+        $baseTeamId = (string) $tenant->get('baseUserTeamId')
+            ?: throw new RuntimeException('Tenant ' . $tenant->getId() . ' has no base team.');
+        $categories = $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
+            ->getRelation($membership, 'knowledgeBaseCategories');
+        $category = $categories->findOne();
+
+        if (!$category) {
+            $name = mb_substr('Sobre a ' . ($preview->companyName ?: 'empresa'), 0, 100);
+            $category = $this->createIndexed('KnowledgeBaseCategory', [
+                'name' => $name,
+                'aiIndexEnabled' => true,
+                'teamsIds' => [$baseTeamId],
+            ], ['aiIndexEnabled' => false]);
+            $categories->relate($category);
+        }
+
+        $hasArticles = $this->entityManager
+            ->getRDBRepository('KnowledgeBaseCategory')
+            ->getRelation($category, 'articles')
+            ->findOne();
+
+        if ($hasArticles) {
+            return;
+        }
+
+        foreach ($preview->knowledge as $article) {
+            $this->createIndexed('KnowledgeBaseArticle', [
+                'name' => $article['title'],
+                'body' => $article['body'],
+                'bodyFormat' => 'Markdown',
+                'status' => 'Published',
+                'categoriesIds' => [(string) $category->getId()],
+                'teamsIds' => [$baseTeamId],
+            ]);
+        }
+    }
+
+    /**
+     * Stages for a funnel the site preview proposed. Ganho and Perdido are told apart by probability (100 and 0),
+     * as everywhere else, and keep the Monostax default rule as their description: the agent and the tracker read
+     * it. Open stages spread between 10% and 90% in their order.
+     *
+     * @return list<array{name: string, order: int, probability: int, style: string, description: string}>
+     */
+    public static function previewStages(PreviewCarry $preview): array
+    {
+        $open = $preview->openStages ?: [['name' => self::STAGES[0]['name'], 'description' => self::STAGES[0]['description']]];
+        $count = count($open);
+        $stages = [];
+
+        foreach ($open as $i => $stage) {
+            $stages[] = [
+                'name' => $stage['name'],
+                'order' => $i + 1,
+                'probability' => $count === 1 ? 50 : (int) round(10 + 80 * $i / ($count - 1)),
+                'style' => 'default',
+                'description' => $stage['description'],
+            ];
+        }
+
+        $stages[] = ['name' => $preview->won['name'], 'order' => $count + 1, 'probability' => 100, 'style' => 'success', 'description' => self::STAGES[2]['description']];
+        $stages[] = ['name' => $preview->lost['name'], 'order' => $count + 2, 'probability' => 0, 'style' => 'danger', 'description' => self::PREVIEW_LOST_RULE];
+
+        return $stages;
+    }
+
+    /**
+     * Creates a knowledge base record with its hooks, so it is indexed for the agent's search (a category's store is
+     * made with Google on save). When that fails, the record is still created, silently and with `$fallback` applied,
+     * so the owner finds the content and can turn indexing on later.
+     *
+     * @param array<string, mixed> $values
+     * @param array<string, mixed> $fallback
+     */
+    private function createIndexed(string $entityType, array $values, array $fallback = []): Entity
+    {
+        try {
+            return $this->entityManager->createEntity($entityType, $values);
+        } catch (Throwable $e) {
+            $this->log->warning("Self-service preview: {$entityType} saved without indexing: " . $e->getMessage());
+
+            return $this->entityManager->createEntity($entityType, [...$values, ...$fallback], ['silent' => true]);
+        }
     }
 
     /** Em dia on for the workspace's Chatwoot account. Setting it again is harmless. */

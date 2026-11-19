@@ -17,6 +17,15 @@ stock view uses. While the policy reports `enabled`, the view adds:
   Their brand marks are inline SVG, since the theme has no Font Awesome brand
   glyphs.
 
+The monostax.ai site preview (`/previa`, Self-Service PLG "Site preview
+inspired by Explee") links here with `?signup=1&preview=<id>&company=<name>`.
+`company` prefills the company field (both forms); `preview` (20 lowercase
+letters or digits) goes with `POST SelfService/signup` and
+`SelfService/oauth/complete`, is kept on `SelfServiceSignup.previewId`, and
+reaches `ProvisioningRequest.previewId` when the signup activates. Google and
+Microsoft sign-in run in a popup, so the tab's query string survives them.
+Anything that isn't a preview id is dropped.
+
 Failures in a signup step show in the step's error line under its button and
 clear on the next edit; failures elsewhere, such as a provider sign-in from
 the login page, show as a notice.
@@ -92,12 +101,24 @@ enabled = CRM_SELF_SERVICE_ENABLED is exactly "true"  AND  not paused
    (`selfServiceChatwootPlatformId`, or the only platform there is), shared
    with the base team.
 4. `ownerMembership`: the owner's Chatwoot membership as `administrator`.
+   - `preview`: only for a signup that came from the site preview. Reads
+     `GET <selfServicePreviewUrl><id>` (default
+     `https://monostax.ai/api/previa/`; public, no credential) once and keeps
+     its `carry` (contract version 1) on `SelfServiceProvisioning.previewCarry`,
+     so every later attempt reads the same copy. A preview that can't be read
+     is stored as `{"unavailable": true}` and the workspace starts with the
+     defaults; it never fails the provisioning. `Preview/PreviewCarry` clamps
+     the AI-made content (at most 6 open stages, one Ganho, one Perdido, 5
+     articles).
 5. What the workspace starts with (`WorkspaceStarter`, Self-Service PLG
    "Next steps to launch" §7, decided 2026-11-10):
    - `salesFunnel`: the default "Vendas" funnel (Em Qualificação 50%, Estacionada 50%,
      Ganho 100%, Perdido 0%), shared with the base team, AI follow-ups off. Ganho and
      Perdido carry the Monostax default rule (gtm/06). A tenant that already
-     has a funnel keeps it.
+     has a funnel keeps it. With a site preview, the preview's open stages
+     (10% to 90% in order) and its Ganho/Perdido names replace them; Ganho
+     and Perdido keep the default rule as their description (without the
+     default stage names).
    - `aiAgent`: a managed AI agent ("IA <workspace>") through
      `Chatwoot/Services/AiAgentProvisioning`, with no inbox, so Chatwoot never
      assigns it a conversation and it never replies. It manages the default
@@ -105,6 +126,13 @@ enabled = CRM_SELF_SERVICE_ENABLED is exactly "true"  AND  not paused
      Its operation id is derived from the provisioning id, so a retry resumes
      the same identity. It is not an attendant (`PlanRecommendation` skips AI
      memberships); a future Chatwoot agent limit must skip it too.
+     With a site preview, `WorkspaceStarter::applyPreview` then sets its
+     instructions (`aiPrompt`, only while empty; created with `''` because
+     `AiAgentProvisioning` freezes its input in the operation hash) and a
+     knowledge base category "Sobre a <empresa>" with the preview's articles
+     (Published, base team). The category is saved with its hooks so Gemini
+     indexes it; if that fails it is saved silently with indexing off. A
+     rerun skips both when they exist. The agent still has no inbox.
    - `emDia`: Em dia on for the Chatwoot account (`catch_up_enabled`, set
      with the concierge key through the Account API).
 
@@ -283,7 +311,7 @@ php command.php self-service first-read --tenant=<tenantId>   # run the first re
 
 Unit: `tests/unit/Espo/Modules/FeatureSelfService` (policy, slugs, provisioning
 requests, signup form and phones, ID-token rules, offboarding order and kept
-types), plus
+types, the site preview carry and its funnel stages), plus
 `Chatwoot/Hooks/ChatwootAccount/SyncWithChatwootResumeTest`,
 `Global/Tools/Tenant/TenantAdminTeamProvisionerTest` and `WorkspaceStarterTest`
 (the agent's operation id, its name, when the owner can enter).
@@ -307,7 +335,9 @@ SELF_SERVICE_TEST_DATABASE=<db> FAKE_CHATWOOT_URL=http://<fake>:8080 \
 ```
 
 - `ProvisioningTest`: the workspace with its funnel, silent AI agent, Em
-  dia and feature packs, rerun no-op, the owner entering while the starter retries (one agent
+  dia and feature packs, a site preview's funnel, instructions and knowledge
+  base (read once, nothing added on a rerun; set `selfServicePreviewUrl` to
+  `<fake>/api/previa/`), an unreadable preview falling back to the defaults, rerun no-op, the owner entering while the starter retries (one agent
   after the retry), an existing funnel kept, same-named tenants, dedupe
   conflicts, concierge failure and lost reply, pause/resume, switch off,
   instance-admin owner, live leases, deleted team keys, the job.
@@ -320,7 +350,8 @@ SELF_SERVICE_TEST_DATABASE=<db> FAKE_CHATWOOT_URL=http://<fake>:8080 \
   then accepted); a card from before funnels in the default funnel's open
   stage; a conversation that moved since is a conflict; the deal goes to the
   person assigned in Chatwoot.
-- `SignupTest`: code signup to a one-time login, wrong-code lockout, token
+- `SignupTest`: code signup to a one-time login, the preview id reaching
+  the provisioning, wrong-code lockout, token
   required, email in use, IP limit, switch off.
 - `SocialSignInTest`: new Google user without a code, existing user ticket,
   foreign or tampered state, unverified email, instance admin, scopes.
