@@ -418,18 +418,26 @@ Checks reuse fresh evidence for free and join a check already running for the sa
 the inbox. The run-as user needs the enrichment-credits permission and Contact edit access.
 
 Example: verify every found value, add emails that are deliverable and phones that are on
-WhatsApp and pass Twilio (Machine kind, trigger `signal`, codes `["enrichment.found"]`,
-subject `Contact`):
+WhatsApp and pass Twilio. Use the **Batch** kind (trigger `signal`, codes `["enrichment.found"]`,
+subject `Contact`): Machine runs drop payload keys that onEnter actions write once the state
+completes, so the outcomes would not stay on the item. This is the live Monostax automation:
 
 ```json
 {
-  "kind": "machine",
-  "initial": "Verify",
-  "states": [
+  "kind": "batch",
+  "limits": { "maxItems": 1, "maxExpandPerParent": 1 },
+  "stages": [
     {
-      "id": "Verify",
-      "type": "final",
-      "onEnter": [
+      "id": "verify",
+      "scope": "forEach",
+      "map": [
+        {
+          "id": "contact", "mode": "primary", "source": "query", "entityType": "Contact",
+          "where": { "id": "none" },
+          "whereFormulas": { "id": "object\\get(object\\get($payload, '__trigger'), 'entityId')" }
+        }
+      ],
+      "actions": [
         { "type": "verifyContactChannel", "params": { "check": "email_deliverability" } },
         {
           "type": "addChannelIdentity", "params": { "channel": "email" },
@@ -444,10 +452,11 @@ subject `Contact`):
           "type": "addChannelIdentity", "params": { "channel": "phone" },
           "when": "object\\get(object\\get($payload, 'verification'), 'whatsapp_registration') == 'registered' && object\\get(object\\get($payload, 'verification'), 'phone_identity') == 'verified'"
         }
-      ]
+      ],
+      "onFailure": [],
+      "itemMode": "allMatching"
     }
-  ],
-  "transitions": []
+  ]
 }
 ```
 
