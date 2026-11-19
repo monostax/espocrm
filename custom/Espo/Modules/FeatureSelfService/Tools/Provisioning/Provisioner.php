@@ -20,6 +20,7 @@ use Espo\Modules\Chatwoot\Services\ChatwootAccountMembershipOrchestrator;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Preview\PreviewCarry;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Preview\PreviewClient;
+use Espo\Modules\FeatureSelfService\Tools\Signup\SignupOrigin;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceWallet;
 use Espo\Modules\Global\Tools\Tenant\TenantAdminTeamProvisioner;
@@ -294,6 +295,7 @@ class Provisioner
                     'language' => $input['language'],
                     'timeZone' => $input['timeZone'],
                     ...WorkspaceTrial::initialValues(),
+                    ...self::originValues($input),
                 ]);
             } catch (Throwable $e) {
                 // Inserted before a hook failed: continue with it. Not inserted:
@@ -328,6 +330,24 @@ class Provisioner
         if ($this->adminTeams->ensureForTenant($tenant) === null) {
             throw new RuntimeException("Tenant {$tenantId} has no admin team. Has the `tenant-admin` Role been seeded?");
         }
+    }
+
+    /**
+     * Where the signup came from, on the tenant: the funnel picked on the site and the connect screen to open (the
+     * onboarding reads both through the workspace state), and the visit's attribution.
+     *
+     * @param array<string, mixed> $input
+     * @return array{signupJob?: string, signupConnect?: string, signupAttribution?: object}
+     */
+    private static function originValues(array $input): array
+    {
+        $origin = SignupOrigin::fromArray($input);
+
+        return [
+            ...($origin->job !== null ? ['signupJob' => $origin->job] : []),
+            ...($origin->connect !== null ? ['signupConnect' => $origin->connect] : []),
+            ...($origin->attribution !== [] ? ['signupAttribution' => (object) $origin->attribution] : []),
+        ];
     }
 
     /**
@@ -492,11 +512,11 @@ class Provisioner
     }
 
     /**
-     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified?: bool, previewId?: string}
+     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified?: bool, previewId?: string, job?: string, connect?: string, attribution?: object|array<string, string>}
      */
     private function input(Entity $record): array
     {
-        /** @var array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified?: bool, previewId?: string} */
+        /** @var array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified?: bool, previewId?: string, job?: string, connect?: string, attribution?: object|array<string, string>} */
         return (array) $record->get('input');
     }
 
@@ -521,15 +541,7 @@ class Provisioner
 
     private function previewCarry(Entity $record): ?PreviewCarry
     {
-        $value = $record->get('previewCarry');
-
-        if (is_string($value)) {
-            $value = json_decode($value, true);
-        } elseif (is_object($value)) {
-            $value = json_decode((string) json_encode($value), true);
-        }
-
-        return is_array($value) ? PreviewCarry::fromArray($value) : null;
+        return PreviewCarry::fromStored($record->get('previewCarry'));
     }
 
     private function findByKey(string $dedupeKey): ?Entity

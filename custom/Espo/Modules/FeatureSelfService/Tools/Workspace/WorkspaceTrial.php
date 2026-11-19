@@ -81,6 +81,10 @@ class WorkspaceTrial
                 $tenant->get('trialEndsAt') && $tenant->get('trialEndsAt') <= gmdate('Y-m-d H:i:s'),
             'seats' => $tenant->get('seats') ? (int) $tenant->get('seats') : null,
             'paidThrough' => $tenant->get('paidThrough'),
+            // What the visitor picked on monostax.ai before signing up: the onboarding opens on that connect screen
+            // and shows that funnel's first screen after the import.
+            'job' => $tenant->get('signupJob') ?: null,
+            'connect' => $tenant->get('signupConnect') ?: null,
         ];
     }
 

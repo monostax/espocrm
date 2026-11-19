@@ -14,6 +14,9 @@ use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServiceUnavailable;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Provisioner;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\ProvisioningRequest;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\WorkspaceStarter;
+use Espo\Modules\FeatureSelfService\Tools\Signup\SignupOrigin;
+use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAgent;
+use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
 use Espo\Modules\Global\Classes\Utils\FeatureVerticalChecker;
 use Espo\Modules\Global\Tools\Tenant\TenantAdminTeamProvisioner;
 use Espo\ORM\Entity;
@@ -142,6 +145,69 @@ class ProvisioningTest extends TestCase
         self::assertSame(1, $this->em->getRDBRepository('TenantAiBillingRate')->where(['tenantId' => $tenant->getId()])->count());
         self::assertSame(1, $this->em->getRDBRepository('Funnel')->where(['tenantId' => $tenant->getId()])->count());
         self::assertSame(1, $this->callCount('POST /platform/api/v1/accounts/:id/machine_identities'));
+    }
+
+    public function testTheSiteOriginLandsOnTheTenant(): void
+    {
+        $owner = $this->owner();
+        $request = new ProvisioningRequest('signup:origin-' . $this->suffix(), (string) $owner->getId(), 'Linea Planejados',
+            origin: SignupOrigin::fromInput('funil', 'qr', ['utm_source' => 'chatgpt', 'utm_content' => 'a1']));
+        $done = $this->provisioner()->run($this->provisioner()->start($request)->getId());
+
+        self::assertSame('completed', $done->get('status'), (string) $done->get('lastError'));
+        $tenant = $this->em->getEntityById('Tenant', $done->get('tenantId'));
+        self::assertSame('funil', $tenant->get('signupJob'));
+        self::assertSame('qr', $tenant->get('signupConnect'));
+        self::assertEquals((object) ['utm_source' => 'chatgpt', 'utm_content' => 'a1'], $tenant->get('signupAttribution'));
+
+        $state = $this->app->getInjectableFactory()->create(WorkspaceTrial::class)->state($tenant);
+        self::assertSame(['funil', 'qr'], [$state['job'], $state['connect']]);
+    }
+
+    public function testTheAgentGoesOnTheConnectedNumberWhenTurnedOn(): void
+    {
+        $owner = $this->owner();
+        $request = new ProvisioningRequest('signup:agent-' . $this->suffix(), (string) $owner->getId(), 'Linea Planejados',
+            origin: SignupOrigin::fromInput('agente', null, []));
+        $done = $this->provisioner()->run($this->provisioner()->start($request)->getId());
+        self::assertSame('completed', $done->get('status'), (string) $done->get('lastError'));
+
+        $tenant = $this->em->getEntityById('Tenant', $done->get('tenantId'));
+        $account = $this->em->getEntityById('ChatwootAccount', $done->get('chatwootAccountId'));
+        $agents = $this->app->getInjectableFactory()->create(WorkspaceAgent::class);
+        self::assertSame(['name' => 'IA Linea Planejados', 'active' => false], $agents->state($tenant));
+
+        try {
+            $agents->activate($tenant, $account);
+            self::fail('Nothing to put the agent on before a number connects.');
+        } catch (\RuntimeException) {
+        }
+
+        $integration = $this->em->createEntity('ChatwootInboxIntegration', [
+            'name' => 'QR ' . $this->suffix(), 'channelType' => 'whatsappQrcode', 'status' => 'ACTIVE',
+            'chatwootAccountId' => $account->getId(),
+        ], ['skipHooks' => true]);
+        $inbox = $this->em->createEntity('ChatwootInbox', [
+            'name' => 'QR', 'chatwootAccountId' => $account->getId(), 'chatwootInboxId' => 4242,
+            'chatwootInboxIntegrationId' => $integration->getId(),
+        ], ['skipHooks' => true]);
+        // Someone the CRM's copy of the inbox doesn't know yet must stay on it: only the add-only call is used.
+        $agent = $this->em->getRDBRepository('ChatwootAccountUserMembership')
+            ->where(['chatwootAccountId' => $account->getId(), 'isAI' => true, 'role' => 'agent'])->findOne();
+        $remoteUserId = (int) $this->em->getEntityById('ChatwootUser', $agent->get('chatwootUserId'))->get('chatwootUserId');
+
+        $agents->activate($tenant, $account);
+        $agents->activate($tenant, $account);
+
+        $added = $this->http('GET', '/__inbox_members');
+        self::assertSame([(int) $account->get('chatwootAccountId'), 4242, [$remoteUserId]],
+            [$added[0]['accountId'], $added[0]['inboxId'], $added[0]['userIds']]);
+        self::assertSame(0, $this->callCount('PATCH /api/v1/accounts/:id/inbox_members'), 'Never the replace-all call.');
+        self::assertSame([$agent->getId()], array_map(
+            fn (Entity $m) => $m->getId(),
+            iterator_to_array($this->em->getRDBRepository('ChatwootInbox')->getRelation($inbox, 'accountUserMemberships')->find(), false),
+        ));
+        self::assertTrue($agents->state($tenant)['active']);
     }
 
     /** Needs the runtime's `selfServicePreviewUrl` pointed at the fake (<fake>/api/previa/). */

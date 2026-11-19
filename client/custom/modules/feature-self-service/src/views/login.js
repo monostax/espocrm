@@ -267,7 +267,7 @@ export default class extends LoginView {
                 company: form.querySelector('[name="company"]').value,
                 acceptTerms: form.querySelector('[name="acceptTerms"]').checked,
                 language: this.getConfig().get('language') === 'en_US' ? 'en_US' : 'pt_BR',
-                preview: this.selfServicePreview().preview,
+                ...this.selfServiceOrigin(),
             })
                 .then(started => {
                     Espo.Ui.notify(false);
@@ -402,6 +402,35 @@ export default class extends LoginView {
         };
     }
 
+    /**
+     * Everything the site's signup link carries that the signup keeps: the preview, the funnel the visitor picked
+     * (`job`: whatsapp, agente or funil), the connect screen to open first (`connect`: api or qr) and the visit's
+     * UTMs and ad click ids. The server checks every value; unknown ones are dropped.
+     */
+    selfServiceOrigin() {
+        const params = new URLSearchParams(window.location.search);
+        const keys = [
+            'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id',
+            'gclid', 'gbraid', 'wbraid', 'fbclid', 'keyword', 'search_term', 'matchtype', 'network', 'device',
+        ];
+        const attribution = {};
+
+        keys.forEach(key => {
+            const value = (params.get(key) || '').trim();
+
+            if (value) {
+                attribution[key] = value.slice(0, 200);
+            }
+        });
+
+        return {
+            preview: this.selfServicePreview().preview,
+            job: params.get('job') || '',
+            connect: params.get('connect') || '',
+            attribution,
+        };
+    }
+
     selfServiceShowForm(values) {
         values = values || {};
 
@@ -451,7 +480,7 @@ export default class extends LoginView {
             password: value('password'),
             acceptTerms: form.querySelector('[name="acceptTerms"]').checked,
             language: this.getConfig().get('language') === 'en_US' ? 'en_US' : 'pt_BR',
-            preview: this.selfServicePreview().preview,
+            ...this.selfServiceOrigin(),
         };
 
         const button = form.querySelector('[type="submit"]');

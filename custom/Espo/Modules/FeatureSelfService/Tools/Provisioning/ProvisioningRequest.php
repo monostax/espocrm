@@ -11,6 +11,7 @@
 
 namespace Espo\Modules\FeatureSelfService\Tools\Provisioning;
 
+use Espo\Modules\FeatureSelfService\Tools\Signup\SignupOrigin;
 use InvalidArgumentException;
 
 /**
@@ -29,12 +30,15 @@ final class ProvisioningRequest
     public readonly string $timeZone;
     public readonly bool $ownerEmailVerified;
     public readonly ?string $previewId;
+    public readonly SignupOrigin $origin;
 
     /**
      * @param bool $ownerEmailVerified The owner proved their email (signup code
      *     or a provider-verified sign-in), so their Chatwoot user is confirmed.
      * @param ?string $previewId The monostax.ai site preview the signup came
      *     from; the workspace starts with its funnel and agent setup.
+     * @param ?SignupOrigin $origin The funnel picked on the site, the connect
+     *     screen to open and the visit's attribution, kept on the tenant.
      */
     public function __construct(
         string $dedupeKey,
@@ -44,6 +48,7 @@ final class ProvisioningRequest
         string $timeZone = 'America/Sao_Paulo',
         bool $ownerEmailVerified = false,
         ?string $previewId = null,
+        ?SignupOrigin $origin = null,
     ) {
         if (!preg_match('/^[a-z0-9][a-z0-9._:\/-]{0,127}$/', $dedupeKey)) {
             throw new InvalidArgumentException('The dedupe key must be 1-128 lowercase letters, digits or ._:/-.');
@@ -79,12 +84,14 @@ final class ProvisioningRequest
         $this->timeZone = $timeZone;
         $this->ownerEmailVerified = $ownerEmailVerified;
         $this->previewId = $previewId;
+        $this->origin = $origin ?? SignupOrigin::none();
     }
 
     /**
-     * `previewId` appears only when set, so requests recorded before it existed keep the same hash.
+     * `previewId` and the origin's parts appear only when set, so requests recorded before they existed keep the
+     * same hash.
      *
-     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified: bool, previewId?: string}
+     * @return array{ownerUserId: string, workspaceName: string, language: string, timeZone: string, ownerEmailVerified: bool, previewId?: string, job?: string, connect?: string, attribution?: array<string, string>}
      */
     public function toArray(): array
     {
@@ -95,6 +102,7 @@ final class ProvisioningRequest
             'timeZone' => $this->timeZone,
             'ownerEmailVerified' => $this->ownerEmailVerified,
             ...($this->previewId !== null ? ['previewId' => $this->previewId] : []),
+            ...$this->origin->toArray(),
         ];
     }
 

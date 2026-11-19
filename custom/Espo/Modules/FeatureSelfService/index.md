@@ -26,6 +26,25 @@ reaches `ProvisioningRequest.previewId` when the signup activates. Google and
 Microsoft sign-in run in a popup, so the tab's query string survives them.
 Anything that isn't a preview id is dropped.
 
+The same link carries where the visitor came from (site preview doc §11, one
+funnel per job), sent with both signups as `job`, `connect` and `attribution`
+and checked by `Tools/Signup/SignupOrigin` (unknown values are dropped):
+
+- `job`: the funnel picked on the site: `whatsapp` (organize the number:
+  connect, then the scan), `agente` (the AI agent: connect, then turn it on)
+  or `funil` (the sales funnel);
+- `connect`: the connect screen to open first, from how they use the number:
+  `api` (Meta, with coexistence) or `qr`;
+- `attribution`: the visit's UTMs and ad click ids (the site's keys plus
+  `fbclid`, 200 characters each).
+
+They are kept on `SelfServiceSignup` (`job`, `connect`, `attribution`), go
+into `ProvisioningRequest` (only when set, so older requests keep their hash)
+and land on the tenant at creation: `Tenant.signupJob`, `signupConnect` and
+`signupAttribution`. `GET SelfService/workspace` returns `job` and `connect`;
+the onboarding opens that connect screen and, for `agente`, offers
+"Ligar a IA neste número" after the import (see Workspace agent below).
+
 Failures in a signup step show in the step's error line under its button and
 clear on the next edit; failures elsewhere, such as a provider sign-in from
 the login page, show as a notice.
@@ -214,6 +233,23 @@ Ferraz Veloso's private offer.
 - Not built yet: changing attendants or credits on a live subscription (Asaas
   subscription updates), Pix Automático, agent and channel limits.
 
+## Workspace agent
+
+`Tools/Workspace/WorkspaceAgent` is the agent the starter made (found through
+the machine identity reserved under `WorkspaceStarter::operationId` of the
+workspace's provisioning). For a tenant with `signupJob` `agente`, the
+workspace state carries `agent: {name, active}`: the site preview's name for
+it (it lives in the instructions) or its own, and whether it is on an inbox.
+
+`POST SelfService/workspace/agent {accountId}` ("Ligar a IA neste número")
+puts it on every connected WhatsApp number of the account. Only an
+administrator of the account's chat (or a CRM admin) can. It uses Chatwoot's
+add-only `POST inbox_members`, so nobody already on the inbox is dropped, then
+mirrors the link on the CRM inbox without hooks: the replace-all
+`SyncInboxMembership` would push the CRM's list, which may not have caught up
+with a number connected minutes ago. Running it again adds nothing. No agent
+or no connected number answers 409; a Chatwoot refusal 503.
+
 ## First read
 
 When a workspace's onboarding opens (`Tenant.onboardingStep` becomes `done`:
@@ -311,7 +347,7 @@ php command.php self-service first-read --tenant=<tenantId>   # run the first re
 
 Unit: `tests/unit/Espo/Modules/FeatureSelfService` (policy, slugs, provisioning
 requests, signup form and phones, ID-token rules, offboarding order and kept
-types, the site preview carry and its funnel stages), plus
+types, the site preview carry and its funnel stages, signup origins), plus
 `Chatwoot/Hooks/ChatwootAccount/SyncWithChatwootResumeTest`,
 `Global/Tools/Tenant/TenantAdminTeamProvisionerTest` and `WorkspaceStarterTest`
 (the agent's operation id, its name, when the owner can enter).
@@ -340,7 +376,10 @@ SELF_SERVICE_TEST_DATABASE=<db> FAKE_CHATWOOT_URL=http://<fake>:8080 \
   `<fake>/api/previa/`), an unreadable preview falling back to the defaults, rerun no-op, the owner entering while the starter retries (one agent
   after the retry), an existing funnel kept, same-named tenants, dedupe
   conflicts, concierge failure and lost reply, pause/resume, switch off,
-  instance-admin owner, live leases, deleted team keys, the job.
+  instance-admin owner, live leases, deleted team keys, the job; the site
+  origin on the tenant and in the state; the agent going on a connected
+  number with the add-only call (the fake records it at `/__inbox_members`),
+  twice without a duplicate link.
 - `FirstReadTest`: onboarding opening schedules the first read once, the
   wait for conversations, the console read as the owner, no read without a
   plan.
@@ -351,7 +390,8 @@ SELF_SERVICE_TEST_DATABASE=<db> FAKE_CHATWOOT_URL=http://<fake>:8080 \
   stage; a conversation that moved since is a conflict; the deal goes to the
   person assigned in Chatwoot.
 - `SignupTest`: code signup to a one-time login, the preview id reaching
-  the provisioning, wrong-code lockout, token
+  the provisioning, the site funnel and attribution reaching the tenant,
+  wrong-code lockout, token
   required, email in use, IP limit, switch off.
 - `SocialSignInTest`: new Google user without a code, existing user ticket,
   foreign or tampered state, unverified email, instance admin, scopes.

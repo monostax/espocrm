@@ -29,6 +29,8 @@ final class SignupRequest
     public readonly string $language;
     /** The monostax.ai site preview the visitor came from (/previa), if any. Anything that isn't one is dropped. */
     public readonly ?string $previewId;
+    /** The funnel picked on the site, the connect screen to open and the visit's attribution. */
+    public readonly SignupOrigin $origin;
 
     /**
      * @throws SignupRejected
@@ -42,6 +44,7 @@ final class SignupRequest
         bool $acceptTerms,
         string $language = 'pt_BR',
         string $previewId = '',
+        ?SignupOrigin $origin = null,
     ) {
         $this->name = self::text($name, SignupRejected::INVALID_NAME);
         $this->company = self::text($company, SignupRejected::INVALID_COMPANY);
@@ -67,6 +70,7 @@ final class SignupRequest
 
         $this->language = $language === 'en_US' ? 'en_US' : 'pt_BR';
         $this->previewId = preg_match('/^[a-z0-9]{20}$/', $previewId) ? $previewId : null;
+        $this->origin = $origin ?? SignupOrigin::none();
     }
 
     /**

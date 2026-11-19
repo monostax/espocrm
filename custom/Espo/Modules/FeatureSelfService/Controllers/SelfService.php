@@ -19,6 +19,7 @@ use Espo\Core\Exceptions\ServiceUnavailable;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServiceUnavailable;
 use Espo\Modules\FeatureSelfService\Tools\Signup\SignupRejected;
+use Espo\Modules\FeatureSelfService\Tools\Signup\SignupOrigin;
 use Espo\Modules\FeatureSelfService\Tools\Signup\SignupRequest;
 use Espo\Modules\FeatureSelfService\Tools\Signup\Signups;
 use Espo\Modules\FeatureSelfService\Tools\Signup\SocialSignIn;
@@ -78,6 +79,7 @@ class SelfService
             (string) ($body->language ?? 'pt_BR'),
             $this->ipAddress($request),
             is_string($body->preview ?? null) ? $body->preview : '',
+            $this->origin($body),
         ));
     }
 
@@ -95,6 +97,7 @@ class SelfService
                 ($body->acceptTerms ?? false) === true,
                 (string) ($body->language ?? 'pt_BR'),
                 is_string($body->preview ?? null) ? $body->preview : '',
+                $this->origin($body),
             ),
             $this->ipAddress($request),
         ));
@@ -165,6 +168,12 @@ class SelfService
     /**
      * Cloudflare sits in front of the CRM and passes the visitor's address.
      */
+    /** The site's funnel, connect screen and attribution, sent along by the login page from the signup link. */
+    private function origin(object $body): SignupOrigin
+    {
+        return SignupOrigin::fromInput($body->job ?? null, $body->connect ?? null, $body->attribution ?? null);
+    }
+
     private function ipAddress(Request $request): string
     {
         $forwarded = trim((string) $request->getHeader('CF-Connecting-IP'));

@@ -148,6 +148,7 @@ class SocialSignIn
         string $language,
         string $ipAddress,
         string $previewId = '',
+        ?SignupOrigin $origin = null,
     ): array {
         $claims = $this->verify($identity, 'identity');
 
@@ -162,6 +163,7 @@ class SocialSignIn
             $acceptTerms,
             $language,
             $previewId,
+            $origin,
         ), $ipAddress);
     }
 

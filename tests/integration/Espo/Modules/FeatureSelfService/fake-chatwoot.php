@@ -12,6 +12,7 @@
  *
  *     GET  /__calls                    the call log
  *     GET  /__users                    the users, with their `confirmed` flag
+ *     GET  /__inbox_members            members added with POST inbox_members: [{accountId, inboxId, userIds}]
  *     POST /__fault {"call": "POST /platform/api/v1/users", "times": 1, "status": 500}
  *     POST /__reset
  *
@@ -29,7 +30,7 @@ $lock = fopen($stateFile . '.lock', 'c');
 flock($lock, LOCK_EX);
 
 $state = is_file($stateFile) ? json_decode((string) file_get_contents($stateFile), true) : null;
-$fresh = ['nextId' => 100, 'accounts' => [], 'users' => [], 'accountUsers' => [], 'calls' => [], 'faults' => []];
+$fresh = ['nextId' => 100, 'accounts' => [], 'users' => [], 'accountUsers' => [], 'calls' => [], 'faults' => [], 'inboxMembers' => []];
 $state ??= $fresh;
 
 $reply = function (int $status, array $payload) use (&$state, $stateFile, $lock): never {
@@ -43,6 +44,10 @@ $reply = function (int $status, array $payload) use (&$state, $stateFile, $lock)
 
 if ($path === '/__calls') {
     $reply(200, $state['calls']);
+}
+
+if ($path === '/__inbox_members') {
+    $reply(200, $state['inboxMembers'] ?? []);
 }
 
 if ($path === '/__reset') {
@@ -245,6 +250,12 @@ if ($path === '/oauth/token' && $method === 'POST') {
     $claims
         ? $finish(200, ['access_token' => 'access', 'id_token' => $encode(['alg' => 'RS256']) . '.' . $encode($claims) . '.signature'])
         : $finish(400, ['error' => 'invalid_grant']);
+}
+
+// Chatwoot's add-only call: keeps everyone already on the inbox.
+if (preg_match('#^/api/v1/accounts/(\d+)/inbox_members$#', $path, $m) && $method === 'POST') {
+    $state['inboxMembers'][] = ['accountId' => (int) $m[1], 'inboxId' => (int) ($body['inbox_id'] ?? 0), 'userIds' => $body['user_ids'] ?? []];
+    $finish(200, ['payload' => []]);
 }
 
 if (preg_match('#^/api/v1/accounts/(\d+)/inboxes$#', $path, $m) && $method === 'GET') {

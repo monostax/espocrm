@@ -117,6 +117,21 @@ final class PreviewCarry
      *
      * @return array<string, mixed>
      */
+    /**
+     * The carry as SelfServiceProvisioning.previewCarry keeps it (a JSON string, or decoded); null when there is none
+     * or it was stored as unavailable.
+     */
+    public static function fromStored(mixed $value): ?self
+    {
+        if (is_string($value)) {
+            $value = json_decode($value, true);
+        } elseif (is_object($value)) {
+            $value = json_decode((string) json_encode($value), true);
+        }
+
+        return is_array($value) ? self::fromArray($value) : null;
+    }
+
     public function toArray(): array
     {
         return [

@@ -14,6 +14,7 @@ use Espo\Modules\FeatureSelfService\Classes\Authentication\TicketLogin;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServiceUnavailable;
 use Espo\Modules\FeatureSelfService\Tools\Signup\SignupRejected;
+use Espo\Modules\FeatureSelfService\Tools\Signup\SignupOrigin;
 use Espo\Modules\FeatureSelfService\Tools\Signup\SignupRequest;
 use Espo\Modules\FeatureSelfService\Tools\Signup\Signups;
 use Espo\Modules\FeatureSelfService\Tools\Signup\VerificationMailer;
@@ -113,6 +114,23 @@ class SignupTest extends TestCase
         $provisioning = $this->em->getEntityById('SelfServiceProvisioning', $signup->get('provisioningId'));
         self::assertSame('abcdefghij0123456789', $provisioning->get('input')->previewId ?? null);
         self::assertSame('completed', $provisioning->get('status'), (string) $provisioning->get('lastError'));
+    }
+
+    public function testTheSiteFunnelAndAttributionReachTheWorkspace(): void
+    {
+        $email = $this->email();
+        $origin = SignupOrigin::fromInput('whatsapp', 'api', ['utm_source' => 'chatgpt', 'utm_content' => 'a1']);
+        $request = new SignupRequest('Maria Souza', $email, '+55 11 98888-7777', 'Clínica Origem', 'segredo-forte', true, 'pt_BR', '', $origin);
+        $started = $this->signups()->begin($request, $this->ip());
+        $this->signups()->verify($started['signupId'], $started['token'], $this->codes[$email]);
+
+        $signup = $this->em->getEntityById('SelfServiceSignup', $started['signupId']);
+        self::assertSame(['whatsapp', 'api'], [$signup->get('job'), $signup->get('connect')]);
+        $provisioning = $this->em->getEntityById('SelfServiceProvisioning', $signup->get('provisioningId'));
+        self::assertSame('completed', $provisioning->get('status'), (string) $provisioning->get('lastError'));
+        $tenant = $this->em->getEntityById('Tenant', $provisioning->get('tenantId'));
+        self::assertSame(['whatsapp', 'api'], [$tenant->get('signupJob'), $tenant->get('signupConnect')]);
+        self::assertSame('a1', $tenant->get('signupAttribution')->utm_content ?? null);
     }
 
     public function testWrongCodesAreCountedThenLocked(): void

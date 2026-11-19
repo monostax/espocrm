@@ -98,6 +98,9 @@ class Signups
             'company' => $request->company,
             'language' => $request->language,
             'previewId' => $request->previewId,
+            'job' => $request->origin->job,
+            'connect' => $request->origin->connect,
+            'attribution' => $request->origin->attribution !== [] ? (object) $request->origin->attribution : null,
             'passwordHash' => $this->passwordHash->hash($request->password),
             'tokenHash' => hash('sha256', $token),
             'codeSentAt' => $this->at($now),
@@ -214,6 +217,9 @@ class Signups
             'company' => $request->company,
             'language' => $request->language,
             'previewId' => $request->previewId,
+            'job' => $request->origin->job,
+            'connect' => $request->origin->connect,
+            'attribution' => $request->origin->attribution !== [] ? (object) $request->origin->attribution : null,
             'passwordHash' => $this->passwordHash->hash($request->password),
             'tokenHash' => hash('sha256', $token),
             'codeSends' => 0,
@@ -249,6 +255,11 @@ class Signups
             (string) $signup->get('language'),
             ownerEmailVerified: true,
             previewId: PreviewClient::isPreviewId($signup->get('previewId')) ? (string) $signup->get('previewId') : null,
+            origin: SignupOrigin::fromArray([
+                'job' => $signup->get('job'),
+                'connect' => $signup->get('connect'),
+                'attribution' => $signup->get('attribution'),
+            ]),
         ));
 
         $signup->set('provisioningId', $provisioning->getId());

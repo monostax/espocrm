@@ -41,6 +41,33 @@
             "importDisabled": true,
             "customizationDisabled": true,
             "tooltip": true
+        },
+        "signupJob": {
+            "type": "enum",
+            "options": ["", "whatsapp", "agente", "funil"],
+            "default": "",
+            "readOnly": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "tooltip": true
+        },
+        "signupConnect": {
+            "type": "enum",
+            "options": ["", "api", "qr"],
+            "default": "",
+            "readOnly": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true
+        },
+        "signupAttribution": {
+            "type": "jsonObject",
+            "readOnly": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "tooltip": true
         }
     }
 }

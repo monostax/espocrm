@@ -9,7 +9,10 @@
         "frozenAt": "Frozen at",
         "chatwootAccess": "Chat access",
         "seats": "Attendants (paid)",
-        "paidThrough": "Paid through"
+        "paidThrough": "Paid through",
+        "signupJob": "Signup path",
+        "signupConnect": "Connection picked on the site",
+        "signupAttribution": "Signup source"
     },
     "options": {
         "plan": {
@@ -31,10 +34,23 @@
             "connectWhatsapp": "Connect WhatsApp",
             "importHistory": "Import history",
             "done": "Done"
+        },
+        "signupJob": {
+            "": "—",
+            "whatsapp": "Organize WhatsApp",
+            "agente": "AI agent",
+            "funil": "Sales funnel"
+        },
+        "signupConnect": {
+            "": "—",
+            "api": "Meta official API",
+            "qr": "QR Code"
         }
     },
     "tooltips": {
-        "chatwootAccess": "What Chatwoot was last told: active, or frozen (no sending, no AI)."
+        "chatwootAccess": "What Chatwoot was last told: active, or frozen (no sending, no AI).",
+        "signupJob": "What the person chose to do first on the site (monostax.ai/previa). Decides the first screen after connecting.",
+        "signupAttribution": "UTMs and ad click ids of the visit that brought the signup."
     },
     "labels": {
         "Offboard workspace": "Offboard workspace",

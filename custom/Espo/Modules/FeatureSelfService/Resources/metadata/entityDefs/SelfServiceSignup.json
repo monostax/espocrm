@@ -82,6 +82,17 @@
             "type": "varchar",
             "maxLength": 20
         },
+        "job": {
+            "type": "varchar",
+            "maxLength": 16
+        },
+        "connect": {
+            "type": "varchar",
+            "maxLength": 8
+        },
+        "attribution": {
+            "type": "jsonObject"
+        },
         "createdAt": {
             "type": "datetime",
             "readOnly": true

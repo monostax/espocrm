@@ -15,6 +15,7 @@ use Espo\Core\Acl;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Conflict;
+use Espo\Core\Exceptions\Error as ChatwootError;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\ServiceUnavailable;
 use Espo\Core\InjectableFactory;
@@ -32,6 +33,7 @@ use Espo\Modules\FeatureSelfService\Tools\Plans\PlanSubscription;
 use Espo\Modules\FeatureSelfService\Tools\Plans\SeatAccess;
 use Espo\Modules\FeatureSelfService\Tools\Plans\SeatRoster;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAccess;
+use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceAgent;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceTrial;
 use Espo\Modules\FeatureSelfService\Tools\Workspace\WorkspaceWallet;
 use InvalidArgumentException;
@@ -44,6 +46,9 @@ use Espo\ORM\EntityManager;
  * Chatwoot shell: the onboarding gate now, the trial banner and lock next.
  *
  *   GET  /SelfService/workspace?accountId=<chatwootAccountId>
+ *   POST /SelfService/workspace/agent {accountId}
+ *        Puts the workspace's AI agent on its connected WhatsApp numbers
+ *        ("Ligar a IA neste número", the site's agent funnel); returns the state.
  *   POST /SelfService/workspace/refresh {accountId}
  *        While onboarding, picks up a WhatsApp inbox connected in Chatwoot at
  *        once (instead of the minute sync), brings adopted QR channels up to
@@ -95,7 +100,7 @@ class SelfServiceWorkspace
     public function getActionState(Request $request): object
     {
         [, $tenant] = $this->resolve($request->getQueryParam('accountId'));
-        $state = $this->trial->state($tenant);
+        $state = (array) $this->stateOf($tenant);
 
         if ($state['selfService'] ?? false) {
             // A cancelled plan runs out with its paid period: the banner says so instead of "pay the invoice".
@@ -111,7 +116,7 @@ class SelfServiceWorkspace
         [$account, $tenant] = $this->resolve($request->getParsedBody()->accountId ?? null);
 
         if ($this->trial->isImportingHistory($tenant)) {
-            return (object) $this->trial->state($this->settleImport($account, $tenant));
+            return $this->stateOf($this->settleImport($account, $tenant));
         }
 
         if (!$this->trial->isConnecting($tenant)) {
@@ -119,7 +124,7 @@ class SelfServiceWorkspace
             $access->applyBilling((string) $tenant->getId());
             $access->syncChatwoot();
 
-            return (object) $this->trial->state(
+            return $this->stateOf(
                 $this->entityManager->getEntityById('Tenant', (string) $tenant->getId()) ?? $tenant
             );
         }
@@ -147,7 +152,62 @@ class SelfServiceWorkspace
             $this->trial->finishImportIfSettled($tenant);
         }
 
-        return (object) $this->trial->state($tenant);
+        return $this->stateOf($tenant);
+    }
+
+    /**
+     * "Ligar a IA neste número": puts the workspace's AI agent on its connected WhatsApp numbers. Offered after the
+     * import to signups from the site's agent funnel; an administrator of the workspace's chat account turns it on.
+     */
+    public function postActionAgent(Request $request): object
+    {
+        [$account, $tenant] = $this->resolve($request->getParsedBody()->accountId ?? null);
+
+        if (!$this->trial->state($tenant)['selfService'] || !$this->isAccountAdministrator($account)) {
+            throw new Forbidden('Only an administrator of the workspace turns its AI agent on.');
+        }
+
+        try {
+            $this->injectableFactory->create(WorkspaceAgent::class)->activate($tenant, $account);
+        } catch (\RuntimeException $e) {
+            throw new Conflict($e->getMessage());
+        } catch (ChatwootError $e) {
+            throw new ServiceUnavailable('Chatwoot did not take the AI agent: ' . $e->getMessage());
+        }
+
+        return $this->stateOf($tenant);
+    }
+
+    /**
+     * The workspace state; for a signup from the site's agent funnel, also its AI agent (name, and whether it is on
+     * a number yet), for the "Ligar a IA" screen.
+     */
+    private function stateOf(Entity $tenant): object
+    {
+        $state = $this->trial->state($tenant);
+
+        if (($state['job'] ?? null) === 'agente') {
+            $state['agent'] = $this->injectableFactory->create(WorkspaceAgent::class)->state($tenant);
+        }
+
+        return (object) $state;
+    }
+
+    private function isAccountAdministrator(Entity $account): bool
+    {
+        if ($this->user->isAdmin()) {
+            return $this->user->isActive();
+        }
+
+        return $this->user->isActive() && $this->user->isRegular() && $this->entityManager
+            ->getRDBRepository('ChatwootAccountUserMembership')
+            ->join('chatwootUser')
+            ->where([
+                'chatwootAccountId' => $account->getId(),
+                'chatwootUser.assignedUserId' => $this->user->getId(),
+                'isAI' => false,
+                'role' => 'administrator',
+            ])->findOne() !== null;
     }
 
     /**
