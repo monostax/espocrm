@@ -9,6 +9,7 @@ use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
+use Espo\Modules\FeatureAutomation\Classes\AutomationActions\ActionWaiting;
 use Espo\Modules\FeatureJourney\Classes\JourneyActions\Action as JourneyAction;
 use Espo\Modules\FeatureJourney\Services\ActionContext as JourneyActionContext;
 use Espo\Modules\FeatureJourney\Services\FormulaReadScope;
@@ -327,6 +328,38 @@ class AutomationActionRunner
                     $payload = $this->readItemPayload($item, $payload);
                     $ok = true;
                     break;
+                } catch (ActionWaiting $wait) {
+                    // The action started something that finishes later. Release its idempotency
+                    // claim so the resumed pass can run it again and read the result.
+                    if ($idempKey !== null) {
+                        $this->receiptStore->release((string) $automation->getId(), $idempKey, 'action');
+                    }
+
+                    $payload = $this->readItemPayload($item, $payload);
+                    $payload['_wakeAt'] = $wait->wakeAt;
+                    if ($item->hasId()) {
+                        $item->set('payload', $payload);
+                        try {
+                            $this->entityManager->saveEntity($item, [SaveOption::SKIP_ALL => true]);
+                        } catch (Throwable) {
+                        }
+                    }
+
+                    $log[] = [
+                        'index' => $index,
+                        'type' => $type,
+                        'status' => 'waiting_action',
+                        'reason' => $wait->getMessage(),
+                        'wakeAt' => $wait->wakeAt,
+                    ];
+
+                    return [
+                        'ok' => true,
+                        'log' => $log,
+                        'waiting' => true,
+                        'wakeAt' => $wait->wakeAt,
+                        'payload' => $payload,
+                    ];
                 } catch (Throwable $e) {
                     $lastError = $e->getMessage();
                     $this->log->error(

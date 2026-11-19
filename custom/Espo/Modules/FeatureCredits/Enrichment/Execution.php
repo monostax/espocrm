@@ -23,7 +23,16 @@ class Execution
 {
     public function __construct(private EntityManager $entityManager, private WalletLock $lock, private ActorAccess $actors,
         private Registry $providers, private FixedSettlement $settlement, private Crypt $crypt, private Clock $clock,
-        private MobilePhones $mobiles, private EmailOwners $owners) {}
+        private MobilePhones $mobiles, private EmailOwners $owners, private FoundResults $found) {}
+
+    /** Wallet-locked work; found Contact emails/phones are announced only once it has committed. */
+    private function locked(string $tenantId, callable $work): mixed
+    {
+        $this->found->reset();
+        $result = $this->lock->run($tenantId, $work);
+        $this->found->announce();
+        return $result;
+    }
 
     /** Job entry. Persist every permission before supplier I/O, never hold database locks over HTTP. */
     public function run(string $tenantId, string $quoteId): void
@@ -71,7 +80,7 @@ class Execution
     public function claim(string $tenantId, string $quoteId, bool $dispatch = true): ?array
     {
         GrantInput::identity($quoteId);
-        return $this->lock->run($tenantId, function (PDO $pdo, array $wallet, string $now) use ($tenantId, $quoteId, $dispatch): ?array {
+        return $this->locked($tenantId, function (PDO $pdo, array $wallet, string $now) use ($tenantId, $quoteId, $dispatch): ?array {
             [$row, $terms, $usage, $hold] = $this->load($pdo, $tenantId, $quoteId);
             if ($usage['state'] !== 'admitted') return null;
             if (!$this->authorized($pdo, $terms)) {
@@ -161,7 +170,7 @@ class Execution
     /** Result replay/late delivery cannot mutate an already completed attempt or reopen a closed hold. */
     public function record(string $tenantId, string $quoteId, string $attemptId, string $token, Result $result): void
     {
-        $this->lock->run($tenantId, function (PDO $pdo, array $wallet, string $now) use ($tenantId, $quoteId, $attemptId, $token, $result): void {
+        $this->locked($tenantId, function (PDO $pdo, array $wallet, string $now) use ($tenantId, $quoteId, $attemptId, $token, $result): void {
             [$row, $terms, $usage, $hold] = $this->load($pdo, $tenantId, $quoteId);
             if ($usage['state'] !== 'admitted') return;
             $q = $pdo->prepare('SELECT * FROM enrichment_attempt WHERE id=? AND quote_id=? AND tenant_id=?');
@@ -233,7 +242,7 @@ class Execution
     /** Recheck after any scheduler/process pause and cap the HTTP timeout to the durable lease. */
     public function dispatchWindow(string $tenant, string $quote, string $attemptId, string $token): ?int
     {
-        return $this->lock->run($tenant, function (PDO $pdo, array $wallet, string $now) use ($tenant,$quote,$attemptId,$token): ?int {
+        return $this->locked($tenant, function (PDO $pdo, array $wallet, string $now) use ($tenant,$quote,$attemptId,$token): ?int {
             [$row,$terms,$usage,$hold] = $this->load($pdo,$tenant,$quote);
             if ($usage['state'] !== 'admitted') return null;
             $q = $pdo->prepare('SELECT * FROM enrichment_attempt WHERE id=? AND quote_id=? AND tenant_id=?');
@@ -326,6 +335,7 @@ class Execution
             }
             $products[$key] = true;
             $charge = $charge->plus(Amount::fromString($attempt['credits']));
+            $this->found->collect($terms, $attempt);
         }
         $this->settlement->settleLocked($pdo,$wallet,$now,$usage,$hold,$charge);
         // The protected purchased marker and charge become visible in the same commit.

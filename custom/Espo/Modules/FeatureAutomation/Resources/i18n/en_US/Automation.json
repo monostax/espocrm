@@ -164,6 +164,8 @@
         "linkRecord": "Link record",
         "unlinkRecord": "Unlink record",
         "applyAssignmentRule": "Apply assignment rule",
+        "verifyContactChannel": "Verify contact value (waits for the result)",
+        "addChannelIdentity": "Add found value to contact",
         "sendHttpRequest": "Send HTTP request",
         "recordTrackingEvent": "Log tracking event",
         "startChildAutomation": "Start child automation",

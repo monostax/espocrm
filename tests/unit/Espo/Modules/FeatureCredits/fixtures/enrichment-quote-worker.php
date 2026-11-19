@@ -103,11 +103,17 @@ $cryptConfig = new class extends \Espo\Core\Utils\Config {
     public function __construct() {}
     public function get(string $name, mixed $default = null): mixed { return $name === 'cryptKey' ? 'enrichment-fixture-key' : $default; }
 };
+// No automations in the worker: found results are not announced.
+$foundResults = new class extends \Espo\Modules\FeatureCredits\Enrichment\FoundResults {
+    public function __construct() {}
+    public function collect(array $terms, array $attempt): void {}
+    public function announce(): void {}
+};
 $execution = new \Espo\Modules\FeatureCredits\Enrichment\Execution($manager,$lock,$actorAccess,$registry,
     new \Espo\Modules\FeatureCredits\Accounting\FixedSettlement(new \Espo\Modules\FeatureCredits\Accounting\Funding($lock)),
     new \Espo\Core\Utils\Crypt($cryptConfig),$clock,
     new \Espo\Modules\FeatureCredits\Enrichment\MobilePhones(new \Espo\Modules\FeatureCredits\Verification\TwilioCredentials(),new \Espo\Modules\FeatureCredits\Verification\TwilioTransport()),
-        new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners(new \Espo\Modules\FeatureCredits\Enrichment\Decisions()));
+        new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners(new \Espo\Modules\FeatureCredits\Enrichment\Decisions()),$foundResults);
 $purchases = new \Espo\Modules\FeatureCredits\Enrichment\Purchases($lock,
     new \Espo\Modules\FeatureCredits\Accounting\FixedSettlement(new \Espo\Modules\FeatureCredits\Accounting\Funding($lock)),
     $actorAccess,$availability,new \Espo\Core\Utils\Crypt($cryptConfig));
@@ -119,7 +125,7 @@ $cacheCrypt = new \Espo\Core\Utils\Crypt($cacheCryptConfig);
 $cachedExecution = new \Espo\Modules\FeatureCredits\Enrichment\Execution($manager,$lock,$actorAccess,$registry,
     new \Espo\Modules\FeatureCredits\Accounting\FixedSettlement(new \Espo\Modules\FeatureCredits\Accounting\Funding($lock)),$cacheCrypt,$clock,
     new \Espo\Modules\FeatureCredits\Enrichment\MobilePhones(new \Espo\Modules\FeatureCredits\Verification\TwilioCredentials(),new \Espo\Modules\FeatureCredits\Verification\TwilioTransport()),
-        new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners(new \Espo\Modules\FeatureCredits\Enrichment\Decisions()));
+        new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners(new \Espo\Modules\FeatureCredits\Enrichment\Decisions()),$foundResults);
 $cache = new \Espo\Modules\FeatureCredits\Enrichment\CandidateCache($lock,$cacheCrypt,$actorAccess,$availability);
 $cachedPurchases = new \Espo\Modules\FeatureCredits\Enrichment\Purchases($lock,
     new \Espo\Modules\FeatureCredits\Accounting\FixedSettlement(new \Espo\Modules\FeatureCredits\Accounting\Funding($lock)),

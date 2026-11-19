@@ -15,6 +15,8 @@
         "linkRecord",
         "unlinkRecord",
         "applyAssignmentRule",
+        "verifyContactChannel",
+        "addChannelIdentity",
         "sendHttpRequest",
         "recordTrackingEvent",
         "startChildAutomation",
@@ -261,6 +263,53 @@
                 {"name": "assignmentRule", "type": "enum", "label": "Rule", "options": ["Round-Robin", "Least-Busy"], "default": "Round-Robin"},
                 {"name": "targetTeamId", "type": "link", "entity": "Team", "label": "Team", "nameKey": "targetTeamName", "required": true},
                 {"name": "targetUserPosition", "type": "varchar", "label": "Team role (optional)"}
+            ]
+        },
+        "verifyContactChannel": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\VerifyContactChannel",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "check",
+                    "type": "enum",
+                    "label": "Check (WhatsApp 2 credits, Twilio 8, email 2)",
+                    "options": ["whatsapp_registration", "phone_identity", "email_deliverability"],
+                    "default": "whatsapp_registration",
+                    "required": true
+                },
+                {
+                    "name": "source",
+                    "type": "enum",
+                    "label": "Value to check",
+                    "options": ["enrichmentResult", "contactPrimary"],
+                    "default": "enrichmentResult"
+                },
+                {
+                    "name": "as",
+                    "type": "varchar",
+                    "label": "Result key (optional, default = check)",
+                    "placeholder": "whatsapp_registration"
+                }
+            ]
+        },
+        "addChannelIdentity": {
+            "implementationClassName": "Espo\\Modules\\FeatureAutomation\\Classes\\AutomationActions\\AddChannelIdentity",
+            "tier": "tenant",
+            "paramDefs": [
+                {
+                    "name": "channel",
+                    "type": "enum",
+                    "label": "Add the found value as",
+                    "options": ["phone", "email", "whatsapp"],
+                    "default": "phone",
+                    "required": true
+                },
+                {
+                    "name": "as",
+                    "type": "varchar",
+                    "label": "Result key (optional, default = channel)",
+                    "placeholder": "phone"
+                }
             ]
         },
         "sendHttpRequest": {

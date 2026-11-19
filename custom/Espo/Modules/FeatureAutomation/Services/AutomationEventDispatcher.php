@@ -41,8 +41,14 @@ class AutomationEventDispatcher
                 ])
                 ->find();
 
+            $subjectTenants = [];
+
             foreach ($list as $automation) {
                 if (!$this->matchesSubjectEntityType($automation, $entityType)) {
+                    continue;
+                }
+
+                if (!$this->matchesSubjectTenant($automation, $entityType, $entityId, $subjectTenants)) {
                     continue;
                 }
 
@@ -96,6 +102,8 @@ class AutomationEventDispatcher
                 ])
                 ->find();
 
+            $subjectTenants = [];
+
             foreach ($list as $automation) {
                 $codes = $automation->get('signalCodes');
                 if ($codes instanceof \stdClass) {
@@ -111,6 +119,10 @@ class AutomationEventDispatcher
                 }
 
                 if (!$this->matchesSubjectEntityType($automation, $entityType)) {
+                    continue;
+                }
+
+                if (!$this->matchesSubjectTenant($automation, $entityType, $entityId, $subjectTenants)) {
                     continue;
                 }
 
@@ -141,6 +153,76 @@ class AutomationEventDispatcher
         } catch (Throwable $e) {
             $this->log->error('AutomationEventDispatcher signal: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Whether any Active signal automation would accept `$code` (an empty code list accepts
+     * every signal). Lets producers skip preparing a signal nobody listens to.
+     */
+    public function hasSignalListeners(string $code): bool
+    {
+        if ($code === '') {
+            return false;
+        }
+
+        $list = $this->entityManager
+            ->getRDBRepository(Automation::ENTITY_TYPE)
+            ->select(['id', 'signalCodes'])
+            ->where([
+                'status' => Automation::STATUS_ACTIVE,
+                'triggerType' => Automation::TRIGGER_SIGNAL,
+            ])
+            ->find();
+
+        foreach ($list as $automation) {
+            $codes = $automation->get('signalCodes');
+            if ($codes instanceof \stdClass) {
+                $codes = (array) $codes;
+            }
+            $codes = is_array($codes) ? array_map('strval', $codes) : [];
+
+            if ($codes === [] || in_array($code, $codes, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * A workspace automation only reacts to records of its own workspace. Starting it for
+     * another workspace's record would fail the run (machine subjects are tenant-guarded)
+     * or, for batch runs, act on its own records because of someone else's event.
+     * Workspace-less (instance) and cross-tenant automations keep reacting to every record.
+     *
+     * @param array<string, ?string> $cache subject tenant per "type|id" for one dispatch
+     */
+    private function matchesSubjectTenant(
+        Automation $automation,
+        ?string $entityType,
+        ?string $entityId,
+        array &$cache,
+    ): bool {
+        $tenantId = (string) ($automation->get('tenantId') ?? '');
+        if ($tenantId === '' || !$entityType || !$entityId || $automation->get('crossTenant')) {
+            return true;
+        }
+
+        if ($entityType === 'Tenant') {
+            return $entityId === $tenantId;
+        }
+
+        $cacheKey = $entityType . '|' . $entityId;
+        if (!array_key_exists($cacheKey, $cache)) {
+            $subject = $this->entityManager->getEntityById($entityType, $entityId);
+            $cache[$cacheKey] = $subject && $subject->hasAttribute('tenantId')
+                ? (string) ($subject->get('tenantId') ?? '')
+                : null;
+        }
+
+        $subjectTenantId = $cache[$cacheKey];
+
+        return $subjectTenantId === null || $subjectTenantId === '' || $subjectTenantId === $tenantId;
     }
 
     private function passTriggerDebounce(object $automation, string $fingerprint): bool

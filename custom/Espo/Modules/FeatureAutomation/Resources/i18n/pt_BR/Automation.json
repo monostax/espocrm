@@ -164,6 +164,8 @@
         "linkRecord": "Vincular registro",
         "unlinkRecord": "Desvincular registro",
         "applyAssignmentRule": "Aplicar regra de atribuição",
+        "verifyContactChannel": "Verificar dado do contato (espera o resultado)",
+        "addChannelIdentity": "Adicionar dado encontrado ao contato",
         "sendHttpRequest": "Enviar requisição HTTP",
         "recordTrackingEvent": "Registrar evento de tracking",
         "startChildAutomation": "Iniciar automação filha",

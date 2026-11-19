@@ -389,6 +389,71 @@ otherwise the clicking user. Enforced by `Hooks/Automation/ValidateRunAsUser.php
 | entityChange | Opportunity, Contact, Lead, Account (+ optional debounce) |
 | signal | `AutomationEventDispatcher::dispatchSignal` |
 
+entityChange and signal runs only start workspace automations whose workspace is the record's
+own. Workspace-less (instance) and `crossTenant` automations still react to every record.
+
+### Signal codes
+
+| code | Subject | Payload (`$payload._trigger`) |
+|------|---------|-------------------------------|
+| `enrichment.found` | Contact | `enrichment.{attemptId, product: email\|phone, provider, index}` |
+
+`enrichment.found` fires once per email or phone that enrichment found and charged for a Contact
+(single-record and bulk), after the purchase commits (`FeatureCredits\Enrichment\FoundResults`).
+It never carries the value: actions resolve it from the encrypted receipt as the run-as user.
+Nothing is decrypted or dispatched while no Active automation listens to the code.
+
+## Contact verification blocks
+
+Pausing actions throw `ActionWaiting(wakeAt)`. The runner parks the item (`Waiting` + `wakeAt`,
+idempotency claim released) and, on wake, runs the action list again from the top. So these
+actions are re-entrant: what they started and decided lives in the item payload.
+
+| Action | Does | Writes |
+|--------|------|--------|
+| `verifyContactChannel` | One paid check as the run-as user: `whatsapp_registration` (2 credits), `phone_identity` (Twilio, 8), `email_deliverability` (2). `source`: `enrichmentResult` (default) or `contactPrimary`. Parks while the check runs (~20 s polls, gives up after 15 min) and on workspace rate limits. No credits → item fails. | `verification.<as>` = the outcome, or `not_applicable` / `unavailable` / `failed`; `verificationInfo.<as>` |
+| `addChannelIdentity` | Adds the found value to the Contact through the record service (edit + field ACL, channel-identity hook). `phone` = phone list + WhatsApp identity, `email` = email list + email identity, `whatsapp` = identity only. Never adds a value the person rejected. | `channelIdentity.<as>` = `added` / `already_present` / `not_applicable` / `invalid` / `rejected` / `conflict` / `unavailable` |
+
+Checks reuse fresh evidence for free and join a check already running for the same value, like
+the inbox. The run-as user needs the enrichment-credits permission and Contact edit access.
+
+Example: verify every found value, add emails that are deliverable and phones that are on
+WhatsApp and pass Twilio (Machine kind, trigger `signal`, codes `["enrichment.found"]`,
+subject `Contact`):
+
+```json
+{
+  "kind": "machine",
+  "initial": "Verify",
+  "states": [
+    {
+      "id": "Verify",
+      "type": "final",
+      "onEnter": [
+        { "type": "verifyContactChannel", "params": { "check": "email_deliverability" } },
+        {
+          "type": "addChannelIdentity", "params": { "channel": "email" },
+          "when": "object\\get(object\\get($payload, 'verification'), 'email_deliverability') == 'deliverable'"
+        },
+        { "type": "verifyContactChannel", "params": { "check": "whatsapp_registration" } },
+        {
+          "type": "verifyContactChannel", "params": { "check": "phone_identity" },
+          "when": "object\\get(object\\get($payload, 'verification'), 'whatsapp_registration') == 'registered'"
+        },
+        {
+          "type": "addChannelIdentity", "params": { "channel": "phone" },
+          "when": "object\\get(object\\get($payload, 'verification'), 'whatsapp_registration') == 'registered' && object\\get(object\\get($payload, 'verification'), 'phone_identity') == 'verified'"
+        }
+      ]
+    }
+  ],
+  "transitions": []
+}
+```
+
+An email check on a found phone (and the reverse) records `not_applicable` without a charge, so
+one automation handles both kinds.
+
 ## UI
 
 Definition field: Builder (mode × source map steps, groupBy/timeBucket, action idempotency) + JSON toggle.
