@@ -324,6 +324,11 @@ UI: detail action **Simulate**.
 
 Requires trigger `entityType` + `entityId`. Waits → item `Waiting` + `wakeAt`.
 
+What `onEnter` / `onExit` actions write to the item payload (setPayload values, verification
+results, `_pendingJoins`, …) stays on it when the state's actions succeed. The machine's own
+bookkeeping (`_state`, `_machineLog`, `_machineSteps`, `_onEnterDone`, `_enteredStateAt`,
+`_pendingTo`, `_wakeAt`, `_join*`) always comes from the machine.
+
 ### Wait modes (machine)
 
 | Spec | Meaning |
@@ -418,9 +423,9 @@ Checks reuse fresh evidence for free and join a check already running for the sa
 the inbox. The run-as user needs the enrichment-credits permission and Contact edit access.
 
 Example: verify every found value, add emails that are deliverable and phones that are on
-WhatsApp and pass Twilio. Use the **Batch** kind (trigger `signal`, codes `["enrichment.found"]`,
-subject `Contact`): Machine runs drop payload keys that onEnter actions write once the state
-completes, so the outcomes would not stay on the item. This is the live Monostax automation:
+WhatsApp and pass Twilio (Batch kind, trigger `signal`, codes `["enrichment.found"]`, subject
+`Contact`; a Machine with the same actions in one state's `onEnter` works too). This is the live
+Monostax automation:
 
 ```json
 {

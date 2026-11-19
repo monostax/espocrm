@@ -186,6 +186,7 @@ class MachineProcessor
                             ];
                         }
 
+                        $payload = $this->adoptActionWrites($payload, $exitLog);
                         unset($payload['_pendingTo'], $payload['_onEnterDone'], $payload['_joinWaiting']);
                         $stateId = $pendingTo;
                         $payload['_state'] = $stateId;
@@ -268,6 +269,7 @@ class MachineProcessor
                             'log' => $log,
                         ];
                     }
+                    $payload = $this->adoptActionWrites($payload, $enterLog);
                     $payload['_onEnterDone'] = true;
                     $payload['_enteredStateAt'] = date('Y-m-d H:i:s');
                 }
@@ -344,6 +346,7 @@ class MachineProcessor
 
                     return ['status' => 'Waiting', 'payload' => $payload, 'log' => $log];
                 }
+                $payload = $this->adoptActionWrites($payload, $enterLog);
 
                 $resolved = $this->resolveWaitClock(
                     $state,
@@ -417,6 +420,7 @@ class MachineProcessor
 
                     return ['status' => 'Waiting', 'payload' => $payload, 'log' => $log];
                 }
+                $payload = $this->adoptActionWrites($payload, $enterLog);
                 $payload['_onEnterDone'] = true;
                 $payload['_enteredStateAt'] = date('Y-m-d H:i:s');
             }
@@ -517,6 +521,7 @@ class MachineProcessor
             if (!$exitLog['ok']) {
                 return $this->fail($payload, $log, $steps, $exitLog['error'] ?? 'onExit failed');
             }
+            $payload = $this->adoptActionWrites($payload, $exitLog);
 
             $log[] = [
                 'from' => $stateId,
@@ -547,6 +552,43 @@ class MachineProcessor
      * @param array<string, mixed> $payload
      * @return array{status: string, payload: array<string, mixed>, log: list<array<string, mixed>>, error: string}
      */
+    /**
+     * Payload keys the machine owns: its own copy of these always wins over the item
+     * payload the actions saved (which can hold, say, a stale past `_wakeAt`).
+     */
+    private const MACHINE_KEYS = [
+        '_state', '_machineLog', '_machineSteps', '_onEnterDone', '_enteredStateAt', '_pendingTo',
+        '_wakeAt', '_joinWaiting', '_joinMode', '_joinTimedOut', '_joinSatisfied',
+    ];
+
+    /**
+     * Keep what a state's actions wrote to the item payload: verification results,
+     * setPayload values, `_pendingJoins` from startChildAutomation, … Actions save the item
+     * and the action runner hands back the saved payload, so that copy is the truth for
+     * everything except the machine's own bookkeeping, which comes from the machine's copy.
+     *
+     * @param array<string, mixed> $payload the machine's copy
+     * @param array{payload?: array<string, mixed>} $side runSide() result
+     * @return array<string, mixed>
+     */
+    private function adoptActionWrites(array $payload, array $side): array
+    {
+        $written = $side['payload'] ?? null;
+        if (!is_array($written)) {
+            return $payload;
+        }
+
+        foreach (self::MACHINE_KEYS as $key) {
+            if (array_key_exists($key, $payload)) {
+                $written[$key] = $payload[$key];
+            } else {
+                unset($written[$key]);
+            }
+        }
+
+        return $written;
+    }
+
     private function fail(array $payload, array $log, int $steps, string $error): array
     {
         $payload['_machineLog'] = $log;
