@@ -114,6 +114,43 @@ class HistoryImportSyncTest extends TestCase
         self::assertNull($this->backfillPage($account), 'Nothing is left for the backfill.');
     }
 
+    public function testAQuietAccountsImportedConversationsAreSyncedOnceNotEveryRun(): void
+    {
+        $account = $this->account();
+        $chatwootId = (int) $account->get('chatwootAccountId');
+        $cursor = time() - 600;
+
+        // An import: 30 threads whose activity time is the import, just before the cursor, and no message since.
+        $conversations = array_map(fn (int $n) => $this->conversation($n, $cursor - 5 * $n), range(1, 30));
+        $this->seed($chatwootId, ['conversations' => $conversations]);
+        $account->set('conversationSyncCursor', $cursor);
+        $this->em->saveEntity($account, ['silent' => true]);
+
+        $sync = $this->app->getInjectableFactory()->create(SyncConversationsFromChatwoot::class);
+        $sync->run();
+        $first = $this->syncedAt($account);
+        self::assertCount(30, $first);
+
+        sleep(1);
+        $conversations[0]['last_activity_at'] = time();
+        $this->seed($chatwootId, ['conversations' => $conversations]);
+        $sync->run();
+
+        self::assertSame([9001], array_keys(array_diff_assoc($this->syncedAt($account), $first)),
+            'Only the thread with a new message is read again.');
+    }
+
+    /** @return array<int, string> lastSyncedAt by Chatwoot conversation id */
+    private function syncedAt(Entity $account): array
+    {
+        $syncedAt = [];
+        foreach ($this->em->getRDBRepository('ChatwootConversation')->where(['chatwootAccountId' => $account->getId()])->find() as $row) {
+            $syncedAt[(int) $row->get('chatwootConversationId')] = (string) $row->get('lastSyncedAt');
+        }
+        ksort($syncedAt);
+        return $syncedAt;
+    }
+
     private function account(): Entity
     {
         $suffix = bin2hex(random_bytes(4));

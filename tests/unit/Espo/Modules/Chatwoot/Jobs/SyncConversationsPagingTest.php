@@ -58,6 +58,22 @@ class SyncConversationsPagingTest extends TestCase
         self::assertTrue($more);
     }
 
+    public function testConversationsSyncedWellAfterTheirLastActivityAreNotSyncedAgain(): void
+    {
+        $page = [
+            ['id' => 1, 'last_activity_at' => 10_000], // synced 5 minutes after: left out
+            ['id' => 2, 'last_activity_at' => 10_000], // synced a minute after: read until the margin passes
+            ['id' => 3, 'last_activity_at' => 10_000], // never synced
+            ['id' => 4, 'last_activity_at' => 20_000], // new activity since its last sync
+            ['id' => 5],                               // no activity time
+        ];
+        $syncedAt = [1 => 10_300, 2 => 10_060, 4 => 15_000, 5 => 99_999];
+
+        $left = SyncConversationsFromChatwoot::notSyncedSinceActivity($page, $syncedAt);
+
+        self::assertSame([2, 3, 4, 5], array_column($left, 'id'));
+    }
+
     public function testAConversationWithoutAnActivityTimeIsRead(): void
     {
         [$changed] = SyncConversationsFromChatwoot::changedOnPage([['id' => 1], ['id' => 2, 'last_activity_at' => 50]], 100);

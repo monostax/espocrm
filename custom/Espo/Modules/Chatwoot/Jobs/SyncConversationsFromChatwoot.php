@@ -304,6 +304,10 @@ class SyncConversationsFromChatwoot implements JobDataLess
             // Handle response structure - filter API returns {meta, payload} directly
             [$conversations, $hasMorePages] = self::changedOnPage($response['payload'] ?? [], $since);
 
+            if ($cursor !== null) {
+                $conversations = self::notSyncedSinceActivity($conversations, $this->syncedAt($conversations, $espoAccountId));
+            }
+
             $this->log->debug(
                 "SyncConversationsFromChatwoot: Page {$page} - " . count($conversations) . " changed conversations"
             );
@@ -379,6 +383,62 @@ class SyncConversationsFromChatwoot implements JobDataLess
         }
 
         return [$changed, count($conversations) === self::PAGE_SIZE];
+    }
+
+    /**
+     * The conversations the CRM hasn't synced since their last activity. The cursor's overlap reads the same ones
+     * again every run while an account is quiet, and after a history import that is every imported conversation, all
+     * with an activity time of the import: Victa's 119 took 45 of every run's 51 s on 2026-11-20. A sync at least
+     * CURSOR_OVERLAP_SECONDS after the activity read it with that activity in place, the margin the overlap keeps.
+     * Only for the incremental sync: the backfill reads everything, rows a sync never saw in full included.
+     *
+     * @param list<array<string, mixed>> $conversations
+     * @param array<int, int> $syncedAt Unix time of the CRM's last sync, by Chatwoot conversation id
+     * @return list<array<string, mixed>>
+     */
+    public static function notSyncedSinceActivity(array $conversations, array $syncedAt): array
+    {
+        return array_values(array_filter($conversations, function (array $conversation) use ($syncedAt): bool {
+            $id = (int) ($conversation['id'] ?? 0);
+            $lastActivityAt = $conversation['last_activity_at'] ?? null;
+
+            return !isset($syncedAt[$id])
+                || !is_numeric($lastActivityAt)
+                || $syncedAt[$id] < (int) $lastActivityAt + self::CURSOR_OVERLAP_SECONDS;
+        }));
+    }
+
+    /**
+     * When the CRM last synced each of these conversations (deleted rows left out: the sync restores them).
+     *
+     * @param list<array<string, mixed>> $conversations
+     * @return array<int, int>
+     */
+    private function syncedAt(array $conversations, string $espoAccountId): array
+    {
+        $ids = array_values(array_filter(array_map(fn (array $c) => (int) ($c['id'] ?? 0), $conversations)));
+
+        if (!$ids) {
+            return [];
+        }
+
+        $rows = $this->entityManager
+            ->getRDBRepository('ChatwootConversation')
+            ->select(['id', 'chatwootConversationId', 'lastSyncedAt'])
+            ->where(['chatwootAccountId' => $espoAccountId, 'chatwootConversationId' => $ids])
+            ->find();
+
+        $syncedAt = [];
+
+        foreach ($rows as $row) {
+            $at = $row->get('lastSyncedAt');
+
+            if ($at) {
+                $syncedAt[(int) $row->get('chatwootConversationId')] = (int) strtotime($at . ' UTC');
+            }
+        }
+
+        return $syncedAt;
     }
 
     /**
