@@ -390,6 +390,9 @@ class Signups
      * number (decided 2026-11-12): a number that already verified another signup is refused, and the person may send
      * a new code from another number. Otherwise the number becomes the owner's phone and the account is created here,
      * so it happens even if the signup page was closed.
+     *
+     * The number stays used only while that other signup's owner exists, or is still being created (no user yet).
+     * Deleting the owner (by hand or by offboarding the workspace) frees it again (decided 2026-11-19).
      */
     public function phoneVerified(string $signupId, string $phone): string
     {
@@ -399,9 +402,16 @@ class Signups
             return self::PHONE_OK;
         }
 
+        // The belongsTo join only matches a user that isn't deleted.
         $used = $this->entityManager
             ->getRDBRepository(self::ENTITY_TYPE)
-            ->where(['phone' => $phone, 'phoneVerifiedAt!=' => null, 'id!=' => $signup->getId()])
+            ->leftJoin('user')
+            ->where([
+                'phone' => $phone,
+                'phoneVerifiedAt!=' => null,
+                'id!=' => $signup->getId(),
+                'OR' => [['userId' => null], ['user.id!=' => null]],
+            ])
             ->findOne();
 
         if ($used) {
