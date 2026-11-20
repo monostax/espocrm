@@ -111,6 +111,10 @@ class ActionRunner
             if (!$actionEntity->get('isActive')) {
                 continue;
             }
+            if ($journey->get('reviewAccountWhatsAppReplies') && $record->hasId() &&
+                $this->entityManager->getEntityById('JourneyRecord', $record->getId())?->get('replyPausedAt')) {
+                break;
+            }
 
             $type = (string) $actionEntity->get('type');
             $meta = $this->metadata->get(['app', 'journeyActionTypes', 'types', $type]);

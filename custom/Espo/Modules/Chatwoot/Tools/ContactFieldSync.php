@@ -12,6 +12,8 @@
 namespace Espo\Modules\Chatwoot\Tools;
 
 use Espo\Core\Utils\Metadata;
+use Espo\Core\FieldProcessing\PhoneNumber\Saver as PhoneSaver;
+use Espo\Core\FieldProcessing\Saver\Params as SaverParams;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -28,10 +30,8 @@ use Espo\ORM\EntityManager;
  * duplicate checking, campaign filters and the reconciler's
  * phone/email match steps read.
  *
- * Strictly additive: never removes or reorders existing values, never
- * changes the primary. When the contact has no value at all, the
- * appended one becomes primary (populating Contact.phoneNumber /
- * Contact.emailAddress).
+ * A WhatsApp removal also unlinks the matching native phone from this
+ * Contact. Espo's phone field saver promotes a remaining primary if needed.
  *
  * Dedupe is normalization-aware: phones compare E.164-normalized
  * (a formatted "+55 (34) 99696-4707" is not duplicated), emails
@@ -52,6 +52,7 @@ class ContactFieldSync
     public function __construct(
         private EntityManager $entityManager,
         private Metadata $metadata,
+        private PhoneSaver $phoneSaver,
     ) {}
 
     /**
@@ -95,6 +96,11 @@ class ContactFieldSync
      */
     public function appendPhone(Entity $contact, string $e164, bool $makePrimary = false): bool
     {
+        if (isset((new WhatsAppRemovals($this->entityManager))->blocked(
+            (string) $contact->get('tenantId'), $contact->getId()
+        )[$e164])) {
+            return false;
+        }
         /** @var \Espo\Repositories\PhoneNumber $repository */
         $repository = $this->entityManager->getRepository('PhoneNumber');
 
@@ -145,6 +151,26 @@ class ContactFieldSync
         $this->saveContact($contact);
 
         return true;
+    }
+
+    /** Unlink just this Contact's matching phone rows. Never mutate the shared PhoneNumber. */
+    public function removePhone(string $tenantId, string $contactId, string $e164): void
+    {
+        $this->entityManager->getTransactionManager()->run(function () use ($tenantId, $contactId, $e164): void {
+            $contact = $this->entityManager->getRDBRepository('Contact')
+                ->where(['id' => $contactId, 'tenantId' => $tenantId])->forUpdate()->findOne();
+            if (!$contact) {
+                return;
+            }
+            $rows = $this->entityManager->getRepository('PhoneNumber')->getPhoneNumberData($contact);
+            $kept = array_values(array_filter($rows, static fn ($r) => PhoneNormalizer::normalize($r->phoneNumber) !== $e164));
+            if (count($kept) !== count($rows)) {
+                $contact->set('phoneNumberData', $kept);
+                // The rebuild runner disables entity hooks, including the native field saver.
+                // Persist just the phone relation with that saver, also on the live removal path.
+                $this->phoneSaver->process($contact, SaverParams::create());
+            }
+        });
     }
 
     /**

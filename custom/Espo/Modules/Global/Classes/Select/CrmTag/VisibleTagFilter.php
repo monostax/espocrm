@@ -30,7 +30,7 @@ class VisibleTagFilter implements ItemConverter
             $visible->where(['id' => $ids]);
         }
         $records = SelectBuilder::create()->from($this->entityType)->select(['id'])
-            ->join(CrmTags::field($this->entityType), 'crmTag')->where(['crmTag.id=s' => $visible->build()]);
+            ->join(CrmTags::FIELD, 'crmTag')->where(['crmTag.id=s' => $visible->build()]);
         if ($type === 'linkedWithAll') {
             $records->group('id')->having(['COUNT:crmTag.id' => count($ids)]);
         }

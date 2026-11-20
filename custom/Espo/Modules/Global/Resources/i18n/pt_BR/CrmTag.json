@@ -1,5 +1,6 @@
 {
-    "fields": { "name": "Nome", "color": "Cor", "tenant": "Ambiente", "teams": "Times", "visibility": "Visibilidade", "ownerUser": "Proprietário" },
+    "fields": { "name": "Nome", "color": "Cor", "tenant": "Ambiente", "teams": "Times", "visibility": "Visibilidade", "appliesTo": "Aplica-se a", "ownerUser": "Proprietário" },
     "labels": { "Create CrmTag": "Criar Etiqueta do CRM" },
-    "options": { "visibility": { "team": "Time", "personal": "Pessoal" }, "color": { "slate": "Cinza", "amber": "Âmbar", "teal": "Verde", "ruby": "Vermelho", "blue": "Azul", "iris": "Roxo" } }
+    "tooltips": { "appliesTo": "Tipos de registro que podem receber esta etiqueta. Deixe vazio para todos. Registros que já têm a etiqueta continuam com ela se você restringir." },
+    "options": { "appliesTo": { "Contact": "Contatos", "Account": "Empresas", "Opportunity": "Oportunidades", "Activity": "Atividades", "Initiative": "Iniciativas" }, "visibility": { "team": "Time", "personal": "Pessoal" }, "color": { "slate": "Cinza", "amber": "Âmbar", "teal": "Verde", "ruby": "Vermelho", "blue": "Azul", "iris": "Roxo" } }
 }

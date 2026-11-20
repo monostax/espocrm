@@ -95,7 +95,8 @@ class InboxQueryTest extends TestCase
         $this->inbox = new Inbox(
             $em, $acl, $user, $factory, $searchParams,
             $this->createMock(ServiceContainer::class), $workspaces,
-            new ActivityDiscussion($em, $user, $acl), new RecordActivityBuckets($factory, $acl),
+            new ActivityDiscussion($em, $user, $acl, $this->createMock(\Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess::class)),
+            new RecordActivityBuckets($factory, $acl),
             $this->createMock(AppMetadata::class), $streamAccess, $this->createMock(ActivityAccess::class),
             $this->createMock(\Espo\Modules\Global\Tools\CrmTags::class),
         );

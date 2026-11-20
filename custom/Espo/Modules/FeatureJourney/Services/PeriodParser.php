@@ -178,6 +178,43 @@ class PeriodParser
         return $date->format('Y-m-d H:i:s');
     }
 
+    /** Business time consumed between UTC instants, respecting local weekends and DST. */
+    public static function weekdaySeconds(int $from, int $to, string $zone): int
+    {
+        $day = (new \DateTimeImmutable('@' . $from))->setTimezone(new \DateTimeZone($zone));
+        $seconds = 0;
+        while ($day->getTimestamp() < $to) {
+            $next = $day->modify('tomorrow midnight');
+            if ((int) $day->format('N') <= 5) {
+                $seconds += min($next->getTimestamp(), $to) - $day->getTimestamp();
+            }
+            $day = $next;
+        }
+        return $seconds;
+    }
+
+    public function isStageDue(\Espo\ORM\Entity $record, string $period, string $zone, ?int $now = null): bool
+    {
+        if ($record->get('replyPausedAt')) {
+            return false;
+        }
+        $now ??= time();
+        $entered = $record->get('enteredStageAt');
+        $s = AccountReplyReview::state($record);
+        if (empty($s['heldSeconds']) || $s['heldStage'] !== $record->get('currentStageId') ||
+            $s['heldEntered'] !== $entered) {
+            return $this->isDue($entered, $period, $now, $zone);
+        }
+        $due = strtotime($this->addToNow($period, strtotime($entered . ' UTC'), $zone) . ' UTC');
+        if ($now < $due) {
+            return false;
+        }
+        if (str_contains($this->normalise($period) ?? '', 'business day')) {
+            return self::weekdaySeconds($due, $now, $zone) >= $s['heldWeekdaySeconds'];
+        }
+        return $now - $due >= $s['heldSeconds'];
+    }
+
     private function add(\DateTimeImmutable $base, string $period, string $timeZone): \DateTimeImmutable
     {
         $canonical = $this->normalise($period);

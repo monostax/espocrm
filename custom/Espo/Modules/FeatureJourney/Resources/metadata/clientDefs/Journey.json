@@ -3,6 +3,11 @@
     "iconClass": "ti ti-route",
     "dynamicLogic": {
         "fields": {
+            "reviewAccountWhatsAppReplies": {
+                "visible": {
+                    "conditionGroup": [{"type": "equals", "attribute": "targetEntityType", "value": "Account"}]
+                }
+            },
             "timeZone": {
                 "readOnly": {
                     "conditionGroup": [{"type": "and", "value": [

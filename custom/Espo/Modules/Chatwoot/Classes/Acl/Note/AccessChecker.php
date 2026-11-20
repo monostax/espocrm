@@ -10,6 +10,7 @@ use Espo\Core\AclManager;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
 use Espo\Modules\Chatwoot\Tools\Stream\OpportunityAccess;
+use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
@@ -20,6 +21,7 @@ class AccessChecker implements AccessEntityCREDChecker
         private AclManager $aclManager,
         private EntityManager $entityManager,
         private OpportunityAccess $opportunityAccess,
+        private OpportunityEventAccess $eventAccess,
     ) {}
 
     public function check(User $user, ScopeData $data): bool
@@ -64,6 +66,10 @@ class AccessChecker implements AccessEntityCREDChecker
         if (!in_array($entity->get('type'), OpportunityStreamEvents::EVENT_TYPES, true)) {
             return true;
         }
+        $parentType = $entity->get('parentType');
+        if (isset(OpportunityStreamEvents::DISCUSSION_ROLLOUT[$parentType]) && $entity->get('type') === OpportunityStreamEvents::MESSAGE_RECEIVED &&
+            !$this->entityManager->getRDBRepository('Note')->where(['id' => $entity->getId()])
+                ->where($this->eventAccess->messageLinkWhere($user, parentType: $parentType))->findOne()) return false;
 
         $scopes = $entity->get('type') === OpportunityStreamEvents::MESSAGE_RECEIVED
             ? ['ChatwootConversation'] : ['Task', 'Meeting', 'Call'];

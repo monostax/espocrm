@@ -12,6 +12,7 @@ use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\{BaseEntity, Entity, EntityManager};
 
 require 'vendor/autoload.php';
+require __DIR__ . '/RecordingAdmissionJobs.php';
 [$script, $dialect, $payload, $now] = $argv;
 $pdo = new PDO(getenv('FEATURE_CREDITS_' . strtoupper($dialect) . '_DSN'), 'credits_test', 'credits_test',
     [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
@@ -67,6 +68,7 @@ $crypt = new Crypt($config);
 $lock = new WalletLock($manager, $clock);
 $operations = new Operations($manager, $clock, new Access($user, $acl, $tenants, $manager, $crypt),
     new CapabilityGate($config, new TwilioCredentials(), $clock, whatsAppCredentials: $credentials),
-    $lock, new ReviewLock($manager), new Reservations($lock, new Funding($lock)), $crypt, $config);
+    $lock, new ReviewLock($manager), new Reservations($lock, new Funding($lock)), $crypt, $config,
+    new \tests\unit\Espo\Modules\FeatureCredits\fixtures\RecordingAdmissionJobs($pdo));
 fwrite(STDOUT, "ready\n"); fflush(STDOUT);
 print json_encode($operations->start(json_decode(base64_decode($payload), false, 16, JSON_THROW_ON_ERROR), Kind::WHATSAPP), JSON_THROW_ON_ERROR) . "\n";

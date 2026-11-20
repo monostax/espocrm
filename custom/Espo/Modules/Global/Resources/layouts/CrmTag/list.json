@@ -2,5 +2,6 @@
     { "name": "name", "link": true },
     { "name": "color", "width": 15 },
     { "name": "visibility", "width": 15 },
+    { "name": "appliesTo", "width": 25 },
     { "name": "tenant", "width": 25 }
 ]

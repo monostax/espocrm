@@ -18,6 +18,8 @@ class OpportunityStreamEvents
     public const ACTIVITY_OVERDUE = 'ActivityOverdue';
     public const EVENT_TYPES = [self::MESSAGE_RECEIVED, self::ACTIVITY_OVERDUE];
     public const TYPES = ['Post', ...self::EVENT_TYPES];
+    public const ACCOUNT_STARTED_AT = 'accountMuralEventsStartedAt';
+    public const DISCUSSION_ROLLOUT = ['Account' => self::ACCOUNT_STARTED_AT, 'Initiative' => 'initiativeMuralEventsStartedAt'];
 
     public function __construct(
         private EntityManager $entityManager,
@@ -25,15 +27,15 @@ class OpportunityStreamEvents
         private StreamService $streamService,
     ) {}
 
-    public function write(string $type, Entity $opportunity, Entity $related, array $data, string $key, array $teams): void
+    public function write(string $type, Entity $target, Entity $related, array $data, string $key, array $teams): void
     {
         $this->entityManager->getTransactionManager()->run(function () use (
-            $type, $opportunity, $related, $data, $key, $teams,
+            $type, $target, $related, $data, $key, $teams,
         ): void {
             // Serialize first insertion, retries, and reconciliation on the same parent.
-            $parent = $this->entityManager->getRDBRepository('Opportunity')
-                ->where(['id' => $opportunity->getId()])->forUpdate()->findOne();
-            if (!$parent || !$parent->get('tenantId') || $parent->get('tenantId') !== $opportunity->get('tenantId')) {
+            $parent = $this->entityManager->getRDBRepository($target->getEntityType())
+                ->where(['id' => $target->getId()])->forUpdate()->findOne();
+            if (!$parent || !$parent->get('tenantId') || $parent->get('tenantId') !== $target->get('tenantId')) {
                 return;
             }
             $existing = SelectBuilder::create()->from('Note')->withDeleted()
@@ -55,7 +57,7 @@ class OpportunityStreamEvents
             }
             $this->entityManager->createEntity('Note', [
                 'type' => $type,
-                'parentType' => 'Opportunity',
+                'parentType' => $parent->getEntityType(),
                 'parentId' => $parent->getId(),
                 'relatedType' => $related->getEntityType(),
                 'relatedId' => $related->getId(),

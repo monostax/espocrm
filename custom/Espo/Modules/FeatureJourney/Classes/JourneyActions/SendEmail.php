@@ -81,7 +81,7 @@ class SendEmail implements Action
         // A `to` override is one fixed delivery; otherwise every person on the target
         // (an Account's Contatos) gets their own email, rendered for them.
         $hasOverride = $toOverride !== null && trim($toOverride) !== '';
-        $people = $hasOverride ? [$context->target] : $this->people->forTarget($context->target, $tenantId);
+        $people = $context->recipients($hasOverride ? [$context->target] : $this->people->forTarget($context->target, $tenantId));
 
         /** @var list<array{0: Entity, 1: list<string>}> $deliveries */
         $deliveries = [];

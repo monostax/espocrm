@@ -17,7 +17,7 @@ final class CustomerBoundaries implements AdditionalBuilder
         'CreditReservations', 'CreditRequests', 'CreditOperations', 'CreditOperationSource', 'CreditBilling',
         'CreditCheckout', 'CreditSubscriptions', 'CreditEnrichmentPreview', 'CreditEnrichmentQuotes', 'CreditEnrichmentBatches',
         'CreditEnrichmentReview', 'CreditEnrichmentHistory', 'CreditEnrichmentFields', 'CreditEnrichmentApplication',
-        'CreditPhoneVerification', 'CreditEmailVerification', 'CreditWhatsAppVerification', 'AiUsage'];
+        'CreditPhoneVerification', 'CreditEmailVerification', 'CreditWhatsAppVerification', 'CreditVerificationBatches', 'AiUsage'];
 
     public function build(stdClass $data): void
     {

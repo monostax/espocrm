@@ -18,6 +18,7 @@ class OpportunityEventAccess implements AdditionalApplier
     public function apply(SelectBuilder $queryBuilder, SearchParams $searchParams): void
     {
         $queryBuilder->where($this->access->where($this->user));
+        $queryBuilder->where($this->access->messageLinkWhere($this->user, $queryBuilder->build()->getFromAlias() ?? 'note'));
         $queryBuilder->where($this->parents->where($this->user));
     }
 }

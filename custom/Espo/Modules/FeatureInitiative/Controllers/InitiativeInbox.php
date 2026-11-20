@@ -45,6 +45,7 @@ class InitiativeInbox
         return $this->discussion->stream(
             $this->inbox->record($request, true), $this->preparator, $request->getQueryParam('rootId'),
             $before === null ? null : (int) $before,
+            $request->getQueryParam('postsOnly') === 'true',
         );
     }
 

@@ -197,9 +197,9 @@ class ConfigWriterTest extends TestCase
             ->expects($this->exactly(6))
             ->method('getPhpContents')
             ->willReturnMap([
-                [$this->configPath, []],
-                [$this->internalConfigPath, []],
-                [$this->stateConfigPath, []],
+                [$this->configPath, ['microtime' => 1.0]],
+                [$this->internalConfigPath, ['microtimeInternal' => 1.0]],
+                [$this->stateConfigPath, ['microtimeState' => 1.0]],
             ]);
 
         $this->fileManager
@@ -273,9 +273,9 @@ class ConfigWriterTest extends TestCase
             ->expects($this->exactly(6))
             ->method('getPhpContents')
             ->willReturnMap([
-                [$this->configPath, []],
-                [$this->internalConfigPath, []],
-                [$this->stateConfigPath, []],
+                [$this->configPath, ['microtime' => 1.0]],
+                [$this->internalConfigPath, ['microtimeInternal' => 1.0]],
+                [$this->stateConfigPath, ['microtimeState' => 1.0]],
             ]);
 
         $this->fileManager
@@ -350,9 +350,9 @@ class ConfigWriterTest extends TestCase
             ->expects($this->exactly(4))
             ->method('getPhpContents')
             ->willReturnMap([
-                [$this->configPath, ['k1' => 'v1', 'k2' => 'v2']],
+                [$this->configPath, ['k1' => 'v1', 'k2' => 'v2', 'microtime' => 1.0]],
                 [$this->internalConfigPath, []],
-                [$this->stateConfigPath, []],
+                [$this->stateConfigPath, ['microtimeState' => 1.0]],
             ]);
 
         $this->fileManager

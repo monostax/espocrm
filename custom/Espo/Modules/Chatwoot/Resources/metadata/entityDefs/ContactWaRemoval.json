@@ -1,0 +1,11 @@
+{
+    "fields": {
+        "tenantId": {"type": "varchar", "maxLength": 24},
+        "contactId": {"type": "varchar", "maxLength": 24},
+        "phone": {"type": "varchar", "maxLength": 32},
+        "blocked": {"type": "bool", "default": true}
+    },
+    "indexes": {
+        "destination": {"columns": ["tenantId", "contactId", "phone"], "unique": true}
+    }
+}

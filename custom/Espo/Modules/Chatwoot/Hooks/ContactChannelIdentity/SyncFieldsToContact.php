@@ -37,9 +37,7 @@ use Espo\ORM\EntityManager;
  * skip entity hooks (it only suppresses stream/workflow side effects),
  * so this fires for sync-job writes too — intentionally.
  *
- * Additive only: a deleted identity does not remove the value from the
- * contact (phone numbers and emails are user data; identities are
- * observations).
+ * WhatsApp removals are mirrored back by RememberWhatsAppRemoval.
  *
  * Tenant / ACL:
  *   - The write is skipped when identity.tenantId is empty or differs

@@ -97,7 +97,8 @@ class CandidateApplicationTest extends TestCase
         $definition = \tests\unit\Espo\Modules\FeatureCredits\EnrichmentFixtures::discoveryDefinition('application-fixture','2026-10-13 00:00:00');
         $publicationClock = $this->createStub(Clock::class); $publicationClock->method('now')->willReturn('2026-10-12 00:00:00');
         (new Catalog($this->em,$publicationClock))->publish((object) $definition,$this->actor);
-        $quotes = new Quotes($this->em,$clock,$access,$catalog,$available,new RoutePlanner(),$lock,$reservations);
+        $quotes = new Quotes($this->em,$clock,$access,$catalog,$available,new RoutePlanner(),$lock,$reservations,
+            $this->createStub(\Espo\Modules\FeatureCredits\Jobs\AdmissionJobs::class));
         $quote = $quotes->quote(new QuoteInput((object) ['tenantId' => $this->tenant,'targetType' => $contactId === null ? 'Account' : 'Contact','targetId' => $contactId ?? $this->account,
             'products' => $products,'requestKey' => 'fixture-purchase','waterfall' => false,'refresh' => false,
             ...(in_array($product,['employees','socios'],true) ? ['count' => 1] : [])]));

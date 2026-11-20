@@ -9,6 +9,7 @@
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillOpportunityReadStates",
         "Espo\\Modules\\Chatwoot\\Rebuild\\EnableOpportunityMessageEvents",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChatwootTenant",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillWhatsAppRemovals",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillChatwootTenantTeams",
         "Espo\\Modules\\Chatwoot\\Rebuild\\SeedChatwootReports",
         "Espo\\Modules\\Chatwoot\\Rebuild\\RotateAutomationToConcierge",

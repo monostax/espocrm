@@ -41,4 +41,5 @@ use Espo\Core\Utils\File\Manager as FileManager;
 class ConfigTempFileManager extends FileManager
 {
     protected string $tmpDir = 'data/config-tmp';
+    protected bool $allowInPlaceFallback = false;
 }

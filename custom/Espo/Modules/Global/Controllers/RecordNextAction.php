@@ -14,6 +14,7 @@ use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\Global\Classes\NextAction\PendingActivity;
+use Espo\Modules\Global\Classes\NextAction\TenantActivities;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use stdClass;
@@ -65,11 +66,14 @@ abstract class RecordNextAction
             } elseif ($body->activityId ?? null) {
                 $activity = $this->activity($record, $body->activityType ?? null, $body->activityId, true);
                 $this->checkPending($activity);
-                if (!$activity->get('parentId')) {
+                if (!$this->belongsTo($activity, $record)) {
+                    // Unlinked or elsewhere in the workspace (e.g. a conversation's task):
+                    // the step moves to this record, since deal buckets follow the parent.
                     $type = $activity->getEntityType();
                     if (!$this->acl->checkEntityEdit($activity) || !$this->acl->checkField($type, 'parent', 'edit')) {
                         throw new Forbidden();
                     }
+                    $this->checkNotAnotherStep($activity);
                     $this->records->get($type)->update($activity->getId(), (object) [
                         'parentType' => $record->getEntityType(),
                         'parentId' => $record->getId(),
@@ -139,7 +143,16 @@ abstract class RecordNextAction
             throw new BadRequest('A supported activity reference is required.');
         }
         $parent = ['parentType' => $record->getEntityType(), 'parentId' => $record->getId()];
-        $where = $allowUnlinked ? ['OR' => [$parent, ['parentId' => null]]] : $parent;
+        $where = $parent;
+        if ($allowUnlinked) {
+            $options = [$parent, ['parentId' => null]];
+            // Same reach as the Activities inbox: any activity of the record's workspace.
+            $tenant = TenantActivities::where($this->entityManager, $type, $record->get('tenantId'));
+            if ($tenant) {
+                $options[] = $tenant;
+            }
+            $where = ['OR' => $options];
+        }
         $activity = $this->entityManager->getRDBRepository($type)->where([
             'id' => $id, ...$where,
         ])->forUpdate()->findOne();
@@ -150,6 +163,27 @@ abstract class RecordNextAction
             throw new Forbidden();
         }
         return $activity;
+    }
+
+    private function belongsTo(Entity $activity, Entity $record): bool
+    {
+        return $activity->get('parentType') === $record->getEntityType() && $activity->get('parentId') === $record->getId();
+    }
+
+    /** Moving another deal's or initiative's current step would silently empty its slot. */
+    private function checkNotAnotherStep(Entity $activity): void
+    {
+        $type = $activity->get('parentType');
+        if (!in_array($type, ['Opportunity', 'Initiative'], true) || !$activity->get('parentId')) {
+            return;
+        }
+        // Lock the other record so its own next-action selection cannot race this move.
+        $other = $this->entityManager->getRDBRepository($type)
+            ->where(['id' => $activity->get('parentId')])->forUpdate()->findOne();
+        if ($other && $other->get('nextActionId') === $activity->getId() &&
+            $other->get('nextActionType') === $activity->getEntityType()) {
+            throw new Conflict('This activity is already the next step of another record.');
+        }
     }
 
     private function checkPending(Entity $activity): void

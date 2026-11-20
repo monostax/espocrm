@@ -33,6 +33,7 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/SchemaTest.php';
 require_once __DIR__ . '/EnrichmentFixtures.php';
+require_once __DIR__ . '/fixtures/RecordingAdmissionJobs.php';
 require_once __DIR__ . '/EnrichmentAdmissionCases.php';
 require_once __DIR__ . '/EnrichmentExecutionCases.php';
 require_once __DIR__ . '/EnrichmentFieldCacheCases.php';
@@ -73,6 +74,7 @@ class EnrichmentQuoteDatabaseTest extends TestCase
     private array $deniedWrites = [];
     private bool $apiActor = false;
     private ?ProviderAvailability $providerAvailability = null;
+    private fixtures\RecordingAdmissionJobs $jobs;
 
     public static function dialects(): iterable
     {
@@ -165,7 +167,8 @@ class EnrichmentQuoteDatabaseTest extends TestCase
         $catalog = new Catalog($manager, $clock);
         $lock = new \Espo\Modules\FeatureCredits\Accounting\WalletLock($manager, $clock);
         $reservations = new \Espo\Modules\FeatureCredits\Accounting\Reservations($lock, new \Espo\Modules\FeatureCredits\Accounting\Funding($lock));
-        return [new Quotes($manager, $clock, $access, $catalog, $this->providerAvailability ?? $availability, new RoutePlanner(), $lock, $reservations), $catalog];
+        $this->jobs = new fixtures\RecordingAdmissionJobs($pdo);
+        return [new Quotes($manager, $clock, $access, $catalog, $this->providerAvailability ?? $availability, new RoutePlanner(), $lock, $reservations, $this->jobs), $catalog];
     }
 
     private function input(array $changes = []): QuoteInput

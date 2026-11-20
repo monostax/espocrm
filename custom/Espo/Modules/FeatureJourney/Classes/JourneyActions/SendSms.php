@@ -59,7 +59,7 @@ class SendSms implements Action
         }
 
         $hasOverride = $phoneOverride !== null && trim($phoneOverride) !== '';
-        $people = $hasOverride ? [$target] : $this->people->forTarget($target, $tenantId);
+        $people = $context->recipients($hasOverride ? [$target] : $this->people->forTarget($target, $tenantId));
 
         if ($people === []) {
             $this->log->warning(
@@ -92,7 +92,7 @@ class SendSms implements Action
         foreach ($people as $person) {
             $name = $this->outbound->displayName($person);
             // WhatsApp identities are left out: one can be a landline, which takes no SMS.
-            $phones = $this->outbound->resolvePhones($person, $phoneOverride, false);
+            $phones = $context->phones($this->outbound->resolvePhones($person, $phoneOverride, false));
 
             if ($phones === []) {
                 $undelivered[$name] = 'sem celular';

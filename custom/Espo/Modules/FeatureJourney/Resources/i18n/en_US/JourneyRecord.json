@@ -1,8 +1,19 @@
 {
     "labels": {
+        "replyReview": "Review WhatsApp reply",
+        "wrongNumber": "Mark wrong number",
+        "resumeReview": "Resume with this contact",
+        "endCadence": "End cadence",
+        "confirmEndCadence": "End this account’s cadence and run its reply exit actions?",
+        "unknownPhone": "Waiting for conversation phone",
+        "replyPhone": "Replying number",
+        "verifiedReplacement": "Verified alternative phone on a linked contact (with country code)",
+        "wrongNumberSaved": "Number excluded. Reopen review to resume once a replacement is verified.",
+        "reviewSaved": "Decision saved",
         "Exit": "Exit journey"
     },
     "fields": {
+        "replyPausedAt": "Paused for reply review at",
         "journey": "Journey",
         "target": "Target",
         "currentStage": "Current step",

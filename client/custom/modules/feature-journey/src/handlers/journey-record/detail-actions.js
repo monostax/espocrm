@@ -10,12 +10,28 @@ define("feature-journey:handlers/journey-record/detail-actions", [], function ()
 
         isExitAvailable() {
             const status = this.view.model.get("status");
+            if (this.view.model.get("replyPausedAt")) return false;
 
             return (
                 status === "Active" ||
                 status === "Processing" ||
                 status === "Paused"
             );
+        }
+
+        canReview() {
+            return this.view.model.get("status") === "Paused" && !!this.view.model.get("replyPausedAt");
+        }
+
+        async replyReview() {
+            const model = this.view.model;
+            const url = "JourneyRecord/" + model.id + "/replyReview";
+            const state = await Espo.Ajax.getRequest(url);
+            const modal = await this.view.createView("replyReview", "feature-journey:views/journey-record/reply-review", {
+                state, url,
+            });
+            this.view.listenToOnce(modal, "done", () => model.fetch());
+            modal.render();
         }
 
         exit() {

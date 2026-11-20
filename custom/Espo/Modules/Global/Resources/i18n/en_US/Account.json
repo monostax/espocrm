@@ -2,7 +2,6 @@
     "fields": {
         "linkedinUrl": "LinkedIn URL",
         "cnpj": "CNPJ",
-        "crmTags": "CRM Tags",
         "tenant": "Tenant",
         "customFields": "Custom Fields"
     },

@@ -1,7 +1,10 @@
 {
     "fields": {
         "staffUserId": { "type": "varchar", "maxLength": 36 },
-        "staffWroteAt": { "type": "datetime" }
+        "staffWroteAt": { "type": "datetime" },
+        "actedById": { "type": "varchar", "maxLength": 36 },
+        "actedAction": { "type": "varchar", "maxLength": 16 },
+        "actedAt": { "type": "datetime" }
     },
     "indexes": {
         "staff": { "columns": ["staffUserId"] }

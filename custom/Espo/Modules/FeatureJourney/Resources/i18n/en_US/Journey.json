@@ -27,6 +27,7 @@
         "week": "week"
     },
     "fields": {
+        "reviewAccountWhatsAppReplies": "Pause account enrollments for WhatsApp reply review",
         "name": "Name",
         "timeZone": "Business-day time zone",
         "status": "Status",

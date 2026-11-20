@@ -32,14 +32,14 @@ class ContactInbox
 {
     protected const ENTITY_TYPE = 'Contact';
     protected const SORT_FIELDS = ['streamUpdatedAt', 'createdAt', 'modifiedAt', 'name', 'accountName', 'assignedUserName', 'source'];
-    protected const EDIT_FIELDS = ['firstName', 'lastName', 'title', 'jobLevel', 'accountId', 'assignedUserId', 'tags', 'crmTagsIds', 'source', 'emailAddress', 'phoneNumber', 'cpf', 'dateOfBirth', 'dataNascimento', 'channelIdentitiesData', 'description', 'customFields'];
+    protected const EDIT_FIELDS = ['firstName', 'lastName', 'title', 'jobLevel', 'accountId', 'assignedUserId', 'tagsIds', 'source', 'emailAddress', 'phoneNumber', 'cpf', 'dateOfBirth', 'dataNascimento', 'channelIdentitiesData', 'description', 'customFields'];
     protected const GROUP_FIELDS = [
         'assignee' => ['assignedUserId', 'assignedUser'],
         'account' => ['accountId', 'account'],
         'source' => ['source', 'source'],
     ];
     protected const FIELDS = [
-        'name', 'firstName', 'lastName', 'title', 'jobLevel', 'account', 'assignedUser', 'teams', 'tags', 'crmTags', 'source',
+        'name', 'firstName', 'lastName', 'title', 'jobLevel', 'account', 'assignedUser', 'teams', 'tags', 'source',
         'emailAddress', 'phoneNumber', 'cpf', 'dateOfBirth', 'dataNascimento', 'channelIdentitiesData', 'description', 'customFields',
         'createdAt', 'modifiedAt', 'createdBy', 'hasLinkedin',
         'emailEnrichedAt', 'emailEnrichmentResult', 'phoneEnrichedAt', 'phoneEnrichmentResult',
@@ -103,8 +103,8 @@ class ContactInbox
         }
         $scope = $query->build();
         if ($tag = $request->getQueryParam('tag')) {
-            if (!$this->acl->checkField(static::ENTITY_TYPE, 'crmTags') || !$this->acl->checkScope('CrmTag', 'read')) throw new Forbidden();
-            $tagged = SelectBuilder::create()->from(static::ENTITY_TYPE)->select(['id'])->join('crmTags', 'crmTag')
+            if (!$this->acl->checkField(static::ENTITY_TYPE, CrmTags::FIELD) || !$this->acl->checkScope('CrmTag', 'read')) throw new Forbidden();
+            $tagged = SelectBuilder::create()->from(static::ENTITY_TYPE)->select(['id'])->join(CrmTags::FIELD, 'crmTag')
                 ->where(['crmTag.id=s' => $this->tags->query()->select(['id'])->where(['id' => $tag])->build()])->build();
             $query->where(['id=s' => $tagged]);
         }
@@ -191,10 +191,11 @@ class ContactInbox
             throw new BadRequest('Invalid inbox sort.');
         }
         if ($sort === 'streamUpdatedAt') {
-            // Only visible mural posts contribute to the inbox's last-update order.
+            // Only entries visible in the viewer's mural contribute to its last-update order.
             $readable = $this->streamAccess->readableParents($this->user, static::ENTITY_TYPE);
             $posts = SelectBuilder::create()->from('Note')->select(['parentId', ['MAX:createdAt', 'updatedAt']])
-                ->where(['parentType' => static::ENTITY_TYPE, 'type' => 'Post', 'opportunityPostDeleted' => false])->group('parentId');
+                ->where(['parentType' => static::ENTITY_TYPE, 'opportunityPostDeleted' => false])
+                ->where($this->discussion->entryWhere(static::ENTITY_TYPE))->group('parentId');
             if ($readable && $this->acl->checkScope('Note', 'read')) $posts->where(['parentId=s' => $readable]);
             else $posts->where(['id' => null]);
             $query->leftJoin($posts->build(), 'contactMural', Expr::equal(Expr::alias('contactMural.parentId'), Expr::column('id')));

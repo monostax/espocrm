@@ -20,8 +20,10 @@ use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Controllers\OpportunityNextAction;
 use Espo\Modules\FeatureInitiative\Controllers\InitiativeNextAction;
 use Espo\Modules\Global\Controllers\RecordNextAction;
+use Espo\ORM\EntityCollection;
 use Espo\ORM\EntityManager;
 use Espo\ORM\QueryComposer\QueryComposer;
+use Espo\ORM\Repository\RDBRelation;
 use Espo\ORM\Repository\RDBRepository;
 use Espo\ORM\Repository\RDBSelectBuilder;
 use Espo\ORM\TransactionManager;
@@ -44,12 +46,16 @@ class RecordNextActionTest extends TestCase
     private bool $regular = true;
     private bool $advanceParentVersion = false;
     private bool $replaceParentSelection = false;
+    /** Activities the record's workspace teams own (emulates TenantActivities). */
+    private array $tenantActivityIds = [];
+    /** Other records reachable by ID, e.g. the deal an activity currently belongs to. */
+    private array $others = [];
 
     private function entity(string $type, array $values): Entity
     {
         $attributes = array_fill_keys([
             'id', 'name', 'status', 'nextActionId', 'nextActionType', 'initiativeTypeId',
-            'parentType', 'parentId', 'assignedUserId', 'dateEndDate',
+            'parentType', 'parentId', 'assignedUserId', 'dateEndDate', 'tenantId', 'baseUserTeamId',
         ], ['type' => 'varchar']);
         $attributes['teamsIds'] = ['type' => 'jsonArray'];
         $attributes['versionNumber'] = ['type' => 'int'];
@@ -76,14 +82,28 @@ class RecordNextActionTest extends TestCase
         $em->method('getTransactionManager')->willReturn(new TransactionManager(
             $this->pdo, $this->createMock(QueryComposer::class),
         ));
-        $em->method('getEntityById')->with('InitiativeType', 'type-id')->willReturn($this->initiativeType);
+        $em->method('getEntityById')->willReturnCallback(fn (string $entityType, string $id) => match ([$entityType, $id]) {
+            ['InitiativeType', 'type-id'] => $this->initiativeType,
+            ['Tenant', 'tenant-id'] => $this->entity('Tenant', ['id' => 'tenant-id', 'baseUserTeamId' => 'base-team']),
+            default => null,
+        });
         $em->method('getRDBRepository')->willReturnCallback(function (string $entityType) use ($type) {
             $repository = $this->createMock(RDBRepository::class);
+            if ($entityType === 'Tenant') {
+                $relation = $this->createMock(RDBRelation::class);
+                $relation->method('find')->willReturn(new EntityCollection([]));
+                $repository->method('getRelation')->willReturn($relation);
+            }
             $repository->method('where')->willReturnCallback(function (array $where) use ($entityType, $type) {
                 $query = $this->createMock(RDBSelectBuilder::class);
                 $query->expects($this->once())->method('forUpdate')->willReturnSelf();
                 $query->method('findOne')->willReturnCallback(function () use ($entityType, $type, $where) {
                     $this->assertTrue($this->pdo->inTransaction());
+                    $other = $this->others[$entityType . ':' . ($where['id'] ?? '')] ?? null;
+                    if ($other) {
+                        $this->assertSame(['id' => $other->getId()], $where);
+                        return $other;
+                    }
                     if ($entityType === $type) {
                         $this->assertSame(['id' => 'record-id'], $where);
                         // Each read has its own fetched version, just like the ORM.
@@ -104,6 +124,11 @@ class RecordNextActionTest extends TestCase
                     $activity = $this->activities[$entityType . ':' . $where['id']] ?? null;
                     if ($activity && isset($where['OR']) && !$activity->get('parentId')) {
                         $this->assertSame(['parentId' => null], $where['OR'][1]);
+                        return $activity;
+                    }
+                    // The workspace branch only exists when the record's tenant resolves.
+                    if ($activity && isset($where['OR'][2]) && in_array($activity->getId(), $this->tenantActivityIds, true)) {
+                        $this->assertArrayHasKey('id=s', $where['OR'][2]);
                         return $activity;
                     }
                     return $activity && $activity->get('parentType') === $parent['parentType'] &&
@@ -449,5 +474,82 @@ class RecordNextActionTest extends TestCase
         $controller = $this->controller();
         $this->expectException(BadRequest::class);
         $controller->postActionSelect($this->request(['createTask' => true, 'name' => '  ']));
+    }
+
+    public static function recordTypes(): array
+    {
+        return ['Opportunity' => ['Opportunity'], 'Initiative' => ['Initiative']];
+    }
+
+    private function workspaceTask(string $type, array $values): void
+    {
+        $this->record->set('tenantId', 'tenant-id');
+        $this->addActivity('Task', $values);
+        $this->tenantActivityIds = ['activity-id'];
+    }
+
+    #[DataProvider('recordTypes')]
+    public function testWorkspaceActivityElsewhereMovesToTheRecord(string $type): void
+    {
+        // e.g. an AI-created follow-up on the contact's conversation, found via the Activities inbox.
+        $controller = $this->controller($type);
+        $this->workspaceTask($type, ['parentType' => 'ChatwootConversation', 'parentId' => 'conversation-id']);
+        $result = $controller->postActionSelect($this->request(['activityId' => 'activity-id', 'activityType' => 'Task']));
+        $this->assertSame('activity-id', $result->nextActionId);
+        $this->assertSame([['Task', 'activity-id', ['parentType' => $type, 'parentId' => 'record-id']]], $this->updated);
+    }
+
+    #[DataProvider('recordTypes')]
+    public function testActivityOutsideTheWorkspaceIsNotFound(string $type): void
+    {
+        $controller = $this->controller($type);
+        $this->workspaceTask($type, ['parentType' => 'ChatwootConversation', 'parentId' => 'conversation-id']);
+        $this->tenantActivityIds = [];
+        try {
+            $controller->postActionSelect($this->request(['activityId' => 'activity-id', 'activityType' => 'Task']));
+            $this->fail('Expected another workspace\'s activity to be unreachable.');
+        } catch (NotFound) {
+            $this->assertSame([], $this->updated);
+        }
+    }
+
+    #[DataProvider('recordTypes')]
+    public function testAnotherRecordsCurrentStepIsNotMoved(string $type): void
+    {
+        $controller = $this->controller($type);
+        $this->workspaceTask($type, ['parentType' => 'Opportunity', 'parentId' => 'other-id']);
+        $this->others['Opportunity:other-id'] = $this->entity('Opportunity', [
+            'id' => 'other-id', 'nextActionId' => 'activity-id', 'nextActionType' => 'Task',
+        ]);
+        try {
+            $controller->postActionSelect($this->request(['activityId' => 'activity-id', 'activityType' => 'Task']));
+            $this->fail('Expected the other record\'s step to conflict.');
+        } catch (Conflict) {
+            $this->assertSame([], $this->updated);
+            $this->assertNull($this->pdo->query('SELECT next_action_id FROM record')->fetchColumn());
+        }
+    }
+
+    #[DataProvider('recordTypes')]
+    public function testAnotherRecordsOtherActivityMoves(string $type): void
+    {
+        $controller = $this->controller($type);
+        $this->workspaceTask($type, ['parentType' => 'Opportunity', 'parentId' => 'other-id']);
+        $this->others['Opportunity:other-id'] = $this->entity('Opportunity', [
+            'id' => 'other-id', 'nextActionId' => 'different-id', 'nextActionType' => 'Task',
+        ]);
+        $result = $controller->postActionSelect($this->request(['activityId' => 'activity-id', 'activityType' => 'Task']));
+        $this->assertSame('activity-id', $result->nextActionId);
+        $this->assertSame([['Task', 'activity-id', ['parentType' => $type, 'parentId' => 'record-id']]], $this->updated);
+    }
+
+    #[DataProvider('recordTypes')]
+    public function testMovingAnActivityRequiresEditingIt(string $type): void
+    {
+        $controller = $this->controller($type);
+        $this->workspaceTask($type, ['parentType' => 'ChatwootConversation', 'parentId' => 'conversation-id']);
+        $this->denied = ['activityEdit'];
+        $this->expectException(Forbidden::class);
+        $controller->postActionSelect($this->request(['activityId' => 'activity-id', 'activityType' => 'Task']));
     }
 }

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureCredits\Jobs;
 
 use Espo\Core\Job\JobDataLess;
-use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureCredits\Accounting\Clock;
 use Espo\Modules\FeatureCredits\Verification\CapabilityGate;
 use Espo\Modules\FeatureCredits\Verification\Execution;
+use Espo\Modules\FeatureCredits\Verification\BatchAdmissions;
 
 /**
  * Minute sweeper for phone verification: purges expired 90-day evidence, recovers expired/cancelled holds,
@@ -21,8 +21,9 @@ final class DispatchPhoneVerification implements JobDataLess
         private Execution $execution,
         private CapabilityGate $capability,
         private Clock $clock,
-        private JobSchedulerFactory $scheduler,
+        private AdmissionJobs $jobs,
         private Log $log,
+        private BatchAdmissions $batches,
     ) {}
 
     public function run(): void
@@ -35,15 +36,12 @@ final class DispatchPhoneVerification implements JobDataLess
             try {
                 $this->execution->recover($row['tenant_id'], $row['id']);
                 if (in_array($row['state'], ['admitted', 'awaiting', 'claimed'], true)) {
-                    $this->scheduler->create()
-                        ->setClassName(RunPhoneVerification::class)
-                        ->setData(['tenantId' => $row['tenant_id'], 'operationId' => $row['id']])
-                        ->setGroup('phone-verification-' . $row['id'])
-                        ->schedule();
+                    $this->jobs->verification($row['tenant_id'], $row['id']);
                 }
             } catch (\Throwable) {
                 $this->log->error('Phone verification scheduling or recovery failed for operation=' . $row['id']);
             }
         }
+        $this->batches->run();
     }
 }

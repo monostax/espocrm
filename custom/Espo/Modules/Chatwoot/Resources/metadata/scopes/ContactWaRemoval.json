@@ -1,0 +1,12 @@
+{
+    "entity": true,
+    "object": false,
+    "acl": true,
+    "aclStrict": true,
+    "tab": false,
+    "layouts": false,
+    "customizable": false,
+    "importable": false,
+    "exportable": false,
+    "module": "Chatwoot"
+}

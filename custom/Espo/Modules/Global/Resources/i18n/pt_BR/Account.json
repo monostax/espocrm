@@ -2,7 +2,6 @@
     "fields": {
         "linkedinUrl": "URL do LinkedIn",
         "cnpj": "CNPJ",
-        "crmTags": "Etiquetas do CRM",
         "tenant": "Ambiente",
         "customFields": "Campos Personalizados"
     },

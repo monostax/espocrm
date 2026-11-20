@@ -214,6 +214,8 @@ class Transcript
         };
         $text = trim(strip_tags((string) ($message['content'] ?? '')));
         [$markers, $files] = $this->attachments($message['attachments'] ?? [], $text !== '');
+        // A deleted WhatsApp QR message keeps its text for the team; the analysis must not read it as still said.
+        if ((self::attributes($message)['deleted'] ?? false) === true) $text = trim('[Mensagem excluída] ' . $text);
         $name = $sender['name'] ?? $sender['available_name'] ?? null;
         $timestamp = (int) $message['created_at'];
         return [
@@ -251,13 +253,19 @@ class Transcript
         return [];
     }
 
-    /** The message this one quotes (a WhatsApp reply), as Chatwoot keeps it in content_attributes.in_reply_to. */
-    private static function replyTo(array $message): ?string
+    /** @return array<string, mixed> */
+    private static function attributes(array $message): array
     {
         $attributes = $message['content_attributes'] ?? null;
         // The column is double-encoded in some rows: a JSON string holding the object.
         if (is_string($attributes)) $attributes = json_decode($attributes, true);
-        $id = is_array($attributes) ? ($attributes['in_reply_to'] ?? null) : null;
+        return is_array($attributes) ? $attributes : [];
+    }
+
+    /** The message this one quotes (a WhatsApp reply), as Chatwoot keeps it in content_attributes.in_reply_to. */
+    private static function replyTo(array $message): ?string
+    {
+        $id = self::attributes($message)['in_reply_to'] ?? null;
         return (is_int($id) || (is_string($id) && ctype_digit($id))) && (int) $id > 0 ? (string) (int) $id : null;
     }
 

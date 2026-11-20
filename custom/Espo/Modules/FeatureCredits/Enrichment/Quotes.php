@@ -13,6 +13,7 @@ use Espo\Modules\FeatureCredits\Accounting\RecordId;
 use Espo\Modules\FeatureCredits\Accounting\ReservationInput;
 use Espo\Modules\FeatureCredits\Accounting\Reservations;
 use Espo\Modules\FeatureCredits\Accounting\WalletLock;
+use Espo\Modules\FeatureCredits\Jobs\AdmissionJobs;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use LogicException;
@@ -24,7 +25,7 @@ final class Quotes
 {
     public function __construct(private EntityManager $entityManager, private Clock $clock, private Access $access,
         private Catalog $catalog, private ProviderAvailability $availability, private RoutePlanner $planner,
-        private WalletLock $walletLock, private Reservations $reservations) {}
+        private WalletLock $walletLock, private Reservations $reservations, private AdmissionJobs $jobs) {}
 
     public function quote(QuoteInput $input): array
     {
@@ -186,12 +187,13 @@ final class Quotes
         });
     }
 
-    /** Accepted terms and shared funds commit together for each quote. Never dispatches. */
+    /** Commit accepted terms and the hold before waking a worker for a new admission. */
     public function admit(string $tenantId, string $quoteId): array
     {
         GrantInput::identity($tenantId); GrantInput::identity($quoteId);
         $actor = $this->access->actorId();
-        return $this->walletLock->run($tenantId, function (PDO $pdo, array $wallet, string $now) use ($tenantId, $quoteId, $actor): array {
+        $newAdmission = false;
+        $receipt = $this->walletLock->run($tenantId, function (PDO $pdo, array $wallet, string $now) use ($tenantId, $quoteId, $actor, &$newAdmission): array {
             $q = $pdo->prepare('SELECT * FROM enrichment_quote WHERE id=? AND tenant_id=? AND created_by_id=? FOR UPDATE');
             $q->execute([$quoteId, $tenantId, $actor]);
             $row = $q->fetch(PDO::FETCH_ASSOC);
@@ -226,8 +228,11 @@ final class Quotes
             $row['admitted_at'] = $now;
             $pdo->prepare('UPDATE enrichment_quote SET usage_id=?, admitted_at=? WHERE id=?')
                 ->execute([$row['usage_id'], $now, $quoteId]);
+            $newAdmission = true;
             return $this->receipt($row, $saved);
         });
+        if ($newAdmission) $this->jobs->enrichment($tenantId, $quoteId);
+        return $receipt;
     }
 
     /**

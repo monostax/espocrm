@@ -64,6 +64,7 @@ class Feed
         private Transcript $transcript,
         private Records $records,
         private ChatwootAccess $access,
+        private Acts $acts,
     ) {}
 
     public function list(Request $request, ?string $conversationId = null): array
@@ -176,6 +177,14 @@ class Feed
             if (!hash_equals($snapshot['snapshot'], (string) ($body->snapshot ?? ''))) throw new Conflict('This deal changed since the card was shown.');
         }
         $this->verdicts->resolve('Opportunity', $id, $body->revision ?? $snapshot['revision']);
+        if ($act = self::reviewAct($body)) $this->acts->record('Opportunity', $id, $this->user->getId(), $act);
+    }
+
+    /** What the card's review settled (Acts): a reply sent from it or the next step scheduled. Older clients don't say. */
+    public static function reviewAct(mixed $body): ?string
+    {
+        $act = $body->action ?? null;
+        return in_array($act, ['reply', 'next'], true) ? $act : null;
     }
 
     /**
@@ -418,7 +427,7 @@ class Feed
     }
 
     /** Where Enviar posts: the conversation the customer last wrote in. */
-    private function target(array $conversations): ?array
+    public function target(array $conversations): ?array
     {
         $best = null;
         foreach ($conversations as $conversation) {

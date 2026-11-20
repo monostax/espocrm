@@ -189,6 +189,32 @@ class BulkEnrichmentDatabaseTest extends TestCase
         });
     }
 
+    #[DataProvider('dialects')]
+    public function testRecoveryRequeuesOnlyAbandonedCreditWork(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo): void {
+            $pdo->exec("CREATE TEMPORARY TABLE scheduled_job (id VARCHAR(32), job VARCHAR(80), deleted BOOLEAN DEFAULT FALSE)");
+            $pdo->exec("INSERT INTO scheduled_job (id,job) VALUES ('v','DispatchPhoneVerification'),('e','DispatchEnrichment'),
+                ('groups','ProcessJobGroup'),('other','Other')");
+            $pdo->exec("CREATE TEMPORARY TABLE job (id INTEGER, status VARCHAR(16), started_at VARCHAR(19), pid INTEGER,
+                executed_at VARCHAR(19), class_name VARCHAR(255), scheduled_job_id VARCHAR(32), target_group VARCHAR(128), deleted BOOLEAN DEFAULT FALSE)");
+            $old = '2026-11-04 11:58:29';
+            $insert = $pdo->prepare('INSERT INTO job (id,status,started_at,pid,class_name,scheduled_job_id,target_group) VALUES (?,?,?,?,?,?,?)');
+            $work = \Espo\Modules\FeatureCredits\Jobs\RunEnrichment::class;
+            foreach ([
+                [1,'Ready',$old,null,null,'v',null], [2,'Ready',$old,null,null,'e',null],
+                [3,'Ready',$old,null,$work,null,null], [4,'Ready',$old,null,null,'groups','phone-verification-abc'],
+                [5,'Running',$old,555,$work,null,null], [6,'Ready',$old,555,null,'v',null],
+                [7,'Ready',self::NOW,null,null,'v',null], [8,'Ready',$old,null,null,'groups','campaign-abc'],
+                [9,'Ready',$old,null,null,'other',null], [10,'Success',$old,null,$work,null,null],
+            ] as $row) $insert->execute($row);
+
+            \Espo\Modules\FeatureCredits\Jobs\CreditQueueRecovery::requeueUnstarted($pdo, '2026-11-04 11:58:30');
+            self::assertSame([1, 2, 3, 4], array_map('intval', $pdo->query(
+                "SELECT id FROM job WHERE status='Pending' AND started_at IS NULL ORDER BY id")->fetchAll(PDO::FETCH_COLUMN)));
+        });
+    }
+
     private function database(string $dialect, callable $test): void
     {
         $dsn = getenv('FEATURE_CREDITS_' . strtoupper($dialect) . '_DSN');
@@ -274,8 +300,7 @@ class BulkEnrichmentDatabaseTest extends TestCase
     {
         $actors = $this->createMock(ActorScope::class);
         if ($revoked) $actors->method('run')->willThrowException(new Forbidden());
-        $scheduled = [];
-        return new BatchRunner($this->manager($pdo), $actors, $this->scheduler($scheduled), $this->clock(), $this->createStub(Log::class));
+        return new BatchRunner($this->manager($pdo), $actors, $this->clock(), $this->createStub(Log::class));
     }
 
     private function manager(PDO $pdo): EntityManager

@@ -408,7 +408,7 @@ class ContactReconciler
         // Materialize every observed identity for this contact.
         $identityEntities = [];
         foreach ($candidateIdentities as $cand) {
-            $identityEntities[] = $this->upsertIdentity(
+            $identity = $this->upsertIdentity(
                 $contact->getId(),
                 $tenantId,
                 $cand['channelType'],
@@ -419,6 +419,9 @@ class ContactReconciler
                 $cand['whatsappLid'] ?? null,
                 $cand['handle'] ?? null
             );
+            if ($identity) {
+                $identityEntities[] = $identity;
+            }
         }
 
         return [
@@ -670,7 +673,8 @@ class ContactReconciler
             $changed = true;
         }
         $ownership = new IdentityOwnership($this->entityManager);
-        if (!$contact->get('phoneNumber') && $normalizedPhone && !$ownership->isRejected($contact, 'phone', $normalizedPhone)) {
+        if (!$contact->get('phoneNumber') && $normalizedPhone && !$ownership->isRejected($contact, 'phone', $normalizedPhone)
+            && !isset((new WhatsAppRemovals($this->entityManager))->blocked((string) $contact->get('tenantId'), $contact->getId())[$normalizedPhone])) {
             $contact->set('phoneNumber', $normalizedPhone);
             $changed = true;
         }
@@ -724,7 +728,11 @@ class ContactReconciler
         ?string $chatwootInboxId,
         ?string $whatsappLid = null,
         ?string $handle = null,
-    ): Entity {
+    ): ?Entity {
+        if ($channelType === 'whatsapp' && isset((new WhatsAppRemovals($this->entityManager))
+            ->blocked($tenantId, $contactId)[PhoneNormalizer::normalize($sourceId)])) {
+            return null;
+        }
         if ($channelType === 'linkedin') {
             $profile = \Espo\Modules\Global\Tools\LinkedInProfile::profile('Contact',$sourceId);
             if ($profile === null || strlen($profile) > 255) throw new \Espo\Core\Exceptions\BadRequest('A personal LinkedIn profile URL is required.');

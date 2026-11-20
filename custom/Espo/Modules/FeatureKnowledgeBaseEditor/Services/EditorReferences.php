@@ -21,6 +21,7 @@ use Espo\ORM\Query\UnionBuilder;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\References;
 use Espo\Modules\FeatureKnowledgeBaseEditor\Tools\ReferenceSearch;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Scopes;
+use Espo\Modules\Global\Classes\NextAction\TenantActivities;
 
 class EditorReferences
 {
@@ -70,6 +71,11 @@ class EditorReferences
         $queries = [];
         $historyTypes = $nextActionParent
             ? array_values(array_intersect($search['types'], ['Task', 'Meeting', 'Call'])) : $search['types'];
+        $parentRecord = null;
+        if ($nextActionParent) {
+            $parentRecord = $this->em->getEntityById($nextActionParent['type'], $nextActionParent['id']);
+            if (!$parentRecord || !$this->acl->checkEntityRead($parentRecord)) return [];
+        }
         $viewed = $this->history(['read', 'create'], $historyTypes, 2000);
         $mentioned = $this->history([self::MENTION_ACTION], $historyTypes, 200);
         $this->supportedTypes ??= (new Scopes($this->metadata))->all();
@@ -95,6 +101,9 @@ class EditorReferences
                     ]];
                     if ($this->acl->checkScope($type, 'edit') && $this->acl->checkField($type, 'parent', 'edit')) {
                         $parents[] = ['parentId' => null];
+                        // Same reach as the Activities inbox; choosing one moves it to this record.
+                        $tenant = TenantActivities::where($this->em, $type, $parentRecord->get('tenantId'));
+                        if ($tenant) $parents[] = $tenant;
                     }
                     $queryBuilder->where(['OR' => $parents]);
                     $queryBuilder->where($type === 'Task' ? [
@@ -153,10 +162,17 @@ class EditorReferences
             // query and all attributes used by custom record access checkers.
             $sql = $this->em->getQueryBuilder()->select()->clone($queries[$type])
                 ->where(['id' => $ids])->limit(0, 10)->build();
+            $found = [];
             foreach ($this->em->getRDBRepository($type)->clone($sql)->find() as $entity) {
                 if (!$this->allowedRecord($entity)) continue;
-                if ($nextActionParent && !$entity->get('parentId') && !$this->acl->checkEntityEdit($entity)) continue;
-                $entities[$type][$entity->getId()] = $entity;
+                $elsewhere = $nextActionParent && ($entity->get('parentType') !== $nextActionParent['type'] ||
+                    $entity->get('parentId') !== $nextActionParent['id']);
+                if ($elsewhere && !$this->acl->checkEntityEdit($entity)) continue;
+                $found[] = $entity;
+            }
+            $taken = $nextActionParent ? $this->otherSteps($type, $found, $nextActionParent) : [];
+            foreach ($found as $entity) {
+                if (!isset($taken[$entity->getId()])) $entities[$type][$entity->getId()] = $entity;
             }
         }
         foreach ($rows as $row) {
@@ -171,6 +187,33 @@ class EditorReferences
             ];
         }
         return $results;
+    }
+
+    /**
+     * Activities that are already another deal's or initiative's next step; choosing one
+     * would move it away and empty that record's slot (RecordNextAction refuses it too).
+     *
+     * @param Entity[] $activities
+     * @return array<string, true>
+     */
+    private function otherSteps(string $type, array $activities, array $parent): array
+    {
+        $byParent = [];
+        foreach ($activities as $activity) {
+            $parentType = $activity->get('parentType');
+            if (!in_array($parentType, ['Opportunity', 'Initiative'], true) || !$activity->get('parentId')) continue;
+            if ($parentType === $parent['type'] && $activity->get('parentId') === $parent['id']) continue;
+            $byParent[$parentType][] = $activity->get('parentId');
+        }
+        $taken = [];
+        foreach ($byParent as $parentType => $ids) {
+            $query = SelectBuilder::create()->from($parentType)->select(['nextActionId'])
+                ->where(['id' => array_values(array_unique($ids)), 'nextActionType' => $type])->build();
+            foreach ($this->em->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_COLUMN) as $id) {
+                if ($id) $taken[$id] = true;
+            }
+        }
+        return $taken;
     }
 
     /**

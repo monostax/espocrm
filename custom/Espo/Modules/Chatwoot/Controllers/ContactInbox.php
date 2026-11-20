@@ -45,6 +45,7 @@ class ContactInbox
         return $this->discussion->stream(
             $this->inbox->record($request, true), $this->preparator, $request->getQueryParam('rootId'),
             $before === null ? null : (int) $before,
+            static::ENTITY_TYPE === 'Account' && $request->getQueryParam('postsOnly') === 'true',
         );
     }
 

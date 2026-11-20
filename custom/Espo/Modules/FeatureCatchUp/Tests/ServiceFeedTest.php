@@ -12,6 +12,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Modules\FeatureCatchUp\Classes\CardGone;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
+use Espo\Modules\FeatureCatchUp\Services\Acts;
 use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\FeatureCatchUp\Services\Ownership;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
@@ -60,7 +61,8 @@ class ServiceFeedTest extends TestCase
         $parties = $this->createMock(Parties::class);
         $transcript = $this->createMock(Transcript::class);
         $feed = new ServiceFeed($em, $this->createMock(SelectBuilderFactory::class), $acl, $user, $workspace, $owners, $verdicts,
-            $transcript, $parties, $options['records'] ?? $this->createMock(Records::class), $this->chatwoot($options['opens']));
+            $transcript, $parties, $options['records'] ?? $this->createMock(Records::class), $this->chatwoot($options['opens']),
+            $options['acts'] ?? $this->createMock(Acts::class));
         return [$feed, $verdicts, $parties, $transcript];
     }
 
@@ -244,7 +246,7 @@ class ServiceFeedTest extends TestCase
         $request = $this->createMock(Request::class);
         $feed = new ServiceFeed($em, $factory, $acl, $user, $workspace, $owners, $this->createMock(Verdicts::class),
             $this->createMock(Transcript::class), $this->createMock(Parties::class),
-            $this->createMock(Records::class), $this->chatwoot());
+            $this->createMock(Records::class), $this->chatwoot(), $this->createMock(Acts::class));
 
         self::assertSame(['copy-a', 'direct'], array_column($feed->list($request)['items'], 'id'));
     }

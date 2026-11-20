@@ -31,7 +31,8 @@ class JourneySignalDispatcher
         array $payload = [],
         ?string $eventId = null,
     ): void {
-        if ($tenantId === '' || $code === '') {
+        if ($tenantId === '' || $code === '' || ($code === JourneyWhatsAppSignal::CODE_REPLIED &&
+            !empty($payload['accountReplyReview']) && !empty($payload['journeyRecordId']))) {
             return;
         }
 

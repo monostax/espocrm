@@ -30,6 +30,12 @@ class ProcessJourneyTimers implements JobDataLess
     public function run(): void
     {
         $this->recoverStaleClaims();
+        // A reply received while an action already owned the claim takes effect as
+        // soon as it drains. No new worker can claim a row with replyPausedAt set.
+        $this->entityManager->getQueryExecutor()->execute($this->entityManager->getQueryBuilder()->update()
+            ->in('JourneyRecord')->set(['status' => 'Paused'])->where([
+                'status' => 'Active', 'replyPausedAt!=' => null, 'claimedAt' => null,
+            ])->build());
         $this->processTimerTransitions();
         $this->processMaxDurationSla();
     }
@@ -135,8 +141,8 @@ class ProcessJourneyTimers implements JobDataLess
                 }
 
                 try {
-                    if (!$this->periodParser->isDue(
-                        (string) $entered, (string) $wait, null, (string) ($journey->get('timeZone') ?: 'UTC'),
+                    if (!$this->periodParser->isStageDue(
+                        $record, (string) $wait, (string) ($journey->get('timeZone') ?: 'UTC'),
                     )) {
                         continue;
                     }
@@ -211,8 +217,8 @@ class ProcessJourneyTimers implements JobDataLess
 
                 try {
                     $journey = $this->entityManager->getEntityById('Journey', (string) $record->get('journeyId'));
-                    if (!$this->periodParser->isDue(
-                        (string) $entered, (string) $max, null, (string) ($journey?->get('timeZone') ?: 'UTC'),
+                    if (!$this->periodParser->isStageDue(
+                        $record, (string) $max, (string) ($journey?->get('timeZone') ?: 'UTC'),
                     )) {
                         continue;
                     }

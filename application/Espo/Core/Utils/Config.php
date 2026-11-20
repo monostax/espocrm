@@ -253,11 +253,7 @@ class Config
             throw new RuntimeException("Config file '$configPath' is not found.");
         }
 
-        $data = include($configPath);
-
-        if (!is_array($data)) {
-            $data = include($configPath);
-        }
+        $data = $this->fileManager->getPhpContents($configPath);
 
         if (is_array($values)) {
             foreach ($values as $key => $value) {

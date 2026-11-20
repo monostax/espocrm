@@ -62,6 +62,7 @@ class ServiceFeed
         private Parties $parties,
         private Records $records,
         private ChatwootAccess $access,
+        private Acts $acts,
     ) {}
 
     public function list(Request $request, ?string $conversationId = null): array
@@ -176,6 +177,7 @@ class ServiceFeed
             if (!hash_equals($snapshot['snapshot'], (string) ($body->snapshot ?? ''))) throw new Conflict('This conversation changed since the card was shown.');
         }
         $this->verdicts->resolve('ChatwootConversation', $id, $body->revision ?? $snapshot['revision']);
+        if ($act = Feed::reviewAct($body)) $this->acts->record('ChatwootConversation', $id, $this->user->getId(), $act);
     }
 
     /** The CRM user behind the conversation's Chatwoot assignee when that is a person (not an AI agent). */
@@ -247,6 +249,7 @@ class ServiceFeed
         $revision = Revision::ofConversation($conversation);
         // Resolving the displayed card must not complete a newer promise.
         $actedOn = $request->getParsedBody()->revision ?? $revision;
+        $this->acts->record('ChatwootConversation', $id, $this->user->getId(), 'done');
         if ($actedOn !== $revision) {
             $this->verdicts->resolve('ChatwootConversation', $id, $actedOn);
             return;
@@ -283,7 +286,10 @@ class ServiceFeed
         }
         if (!$participant) throw new BadRequest('This contact is not on the card.');
         $this->parties->set($participant, $class);
-        if (!empty($participant['own']) && !in_array($class, ['customer', 'partner'], true)) $this->verdicts->resolve('ChatwootConversation', $id);
+        if (!empty($participant['own']) && !in_array($class, ['customer', 'partner'], true)) {
+            $this->verdicts->resolve('ChatwootConversation', $id);
+            $this->acts->record('ChatwootConversation', $id, $this->user->getId(), 'label');
+        }
         return ['id' => $contactId, 'class' => $class, 'label' => Parties::LABELS[$class]];
     }
 

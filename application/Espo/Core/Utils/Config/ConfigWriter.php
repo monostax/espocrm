@@ -219,7 +219,7 @@ class ConfigWriter
      */
     private function saveData(string $path, array &$data, string $timeParam): void
     {
-        $data[$timeParam] = $microtime = $this->helper->generateMicrotime();
+        $data[$timeParam] = $this->helper->generateMicrotime();
 
         try {
             $this->fileManager->putPhpContents($path, $data);
@@ -235,11 +235,7 @@ class ConfigWriter
             return;
         }
 
-        try {
-            $this->fileManager->putPhpContentsNoRenaming($path, $data);
-        } catch (Exception) {
-            throw new RuntimeException("Could not save config.");
-        }
+        throw new RuntimeException("Could not verify config save.");
     }
 
     /**

@@ -40,12 +40,12 @@ class ConfigFileManager
 
     public function __construct()
     {
-        $this->fileManager = new FileManager();
+        $this->fileManager = new ConfigTempFileManager();
     }
 
     public function setConfig(Config $config): void
     {
-        $this->fileManager = new FileManager(
+        $this->fileManager = new ConfigTempFileManager(
             $config->get('defaultPermissions')
         );
     }
@@ -89,7 +89,7 @@ class ConfigFileManager
      */
     public function getPhpContents(string $path): array
     {
-        $data = $this->fileManager->getPhpContents($path);
+        $data = $this->fileManager->getPhpSafeContents($path);
 
         if (!is_array($data)) {
             throw new RuntimeException("Bad data stored in '{$path}.");

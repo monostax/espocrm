@@ -64,6 +64,32 @@ trait EnrichmentExecutionCases
     }
 
     #[DataProvider('dialects')]
+    public function testBulkChannelResultsRemainInHistoryUntilManuallyAdded(string $dialect): void
+    {
+        $this->database($dialect,function (PDO $pdo,Quotes $quotes): void {
+            $pdo->exec("ALTER TABLE contact ADD phone_number VARCHAR(32)");
+            $this->fundAdmission($pdo);
+            $quote = $this->accepted($quotes);
+            $quotes->admit('tenant',$quote['id']);
+            $this->supplierResults = [new Result('match',['a@example.test','b@example.test']),
+                new Result('match',['+5511999998888','+5511999997777'])];
+            $this->executor($pdo)->run('tenant',$quote['id']);
+
+            [$purchases,,,,,$review,,$fields] = $this->purchaseServices($pdo);
+            $manager = $this->createStub(EntityManager::class);
+            $manager->method('getPDO')->willReturn($pdo);
+            $candidate = new \Espo\Modules\FeatureCredits\Enrichment\CandidateApplication($manager,$this->executionAccess,$purchases,
+                $this->createStub(\Espo\Modules\FeatureCredits\Enrichment\ApplicationRecords::class),$this->createStub(Clock::class));
+            $batch = new \Espo\Modules\FeatureCredits\Enrichment\BatchApplication($manager,$fields,$review,$candidate);
+            $outcome = $batch->apply('tenant',$quote['id'],['products'=>['email','phone'],'targetId'=>'contact']);
+            self::assertSame(['emailsFound'=>2,'phonesFound'=>2,'emailsAdded'=>0,'phonesAdded'=>0,'needsReview'=>1],$outcome);
+            self::assertSame(['person@example.test',null],$pdo->query("SELECT email_address,phone_number FROM contact WHERE id='contact'")->fetch(PDO::FETCH_NUM));
+            self::assertSame(0,(int)$pdo->query('SELECT COUNT(*) FROM contact_channel_identity')->fetchColumn());
+            self::assertSame(2,(int)$pdo->query('SELECT COUNT(*) FROM enrichment_attempt WHERE purchased_at IS NOT NULL AND application_hash IS NULL')->fetchColumn());
+        });
+    }
+
+    #[DataProvider('dialects')]
     public function testDurableWaterfallKeepsSharedCapAndAtomicallyPurchasesSuccessfulSibling(string $dialect): void
     {
         $this->database($dialect,function (PDO $pdo,Quotes $quotes): void {

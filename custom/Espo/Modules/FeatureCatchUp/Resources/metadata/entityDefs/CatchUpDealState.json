@@ -6,7 +6,10 @@
         "lastCustomerAt": { "type": "datetime" },
         "lastBusinessAt": { "type": "datetime" },
         "lastMessageAt": { "type": "datetime" },
-        "messageCount": { "type": "int", "default": 0 }
+        "messageCount": { "type": "int", "default": 0 },
+        "actedById": { "type": "varchar", "maxLength": 36 },
+        "actedAction": { "type": "varchar", "maxLength": 16 },
+        "actedAt": { "type": "datetime" }
     },
     "indexes": {
         "tenantStaff": { "columns": ["tenantId", "staffUserId"] }

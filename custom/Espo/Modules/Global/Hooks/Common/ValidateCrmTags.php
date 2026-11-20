@@ -18,7 +18,7 @@ class ValidateCrmTags implements BeforeSave
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
         if (!in_array($entity->getEntityType(), CrmTags::TYPES, true)) return;
-        $attribute = CrmTags::field($entity->getEntityType()) . 'Ids';
+        $attribute = CrmTags::FIELD . 'Ids';
         $changed = $entity->isAttributeChanged($attribute);
         if (!$changed && !$entity->isAttributeChanged('tenantId') && !$entity->isAttributeChanged('teamsIds')) return;
         if ($changed || $entity->isNew()) {

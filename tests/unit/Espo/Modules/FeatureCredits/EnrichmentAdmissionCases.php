@@ -71,6 +71,9 @@ trait EnrichmentAdmissionCases
             $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM credit_usage')->fetchColumn());
             $quotes->confirm('tenant', $quote['id']);
             $hold = $quotes->admit('tenant', $quote['id']);
+            $fast = \Espo\Modules\FeatureCredits\Jobs\InteractiveWork::class;
+            $lane = $quote['id'][0] < '8' ? 'enrich-a' : 'enrich-b';
+            $this->assertSame($quote['id'], $fast::next($pdo,$lane,$this->now)['id']);
             $request = $this->createStub(Request::class);
             $request->method('getQueryParams')->willReturn($query);
             $response = $this->createMock(Response::class);
@@ -79,6 +82,7 @@ trait EnrichmentAdmissionCases
             $this->assertSame('admitted', $receipt['admission']);
             $this->assertArrayNotHasKey('policyId', $receipt);
             $reservations->release('tenant', $hold['usageId'], 'enrichment:' . $quote['id']);
+            $this->assertNull($fast::next($pdo,$lane,$this->now));
             $this->assertSame('released', $quotes->status($query)['admission']);
             $this->actor = 'other-user';
             try { $quotes->status($query); $this->fail('Other actor read a private quote.'); } catch (NotFound) {}
@@ -109,6 +113,7 @@ trait EnrichmentAdmissionCases
             $this->assertSame($receipt, \Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::quote($quotes->admit('tenant', $terms['id'])));
             $this->assertSame($receipt, \Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::quote($quotes->confirm('tenant', $terms['id'])));
             $this->assertSame($receipt, \Espo\Modules\FeatureCredits\Enrichment\CustomerProjection::quote($quotes->quote($this->input())));
+            $this->assertSame([['enrichment', 'tenant', $terms['id'], false]], $this->jobs->queued);
             $this->assertSame('8.0000', $pdo->query('SELECT reserved_credits FROM tenant_credit_balance')->fetchColumn());
             foreach (['credit_usage', 'credit_reservation', 'credit_allocation'] as $table) {
                 $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn());

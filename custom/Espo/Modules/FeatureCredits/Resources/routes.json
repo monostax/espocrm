@@ -1,4 +1,6 @@
 [
+    {"route": "/CreditVerificationBatches", "method": "post", "params": {"controller": "CreditVerificationBatches", "action": "create"}},
+    {"route": "/CreditVerificationBatches/current", "method": "get", "params": {"controller": "CreditVerificationBatches", "action": "current"}},
     {"route": "/CreditWhatsAppVerification/context", "method": "post", "params": {"controller": "CreditWhatsAppVerification", "action": "context"}},
     {"route": "/CreditWhatsAppVerification", "method": "post", "params": {"controller": "CreditWhatsAppVerification", "action": "start"}},
     {"route": "/CreditWhatsAppVerification/status", "method": "get", "params": {"controller": "CreditWhatsAppVerification", "action": "status"}},

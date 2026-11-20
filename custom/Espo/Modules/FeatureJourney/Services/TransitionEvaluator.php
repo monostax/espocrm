@@ -178,8 +178,8 @@ class TransitionEvaluator
 
         try {
             $journey = $this->entityManager->getEntityById('Journey', (string) $record->get('journeyId'));
-            return (new PeriodParser())->isDue(
-                (string) $entered, $period, null, (string) ($journey?->get('timeZone') ?: 'UTC'),
+            return (new PeriodParser())->isStageDue(
+                $record, $period, (string) ($journey?->get('timeZone') ?: 'UTC'),
             );
         } catch (Throwable $e) {
             $this->log->warning('TransitionEvaluator: elapsedInStage failed: ' . $e->getMessage());
@@ -385,6 +385,23 @@ class TransitionEvaluator
                 $where['occurredAt>='] = max($where['occurredAt>='] ?? '', $from);
             }
 
+            // Keep the original tracking events. Only this enrollment's reviewed WhatsApp
+            // signals are consumed; an SMS (same event code) or email still stops the run.
+            if ($code === JourneyWhatsAppSignal::CODE_REPLIED && $record->get('replyReviewState') &&
+                !empty($node['sinceEnrollment'])) {
+                $count = 0;
+                foreach ($this->entityManager->getRDBRepository('TrackingEvent')->where($where)
+                    ->select(['id', 'payload'])->find() as $event) {
+                    $p = (array) $event->get('payload');
+                    if (!empty($p['accountReplyReview']) && ($p['journeyRecordId'] ?? null) === $record->getId()) {
+                        continue;
+                    }
+                    if (++$count >= $minCount) {
+                        return true;
+                    }
+                }
+                return false;
+            }
             $count = $this->entityManager
                 ->getRDBRepository('TrackingEvent')
                 ->where($where)

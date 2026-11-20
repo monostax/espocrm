@@ -24,8 +24,9 @@
                 {
                     "name": "allowReEnrollment"
                 },
-                {"name": "timeZone"}
-            ],
+                 {"name": "timeZone"}
+             ],
+             [{"name": "reviewAccountWhatsAppReplies"}],
             [
                 {
                     "name": "description",

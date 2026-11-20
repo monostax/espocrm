@@ -57,6 +57,10 @@
             "type": "bool",
             "default": false
         },
+        "reviewAccountWhatsAppReplies": {
+            "type": "bool",
+            "default": false
+        },
         "allowReEnrollment": {
             "type": "bool",
             "default": false,

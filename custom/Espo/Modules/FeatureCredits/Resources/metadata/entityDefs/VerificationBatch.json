@@ -1,0 +1,26 @@
+{
+    "modifierClassName": "Espo\\Modules\\FeatureCredits\\Classes\\Database\\RequiredFields",
+    "fields": {
+        "tenant": {"type":"link","notNull":true},
+        "contact": {"type":"link","notNull":true},
+        "actor": {"type":"link","notNull":true},
+        "requestKey": {"type":"varchar","maxLength":64,"notNull":true},
+        "family": {"type":"varchar","maxLength":8,"notNull":true},
+        "commands": {"type":"jsonArray","notNull":true},
+        "outcomes": {"type":"jsonArray","notNull":true},
+        "state": {"type":"varchar","maxLength":16,"notNull":true},
+        "nextAt": {"type":"datetime","notNull":true},
+        "createdAt": {"type":"datetime","notNull":true},
+        "leaseToken": {"type":"varchar","maxLength":24}
+    },
+    "links": {
+        "tenant": {"type":"belongsTo","entity":"Tenant"},
+        "contact": {"type":"belongsTo","entity":"Contact"},
+        "actor": {"type":"belongsTo","entity":"User"}
+    },
+    "indexes": {
+        "requestUnique": {"columns":["tenantId","actorId","requestKey"],"unique":true},
+        "due": {"columns":["state","nextAt"]},
+        "recent": {"columns":["tenantId","contactId","actorId","family","createdAt"]}
+    }
+}

@@ -141,6 +141,8 @@ class JourneyWhatsAppReplyTracker
 
         $properties = [
             'messageId' => $messageId !== '' ? $messageId : null,
+            'replyPhone' => $conversation?->get('contactPhoneNumber'),
+            'messageCreatedAt' => $message->get('chatwootCreatedAt'),
             'chatwootMessageId' => $chatwootMessageId,
             'conversationId' => $conversationCrmId !== '' ? $conversationCrmId : null,
             'chatwootConversationId' => $externalConversationId,
@@ -244,6 +246,11 @@ class JourneyWhatsAppReplyTracker
 
         $properties = [
             'messageId' => null,
+            'replyPhone' => $payload['replyPhone'] ?? $conversation?->get('contactPhoneNumber'),
+            'messageCreatedAt' => $payload['createdAt'] ?? null,
+            'inboxExternalId' => $payload['inboxExternalId'] ?? null,
+            'espoAccountId' => $espoAccountId,
+            'isWhatsAppChannel' => !empty($payload['isWhatsAppChannel']),
             'chatwootMessageId' => $chatwootMessageId,
             'conversationId' => $conversation?->getId(),
             'chatwootConversationId' => $externalConversationId,
@@ -433,7 +440,7 @@ class JourneyWhatsAppReplyTracker
             ->where([
                 'whatsAppChatwootConversationId' => $externalConversationId,
                 'whatsAppChatwootAccountId' => $espoAccountId,
-                'status' => ['Active', 'Processing'],
+                'status' => ['Active', 'Processing', 'Paused'],
             ])
             ->order('modifiedAt', 'DESC')
             ->findOne();
@@ -469,7 +476,7 @@ class JourneyWhatsAppReplyTracker
                     ->where([
                         'whatsAppChatwootConversationId' => $alt,
                         'whatsAppChatwootAccountId' => $espoAccountId,
-                        'status' => ['Active', 'Processing'],
+                        'status' => ['Active', 'Processing', 'Paused'],
                     ])
                     ->order('modifiedAt', 'DESC')
                     ->findOne();
@@ -497,7 +504,7 @@ class JourneyWhatsAppReplyTracker
             ->where([
                 'chatwootConversationTrail*' => '%"' .
                     JourneyWhatsAppOutbound::trailKey($espoAccountId, $externalConversationId) . '"%',
-                'status' => ['Active', 'Processing'],
+                'status' => ['Active', 'Processing', 'Paused'],
             ])
             ->order('modifiedAt', 'DESC')
             ->findOne();
@@ -593,6 +600,26 @@ class JourneyWhatsAppReplyTracker
                 : null;
         }
 
+        $cwAccountId ??= $properties['espoAccountId'] ?? null;
+        if ($targetType === 'Account' && $recordId && $cwAccountId) {
+            if (empty($properties['channelType'])) {
+                $inbox = !empty($properties['inboxId'])
+                    ? $this->entityManager->getEntityById('ChatwootInbox', $properties['inboxId'])
+                    : (!empty($properties['inboxExternalId']) ? $this->entityManager->getRDBRepository('ChatwootInbox')
+                        ->where(['chatwootAccountId' => $cwAccountId, 'chatwootInboxId' => $properties['inboxExternalId']])
+                        ->findOne() : null);
+                if ($inbox && $inbox->get('chatwootAccountId') === $cwAccountId) {
+                    $properties['channelType'] = $inbox->get('channelType');
+                }
+            }
+            if (empty($properties['channelType']) && !empty($properties['isWhatsAppChannel'])) {
+                $properties['channelType'] = 'Channel::Whatsapp';
+            }
+            if ((new AccountReplyReview($this->entityManager))->receive($tenantId, $cwAccountId, $targetId, $properties)) {
+                $properties['accountReplyReview'] = true;
+            }
+        }
+        unset($properties['replyPhone'], $properties['espoAccountId'], $properties['inboxExternalId'], $properties['isWhatsAppChannel']);
         if ($this->alreadyEmitted($tenantId, $targetType, $targetId, $recordId, $cwMessageId, $cwAccountId)) {
             return;
         }

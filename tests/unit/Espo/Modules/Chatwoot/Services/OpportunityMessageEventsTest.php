@@ -28,6 +28,8 @@ class OpportunityMessageEventsTest extends TestCase
 {
     private array $notes = [];
     private array $resolvedAccounts = [];
+    private bool $companyLinked = false;
+    private bool $initiativeLinked = false;
     private OpportunityMessageEvents $service;
     private Entity $conversation;
 
@@ -35,7 +37,11 @@ class OpportunityMessageEventsTest extends TestCase
     {
         $em = $this->createMock(EntityManager::class);
         $config = $this->createMock(Config::class);
-        $config->method('get')->with(OpportunityMessageEvents::STARTED_AT)->willReturn('2026-09-06 00:00:00');
+        $config->method('get')->willReturnCallback(fn ($key) => match ($key) {
+            OpportunityMessageEvents::STARTED_AT => '2026-09-06 00:00:00',
+            OpportunityStreamEvents::ACCOUNT_STARTED_AT => '2026-09-06 12:00:00',
+            OpportunityStreamEvents::DISCUSSION_ROLLOUT['Initiative'] => '2026-09-06 14:00:00',
+        });
         $system = $this->createMock(SystemUser::class);
         $system->method('getId')->willReturn('system');
         $stream = $this->createMock(StreamService::class);
@@ -71,12 +77,32 @@ class OpportunityMessageEventsTest extends TestCase
         $locked->method('findOne')->willReturn($opportunity);
         $opportunities->method('where')->with(['id' => 'opp'])->willReturn($locked);
 
+        $parents = [];
+        foreach (['Account' => 'companyLinked', 'Initiative' => 'initiativeLinked'] as $type => $linked) {
+            $parent = new EntityDouble(['id' => 'opp', 'tenantId' => 'tenant'], $type);
+            $parents[$type] = $this->createMock(RDBRepository::class);
+            $parents[$type]->method('where')->willReturnCallback(function (array $where) use ($parent, $linked) {
+                $select = $this->createMock(RDBSelectBuilder::class);
+                if (isset($where['id=s'])) {
+                    $select->method('find')->willReturn(new EntityCollection($this->$linked ? [$parent] : []));
+                } else {
+                    self::assertSame(['id' => 'opp'], $where);
+                    $select->method('forUpdate')->willReturnSelf();
+                    $select->method('findOne')->willReturn($parent);
+                }
+                return $select;
+            });
+        }
+
         $notes = $this->createMock(RDBRepository::class);
         $notes->method('where')->willReturnCallback(function (array $where): RDBSelectBuilder {
             self::assertSame(OpportunityMessageEvents::TYPE, $where['type']);
             self::assertSame('ChatwootConversation', $where['relatedType']);
             self::assertSame('conversation', $where['relatedId']);
-            $matches = array_intersect_key($this->notes, array_flip($where['opportunityStreamEventKey']));
+            $prefixes = array_map(fn ($pattern) => rtrim($pattern, '%'), array_column($where['OR'], 'opportunityStreamEventKey*'));
+            $keys = array_column($where['OR'], 'opportunityStreamEventKey');
+            $matches = array_filter($this->notes, fn ($key) => in_array($key, $keys, true) ||
+                array_filter($prefixes, fn ($prefix) => str_starts_with($key, $prefix)), ARRAY_FILTER_USE_KEY);
             $select = $this->createMock(RDBSelectBuilder::class);
             $select->method('find')->willReturn(new EntityCollection(array_values(array_map(
                 fn ($data) => new EntityDouble($data, 'Note'), $matches
@@ -93,7 +119,7 @@ class OpportunityMessageEventsTest extends TestCase
             $select->method('findOne')->willReturn(isset($this->notes[$key]) ? new EntityDouble($this->notes[$key]) : null);
             return $select;
         });
-        $repos = ['Note' => $notes, 'Opportunity' => $opportunities, 'ChatwootConversation' => $conversations];
+        $repos = $parents + ['Note' => $notes, 'Opportunity' => $opportunities, 'ChatwootConversation' => $conversations];
         $em->method('getRDBRepository')->willReturnCallback(fn ($type) => $repos[$type]);
         $em->method('createEntity')->willReturnCallback(function (string $type, array $data): Entity {
             self::assertSame('Note', $type);
@@ -144,6 +170,23 @@ class OpportunityMessageEventsTest extends TestCase
             'chatwootCreatedAt' => '2026-09-06 14:32:00',
         ]), $this->conversation);
         self::assertCount(1, $this->notes);
+    }
+
+    public function testAccountAndInitiativeMessagesAreIndependentAndCorrectedEvenAfterUnlink(): void
+    {
+        $this->companyLinked = true;
+        $this->initiativeLinked = true;
+        $this->service->recordWebhook($this->payload(1, ['created_at' => '2026-09-06T13:00:00Z']), 'crm-account');
+        self::assertSame(['Opportunity', 'Account'], array_column($this->notes, 'parentType'));
+        $this->service->recordWebhook($this->payload(2), 'crm-account');
+        $this->service->recordWebhook($this->payload(2), 'crm-account');
+        self::assertSame(['Opportunity', 'Account', 'Opportunity', 'Account', 'Initiative'], array_column($this->notes, 'parentType'));
+        $this->companyLinked = false;
+        $this->initiativeLinked = false;
+        $this->service->recordSyncedMessage(new EntityDouble([
+            'chatwootMessageId' => 2, 'messageType' => 'incoming', 'isPrivate' => true,
+        ]), $this->conversation);
+        self::assertSame(['Opportunity', 'Account'], array_column($this->notes, 'parentType'));
     }
 
     public function testPrivateOutgoingActivityAndHistoricalMessagesAreIgnored(): void

@@ -1,5 +1,6 @@
 {
-    "fields": { "name": "Name", "color": "Color", "tenant": "Workspace", "teams": "Teams", "visibility": "Visibility", "ownerUser": "Owner" },
+    "fields": { "name": "Name", "color": "Color", "tenant": "Workspace", "teams": "Teams", "visibility": "Visibility", "appliesTo": "Applies to", "ownerUser": "Owner" },
     "labels": { "Create CrmTag": "Create CRM Tag" },
-    "options": { "visibility": { "team": "Team", "personal": "Personal" }, "color": { "slate": "Gray", "amber": "Amber", "teal": "Teal", "ruby": "Red", "blue": "Blue", "iris": "Purple" } }
+    "tooltips": { "appliesTo": "Record types this tag can be added to. Leave empty for all of them. Records already tagged keep the tag when you narrow this." },
+    "options": { "appliesTo": { "Contact": "Contacts", "Account": "Companies", "Opportunity": "Opportunities", "Activity": "Activities", "Initiative": "Initiatives" }, "visibility": { "team": "Team", "personal": "Personal" }, "color": { "slate": "Gray", "amber": "Amber", "teal": "Teal", "ruby": "Red", "blue": "Blue", "iris": "Purple" } }
 }

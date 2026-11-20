@@ -7,14 +7,18 @@ namespace Espo\Modules\Chatwoot\Services;
 use DateTimeImmutable;
 use DateTimeZone;
 use Espo\Core\Utils\Config;
+use Espo\Modules\Chatwoot\Tools\Stream\MuralConversationLinks;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\SelectBuilder;
+use Espo\ORM\Query\UnionBuilder;
 
 /** Durable message events. Grouping belongs to the UI, never to the read cursor. */
 class OpportunityMessageEvents
 {
     public const TYPE = OpportunityStreamEvents::MESSAGE_RECEIVED;
     public const STARTED_AT = 'opportunityMessageEventsStartedAt';
+    private const KEY_PREFIX = ['Account' => 'am', 'Initiative' => 'im'];
 
     public function __construct(
         private EntityManager $entityManager,
@@ -64,21 +68,21 @@ class OpportunityMessageEvents
             return;
         }
 
-        $opportunities = $this->entityManager->getRDBRepository('ChatwootConversation')
-            ->getRelation($conversation, 'opportunities')->find();
-        $keys = [];
-        foreach ($opportunities as $opportunity) {
-            $keys[] = hash('sha256', implode(':', [$opportunity->getId(), $conversation->get('chatwootAccountId'), $messageId]));
+        $opportunities = $this->entityManager->getRDBRepository('ChatwootConversation')->getRelation($conversation, 'opportunities')->find();
+        // Indexed prefixes still find mural copies after a relationship has been removed.
+        $matches = [];
+        foreach (self::KEY_PREFIX as $type => $prefix) {
+            $matches[] = ['parentType' => $type, 'opportunityStreamEventKey*' => "$prefix:$messageId:%"];
         }
-        if (!$keys) {
-            return;
+        foreach ($opportunities as $opportunity) {
+            $matches[] = ['opportunityStreamEventKey' => $this->messageKey($opportunity, $conversation, $messageId)];
         }
 
         $notes = $this->entityManager->getRDBRepository('Note')->where([
             'type' => self::TYPE,
             'relatedType' => 'ChatwootConversation',
             'relatedId' => $conversation->getId(),
-            'opportunityStreamEventKey' => $keys,
+            'OR' => $matches,
         ])->find();
         foreach ($notes as $note) {
             $this->entityManager->removeEntity($note);
@@ -107,21 +111,41 @@ class OpportunityMessageEvents
             return;
         }
 
-        $opportunities = $this->entityManager->getRDBRepository('ChatwootConversation')
-            ->getRelation($conversation, 'opportunities')->find();
-
-        foreach ($opportunities as $opportunity) {
-            if ($opportunity->get('tenantId') !== $account->get('tenantId')) {
+        foreach ($this->parents($conversation, $account, $occurredAt) as $parent) {
+            if ($parent->get('tenantId') !== $account->get('tenantId')) {
                 continue;
             }
 
-            $key = hash('sha256', implode(':', [$opportunity->getId(), $account->getId(), $messageId]));
-            $this->events->write(self::TYPE, $opportunity, $conversation, [
+            $key = $this->messageKey($parent, $conversation, $messageId);
+            $this->events->write(self::TYPE, $parent, $conversation, [
                 'chatwootAccountId' => (int) $account->get('chatwootAccountId'),
                 'chatwootConversationId' => (int) $conversation->get('chatwootConversationId'),
                 'chatwootMessageId' => (int) $messageId,
                 'occurredAt' => $occurredAt,
             ], $key, $account->getLinkMultipleIdList('teams'));
+        }
+    }
+
+    private function messageKey(Entity $parent, Entity $conversation, string $messageId): string
+    {
+        $hash = hash('sha256', implode(':', [$parent->getId(), $conversation->get('chatwootAccountId'), $messageId]));
+        $prefix = self::KEY_PREFIX[$parent->getEntityType()] ?? null;
+        return $prefix ? "$prefix:$messageId:" . substr($hash, 0, 40) : $hash;
+    }
+
+    private function parents(Entity $conversation, Entity $workspace, string $occurredAt): iterable
+    {
+        yield from $this->entityManager->getRDBRepository('ChatwootConversation')->getRelation($conversation, 'opportunities')->find();
+        foreach (OpportunityStreamEvents::DISCUSSION_ROLLOUT as $type => $setting) {
+            $startedAt = $this->config->get($setting);
+            if (!$startedAt || $occurredAt < $startedAt) continue;
+            $union = UnionBuilder::create();
+            foreach (MuralConversationLinks::paths($type) as $link) $union->query($link->where([
+                'muralParent.tenantId' => $workspace->get('tenantId'), 'muralConversation.id' => $conversation->getId(),
+            ])->build());
+            yield from $this->entityManager->getRDBRepository($type)->where([
+                'id=s' => SelectBuilder::create()->fromQuery($union->build(), 'linkedParents')->select('id')->build(),
+            ])->find();
         }
     }
 }

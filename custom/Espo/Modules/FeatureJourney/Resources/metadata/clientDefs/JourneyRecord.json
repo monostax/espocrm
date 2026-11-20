@@ -21,6 +21,15 @@
     ],
     "detailActionList": [
         {
+            "name": "replyReview",
+            "label": "replyReview",
+            "handler": "feature-journey:handlers/journey-record/detail-actions",
+            "actionFunction": "replyReview",
+            "checkVisibilityFunction": "canReview",
+            "acl": "edit",
+            "groupIndex": 0
+        },
+        {
             "name": "exit",
             "label": "Exit",
             "handler": "feature-journey:handlers/journey-record/detail-actions",

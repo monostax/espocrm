@@ -186,6 +186,18 @@ The Exit stage may run **Cancel open tasks from this enrollment** (`cancelJourne
 it cancels only open Task references saved with `saveAs` in the current cycle, checks
 tenant/run-as edit access, and preserves completed/canceled and unrelated tasks.
 
+### 5.2 Account reply review
+
+For Account journeys, **Pause account enrollments for WhatsApp reply review** holds the
+current enrollment on a correlated inbound WhatsApp. On the paused journey record,
+choose **Review WhatsApp reply**. **End cadence** runs the configured reply Exit step
+and its cleanup. **Mark wrong number** excludes that number from this run and leaves
+the record paused. Once verified, enter another number belonging to one eligible linked
+contact and choose **Resume with this contact**. Subsequent WhatsApp/SMS sends use
+that number; email uses that contact. Resume keeps the step and remaining wait without
+replaying entry actions. Previous exits are terminal. Email and SMS replies retain their
+configured rules.
+
 ### 5.3 Execution path
 
 1. Dispatcher or timer queues `ProcessJourneyTransition` job `{ journeyRecordId, transitionId, signal? }`

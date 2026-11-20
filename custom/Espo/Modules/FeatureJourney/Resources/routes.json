@@ -1,5 +1,15 @@
 [
     {
+        "route": "/JourneyRecord/:id/replyReview",
+        "method": "get",
+        "params": {"controller": "JourneyRecord", "action": "replyReview", "id": ":id"}
+    },
+    {
+        "route": "/JourneyRecord/:id/replyReview",
+        "method": "post",
+        "params": {"controller": "JourneyRecord", "action": "replyReview", "id": ":id"}
+    },
+    {
         "route": "/Journey/:id/recordReferences",
         "method": "get",
         "params": {

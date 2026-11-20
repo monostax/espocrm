@@ -1,13 +1,11 @@
 {
   "fields": {
-    "crmTags": "CRM Tags",
   "cpf": "CPF",
   "dataNascimento": "Date of Birth",
   "sexo": "Sex",
   "title": "Job Title",
   "jobLevel": "Job Level",
   "source": "Source",
-  "tags": "Tags",
   "tenant": "Tenant",
   "whatsAppOptedOut": "WhatsApp Opted Out",
   "customFields": "Custom Fields"
@@ -75,7 +73,6 @@
         "whatsAppOptedOut": "Indicates whether the contact has opted out of receiving WhatsApp messages."
     },
  "tooltips": {
-  "whatsAppOptedOut": "When enabled, this contact will be excluded from WhatsApp campaigns and bulk messages. The opt-out can be set manually or automatically by the system when the contact requests to stop receiving messages.",
-  "tags": "Free-form labels for segmentation (e.g. import batch, niche, region). Type any value and press Enter. On CSV import, map a column with comma-separated values to this field. Reports and Target Lists can filter by tag."
+  "whatsAppOptedOut": "When enabled, this contact will be excluded from WhatsApp campaigns and bulk messages. The opt-out can be set manually or automatically by the system when the contact requests to stop receiving messages."
  }
 }

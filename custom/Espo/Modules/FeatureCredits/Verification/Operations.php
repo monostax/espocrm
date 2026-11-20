@@ -9,7 +9,6 @@ use DateTimeZone;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
-use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Crypt;
@@ -21,7 +20,7 @@ use Espo\Modules\FeatureCredits\Accounting\Reservations;
 use Espo\Modules\FeatureCredits\Accounting\SourceReference;
 use Espo\Modules\FeatureCredits\Accounting\WalletLock;
 use Espo\Modules\FeatureCredits\Enrichment\ReviewLock;
-use Espo\Modules\FeatureCredits\Jobs\RunPhoneVerification;
+use Espo\Modules\FeatureCredits\Jobs\AdmissionJobs;
 use Espo\ORM\EntityManager;
 use InvalidArgumentException;
 use PDO;
@@ -43,8 +42,8 @@ class Operations
         private Reservations $reservations,
         private Crypt $crypt,
         private Config $config,
+        private AdmissionJobs $jobs,
         private ?ServiceContainer $records = null,
-        private ?JobSchedulerFactory $scheduler = null,
     ) {}
 
     public function context(stdClass $input, string $kind = Kind::PHONE): array
@@ -227,7 +226,7 @@ class Operations
         });
     }
 
-    public function start(stdClass $input, string $kind = Kind::PHONE): array
+    public function start(stdClass $input, string $kind = Kind::PHONE, bool $bulk = false): array
     {
         $data = get_object_vars($input);
         if (array_diff(array_keys($data), ['tenantId', 'contactId', 'source', 'requestKey', 'contextRevision', 'refresh', 'dateOfBirth', 'maxChargeCredits']) ||
@@ -312,6 +311,7 @@ class Operations
             }
         }
 
+        $newOperationId = null;
         $result = $this->walletLock->run(
             $tenantId,
             function (PDO $pdo, array $wallet, string $now) use (
@@ -326,6 +326,8 @@ class Operations
                 $commandHash,
                 $kind,
                 $maxCharge,
+                $bulk,
+                &$newOperationId,
             ): array {
                 // 1. Check request binding first so retries return the original operation even after expiry/erasure.
                 $q = $pdo->prepare('SELECT * FROM phone_verification_request WHERE tenant_id = ? AND request_key = ?');
@@ -448,7 +450,7 @@ class Operations
                     );
                 }
 
-                $this->enforceLimitsLocked($pdo, $tenantId, $fingerprintHash, $cap['limits'], $now);
+                $this->enforceLimitsLocked($pdo, $tenantId, $fingerprintHash, $cap['limits'], $now, $bulk);
 
                 $q = $pdo->prepare('SELECT id FROM tenant_credit_billing_rate WHERE tenant_id = ? AND deleted = FALSE
                     AND effective_from <= ? AND (effective_until IS NULL OR effective_until > ?)');
@@ -521,6 +523,7 @@ class Operations
                     ]);
 
                 $this->insertRequestBinding($pdo, $tenantId, $contactId, $actorId, $requestKey, $commandHash, 'admitted', $operationId, $now);
+                $newOperationId = $operationId;
                 $op = $this->loadOperationLocked($pdo, $tenantId, $operationId);
 
                 return [
@@ -533,16 +536,8 @@ class Operations
             },
         );
 
-        if (($result['resolution'] ?? null) === 'admitted' && $this->scheduler !== null) {
-            try {
-                $this->scheduler->create()
-                    ->setClassName(RunPhoneVerification::class)
-                    ->setData(['tenantId' => $tenantId, 'operationId' => $result['operation']['id']])
-                    ->setGroup('phone-verification-' . $result['operation']['id'])
-                    ->schedule();
-            } catch (\Throwable) {
-                // Durable admitted operations are recovered and scheduled by DispatchPhoneVerification.
-            }
+        if ($newOperationId !== null) {
+            $this->jobs->verification($tenantId, $newOperationId);
         }
 
         return $result;
@@ -929,7 +924,7 @@ class Operations
         return [$active, $completed, $failed];
     }
 
-    private function enforceLimitsLocked(PDO $pdo, string $tenantId, string $fingerprintHash, array $limits, string $now): void
+    private function enforceLimitsLocked(PDO $pdo, string $tenantId, string $fingerprintHash, array $limits, string $now, bool $bulk): void
     {
         $cooldownCutoff = self::after($now, -$limits['sameInputCooldownSeconds']);
         $q = $pdo->prepare('SELECT COUNT(*) FROM phone_verification_operation
@@ -943,14 +938,23 @@ class Operations
         }
 
         $minuteCutoff = self::after($now, -60);
-        $q = $pdo->prepare('SELECT COUNT(*) FROM phone_verification_operation
-            WHERE tenant_id = ? AND admitted_at > ? AND deleted = FALSE');
+        $offset = max(0, (int)$limits['maxPerMinutePerTenant'] - 1);
+        $q = $pdo->prepare("SELECT admitted_at FROM phone_verification_operation
+            WHERE tenant_id = ? AND admitted_at > ? AND deleted = FALSE ORDER BY admitted_at DESC LIMIT 1 OFFSET $offset");
         $q->execute([$tenantId, $minuteCutoff]);
-        if ((int) $q->fetchColumn() >= $limits['maxPerMinutePerTenant']) {
+        if ($oldest = $q->fetchColumn()) {
+            $retry = max(1, 60 + strtotime($oldest . ' UTC') - strtotime($now . ' UTC'));
             throw Conflict::createWithBody(
                 'Per-minute phone verification limit reached.',
-                '{"reason":"rate_limited","limit":"per_minute"}',
+                json_encode(['reason'=>'rate_limited','limit'=>'per_minute','retryAfterSeconds'=>$retry], JSON_THROW_ON_ERROR),
             );
+        }
+        $q = $pdo->prepare("SELECT COUNT(*) FROM phone_verification_operation WHERE tenant_id=? AND deleted=FALSE
+            AND state IN ('admitted','claimed','awaiting')");
+        $q->execute([$tenantId]);
+        if ((int)$q->fetchColumn() >= ($bulk ? CapabilityGate::BULK_IN_FLIGHT : CapabilityGate::MAX_IN_FLIGHT)) {
+            throw Conflict::createWithBody('Verification capacity is busy.',
+                '{"reason":"rate_limited","limit":"in_flight","retryAfterSeconds":2}');
         }
     }
 

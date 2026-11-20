@@ -12,6 +12,7 @@ use Espo\Entities\PhoneNumber;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
 use Espo\Modules\Chatwoot\Tools\PhoneNormalizer;
+use Espo\Modules\Chatwoot\Tools\WhatsAppRemovals;
 use Espo\Modules\Global\Tools\CustomField\TemplateBridge;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -156,7 +157,8 @@ class JourneyWhatsAppOutbound
     /**
      * All sendable phones on the target (primary + secondary).
      *
-     * - Non-empty override → that number only (semicolon/comma/whitespace separated list allowed).
+     * - Non-empty override → explicit recipients (semicolon/comma/whitespace separated list allowed).
+     *   Removed WhatsApp numbers and rejected identities on a Contact override all recipient sources.
      * - Otherwise: phoneNumberData (skip opted-out / invalid / Fax), then primary field fallbacks,
      *   then ContactChannelIdentity whatsapp sourceIds when available.
      * - Only mobile numbers ({@see isMobile}), judged by the number rather than its CRM type
@@ -170,19 +172,40 @@ class JourneyWhatsAppOutbound
      */
     public function resolvePhones(Entity $target, ?string $override = null, bool $whatsAppIdentities = true): array
     {
+        $blocked = [];
+        $identityPhones = [];
+        if ($whatsAppIdentities && $target->hasId() && $target->getEntityType() === 'Contact') {
+            $tenant = (string) $target->get('tenantId');
+            $blocked = (new WhatsAppRemovals($this->entityManager))->blocked($tenant, $target->getId());
+            $identities = $this->entityManager->getRDBRepository('ContactChannelIdentity')
+                ->where(['tenantId' => $tenant, 'contactId' => $target->getId(), 'channelType' => ['whatsapp', 'sms']])
+                ->select(['sourceId', 'channelType', 'ownershipStatus'])->find();
+            foreach ($identities as $identity) {
+                $n = PhoneNormalizer::normalize($identity->get('sourceId'));
+                if (!$n) {
+                    continue;
+                }
+                if ($identity->get('ownershipStatus') === 'rejected') {
+                    $blocked[$n] = true;
+                } elseif ($identity->get('channelType') === 'whatsapp') {
+                    $identityPhones[] = $n;
+                }
+            }
+        }
+
         if (is_string($override) && trim($override) !== '') {
-            return $this->normalizePhoneList($override);
+            return array_values(array_diff($this->normalizePhoneList($override), array_keys($blocked)));
         }
 
         $phones = [];
         $seen = [];
 
-        $append = function (?string $raw, bool $mobileOnly = true) use (&$phones, &$seen): void {
+        $append = function (?string $raw, bool $mobileOnly = true) use (&$phones, &$seen, &$blocked): void {
             if ($raw === null || trim($raw) === '') {
                 return;
             }
             $n = PhoneNormalizer::normalize(trim($raw));
-            if ($n === null || isset($seen[$n])) {
+            if ($n === null || isset($seen[$n]) || isset($blocked[$n])) {
                 return;
             }
             if ($mobileOnly && !$this->isMobile($n)) {
@@ -198,10 +221,11 @@ class JourneyWhatsAppOutbound
                 $repo = $this->entityManager->getRepository(PhoneNumber::ENTITY_TYPE);
 
                 foreach ($repo->getPhoneNumberData($target) as $row) {
-                    if (!empty($row->optOut) || !empty($row->invalid)) {
-                        continue;
-                    }
-                    if (strcasecmp((string) ($row->type ?? ''), 'Fax') === 0) {
+                    if (!empty($row->optOut) || !empty($row->invalid) || strcasecmp((string) ($row->type ?? ''), 'Fax') === 0) {
+                        $n = PhoneNormalizer::normalize($row->phoneNumber ?? null);
+                        if ($n !== null) {
+                            $blocked[$n] = true;
+                        }
                         continue;
                     }
                     $append(isset($row->phoneNumber) ? (string) $row->phoneNumber : null);
@@ -221,27 +245,11 @@ class JourneyWhatsAppOutbound
             }
         }
 
-        // WhatsApp channel identities (multi-number) when not yet mirrored to phoneNumber.
-        if ($whatsAppIdentities && $target->hasId() && $target->getEntityType() === 'Contact') {
-            try {
-                $identities = $this->entityManager
-                    ->getRDBRepository('ContactChannelIdentity')
-                    ->where([
-                        'contactId' => $target->getId(),
-                        'channelType' => 'whatsapp',
-                    ])
-                    ->select(['sourceId'])
-                    ->find();
-
-                foreach ($identities as $identity) {
-                    $append((string) ($identity->get('sourceId') ?? ''), false);
-                }
-            } catch (Throwable $e) {
-                $this->log->debug('JourneyWhatsApp: channel identities: ' . $e->getMessage());
-            }
+        foreach ($identityPhones as $phone) {
+            $append($phone, false);
         }
 
-        return $phones;
+        return array_values(array_diff($phones, array_keys($blocked)));
     }
 
     /**

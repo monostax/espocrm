@@ -113,7 +113,8 @@ class Inbox
                 $query->where(['id' => null]);
             } else {
                 $query->where(['id=s' => $this->readableStreamScope()]);
-                $this->discussion->applyFilter($query, 'Initiative', $read === 'unread');
+                if ($read === 'unread') $this->discussion->applyFilter($query, 'Initiative', true);
+                if ($request->getQueryParam('view') === 'mentions') $this->discussion->applyFilter($query, 'Initiative', false);
             }
         }
         return $query->build();

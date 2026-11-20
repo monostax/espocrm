@@ -23,7 +23,9 @@ class CapabilityGate
     public const OPERATION_DEADLINE_SECONDS = 300;
     public const FRESH_REUSE_SECONDS = 2592000; // 30 days
     public const RETENTION_SECONDS = 7776000; // 90 days
-    public const DEFAULT_MAX_PER_MINUTE = 10;
+    public const DEFAULT_MAX_PER_MINUTE = 3000;
+    public const MAX_IN_FLIGHT = 24;
+    public const BULK_IN_FLIGHT = 12; // Leave room for interactive checks during a bulk run.
     public const DEFAULT_COOLDOWN_SECONDS = 60;
 
     private ?array $published = null;
@@ -58,7 +60,7 @@ class CapabilityGate
             'releaseApprovalRef' => is_string($data['releaseApprovalRef'] ?? null) && $data['releaseApprovalRef'] !== ''
                 ? $data['releaseApprovalRef'] : null,
             'allowlistedTenantIds' => $allowlist,
-            'maxPerMinutePerTenant' => $this->boundedInt($data['maxPerMinutePerTenant'] ?? null, self::DEFAULT_MAX_PER_MINUTE, 1, 1000),
+            'maxPerMinutePerTenant' => $this->boundedInt($data['maxPerMinutePerTenant'] ?? null, self::DEFAULT_MAX_PER_MINUTE, 1, self::DEFAULT_MAX_PER_MINUTE),
             'sameInputCooldownSeconds' => $this->boundedInt($data['sameInputCooldownSeconds'] ?? null, self::DEFAULT_COOLDOWN_SECONDS, 1, 3600),
             'updatedAt' => is_string($data['updatedAt'] ?? null) ? $data['updatedAt'] : null,
             'updatedById' => is_string($data['updatedById'] ?? null) ? $data['updatedById'] : null,
@@ -178,7 +180,7 @@ class CapabilityGate
             $current['allowlistedTenantIds'] = $tenants;
         }
         foreach ([
-            'maxPerMinutePerTenant' => [1, 1000],
+            'maxPerMinutePerTenant' => [1, self::DEFAULT_MAX_PER_MINUTE],
             'sameInputCooldownSeconds' => [1, 3600],
         ] as $intKey => [$min, $max]) {
             if (array_key_exists($intKey, $vars)) {

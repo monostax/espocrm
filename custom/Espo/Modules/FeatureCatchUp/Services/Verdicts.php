@@ -37,19 +37,20 @@ class Verdicts
 
     public function __construct(private EntityManager $em) {}
 
-    /** @return ?array{verdict: string, reason: ?string, card: ?array<string, mixed>} */
+    /** @return ?array{verdict: string, reason: ?string, card: ?array<string, mixed>, resolved: bool} `resolved`: someone acted on it (resolve()) */
     public function find(string $type, string $id, string $revision, string $locale, string $evidenceScope, bool $unresolvedOnly = false): ?array
     {
         $column = self::column($type);
         $query = $this->em->getPDO()->prepare(
-            "SELECT verdict, reason, card FROM catch_up_verdict WHERE deleted = 0 AND $column = :id AND revision = :revision "
+            "SELECT verdict, reason, card, resolved_at FROM catch_up_verdict WHERE deleted = 0 AND $column = :id AND revision = :revision "
             . 'AND locale = :locale AND evidence_scope = :scope' . ($unresolvedOnly ? ' AND resolved_at IS NULL' : '') . ' LIMIT 1'
         );
         $query->execute(['id' => $id, 'revision' => $revision, 'locale' => $locale, 'scope' => $evidenceScope]);
         $row = $query->fetch(\PDO::FETCH_ASSOC);
         if (!$row) return null;
         $card = $row['card'] ? json_decode((string) $row['card'], true) : null;
-        return ['verdict' => $row['verdict'], 'reason' => $row['reason'], 'card' => is_array($card) ? $card : null];
+        return ['verdict' => $row['verdict'], 'reason' => $row['reason'], 'card' => is_array($card) ? $card : null,
+            'resolved' => ($row['resolved_at'] ?? null) !== null];
     }
 
     /**

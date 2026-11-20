@@ -19,7 +19,9 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\ContactReconciler;
+use Espo\Modules\Chatwoot\Tools\ContactFieldSync;
 use Espo\Modules\Chatwoot\Tools\PhoneNormalizer;
+use Espo\Modules\Chatwoot\Tools\WhatsAppRemovals;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use WeakMap;
@@ -105,6 +107,8 @@ class ChannelIdentities
         private Metadata $metadata,
         private Acl $acl,
         private User $user,
+        private WhatsAppRemovals $removals,
+        private ContactFieldSync $fields,
     ) {
         $this->pendingAdditiveItems = new WeakMap();
     }
@@ -207,6 +211,9 @@ class ChannelIdentities
             foreach (['emailAddress', 'phoneNumber'] as $field) {
                 $entity->set($field, $refreshed->get($field));
             }
+            if ($toProcessList) {
+                $entity->set('phoneNumberData', $this->entityManager->getRepository('PhoneNumber')->getPhoneNumberData($refreshed));
+            }
         }
     }
 
@@ -262,9 +269,16 @@ class ChannelIdentities
         }
 
         $keptIdSet = [];
+        $blocked = $this->removals->blocked($tenantId, $entity->getId());
 
         foreach ($items as $item) {
             $id = $item->id ?? null;
+            // Only an explicit addition to the edited channel list re-enables a removed destination.
+            $readded = $item->channelType === 'whatsapp' && isset($blocked[$item->sourceId])
+                && (!$id || !isset($existingMap[$id]) || $existingMap[$id]->get('sourceId') !== $item->sourceId);
+            if ($readded) {
+                $this->removals->allowReadded($tenantId, $entity->getId(), $item->sourceId);
+            }
 
             if ($id && isset($existingMap[$id])) {
                 $this->updateIdentity($existingMap[$id], $item);
@@ -287,6 +301,13 @@ class ChannelIdentities
                 null,
                 $item->handle ?? null,
             );
+            if (!$identity) {
+                continue;
+            }
+            if ($readded && $identity->get('ownershipStatus') !== 'rejected') {
+                $this->fields->appendPhone($this->entityManager->getEntityById('Contact', $entity->getId()),
+                    $item->sourceId, (bool) $item->isPrimary);
+            }
 
             if ((bool) $identity->get('isPrimary') !== (bool) ($item->isPrimary ?? false)) {
                 $identity->set('isPrimary', (bool) ($item->isPrimary ?? false));

@@ -6,6 +6,7 @@ namespace Espo\Modules\Chatwoot\Services;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Espo\Core\Acl;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Metadata;
@@ -33,20 +34,24 @@ class OpportunityOverdueActivities
             return;
         }
         $now = ($now ?? new DateTimeImmutable())->setTimezone(new DateTimeZone('UTC'));
+        $starts = ['Opportunity' => $startedAt] + array_filter(array_map(
+            fn ($setting) => $this->config->get($setting), OpportunityStreamEvents::DISCUSSION_ROLLOUT,
+        ));
         foreach (['Task', 'Meeting', 'Call'] as $type) {
-            $dueWhere = $this->dueWhere($type, $now, $startedAt);
+            $dueWhere = [];
+            foreach ($starts as $parentType => $since) $dueWhere[] = ['parentType' => $parentType] + $this->dueWhere($type, $now, $since);
             $afterId = '';
             do {
                 $activities = $this->entityManager->getRDBRepository($type)->where([
-                    'parentType' => 'Opportunity', 'parentId!=' => null, 'id>' => $afterId,
-                ])->where($this->pendingWhere($type))->where($dueWhere)->order('id')->limit(0, 200)->find();
+                    'parentId!=' => null, 'id>' => $afterId, 'OR' => $dueWhere,
+                ])->where($this->pendingWhere($type))->order('id')->limit(0, 200)->find();
                 foreach ($activities as $activity) {
                     $afterId = $activity->getId();
                     try {
-                        $this->record($activity, $now, $startedAt);
+                        $this->record($activity, $now, $starts[$activity->get('parentType')]);
                     } catch (Throwable $e) {
                         // Retry this activity on the next tick without blocking the other deadlines.
-                        $this->log->error("Opportunity overdue event failed for {$type}/{$afterId}: {$e->getMessage()}");
+                        $this->log->error("Overdue event failed for {$type}/{$afterId}: {$e->getMessage()}");
                     }
                 }
             } while (count($activities) === 200);
@@ -94,18 +99,37 @@ class OpportunityOverdueActivities
             : ['status' => $this->metadata->get(['scopes', $type, 'activityStatusList']) ?? []];
     }
 
+    /** The Account Mural doesn't load the Opportunity board's pending-activity list. */
+    public function decorateAccountPage(array $entries, string $accountId, Acl $acl): void
+    {
+        $byType = [];
+        foreach ($entries as $entry) {
+            if ($entry->type === OpportunityStreamEvents::ACTIVITY_OVERDUE) $byType[$entry->relatedType][] = $entry;
+        }
+        foreach ($byType as $type => $notes) {
+            if (!in_array($type, ['Task', 'Meeting', 'Call'], true) || !$acl->checkField($type, 'status')) continue;
+            $pending = $this->entityManager->getRDBRepository($type)->select(['id'])->where([
+                'id' => array_column($notes, 'relatedId'), 'parentType' => 'Account', 'parentId' => $accountId,
+            ])->where($this->pendingWhere($type))->find();
+            $ids = [];
+            foreach ($pending as $activity) $ids[$activity->getId()] = true;
+            foreach ($notes as $note) $note->activityResolved = !isset($ids[$note->relatedId]);
+        }
+    }
+
     private function record(Entity $candidate, DateTimeImmutable $now, string $startedAt): void
     {
         $this->entityManager->getTransactionManager()->run(function () use ($candidate, $now, $startedAt): void {
             // A completion or reschedule can race the scan. Recheck under the activity lock.
+            $parentType = $candidate->get('parentType');
             $activity = $this->entityManager->getRDBRepository($candidate->getEntityType())
-                ->where(['id' => $candidate->getId(), 'parentType' => 'Opportunity'])
+                ->where(['id' => $candidate->getId(), 'parentType' => $parentType])
                 ->where($this->pendingWhere($candidate->getEntityType()))->forUpdate()->findOne();
             if (!$activity || !$activity->get('parentId')) {
                 return;
             }
-            $opportunity = $this->entityManager->getEntityById('Opportunity', $activity->get('parentId'));
-            $tenantId = $opportunity?->get('tenantId');
+            $parent = $this->entityManager->getEntityById($parentType, $activity->get('parentId'));
+            $tenantId = $parent?->get('tenantId');
             if (!$tenantId || ($activity->get('tenantId') && $activity->get('tenantId') !== $tenantId)) {
                 return;
             }
@@ -126,10 +150,10 @@ class OpportunityOverdueActivities
             }
 
             $key = hash('sha256', implode(':', [
-                OpportunityStreamEvents::ACTIVITY_OVERDUE, $opportunity->getId(),
+                OpportunityStreamEvents::ACTIVITY_OVERDUE, ($parentType === 'Opportunity' ? '' : "$parentType:") . $parent->getId(),
                 $activity->getEntityType(), $activity->getId(), $dueAt,
             ]));
-            $this->events->write(OpportunityStreamEvents::ACTIVITY_OVERDUE, $opportunity, $activity, [
+            $this->events->write(OpportunityStreamEvents::ACTIVITY_OVERDUE, $parent, $activity, [
                 'activityName' => $activity->get('name'),
                 'dueAt' => $dueAt,
                 'dueDate' => $activity->get('dateEndDate'),

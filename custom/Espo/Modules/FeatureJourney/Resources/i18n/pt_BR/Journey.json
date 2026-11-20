@@ -27,6 +27,7 @@
         "week": "semana"
     },
     "fields": {
+        "reviewAccountWhatsAppReplies": "Pausar inscrições de empresas para revisar respostas do WhatsApp",
         "name": "Nome",
         "timeZone": "Fuso dos dias úteis",
         "status": "Status",

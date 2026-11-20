@@ -256,8 +256,12 @@ class TransitionExecutor
 
             $actor = $this->identity->fromRecord($record, $journey);
 
+            if ($record->get('replyPausedAt')) {
+                $this->releaseClaim($record);
+                return false;
+            }
             if (
-                !$conditionsAlreadyMatched &&
+                (!$conditionsAlreadyMatched || $journey->get('reviewAccountWhatsAppReplies')) &&
                 !$this->evaluator->evaluate($record, $transition, $evalSignal, $actor)
             ) {
                 $this->releaseClaim($record);
@@ -652,6 +656,7 @@ class TransitionExecutor
                 'id' => $record->getId(),
                 'status' => JourneyRecord::STATUS_ACTIVE,
                 'claimedAt' => null,
+                'replyPausedAt' => null,
             ])
             ->build();
 

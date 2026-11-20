@@ -90,7 +90,11 @@ abstract class SecurityTestCase extends TestCase
         });
         $repository = $this->createMock(RDBRepository::class);
         $repository->method('getRelation')->with($this->user, 'tenants')->willReturn($relation);
-        $this->em->method('getRDBRepository')->with('User')->willReturn($repository);
+        $seats = $this->createMock(RDBRepository::class);
+        $disabled = $this->createMock(\Espo\ORM\Repository\RDBSelectBuilder::class);
+        $disabled->method('find')->willReturn(new EntityCollection([]));
+        $seats->method('where')->with(['userId' => 'agent', 'disabled' => true])->willReturn($disabled);
+        $this->em->method('getRDBRepository')->willReturnMap([['User', $repository], ['SelfServiceSeat', $seats]]);
         $teamResolver = $this->createMock(TenantResolver::class);
         $teamResolver->method('resolveAllFromTeamIds')->with(['team-a'])->willReturnCallback(fn () => $this->teamTenants);
         $this->tenants = new UserTenantResolver($this->em, $teamResolver);
@@ -131,7 +135,8 @@ abstract class SecurityTestCase extends TestCase
         $this->opportunityChecker = new OpportunityChecker($default, $this->tenants);
         $this->portalOpportunityChecker = new PortalOpportunityChecker($portalDefault, $this->tenants);
         $baseNote = new \Espo\Classes\Acl\Note\AccessChecker($default, $this->acl, $this->em, $config);
-        $this->createNoteChecker = fn () => new NoteChecker($baseNote, $this->acl, $this->em, $this->parents);
+        $this->createNoteChecker = fn () => new NoteChecker($baseNote, $this->acl, $this->em, $this->parents,
+            new \Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess($this->factory, $this->acl));
         $this->portalNoteChecker = new PortalNoteChecker($portalDefault, $portalAcl, $this->em, $config, $this->parents);
         $this->attachmentChecker = new AttachmentChecker($default, $this->acl, $this->em, $this->attachments);
         $this->portalAttachmentChecker = new PortalAttachmentChecker($portalDefault, $portalAcl, $this->em, $this->attachments);

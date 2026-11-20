@@ -29,4 +29,19 @@ class ActionContext
         public readonly ?string $tenantId,
         public readonly ?User $actor = null,
     ) {}
+
+    /** After wrong-number review, only the confirmed person and destination may receive outreach. */
+    public function recipients(array $people): array
+    {
+        $id = AccountReplyReview::state($this->record)['contactId'] ?? null;
+        return $id ? array_values(array_filter($people, static fn ($person) =>
+            $person->getEntityType() === 'Contact' && $person->getId() === $id)) : $people;
+    }
+
+    public function phones(array $phones): array
+    {
+        $s = AccountReplyReview::state($this->record);
+        $phones = array_diff($phones, $s['excluded'] ?? []);
+        return array_values(isset($s['phone']) ? array_intersect($phones, [$s['phone']]) : $phones);
+    }
 }

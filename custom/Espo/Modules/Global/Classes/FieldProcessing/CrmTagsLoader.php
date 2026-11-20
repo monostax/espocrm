@@ -16,7 +16,7 @@ class CrmTagsLoader implements Loader
 
     public function process(Entity $entity, Params $params): void
     {
-        $field = CrmTags::field($entity->getEntityType());
+        $field = CrmTags::FIELD;
         if (!$entity->has($field . 'Ids')) $entity->set($field . 'Ids', []);
         $this->tags->filterOutput($entity);
         foreach ([$field . 'Ids', $field . 'Names', $field . 'Columns'] as $attribute) {

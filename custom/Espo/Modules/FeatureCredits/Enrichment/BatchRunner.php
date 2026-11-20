@@ -8,10 +8,8 @@ use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Exceptions\ServiceUnavailable;
-use Espo\Core\Job\JobSchedulerFactory;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureCredits\Accounting\Clock;
-use Espo\Modules\FeatureCredits\Jobs\RunEnrichment;
 use Espo\ORM\EntityManager;
 use PDO;
 use Throwable;
@@ -31,7 +29,7 @@ final class BatchRunner
     public const GLOBAL_WINDOW = 25;
     private const STEP_SECONDS = 8;
 
-    public function __construct(private EntityManager $em, private ActorScope $actors, private JobSchedulerFactory $scheduler,
+    public function __construct(private EntityManager $em, private ActorScope $actors,
         private Clock $clock, private Log $log) {}
 
     /** One bounded step. Returns whether another step is needed. */
@@ -110,8 +108,6 @@ final class BatchRunner
         }
         $this->em->getPDO()->prepare("UPDATE enrichment_batch_item SET state='running', started_at=? WHERE id=? AND state='pending'")
             ->execute([$this->clock->now(), $item['id']]);
-        $this->scheduler->create()->setClassName(RunEnrichment::class)
-            ->setData(['tenantId' => $tenant, 'quoteId' => $quoteId])->setGroup('enrichment-' . $quoteId)->schedule();
         return true;
     }
 

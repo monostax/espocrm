@@ -20,10 +20,18 @@ class CrmTags
 {
     public const TYPES = ['Opportunity', 'Task', 'Call', 'Meeting', 'Initiative', 'Contact', 'Account'];
     public const LINKS = ['opportunities' => 'Opportunity', 'tasks' => 'Task', 'calls' => 'Call', 'meetings' => 'Meeting', 'initiatives' => 'Initiative', 'contacts' => 'Contact', 'accounts' => 'Account'];
+    /** The CrmTag link on every type in TYPES. */
+    public const FIELD = 'tags';
+    /** CrmTag.appliesTo option per type; an empty appliesTo means every type. */
+    public const SCOPES = [
+        'Contact' => 'Contact', 'Account' => 'Account', 'Opportunity' => 'Opportunity',
+        'Task' => 'Activity', 'Call' => 'Activity', 'Meeting' => 'Activity', 'Initiative' => 'Initiative',
+    ];
 
-    public static function field(string $type): string
+    public static function appliesTo(Entity $tag, string $type): bool
     {
-        return in_array($type, ['Contact', 'Account'], true) ? 'crmTags' : 'tags';
+        $scopes = $tag->get('appliesTo') ?: [];
+        return !$scopes || in_array(self::SCOPES[$type] ?? null, $scopes, true);
     }
 
     public function __construct(
@@ -52,7 +60,7 @@ class CrmTags
             return;
         }
         if (!in_array($entity->getEntityType(), self::TYPES, true)) return;
-        $field = self::field($entity->getEntityType());
+        $field = self::FIELD;
         if (!$entity->has($field . 'Ids') && !$entity->has($field . 'Names') && !$entity->has($field . 'Columns')) return;
 
         $rows = $this->decorate($entity->getEntityType(), [(object) ['id' => $entity->getId()]]);
@@ -69,7 +77,7 @@ class CrmTags
     public function preserveHidden(Entity $record): void
     {
         if ($record->isNew()) return;
-        $field = self::field($record->getEntityType());
+        $field = self::FIELD;
         $ids = $record->get($field . 'Ids') ?? [];
         foreach ($this->em->getRDBRepository($record->getEntityType())->getRelation($record, $field)->find() as $tag) {
             if (!$this->acl->checkEntityRead($tag)) {
@@ -83,7 +91,7 @@ class CrmTags
     {
         if ($record->isNew()) return;
         $tenantId = $this->recordTenantId($record);
-        foreach ($this->em->getRDBRepository($record->getEntityType())->getRelation($record, self::field($record->getEntityType()))->find() as $tag) {
+        foreach ($this->em->getRDBRepository($record->getEntityType())->getRelation($record, self::FIELD)->find() as $tag) {
             if ($tag->get('tenantId') !== $tenantId) {
                 throw new BadRequest('Tagged records must stay in the tag workspace.');
             }
@@ -115,6 +123,11 @@ class CrmTags
             if (!$tag || $tag->get('tenantId') !== $tenantId || !$this->acl->checkEntityRead($tag)) {
                 throw new BadRequest('Choose CRM tags from this workspace.');
             }
+            // Narrowing appliesTo later never strips or blocks a link that already exists.
+            if (!self::appliesTo($tag, $record->getEntityType()) && ($record->isNew() ||
+                !$this->em->getRDBRepository($record->getEntityType())->getRelation($record, self::FIELD)->isRelated($tag))) {
+                throw new BadRequest("The tag \"{$tag->get('name')}\" does not apply to this record type.");
+            }
         }
     }
 
@@ -122,7 +135,7 @@ class CrmTags
     public function decorate(string $type, array $rows): array
     {
         if (!$rows) return $rows;
-        $field = self::field($type);
+        $field = self::FIELD;
         if (!$this->acl->checkField($type, $field) || !$this->acl->checkScope('CrmTag', 'read')) {
             foreach ($rows as $row) {
                 $row->{$field . 'Ids'} = [];
@@ -148,7 +161,7 @@ class CrmTags
     /** Aggregate a semi-joined record scope so team joins never multiply tag counts. */
     public function counts(string $type, SelectBuilder $scope): array
     {
-        $field = self::field($type);
+        $field = self::FIELD;
         if (!$this->acl->checkScope('CrmTag', 'read') || !$this->acl->checkField($type, $field)) return [];
         $ids = (clone $scope)->select(['id'])->order([])->limit(null, null)->build();
         $tags = $this->query()->select(['id'])->build();

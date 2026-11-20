@@ -43,6 +43,7 @@ class ProposedDeals
         private AssignmentCheckerManager $assignment,
         private Config $config,
         private TeamTenantAccess $teams,
+        private Acts $acts,
     ) {}
 
     /**
@@ -113,6 +114,7 @@ class ProposedDeals
             'chatwootConversationsIds' => [$id],
         ], CreateParams::create()->withSkipDuplicateCheck());
         $this->verdicts->resolve('ChatwootConversation', $id);
+        $this->acts->record('ChatwootConversation', $id, $this->user->getId(), 'deal');
 
         return [
             'id' => (string) $deal->getId(), 'name' => (string) $deal->get('name'), 'status' => (string) $deal->get('status'),

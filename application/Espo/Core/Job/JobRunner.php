@@ -81,17 +81,20 @@ class JobRunner
             throw new RuntimeException("Empty job ID.");
         }
 
+        // A late child can race recovery and a replacement child. Claim before releasing the row.
+        $this->entityManager->getTransactionManager()->run(function () use ($id): void {
+            $job = $this->entityManager->getRDBRepositoryByClass(JobEntity::class)
+                ->select([Attribute::ID, 'status', 'startedAt'])
+                ->where([Attribute::ID => $id])->forUpdate()->findOne();
+            if (!$job) throw new RuntimeException("Job '$id' not found.");
+            if ($job->getStatus() !== Status::READY) {
+                throw new RuntimeException("Can't run job '$id' with not Ready status.");
+            }
+            $this->setJobRunning($job);
+        });
+
         $jobEntity = $this->entityManager->getRDBRepositoryByClass(JobEntity::class)->getById($id);
-
-        if (!$jobEntity) {
-            throw new RuntimeException("Job '$id' not found.");
-        }
-
-        if ($jobEntity->getStatus() !== Status::READY) {
-            throw new RuntimeException("Can't run job '$id' with not Ready status.");
-        }
-
-        $this->setJobRunning($jobEntity);
+        if (!$jobEntity) throw new RuntimeException("Job '$id' not found.");
         $this->run($jobEntity);
     }
 

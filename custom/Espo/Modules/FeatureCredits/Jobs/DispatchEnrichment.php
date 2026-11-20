@@ -15,7 +15,7 @@ use Espo\Modules\FeatureCredits\Enrichment\ExecutionRouter;
 final class DispatchEnrichment implements JobDataLess
 {
     public function __construct(private Execution $execution, private JobSchedulerFactory $scheduler, private Log $log,
-        private ExecutionRouter $router, private BatchRunner $batches) {}
+        private ExecutionRouter $router, private BatchRunner $batches, private AdmissionJobs $jobs) {}
     public function run(): void
     {
         $this->execution->expireResults();
@@ -23,9 +23,7 @@ final class DispatchEnrichment implements JobDataLess
             try {
                 // Deadline cleanup does not wait for a provider/worker or authorize paid I/O.
                 $this->router->recover($row['tenant_id'],$row['id']);
-                $this->scheduler->create()->setClassName(RunEnrichment::class)
-                    ->setData(['tenantId' => $row['tenant_id'], 'quoteId' => $row['id']])
-                    ->setGroup('enrichment-' . $row['id'])->schedule();
+                $this->jobs->enrichment($row['tenant_id'], $row['id']);
             } catch (\Throwable) {
                 $this->log->error('Enrichment scheduling or cleanup failed for quote=' . $row['id']);
             }

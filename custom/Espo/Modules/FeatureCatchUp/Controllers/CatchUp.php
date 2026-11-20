@@ -15,6 +15,7 @@ use Espo\Modules\FeatureCatchUp\Services\Batch;
 use Espo\Modules\FeatureCatchUp\Services\ConversationDrafts;
 use Espo\Modules\FeatureCatchUp\Services\ConversationRecord;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
+use Espo\Modules\FeatureCatchUp\Services\Linked;
 use Espo\Modules\FeatureCatchUp\Services\ProposedDeals;
 use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
 use Espo\Modules\FeatureCatchUp\Services\Snoozes;
@@ -36,6 +37,7 @@ class CatchUp
         private ProposedDeals $proposedDeals,
         private Batch $batch,
         private ConversationDrafts $drafts,
+        private Linked $linked,
     ) {}
 
     /** The Agenda tab: loops not due yet, pending next steps and armed AI follow-ups, from stored data only. */
@@ -93,6 +95,12 @@ class CatchUp
         } catch (NotFound) {
             return (object) ['current' => false];
         }
+    }
+
+    /** A linked card (Avisos on WhatsApp) that is not in the reader's deck: who took care of it and how (Linked). */
+    public function getActionLinked(Request $request): object
+    {
+        return (object) $this->linked->read($request);
     }
 
     /**

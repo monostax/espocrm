@@ -46,7 +46,7 @@ class OpportunityOverdueActivitiesTest extends TestCase
     protected function setUp(): void
     {
         $this->attributes = [
-            'id' => 'task', 'name' => 'Enviar proposta', 'parentId' => 'opp',
+            'id' => 'task', 'name' => 'Enviar proposta', 'parentType' => 'Opportunity', 'parentId' => 'opp',
             'dateEnd' => '2026-09-06 14:00:00', 'dateEndDate' => null, 'tenantId' => 'tenant',
             'createdAt' => '2026-09-01 14:00:00',
         ];
@@ -73,10 +73,12 @@ class OpportunityOverdueActivitiesTest extends TestCase
         $select->method('forUpdate')->willReturnSelf();
         $select->method('findOne')->willReturnCallback(fn () => $this->stillPending ? $activity : null);
         $repo = $this->createMock(RDBRepository::class);
-        $repo->method('where')->with(['id' => 'task', 'parentType' => 'Opportunity'])->willReturn($select);
+        $repo->method('where')->with(self::callback(fn ($where) => $where === ['id' => 'task', 'parentType' => $activity->get('parentType')]))->willReturn($select);
         $em->method('getRDBRepository')->with('Task')->willReturn($repo);
         $em->method('getEntityById')->willReturnMap([
             ['Opportunity', 'opp', new EntityDouble(['id' => 'opp', 'tenantId' => 'tenant'], 'Opportunity')],
+            ['Account', 'opp', new EntityDouble(['id' => 'opp', 'tenantId' => 'tenant'], 'Account')],
+            ['Initiative', 'opp', new EntityDouble(['id' => 'opp', 'tenantId' => 'tenant'], 'Initiative')],
             ['Tenant', 'tenant', new EntityDouble(['timeZone' => 'America/Sao_Paulo'], 'Tenant')],
         ]);
         $this->service = new OpportunityOverdueActivities($em, $config, $metadata, $events, $this->createMock(Log::class));
@@ -117,6 +119,18 @@ class OpportunityOverdueActivitiesTest extends TestCase
         $this->tick('2026-09-07T03:01:00Z');
         self::assertCount(1, $this->writes);
         self::assertSame('2026-09-07 03:00:00', array_values($this->writes)[0]['data']['dueAt']);
+    }
+
+    public function testDeadlineIsIndependentForEachParentTypeWithSameId(): void
+    {
+        foreach (['Opportunity', 'Account', 'Initiative'] as $type) {
+            $this->attributes['parentType'] = $type;
+            $this->tick('2026-09-06T15:01:00Z');
+            $this->tick('2026-09-06T15:02:00Z');
+        }
+        self::assertSame(['Opportunity', 'Account', 'Initiative'], array_values(array_map(
+            fn ($event) => $event['opportunity']->getEntityType(), $this->writes,
+        )));
     }
 
     public function testCompletionRaceAndHistoricalDeadlinesDoNotPost(): void

@@ -12,6 +12,7 @@ use Espo\Core\Record\CreateParams;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Record\UpdateParams;
 use Espo\Core\Utils\Language;
+use Espo\Entities\User;
 use Espo\ORM\EntityManager;
 
 /** Card commits that change the deal. Both go through the record services, so ACL, validation and hooks apply. */
@@ -25,6 +26,8 @@ class Actions
         private Feed $feed,
         private Verdicts $verdicts,
         private Language $language,
+        private User $user,
+        private Acts $acts,
     ) {}
 
     /** Ganho or Perdido: the deal moves to its funnel's 100% or 0% stage; the stage hook sets the status. */
@@ -53,6 +56,7 @@ class Actions
             'type' => 'Post', 'parentType' => 'Opportunity', 'parentId' => $id, 'post' => "$prefix: $text",
         ], CreateParams::create());
         $this->verdicts->resolve('Opportunity', $id);
+        $this->acts->record('Opportunity', $id, $this->user->getId(), 'done');
         return ['success' => true];
     }
 }

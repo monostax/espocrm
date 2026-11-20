@@ -17,6 +17,7 @@ use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 
 require 'vendor/autoload.php';
+require __DIR__ . '/RecordingAdmissionJobs.php';
 
 [$script, $dialect, $operation, $payload, $now] = $argv;
 $pdo = new PDO(getenv('FEATURE_CREDITS_' . strtoupper($dialect) . '_DSN'), 'credits_test', 'credits_test',
@@ -78,7 +79,8 @@ $availability = new class extends ProviderAvailability {
 };
 $lock = new \Espo\Modules\FeatureCredits\Accounting\WalletLock($manager, $clock);
 $reservations = new \Espo\Modules\FeatureCredits\Accounting\Reservations($lock, new \Espo\Modules\FeatureCredits\Accounting\Funding($lock));
-$quotes = new Quotes($manager, $clock, new Access($user, $acl, $tenants, $manager), new Catalog($manager, $clock), $availability, new RoutePlanner(), $lock, $reservations);
+$quotes = new Quotes($manager, $clock, new Access($user, $acl, $tenants, $manager), new Catalog($manager, $clock), $availability, new RoutePlanner(), $lock, $reservations,
+    new \tests\unit\Espo\Modules\FeatureCredits\fixtures\RecordingAdmissionJobs($pdo));
 $actorAccess = new class(new Access($user,$acl,$tenants,$manager)) extends \Espo\Modules\FeatureCredits\Enrichment\ActorAccess {
     public function __construct(private Access $access) {}
     public function forActor(string $actorId): Access {

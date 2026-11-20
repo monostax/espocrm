@@ -61,6 +61,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/SchemaTest.php';
+require_once __DIR__ . '/fixtures/RecordingAdmissionJobs.php';
 
 final class PhoneVerificationDatabaseTest extends TestCase
 {
@@ -81,6 +82,7 @@ final class PhoneVerificationDatabaseTest extends TestCase
     public array $whatsAppCalls = [];
     public ?bool $registered = true;
     public bool $whatsAppEnabled = true;
+    private fixtures\RecordingAdmissionJobs $jobs;
 
     public static function dialects(): iterable
     {
@@ -209,6 +211,87 @@ final class PhoneVerificationDatabaseTest extends TestCase
         }
     }
 
+    #[DataProvider('dialects')]
+    public function testBulkAdmissionWindowLeavesCapacityForManualChecksAndHonorsAdminRate(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $ops, Execution $execution, CapabilityGate $gate): void {
+            self::assertSame(3000, $gate->configuration()['maxPerMinutePerTenant']);
+            $gate->publish((object)['maxPerMinutePerTenant'=>3000], 'admin');
+            for ($i=0; $i<=CapabilityGate::BULK_IN_FLIGHT; $i++) {
+                $pdo->prepare("UPDATE contact SET phone_number=? WHERE id='contact'")->execute([sprintf('+551199999%04d',$i)]);
+                $cmd=$this->whatsAppCommand($ops,'rate-'.$i);
+                if ($i < CapabilityGate::BULK_IN_FLIGHT) {
+                    self::assertSame('admitted',$ops->start($cmd,Kind::WHATSAPP,true)['resolution']);
+                } else {
+                    try { $ops->start($cmd,Kind::WHATSAPP,true); self::fail('Bulk used interactive headroom'); }
+                    catch (Conflict $e) { self::assertSame('in_flight',json_decode($e->getBody(),true)['limit']); }
+                    self::assertSame('admitted',$ops->start($cmd,Kind::WHATSAPP)['resolution']);
+                }
+            }
+            $w = \Espo\Modules\FeatureCredits\Jobs\InteractiveWork::class;
+            $picked = array_filter([$w::next($pdo,'phone-a',$this->now),$w::next($pdo,'phone-b',$this->now)]);
+            self::assertNotEmpty($picked);
+            self::assertCount(count($picked),array_unique(array_column($picked,'id')));
+            self::assertNull($w::next($pdo,'email',$this->now));
+            self::assertNull($w::next($pdo,'enrich-a',$this->now));
+            $gate->publish((object)['maxPerMinutePerTenant'=>3], 'admin');
+            $this->now = Operations::after($this->now,45);
+            $pdo->exec("UPDATE contact SET phone_number='+5511999999999' WHERE id='contact'");
+            try { $ops->start($this->whatsAppCommand($ops,'rate-final'),Kind::WHATSAPP); self::fail('Admin rate exceeded'); }
+            catch (Conflict $e) { self::assertSame(15,json_decode($e->getBody(),true)['retryAfterSeconds']); }
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testBulkConfirmationSurvivesDisconnectAndInterruptedWorkerWithoutDoubleHolding(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo, Operations $ops, Execution $exec, CapabilityGate $gate, Funding $fund, Crypt $crypt, EntityManager $em) {
+            $access = $this->createStub(Access::class);
+            $access->method('isHumanActor')->willReturn(true);
+            $access->method('actorId')->willReturn('user');
+            $clock = $this->createStub(Clock::class);
+            $clock->method('now')->willReturnCallback(fn () => $this->now);
+            $tx = $this->createStub(\Espo\ORM\TransactionManager::class);
+            $tx->method('run')->willReturnCallback(static function ($fn) use ($pdo) {
+                $pdo->beginTransaction();
+                try { $r=$fn(); $pdo->commit(); return $r; }
+                catch (\Throwable $e) { $pdo->rollBack(); throw $e; }
+            });
+            $em->method('getTransactionManager')->willReturn($tx);
+            $batches = new \Espo\Modules\FeatureCredits\Verification\Batches($em,$access,$clock);
+            $actors = $this->createMock(\Espo\Modules\FeatureCredits\Enrichment\ActorScope::class);
+            $actors->method('run')->willReturnCallback(static function ($actor,$fn) use ($ops) {
+                self::assertSame('user',$actor);
+                return $fn(static fn ($class) => $ops);
+            });
+            $runner = new \Espo\Modules\FeatureCredits\Verification\BatchAdmissions($em,$actors,$clock,$this->createStub(\Espo\Core\Utils\Log::class));
+            $source = (object)['kind'=>'contact_phone'];
+            $items = [];
+            foreach ([Kind::WHATSAPP,Kind::PHONE] as $kind) {
+                $ctx=$ops->context((object)['tenantId'=>'tenant','contactId'=>'contact','sources'=>[$source]],$kind);
+                $items[]=(object)['kind'=>$kind,'maxChargeCredits'=>Kind::price($kind),'source'=>$source,'contextRevision'=>$ctx['rows'][0]['contextRevision']];
+            }
+            $input=(object)['tenantId'=>'tenant','contactId'=>'contact','requestKey'=>'selection-1','items'=>$items];
+            $batch=$batches->create($input);
+            self::assertSame($batch,$batches->create($input));
+            self::assertCount(0,$this->jobs->queued);
+            self::assertSame('running',$batch['state']);
+            // Response was lost and the daemon died between the first committed admission and its checkpoint.
+            $first=(array)$items[0]; unset($first['kind']);
+            $ops->start((object)($first+['tenantId'=>'tenant','contactId'=>'contact','requestKey'=>'batch:'.$batch['id'].':0']),Kind::WHATSAPP);
+            $runner->run();
+            $status=$batches->current(['tenantId'=>'tenant','contactId'=>'contact','family'=>'phone']);
+            self::assertSame('submitted',$status['state']);
+            self::assertCount(2,array_column($status['items'],'operationId'));
+            self::assertCount(2,$this->jobs->queued);
+            self::assertSame('10.0000',$pdo->query("SELECT reserved_credits FROM tenant_credit_balance WHERE tenant_id='tenant'")->fetchColumn());
+            $runner->run();
+            self::assertCount(2,$this->jobs->queued);
+            self::assertSame($status,$batches->create($input));
+            self::assertNull($batches->current(['tenantId'=>'tenant','contactId'=>'contact2','family'=>'phone']));
+        });
+    }
+
     private function services(PDO $pdo): array
     {
         $manager = $this->createStub(EntityManager::class);
@@ -328,7 +411,8 @@ final class PhoneVerificationDatabaseTest extends TestCase
             }
         };
 
-        $operations = new Operations($manager, $clock, $access, $gate, $lock, $reviewLock, $reservations, $crypt, $config);
+        $this->jobs = new fixtures\RecordingAdmissionJobs($pdo);
+        $operations = new Operations($manager, $clock, $access, $gate, $lock, $reviewLock, $reservations, $crypt, $config, $this->jobs);
         $emailLookup = new class($emailCredentials, new BounceBanTransport(), $this) extends BounceBanLookup {
             public function __construct(BounceBanCredentials $c, BounceBanTransport $t, private PhoneVerificationDatabaseTest $suite) { parent::__construct($c, $t); }
             public function verify(string $email, ?string $taskId, int $timeoutMs): EmailResult {
@@ -1102,6 +1186,7 @@ final class PhoneVerificationDatabaseTest extends TestCase
                 self::assertSame('reused', $operations->start($this->whatsAppCommand($operations, 'reuse-wa-' . $i, $source), Kind::WHATSAPP)['resolution']);
             }
             self::assertCount(1, $this->whatsAppCalls);
+            self::assertSame([['verification', 'tenant', $first['operation']['id'], false]], $this->jobs->queued);
             $this->now = Operations::after($this->now, 61);
             $this->registered = false;
             $second = $operations->start($this->whatsAppCommand($operations, 'wa-negative', refresh: true), Kind::WHATSAPP);

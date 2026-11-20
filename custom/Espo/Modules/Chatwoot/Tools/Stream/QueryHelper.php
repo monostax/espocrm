@@ -27,8 +27,10 @@ class QueryHelper extends \Espo\Tools\Stream\RecordService\QueryHelper
 
     public function buildBaseQueryBuilder(SearchParams $searchParams): SelectBuilder
     {
-        return parent::buildBaseQueryBuilder($searchParams)
+        $query = parent::buildBaseQueryBuilder($searchParams);
+        return $query
             ->where($this->access->where($this->user))
+            ->where($this->access->messageLinkWhere($this->user, $query->build()->getFromAlias() ?? 'note'))
             ->where($this->parents->where($this->user));
     }
 }

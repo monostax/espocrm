@@ -9,6 +9,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Entities\Note;
 use Espo\Entities\User;
+use Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Condition as Cond;
@@ -27,7 +28,19 @@ class ActivityDiscussion
         private EntityManager $em,
         private User $user,
         private Acl $acl,
+        private OpportunityEventAccess $eventAccess,
     ) {}
+
+    /** Apply before ordering, pagination, counts and cursor selection. Threads contain posts only. */
+    public function entryWhere(string $type, ?string $root = null, string $alias = 'note'): array
+    {
+        if (!isset(OpportunityStreamEvents::DISCUSSION_ROLLOUT[$type]) || $root !== null) return ['type' => 'Post'];
+        return [
+            'type' => OpportunityStreamEvents::TYPES,
+            $this->eventAccess->where($this->user),
+            $this->eventAccess->messageLinkWhere($this->user, $alias, $type),
+        ];
+    }
 
     public function unreadWhere(string $alias = 'note'): array
     {
@@ -53,8 +66,8 @@ class ActivityDiscussion
     public function applyFilter(SelectBuilder $query, string $type, bool $unread): void
     {
         $notes = SelectBuilder::create()->from('Note', 'activityPost')->select('parentId', 'id')->where([
-            'parentType' => $type, 'type' => 'Post', 'opportunityPostDeleted' => false,
-        ]);
+            'parentType' => $type, 'opportunityPostDeleted' => false,
+        ])->where($unread ? $this->entryWhere($type, alias: 'activityPost') : ['type' => 'Post']);
         if ($unread) {
             $notes->where($this->unreadWhere('activityPost'))->where($this->countsAsUnreadWhere($type));
             $marked = SelectBuilder::create()->from('ActivityReadState')->select('parentId', 'id')->where([
@@ -70,13 +83,17 @@ class ActivityDiscussion
     }
 
     /**
-     * Only a post or reply that @mentions the viewer makes a record unread; plain posts
+     * Incoming mural messages and posts or replies that @mention the viewer make a record unread; plain posts
      * never do. AI sessions are the viewer's own chat with an agent, so every reply counts.
      * Per-thread summaries still count every unread reply.
      */
     private function countsAsUnreadWhere(string $type): array
     {
-        return $type === 'AiSession' ? [] : $this->mentionWhere();
+        return match ($type) {
+            'AiSession' => [],
+            'Account', 'Initiative' => ['OR' => [['type' => OpportunityStreamEvents::MESSAGE_RECEIVED], ['type' => 'Post'] + $this->mentionWhere()]],
+            default => $this->mentionWhere(),
+        };
     }
 
     private function mentionWhere(): array
@@ -102,7 +119,7 @@ class ActivityDiscussion
             }
         }
         $query = SelectBuilder::create()->from('Note')->select(['parentId', 'opportunityThreadRootId', ['COUNT:id', 'count']])
-            ->where(['parentType' => $type, 'parentId' => $ids, 'type' => 'Post', 'opportunityPostDeleted' => false])
+            ->where(['parentType' => $type, 'parentId' => $ids, 'opportunityPostDeleted' => false])->where($this->entryWhere($type))
             ->where($this->unreadWhere())->where($this->countsAsUnreadWhere($type))
             ->group(['parentId', 'opportunityThreadRootId'])->build();
         foreach ($this->em->getQueryExecutor()->execute($query)->fetchAll(\PDO::FETCH_ASSOC) as $row) {
@@ -129,7 +146,8 @@ class ActivityDiscussion
     {
         $root = $data->rootId ?? null;
         if ($root) $this->root($parent, $root);
-        $where = ['parentType' => $parent->getEntityType(), 'parentId' => $parent->getId(), 'type' => 'Post', 'opportunityThreadRootId' => $root];
+        $where = ['parentType' => $parent->getEntityType(), 'parentId' => $parent->getId(), 'opportunityThreadRootId' => $root]
+            + $this->entryWhere($parent->getEntityType(), $root);
         $postId = $data->lastPostId ?? null;
         // An explicit null means the rendered stream was empty. Never consume a
         // post that arrived between that snapshot and its automatic cursor write.
@@ -171,10 +189,21 @@ class ActivityDiscussion
         return $root;
     }
 
-    public function stream(Entity $parent, MassNotePreparator $preparator, ?string $rootId, ?int $before): object
+    public function stream(Entity $parent, MassNotePreparator $preparator, ?string $rootId, ?int $before, bool $postsOnly = false): object
     {
         $root = $rootId ? $this->root($parent, $rootId) : null;
-        $where = ['parentType' => $parent->getEntityType(), 'parentId' => $parent->getId(), 'type' => 'Post', 'opportunityThreadRootId' => $rootId];
+        $where = ['parentType' => $parent->getEntityType(), 'parentId' => $parent->getId(), 'opportunityThreadRootId' => $rootId]
+            + $this->entryWhere($parent->getEntityType(), $rootId);
+        // Hiding pills changes pagination, never the read boundary. Take the cutoff before the page
+        // so a message arriving during the request cannot be marked read by this snapshot.
+        $extra = [];
+        if ($postsOnly && !$rootId) {
+            if (!$before) {
+                $cutoff = $this->em->getRDBRepository('Note')->select(['id', 'number'])->where($where)->order('number', 'DESC')->findOne();
+                $extra['readCutoff'] = $cutoff ? ['id' => $cutoff->getId(), 'number' => $cutoff->get('number')] : null;
+            }
+            $where = ['parentType' => $parent->getEntityType(), 'parentId' => $parent->getId(), 'opportunityThreadRootId' => null, 'type' => 'Post'];
+        }
         if ($before) $where['number<'] = $before;
         $notes = [...$this->em->getRDBRepository('Note')->where($where)->order('number', 'DESC')->limit(0, 51)->find()];
         $hasMore = count($notes) > 50;
@@ -186,6 +215,7 @@ class ActivityDiscussion
         }
         $preparator->prepare($all);
         return (object) [
+            ...$extra,
             'list' => array_map(fn ($note) => $note->getValueMap(), array_reverse($notes)), 'hasMore' => $hasMore,
             'root' => $root?->getValueMap(),
             'readState' => $rootId ? $this->cursor($parent, $rootId) : $this->states($parent->getEntityType(), [$parent->getId()])[$parent->getId()],

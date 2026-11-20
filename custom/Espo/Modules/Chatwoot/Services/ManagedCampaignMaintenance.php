@@ -21,6 +21,7 @@ class ManagedCampaignMaintenance
     {
         // Persist a keyset cursor in Config, so a large history cannot starve later campaigns.
         $after = (string) $this->config->get('managedCampaignSweepCursor', '');
+        $previousCursor = $after;
         $rows = $this->em->getRDBRepository('WhatsAppCampaign')->where(['managedByChatwoot' => true, 'id>' => $after])
             ->order('id')->limit(0, 100)->find();
         foreach ($rows as $campaign) {
@@ -42,7 +43,9 @@ class ManagedCampaignMaintenance
             }
             $after = $campaign->getId();
         }
-        $this->config->set('managedCampaignSweepCursor', count($rows) === 100 ? $after : '');
+        $nextCursor = count($rows) === 100 ? $after : '';
+        if ($nextCursor === $previousCursor) return;
+        $this->config->set('managedCampaignSweepCursor', $nextCursor);
         $this->config->save();
     }
 

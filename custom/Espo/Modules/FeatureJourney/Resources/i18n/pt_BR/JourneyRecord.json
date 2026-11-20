@@ -1,8 +1,19 @@
 {
     "labels": {
+        "replyReview": "Revisar resposta do WhatsApp",
+        "wrongNumber": "Marcar número errado",
+        "resumeReview": "Retomar com este contato",
+        "endCadence": "Encerrar cadência",
+        "confirmEndCadence": "Encerrar a cadência desta empresa e executar as ações de saída por resposta?",
+        "unknownPhone": "Aguardando o telefone da conversa",
+        "replyPhone": "Número que respondeu",
+        "verifiedReplacement": "Número alternativo confirmado de um contato vinculado (com código do país)",
+        "wrongNumberSaved": "Número excluído. Reabra a revisão para retomar quando confirmar outro contato.",
+        "reviewSaved": "Decisão salva",
         "Exit": "Sair da jornada"
     },
     "fields": {
+        "replyPausedAt": "Pausado para revisão em",
         "journey": "Jornada",
         "target": "Alvo",
         "currentStage": "Etapa atual",

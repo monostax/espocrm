@@ -78,21 +78,27 @@ class TenantPredicatesSqlTest extends TestCase
             'ChatwootAccount' => ['id', 'tenantId', 'platformId', 'readable', 'deleted'],
             'ChatwootUser' => ['id', 'assignedUserId', 'platformId', 'deleted'],
             'ChatwootAccountUserMembership' => ['id', 'chatwootAccountId', 'chatwootUserId', 'isAI', 'deleted'],
-            'Note' => ['id', 'parentType', 'parentId', 'type', 'relatedType', 'relatedId', 'createdById', 'number', 'isPinned', 'isInternal', 'readable', 'deleted'],
+            'Note' => ['id', 'parentType', 'parentId', 'type', 'relatedType', 'relatedId', 'createdById', 'number', 'isPinned', 'isInternal',
+                'opportunityPostDeleted', 'opportunityThreadRootId', 'opportunityMentionUserIds', 'readable', 'deleted'],
+            'ActivityReadState' => ['id', 'parentType', 'parentId', 'userId', 'threadKey', 'lastSeenNumber', 'isMarkedUnread', 'deleted'],
             'Attachment' => ['id', 'parentType', 'parentId', 'relatedType', 'relatedId', 'createdById', 'deleted'],
-            'ChatwootConversation' => ['id', 'readable', 'deleted'],
-            'Task' => ['id', 'readable', 'deleted'],
-            'Meeting' => ['id', 'readable', 'deleted'],
-            'Call' => ['id', 'readable', 'deleted'],
+            'ChatwootConversation' => ['id', 'contactId', 'chatwootAccountId', 'readable', 'deleted'],
+            'RecordRelation' => ['id', 'tenantId', 'subjectType', 'subjectId', 'objectType', 'objectId', 'origin', 'status', 'sourceDocumentId', 'sourceRevisionId', 'deleted'],
+            'AccountContact' => ['accountId', 'contactId', 'deleted'],
+            'InitiativeRelation' => ['id', 'initiativeId', 'parentType', 'parentId', 'tenantId', 'readable', 'deleted'],
             'Appointment' => ['id', 'readable', 'deleted'],
             'Team' => ['id', 'deleted'],
             'AppointmentTeam' => ['appointmentId', 'teamId', 'deleted'],
         ];
+        foreach (['Task', 'Meeting', 'Call'] as $activity) {
+            $tables[$activity] = ['id', 'tenantId', 'parentType', 'parentId', 'readable', 'deleted'];
+            $tables["ChatwootConversation$activity"] = ['chatwootConversationId', lcfirst($activity) . 'Id', 'deleted'];
+        }
         $defs = [];
         foreach ($tables as $type => $fields) {
             $columns = [];
             foreach ($fields as $field) {
-                $numeric = in_array($field, ['number', 'isPinned', 'isInternal', 'readable', 'deleted', 'isAI'], true);
+                $numeric = in_array($field, ['number', 'isPinned', 'isInternal', 'readable', 'deleted', 'isAI', 'opportunityPostDeleted', 'lastSeenNumber', 'isMarkedUnread'], true);
                 $columns[] = $this->sqlName($field) . ($numeric ? ' INTEGER DEFAULT 0' : ' TEXT');
                 $defs[$type]['attributes'][$field] = ['type' => $numeric ? 'int' : 'varchar'];
             }
@@ -100,6 +106,14 @@ class TenantPredicatesSqlTest extends TestCase
         }
         $defs['Appointment']['relations']['teams'] = ['type' => 'manyMany', 'entity' => 'Team',
             'relationName' => 'AppointmentTeam', 'midKeys' => ['appointmentId', 'teamId']];
+        $defs['Account']['relations']['contacts'] = ['type' => 'manyMany', 'entity' => 'Contact',
+            'relationName' => 'AccountContact', 'midKeys' => ['accountId', 'contactId']];
+        $defs['Initiative']['relations']['relations'] = ['type' => 'hasMany', 'entity' => 'InitiativeRelation',
+            'key' => 'id', 'foreignKey' => 'initiativeId'];
+        foreach (['Task', 'Meeting', 'Call'] as $activity) {
+            $defs['ChatwootConversation']['relations'][strtolower($activity) . 's'] = ['type' => 'manyMany', 'entity' => $activity,
+                'relationName' => "ChatwootConversation$activity", 'midKeys' => ['chatwootConversationId', lcfirst($activity) . 'Id']];
+        }
         $provider = $this->createMock(MetadataDataProvider::class);
         $provider->method('get')->willReturn($defs);
         $metadata = new Metadata($provider);
@@ -119,6 +133,7 @@ class TenantPredicatesSqlTest extends TestCase
         $this->tenants = $this->createMock(UserTenantResolver::class);
         $this->tenants->method('resolveTenantIds')->with($this->user)->willReturnCallback(fn () => $this->tenantIds);
         $this->acl = $this->createMock(AclManager::class);
+        $this->acl->method('checkLink')->willReturn(true);
         $this->acl->method('checkField')->willReturnCallback(fn () => $this->attachmentFieldAllowed);
         $this->acl->method('checkScope')->willReturnCallback(fn ($user, $scope, $action) =>
             (!in_array($scope, ['Contact', 'Initiative', 'Account', 'AiSession', 'Appointment'], true) || in_array($scope, $this->enabledParents, true)) &&
@@ -237,6 +252,40 @@ class TenantPredicatesSqlTest extends TestCase
         return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
     }
 
+    public function testAccountMuralAndUnreadInboxRequireReadableMessageSourceAndCompanyLink(): void
+    {
+        $this->enabledParents = ['Account', 'Contact'];
+        $this->insert('ChatwootAccount', ['id' => 'workspace', 'tenantId' => 'tenant-a']);
+        foreach (['native', 'manual', 'reverse', 'hidden-contact', 'hidden-chat', 'foreign', 'suggested', 'restricted-evidence', 'overdue'] as $i => $id) {
+            $this->insert('Account', ['id' => $id, 'tenantId' => 'tenant-a', 'readable' => 1]);
+            if ($id === 'overdue') {
+                $this->insertNote($id, $i + 100, ['parentType' => 'Account', 'parentId' => $id, 'type' => 'ActivityOverdue', 'relatedType' => 'Task', 'relatedId' => 'visible']);
+                continue;
+            }
+            $this->insert('ChatwootConversation', ['id' => "chat-$id", 'chatwootAccountId' => 'workspace', 'contactId' => $id, 'readable' => (int) ($id !== 'hidden-chat')]);
+            $this->insertNote($id, $i + 100, ['parentType' => 'Account', 'parentId' => $id, 'type' => 'ChatwootMessageReceived',
+                'relatedType' => 'ChatwootConversation', 'relatedId' => "chat-$id", 'createdById' => 'system']);
+            if (in_array($id, ['native', 'hidden-chat', 'hidden-contact', 'foreign'], true)) {
+                $this->insert('Contact', ['id' => $id, 'tenantId' => $id === 'foreign' ? 'tenant-b' : 'tenant-a', 'readable' => (int) ($id !== 'hidden-contact')]);
+                $this->insert('AccountContact', ['accountId' => $id, 'contactId' => $id]);
+            } else {
+                [$a, $b] = $id === 'reverse' ? ['object', 'subject'] : ['subject', 'object'];
+                $this->insert('RecordRelation', [$a . 'Type' => 'Account', $a . 'Id' => $id, $b . 'Type' => 'ChatwootConversation', $b . 'Id' => "chat-$id",
+                    'tenantId' => 'tenant-a', 'origin' => 'manual', 'status' => $id === 'suggested' ? $id : 'confirmed',
+                    'sourceDocumentId' => $id === 'restricted-evidence' ? 'private' : null]);
+            }
+        }
+        $discussion = new \Espo\Modules\Chatwoot\Services\ActivityDiscussion($this->em, $this->user, $this->createMock(\Espo\Core\Acl::class), $this->events);
+        $this->assertRows(['manual', 'native', 'overdue', 'reverse'], SelectBuilder::create()->from('Note')->select('id')
+            ->where(['parentType' => 'Account'])->where($discussion->entryWhere('Account'))->order('id'));
+        $unread = SelectBuilder::create()->from('Account')->select('id')->order('id');
+        $discussion->applyFilter($unread, 'Account', true);
+        $this->assertRows(['manual', 'native', 'reverse'], $unread);
+        $this->insert('ActivityReadState', ['id' => 'seen', 'parentType' => 'Account', 'parentId' => 'manual', 'userId' => 'agent', 'threadKey' => 'main', 'lastSeenNumber' => 101]);
+        $this->pdo->exec("UPDATE record_relation SET deleted = 1 WHERE object_id = 'reverse'");
+        $this->assertRows(['native'], $unread);
+    }
+
     public function testAppointmentNotesRequireTenantTeamAndRecordAccessBeforePagination(): void
     {
         $this->enabledParents[] = 'Appointment';
@@ -265,6 +314,48 @@ class TenantPredicatesSqlTest extends TestCase
         $this->deniedScopes = [];
         $this->tenantIds = [];
         $this->assertRows([], $query());
+    }
+
+    public function testInitiativePillsRespectTheirRelationshipAndSourceInStreamAndUnreadFilter(): void
+    {
+        $this->enabledParents = ['Account', 'Initiative'];
+        $this->insert('ChatwootAccount', ['id' => 'workspace', 'tenantId' => 'tenant-a']);
+        $this->insert('ChatwootAccount', ['id' => 'foreign', 'tenantId' => 'tenant-b']);
+        foreach (['Task', 'Call', 'Meeting', 'manual', 'direct', 'hidden-relation', 'hidden-activity', 'foreign', 'hidden-chat', 'other-parent', 'overdue'] as $i => $id) {
+            $this->insert('Initiative', ['id' => $id, 'tenantId' => 'tenant-a', 'readable' => 1]);
+            if ($id === 'overdue') {
+                $this->insertNote($id, $i + 100, ['parentType' => 'Initiative', 'parentId' => $id, 'type' => 'ActivityOverdue',
+                    'relatedType' => 'Task', 'relatedId' => 'visible', 'createdById' => 'system']);
+                continue;
+            }
+            $this->insert('ChatwootConversation', ['id' => "chat-$id", 'chatwootAccountId' => $id === 'foreign' ? 'foreign' : 'workspace',
+                'readable' => (int) ($id !== 'hidden-chat')]);
+            $this->insertNote($id, $i + 100, ['parentType' => 'Initiative', 'parentId' => $id, 'type' => 'ChatwootMessageReceived',
+                'relatedType' => 'ChatwootConversation', 'relatedId' => "chat-$id", 'createdById' => 'system']);
+            if ($id === 'manual' || $id === 'other-parent') {
+                $this->insert('RecordRelation', ['subjectType' => 'ChatwootConversation', 'subjectId' => "chat-$id",
+                    'objectType' => $id === 'manual' ? 'Initiative' : 'Account', 'objectId' => $id,
+                    'tenantId' => 'tenant-a', 'origin' => 'manual', 'status' => 'confirmed']);
+            } elseif ($id === 'direct' || $id === 'hidden-relation') {
+                $this->insert('InitiativeRelation', ['id' => $id, 'parentType' => 'ChatwootConversation', 'parentId' => "chat-$id",
+                    'initiativeId' => $id, 'tenantId' => 'tenant-a', 'readable' => (int) ($id === 'direct')]);
+            } else {
+                $type = in_array($id, ['Meeting', 'Call'], true) ? $id : 'Task';
+                $this->insert($type, ['id' => $id, 'parentId' => $id, 'parentType' => 'Initiative', 'readable' => (int) ($id !== 'hidden-activity')]);
+                $this->insert("ChatwootConversation$type", ['chatwootConversationId' => "chat-$id", lcfirst($type) . 'Id' => $id]);
+            }
+        }
+        $discussion = new \Espo\Modules\Chatwoot\Services\ActivityDiscussion($this->em, $this->user, $this->createMock(\Espo\Core\Acl::class), $this->events);
+        $this->assertRows(['Call', 'Meeting', 'Task', 'direct', 'manual', 'overdue'], SelectBuilder::create()->from('Note')->select('id')
+            ->where(['parentType' => 'Initiative'])->where($discussion->entryWhere('Initiative'))->order('id'));
+        $unread = SelectBuilder::create()->from('Initiative')->select('id')->order('id');
+        $discussion->applyFilter($unread, 'Initiative', true);
+        $this->assertRows(['Call', 'Meeting', 'Task', 'direct', 'manual'], $unread);
+        $this->pdo->exec("UPDATE initiative_relation SET deleted = 1 WHERE id = 'direct'");
+        $this->pdo->exec("UPDATE task SET readable = 0 WHERE id = 'Task'");
+        $this->insert('ActivityReadState', ['parentType' => 'Initiative', 'parentId' => 'manual', 'userId' => 'agent',
+            'threadKey' => 'main', 'lastSeenNumber' => 103]);
+        $this->assertRows(['Call', 'Meeting'], $unread);
     }
 
     public function testPrivateSessionsFilterRecordsNotesAndFilesDespiteBroadRoleAccess(): void
@@ -355,6 +446,11 @@ class TenantPredicatesSqlTest extends TestCase
     {
         foreach ($this->composers as $dialect => $composer) {
             $sql = $composer->composeSelect($builder->build());
+            if (str_contains($sql, ') UNION (SELECT')) {
+                // SQLite doesn't accept parenthesized UNION members (see FeatureInitiative/InboxQueryTest).
+                $sql = str_replace(['((SELECT', ') UNION (SELECT', ' ILIKE '], ['(SELECT', ' UNION SELECT', ' LIKE '], $sql);
+                $sql = preg_replace('/\)\) AS ([`"])activityUnread/', ') AS $1activityUnread', $sql);
+            }
             self::assertSame($expected, $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN), "$dialect: $sql");
         }
     }

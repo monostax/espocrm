@@ -13,10 +13,11 @@
                 {
                     "name": "currentStage"
                 },
-                {
-                    "name": "status"
-                }
-            ],
+                 {
+                     "name": "status"
+                 }
+             ],
+             [{"name": "replyPausedAt"}],
             [
                 {
                     "name": "cycleCount"

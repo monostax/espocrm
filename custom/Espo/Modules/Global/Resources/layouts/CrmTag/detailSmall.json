@@ -3,7 +3,7 @@
         "label": "Overview",
         "rows": [
             [{ "name": "name" }, { "name": "color" }],
-            [{ "name": "visibility" }, false],
+            [{ "name": "visibility" }, { "name": "appliesTo" }],
             [{ "name": "teams" }, { "name": "tenant" }]
         ]
     }

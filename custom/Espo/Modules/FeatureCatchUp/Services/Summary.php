@@ -43,6 +43,9 @@ class Summary
         $key = [$conversation ? 'ChatwootConversation' : 'Opportunity', $snapshot['id'], $snapshot['revision'], $locale, $snapshot['evidenceScope']];
         $this->verdicts->flipDue((string) $snapshot['tenantId']);
         $stored = $this->verdicts->find(...$key);
+        // A card someone acted on stays acted on at this revision, as in the lists (Verdicts::judged): a deck that reaches it
+        // anyway (a link from Avisos to a card further down) gets nothing to show, never the card again.
+        if ($stored['resolved'] ?? false) return ['status' => 'completed', 'cached' => true, 'verdict' => 'none', 'reason' => $stored['reason'], 'card' => null];
         // The conversation's closed deals the reader may read (ServiceFeed::dealKeys); a found deal remembers them.
         $closedDeals = $conversation && is_array($snapshot['closedDeals'] ?? null) ? array_values($snapshot['closedDeals']) : [];
         if ($stored && !Verdicts::outdated($stored, $closedDeals)) return ['status' => 'completed', 'cached' => true, ...$stored];

@@ -58,7 +58,7 @@ class SendWhatsAppMessage implements Action
         // A phone override is one fixed recipient; otherwise every person on the target
         // (an Account's Contatos) gets the message on their own phones.
         $hasOverride = $phoneOverride !== null && trim($phoneOverride) !== '';
-        $people = $hasOverride ? [$context->target] : $this->people->forTarget($context->target, $tenantId);
+        $people = $context->recipients($hasOverride ? [$context->target] : $this->people->forTarget($context->target, $tenantId));
 
         if ($people === []) {
             $this->log->warning(
@@ -100,7 +100,7 @@ class SendWhatsAppMessage implements Action
                 continue;
             }
 
-            $phones = $this->outbound->resolvePhones($person, $phoneOverride);
+            $phones = $context->phones($this->outbound->resolvePhones($person, $phoneOverride));
 
             if ($phones === []) {
                 $undelivered[$name] = 'sem celular';

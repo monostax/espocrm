@@ -45,6 +45,7 @@ class Manager
     private $permissionDeniedList = [];
 
     protected string $tmpDir = 'data/tmp';
+    protected bool $allowInPlaceFallback = true;
 
     protected const RENAME_RETRY_NUMBER = 10;
     protected const RENAME_RETRY_INTERVAL = 0.1;
@@ -315,7 +316,7 @@ class Manager
             $result = $this->putContentsUseRenaming($path, $data);
         }
 
-        if (!$result) {
+        if (!$result && (!$useRenaming || $this->allowInPlaceFallback)) {
             $result = file_put_contents($path, $data, $flags) !== false;
         }
 
@@ -367,8 +368,11 @@ class Manager
             return false;
         }
 
-        fwrite($h, $data);
-        fclose($h);
+        $written = fwrite($h, $data);
+        if (!fclose($h) || $written !== strlen($data)) {
+            $this->removeFile($tmpPath);
+            return false;
+        }
 
         $this->getPermissionUtils()->setDefaultPermissions($tmpPath);
 

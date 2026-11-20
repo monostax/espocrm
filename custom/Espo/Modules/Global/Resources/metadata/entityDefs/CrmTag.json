@@ -10,6 +10,7 @@
             "view": "global:views/crm-tag/fields/color"
         },
         "visibility": { "type": "enum", "options": ["team", "personal"], "default": "team", "notNull": true, "required": true, "readOnlyAfterCreate": true, "view": "global:views/crm-tag/fields/visibility" },
+        "appliesTo": { "type": "multiEnum", "options": ["Contact", "Account", "Opportunity", "Activity", "Initiative"], "default": [], "tooltip": true },
         "ownerUser": { "type": "link", "readOnly": true, "view": "views/fields/user" },
         "nameScope": { "type": "varchar", "maxLength": 32, "default": "team", "notNull": true, "readOnly": true, "utility": true },
         "tenant": { "type": "link", "required": true, "readOnlyAfterCreate": true },
@@ -21,8 +22,8 @@
         "modifiedBy": { "type": "link", "readOnly": true, "view": "views/fields/user" }
     },
     "links": {
-        "contacts": { "type": "hasMany", "entity": "Contact", "foreign": "crmTags", "relationName": "crmTagContact", "layoutRelationshipsDisabled": true },
-        "accounts": { "type": "hasMany", "entity": "Account", "foreign": "crmTags", "relationName": "crmTagAccount", "layoutRelationshipsDisabled": true },
+        "contacts": { "type": "hasMany", "entity": "Contact", "foreign": "tags", "relationName": "crmTagContact", "layoutRelationshipsDisabled": true },
+        "accounts": { "type": "hasMany", "entity": "Account", "foreign": "tags", "relationName": "crmTagAccount", "layoutRelationshipsDisabled": true },
         "ownerUser": { "type": "belongsTo", "entity": "User" },
         "tenant": { "type": "belongsTo", "entity": "Tenant", "foreign": "crmTags" },
         "teams": { "type": "hasMany", "entity": "Team", "relationName": "entityTeam", "layoutRelationshipsDisabled": true },

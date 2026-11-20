@@ -121,7 +121,7 @@ class SchemaTest extends TestCase
     public function testGeneratedFinancialSchema(string $dialect): void
     {
         $schema = $this->schema($dialect);
-        $this->assertCount(36, $schema->getTables());
+        $this->assertCount(37, $schema->getTables());
         foreach ($schema->getTables() as $table) {
             if (!in_array($table->getName(), ['ai_model_credit_rate', 'enrichment_credit_catalog',
                 'credit_billing_catalog', 'credit_billing_product', 'credit_market_offer', 'credit_billing_event', 'verification_provider_window'], true)) {
@@ -165,6 +165,7 @@ class SchemaTest extends TestCase
             'enrichment_discovery_call' => ['quote_id', 'provider', 'kind', 'slot_key'],
             'phone_verification_operation' => ['usage_id'],
             'phone_verification_request' => ['tenant_id', 'request_key'],
+            'verification_batch' => ['tenant_id', 'actor_id', 'request_key'],
             'tenant_credit_balance' => ['tenant_id'],
             'tenant_credit_cutover' => ['tenant_id'],
             'credit_execution_route' => ['run_id'],

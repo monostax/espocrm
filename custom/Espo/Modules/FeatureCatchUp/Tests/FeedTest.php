@@ -12,6 +12,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
+use Espo\Modules\FeatureCatchUp\Services\Acts;
 use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\FeatureCatchUp\Services\DealTargets;
 use Espo\Modules\FeatureCatchUp\Services\DealStates;
@@ -97,7 +98,7 @@ class FeedTest extends TestCase
         }
         $feed = new Feed($em, $factory, $acl, $user, $workspace,
             $owners, $states, $verdicts, $this->createMock(Metadata::class),
-            $this->createMock(Transcript::class), $this->createMock(Records::class), $this->chatwoot($opens));
+            $this->createMock(Transcript::class), $this->createMock(Records::class), $this->chatwoot($opens), $this->createMock(Acts::class));
         return [$feed, $verdicts, $deal];
     }
 
@@ -148,7 +149,7 @@ class FeedTest extends TestCase
         $feed = new Feed($em, $this->createMock(SelectBuilderFactory::class), $acl, $this->createMock(User::class), $this->createMock(Workspace::class),
             $this->createMock(Ownership::class), $this->createMock(DealStates::class), $this->createMock(Verdicts::class),
             $this->createMock(Metadata::class), $this->createMock(Transcript::class), $this->createMock(Records::class),
-            $this->chatwoot());
+            $this->chatwoot(), $this->createMock(Acts::class));
         $now = new DateTimeImmutable('2026-11-10 10:00:00', new DateTimeZone('America/Sao_Paulo'));
         $deal = $entity('deal', ['tenantId' => 'tenant', 'createdAt' => '2026-11-01 12:00:00']);
 

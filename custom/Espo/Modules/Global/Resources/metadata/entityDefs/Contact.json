@@ -1,6 +1,6 @@
 {
     "fields": {
-        "crmTags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" },
+        "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" },
         "cpf": {
             "type": "varchar",
             "maxLength": 14,
@@ -57,14 +57,6 @@
             "default": "",
             "audited": true
         },
-        "tags": {
-            "type": "multiEnum",
-            "options": [],
-            "allowCustomOptions": true,
-            "displayAsLabel": true,
-            "storeArrayValues": true,
-            "tooltip": true
-        },
         "createdBy": {
             "view": "views/fields/user-with-avatar"
         },
@@ -91,7 +83,7 @@
         }
     },
     "links": {
-        "crmTags": { "type": "hasMany", "entity": "CrmTag", "foreign": "contacts", "relationName": "crmTagContact" },
+        "tags": { "type": "hasMany", "entity": "CrmTag", "foreign": "contacts", "relationName": "crmTagContact" },
         "tenant": {
             "type": "belongsTo",
             "entity": "Tenant",

@@ -6,6 +6,7 @@
     {"route": "/CatchUp/:id/summary", "method": "post", "params": {"controller": "CatchUp", "action": "summary", "id": ":id"}},
     {"route": "/CatchUpBatch", "method": "post", "params": {"controller": "CatchUp", "action": "batch"}},
     {"route": "/CatchUpCardStatus/:id", "method": "get", "params": {"controller": "CatchUp", "action": "cardStatus", "id": ":id"}},
+    {"route": "/CatchUpLinked", "method": "get", "params": {"controller": "CatchUp", "action": "linked"}},
     {"route": "/CatchUpBatch/status", "method": "post", "params": {"controller": "CatchUp", "action": "batchStatus"}},
     {"route": "/CatchUpSettle", "method": "post", "noAuth": true, "params": {"controller": "CatchUpSettle", "action": "start"}},
     {"route": "/CatchUpSettle/complete", "method": "post", "noAuth": true, "params": {"controller": "CatchUpSettle", "action": "complete"}},
