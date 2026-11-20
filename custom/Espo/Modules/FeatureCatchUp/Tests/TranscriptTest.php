@@ -11,6 +11,7 @@ use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\ServiceUnavailable;
 use Espo\Core\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Tools\ConversationGone;
 use Espo\Modules\FeatureCatchUp\Services\Transcript;
 use Espo\ORM\EntityManager;
 use PHPUnit\Framework\TestCase;
@@ -29,7 +30,7 @@ class TranscriptTest extends TestCase
     }
 
     /** @return array{Transcript, Entity} the transcript and the probe message its ACL check sees */
-    private function transcript(ChatwootApiClient $api, bool $readable = true): array
+    private function transcript(ChatwootApiClient $api, bool $readable = true, ?ConversationGone $gone = null): array
     {
         $acl = $this->createMock(Acl::class);
         $acl->method('checkScope')->willReturn(true);
@@ -47,7 +48,7 @@ class TranscriptTest extends TestCase
             'ChatwootAccount' => $this->entity(['apiKey' => 'key', 'platformId' => 'platform', 'chatwootAccountId' => 12]),
             'ChatwootPlatform' => $this->entity(['backendUrl' => 'http://chatwoot']),
         });
-        return [new Transcript($em, $acl, $api), $probe];
+        return [new Transcript($em, $acl, $api, $gone ?? $this->createMock(ConversationGone::class)), $probe];
     }
 
     private function conversations(): array
@@ -209,6 +210,24 @@ class TranscriptTest extends TestCase
         [$transcript] = $this->transcript($api);
         $this->expectException(ServiceUnavailable::class);
         $transcript->read($this->conversations(), $this->now())['evidence'];
+    }
+
+    public function testAConversationDeletedInChatwootIsLeftOutAndTheRestIsRead(): void
+    {
+        $api = $this->createMock(ChatwootApiClient::class);
+        $api->method('getConversationMessagesPage')->willReturnCallback(fn ($url, $key, $account, int $conversation) => $conversation === 2775
+            ? throw new Error('Failed to get conversation messages from Chatwoot: HTTP 404')
+            : self::page([self::message(1, 0, ['type' => 'contact', 'id' => 7, 'name' => 'Samuel'], 'Oi')]));
+        $gone = $this->createMock(ConversationGone::class);
+        $gone->expects(self::once())->method('check')
+            ->with(self::callback(fn ($conversation) => $conversation->getId() === 'conv'))->willReturn(true);
+        [$transcript] = $this->transcript($api, true, $gone);
+
+        $evidence = $transcript->read($this->conversations() + [
+            'other' => $this->entity(['chatwootAccountId' => 'account', 'chatwootConversationId' => 2776], 'other'),
+        ], $this->now())['evidence'];
+
+        self::assertSame([2776], array_column($evidence, 'conversationId'));
     }
 
     public function testInAGroupTheTeamWritesForTheBusinessAndUnlabeledPeopleAreAskedAbout(): void

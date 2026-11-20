@@ -262,7 +262,9 @@ if (preg_match('#^/api/v1/accounts/(\d+)/inboxes$#', $path, $m) && $method === '
     $finish(200, ['payload' => $state['inboxes'][$m[1]] ?? []]);
 }
 
-// Like Chatwoot: newest activity first, 25 a page, optional last_activity_at filter.
+// Like Chatwoot: newest activity first, 25 a page, optional last_activity_at filter. The meta counts mine, unassigned
+// and others' conversations, with no total: the fork dropped all_count on 2026-04-11, and a fake that kept it hid that
+// the CRM sync then read only the first page.
 if (preg_match('#^/api/v1/accounts/(\d+)/conversations/filter$#', $path, $m) && $method === 'POST') {
     $conversations = $state['conversations'][$m[1]] ?? [];
     foreach ($body['payload'] ?? [] as $filter) {
@@ -274,7 +276,7 @@ if (preg_match('#^/api/v1/accounts/(\d+)/conversations/filter$#', $path, $m) && 
     usort($conversations, fn ($a, $b) => $b['last_activity_at'] <=> $a['last_activity_at']);
     $page = max(1, (int) ($_GET['page'] ?? 1));
     $finish(200, [
-        'meta' => ['all_count' => count($conversations)],
+        'meta' => ['mine_count' => 0, 'unassigned_count' => count($conversations), 'others_count' => 0],
         'payload' => array_slice($conversations, ($page - 1) * 25, 25),
     ]);
 }

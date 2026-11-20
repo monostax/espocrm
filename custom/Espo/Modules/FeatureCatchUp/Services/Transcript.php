@@ -9,6 +9,7 @@ use Espo\Core\Acl;
 use Espo\Core\Exceptions\ServiceUnavailable;
 use Espo\Core\ORM\Entity;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\Chatwoot\Tools\ConversationGone;
 use Espo\ORM\EntityManager;
 
 /**
@@ -36,7 +37,12 @@ class Transcript
     /** Quoted messages looked up in Chatwoot per read when they are older than every page fetched. */
     private const QUOTE_LOOKUPS = 3;
 
-    public function __construct(private EntityManager $em, private Acl $acl, private ChatwootApiClient $chatwoot) {}
+    public function __construct(
+        private EntityManager $em,
+        private Acl $acl,
+        private ChatwootApiClient $chatwoot,
+        private ConversationGone $gone,
+    ) {}
 
     /**
      * Evidence entries, newest first, from the conversations whose messages the reader may read. Each
@@ -72,7 +78,9 @@ class Transcript
                 throw new ServiceUnavailable('This conversation cannot be read from Chatwoot.');
             }
             $ai ??= $this->aiSenders();
-            ['contact' => $contact, 'messages' => $messages, 'quotes' => $fetched] = $this->fetch($conversation, $account, $platform);
+            $read = $this->fetch($conversation, $account, $platform);
+            if ($read === null) continue;
+            ['contact' => $contact, 'messages' => $messages, 'quotes' => $fetched] = $read;
             $quotes += $fetched;
             $sources[(int) $conversation->get('chatwootConversationId')] = [$account, $platform, (int) $conversation->get('chatwootConversationId')];
             $accountId = (int) $account->get('chatwootAccountId');
@@ -154,9 +162,10 @@ class Transcript
 
     /**
      * @return array{contact: ?array<string, mixed>, messages: list<array<string, mixed>>, quotes: array<string, string>} the
-     *   conversation's contact, its newest messages of the read kinds, oldest first, and the text of every public message fetched
+     *   conversation's contact, its newest messages of the read kinds, oldest first, and the text of every public message
+     *   fetched; null when the conversation was deleted in Chatwoot (its CRM copy is removed)
      */
-    private function fetch(Entity $conversation, Entity $account, Entity $platform): array
+    private function fetch(Entity $conversation, Entity $account, Entity $platform): ?array
     {
         $kept = [];
         $quotes = [];
@@ -167,6 +176,7 @@ class Transcript
                 $result = $this->chatwoot->getConversationMessagesPage((string) $platform->get('backendUrl'), (string) $account->get('apiKey'),
                     (int) $account->get('chatwootAccountId'), (int) $conversation->get('chatwootConversationId'), $before);
             } catch (\Throwable) {
+                if ($this->gone->check($conversation, $account, $platform)) return null;
                 throw new ServiceUnavailable('Chatwoot is temporarily unavailable.');
             }
             $contact ??= $result['contact'];

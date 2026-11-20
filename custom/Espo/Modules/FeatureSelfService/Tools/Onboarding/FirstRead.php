@@ -39,6 +39,8 @@ class FirstRead
 {
     /** Cards analysed at most, like the deck's own cap per open. */
     public const LIMIT = 15;
+    /** Conversation pages (25 each) copied before the first read, room for LIMIT after the cards it skips. */
+    private const SYNC_PAGES = 2;
     /**
      * Right when onboarding opens (decided 2026-11-12: start the analysis as soon as possible). The CRM copies the
      * newest conversations within a minute, often before the import's first window ends; until then it looks again
@@ -95,9 +97,10 @@ class FirstRead
         }
 
         // The scheduled conversation sync walks every account in turn and can be minutes away (8 on 2026-11-19, so
-        // a new workspace's Em dia sat empty): this account's conversations are copied now instead.
+        // a new workspace's Em dia sat empty): this account's newest conversations are copied now instead, and the
+        // scheduled run's backfill copies the older pages.
         if (!$poll && $wait && !$this->conversationsSynced($account)) {
-            $this->injectableFactory->create(SyncConversationsFromChatwoot::class)->syncAccount($account);
+            $this->injectableFactory->create(SyncConversationsFromChatwoot::class)->syncAccount($account, self::SYNC_PAGES);
         }
 
         if (!$poll && $wait && !$this->conversationsSynced($account) && ($attempt + 1) * self::RECHECK_SECONDS < self::MAX_WAIT_SECONDS) {

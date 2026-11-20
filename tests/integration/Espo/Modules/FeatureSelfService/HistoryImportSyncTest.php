@@ -92,6 +92,28 @@ class HistoryImportSyncTest extends TestCase
         );
     }
 
+    public function testTheLiveSyncReadsEveryConversationChangedSinceTheCursorAndStopsThere(): void
+    {
+        $account = $this->account();
+        $chatwootId = (int) $account->get('chatwootAccountId');
+        $cursor = time() - 3600;
+
+        // 60 threads active since the cursor, more than a page, and 10 older ones the day filter still returns.
+        $this->seed($chatwootId, ['conversations' => [
+            ...array_map(fn (int $n) => $this->conversation($n, $cursor + 60 * $n), range(1, 60)),
+            ...array_map(fn (int $n) => $this->conversation($n, $cursor - 600 - 60 * $n), range(61, 70)),
+        ]]);
+        $account->set('conversationSyncCursor', $cursor);
+        $this->em->saveEntity($account, ['silent' => true]);
+
+        $this->app->getInjectableFactory()->create(SyncConversationsFromChatwoot::class)->run();
+
+        self::assertSame(60, $this->em->getRDBRepository('ChatwootConversation')
+            ->where(['chatwootAccountId' => $account->getId()])->count(), 'Every changed thread, none older than the cursor.');
+        self::assertSame($cursor + 3600, (int) $this->reload($account)->get('conversationSyncCursor'));
+        self::assertNull($this->backfillPage($account), 'Nothing is left for the backfill.');
+    }
+
     private function account(): Entity
     {
         $suffix = bin2hex(random_bytes(4));
@@ -133,13 +155,13 @@ class HistoryImportSyncTest extends TestCase
     /**
      * @return array<string, mixed>
      */
-    private function conversation(int $n): array
+    private function conversation(int $n, ?int $lastActivityAt = null): array
     {
         return [
             'id' => 9000 + $n,
             'inbox_id' => 501,
             'status' => 'open',
-            'last_activity_at' => time() - (100 + $n) * 86400,
+            'last_activity_at' => $lastActivityAt ?? time() - (100 + $n) * 86400,
             'created_at' => time(),
             'meta' => ['sender' => [
                 'id' => 7000 + $n,

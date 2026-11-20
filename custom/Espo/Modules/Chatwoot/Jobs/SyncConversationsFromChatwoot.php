@@ -16,12 +16,18 @@ use Espo\Modules\Chatwoot\Tools\ContactReconciler;
  * Scheduled job to sync conversations from Chatwoot to EspoCRM.
  * Iterates through all ChatwootAccount records with contactSyncEnabled = true
  * and pulls conversations from Chatwoot.
+ *
+ * A conversation deleted in Chatwoot is not looked for here: Tools\ConversationGone removes it when someone reads it.
+ * Until 2026-11 this job asked Chatwoot about every conversation not synced in the past hour, one call each (a
+ * `limit(50)` that Espo reads as an offset), and found 22 deletions in 30 days for about 500k calls a day.
  */
 class SyncConversationsFromChatwoot implements JobDataLess
 {
     private const MAX_PAGES_PER_RUN = 50;
     private const MAX_BACKFILL_PAGES_PER_RUN = 20;
-    private const PAGE_SIZE = 25; // Chatwoot conversations API page size
+    public const PAGE_SIZE = 25; // Chatwoot conversations API page size
+    /** Conversations this much older than the cursor are read again, for activity written just before the last run read. */
+    private const CURSOR_OVERLAP_SECONDS = 300;
 
     /**
      * WAHA color map (0-19).
@@ -66,11 +72,12 @@ class SyncConversationsFromChatwoot implements JobDataLess
 
     /**
      * One account now, outside the scheduled run: a new self-service workspace whose onboarding just opened can't
-     * wait for the run, which walks every account in turn and can take minutes.
+     * wait for the run, which walks every account in turn and can take minutes. Only the newest $maxPages are read
+     * here; older pages go to the backfill, which the scheduled run continues.
      */
-    public function syncAccount(Entity $account): void
+    public function syncAccount(Entity $account, int $maxPages = self::MAX_PAGES_PER_RUN): void
     {
-        $this->syncAccountConversations($account);
+        $this->syncAccountConversations($account, $maxPages, false);
     }
 
     /** Ensure a historical episode's parent uses the same contact/inbox reconciliation as normal sync. */
@@ -105,8 +112,11 @@ class SyncConversationsFromChatwoot implements JobDataLess
     /**
      * Sync conversations for a single ChatwootAccount.
      */
-    private function syncAccountConversations(Entity $account): void
-    {
+    private function syncAccountConversations(
+        Entity $account,
+        int $maxPages = self::MAX_PAGES_PER_RUN,
+        bool $backfill = true
+    ): void {
         $accountName = $account->get('name');
 
         try {
@@ -144,7 +154,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 $cursor,
                 $teamId,
                 $tenantId,
-                $teamsIds
+                $teamsIds,
+                1,
+                $maxPages
             );
 
             // Update sync timestamps and cursor
@@ -152,9 +164,10 @@ class SyncConversationsFromChatwoot implements JobDataLess
             if ($result['newCursor'] !== null) {
                 $account->set('conversationSyncCursor', $result['newCursor']);
             }
-            // A first sync that ran out of pages: the cursor now points at the
-            // newest thread, so the older pages go to the backfill.
-            if ($cursor === null && $result['hasMore'] && !(int) $account->get('conversationBackfillPage')) {
+            // Pages left unread (a first sync, or more changes than one run
+            // reads): the cursor now points at the newest thread, so the older
+            // pages go to the backfill.
+            if ($result['hasMore'] && !(int) $account->get('conversationBackfillPage')) {
                 $account->set('conversationBackfillPage', $result['nextPage']);
             }
             $this->entityManager->saveEntity($account, ['silent' => true]);
@@ -165,18 +178,9 @@ class SyncConversationsFromChatwoot implements JobDataLess
                 ($result['hasMore'] ? " (more pages remaining)" : " (complete)")
             );
 
-            // Run reconciliation when sync is complete (no more pages)
-            // This detects conversations that were deleted in Chatwoot
-            if (!$result['hasMore']) {
-                $this->reconcileDeletedConversations(
-                    $platformUrl,
-                    $apiKey,
-                    $chatwootAccountId,
-                    $account->getId()
-                );
+            if ($backfill) {
+                $this->backfillConversations($account, $platformUrl, $apiKey, $chatwootAccountId, $teamId, $tenantId, $teamsIds);
             }
-
-            $this->backfillConversations($account, $platformUrl, $apiKey, $chatwootAccountId, $teamId, $tenantId, $teamsIds);
 
         } catch (\Exception $e) {
             $this->log->error(
@@ -266,6 +270,7 @@ class SyncConversationsFromChatwoot implements JobDataLess
         $page = max(1, $startPage);
         $pagesProcessed = 0;
         $maxLastActivityAt = $cursor;
+        $since = $cursor !== null ? $cursor - self::CURSOR_OVERLAP_SECONDS : null;
 
         // Build filter for incremental sync
         // Chatwoot filter uses date-only comparison, so we subtract 1 day 
@@ -297,15 +302,10 @@ class SyncConversationsFromChatwoot implements JobDataLess
             );
 
             // Handle response structure - filter API returns {meta, payload} directly
-            $conversations = $response['payload'] ?? [];
-            $meta = $response['meta'] ?? [];
-
-            // Get counts for pagination
-            $allCount = $meta['all_count'] ?? count($conversations);
+            [$conversations, $hasMorePages] = self::changedOnPage($response['payload'] ?? [], $since);
 
             $this->log->debug(
-                "SyncConversationsFromChatwoot: Page {$page} - " . count($conversations) .
-                " conversations, total: {$allCount}"
+                "SyncConversationsFromChatwoot: Page {$page} - " . count($conversations) . " changed conversations"
             );
 
             foreach ($conversations as $chatwootConversation) {
@@ -337,22 +337,48 @@ class SyncConversationsFromChatwoot implements JobDataLess
             $page++;
             $pagesProcessed++;
 
-            $totalPages = (int) ceil($allCount / self::PAGE_SIZE);
-            $hasMorePages = $page <= $totalPages;
-
             // Stop if we've processed enough pages this run (prevent timeout)
-            if ($pagesProcessed >= $maxPages) {
-                $stats['hasMore'] = $hasMorePages;
-                $stats['nextPage'] = $hasMorePages ? $page : null;
+            if ($hasMorePages && $pagesProcessed >= $maxPages) {
+                $stats['hasMore'] = true;
+                $stats['nextPage'] = $page;
                 break;
             }
 
-        } while ($hasMorePages && count($conversations) > 0);
+        } while ($hasMorePages);
 
         // Update cursor to max last_activity_at seen
         $stats['newCursor'] = $maxLastActivityAt;
 
         return $stats;
+    }
+
+    /**
+     * The page's conversations with activity at or after $since (all of them without a cursor), and whether the next
+     * page may hold more. Chatwoot sorts the filter newest activity first, and every message but a history import's
+     * moves last_activity_at, status and assignment activity included: the first conversation older than $since means
+     * the rest are older too. Its filter compares whole days, so the page alone can't stop at the cursor.
+     *
+     * The meta has no total to page by: the Chatwoot fork dropped `all_count` on 2026-04-11, and from then on the job
+     * read only the first page of every account. A full page may have more after it.
+     *
+     * @param list<array<string, mixed>> $conversations
+     * @return array{list<array<string, mixed>>, bool}
+     */
+    public static function changedOnPage(array $conversations, ?int $since): array
+    {
+        $changed = [];
+
+        foreach ($conversations as $conversation) {
+            $lastActivityAt = $conversation['last_activity_at'] ?? null;
+
+            if ($since !== null && is_numeric($lastActivityAt) && (int) $lastActivityAt < $since) {
+                return [$changed, false];
+            }
+
+            $changed[] = $conversation;
+        }
+
+        return [$changed, count($conversations) === self::PAGE_SIZE];
     }
 
     /**
@@ -1561,163 +1587,6 @@ class SyncConversationsFromChatwoot implements JobDataLess
             ->getRDBRepository($entityType)
             ->clone($query)
             ->findOne();
-    }
-
-    private const RECONCILE_FAIL_THRESHOLD = 3;
-
-    /**
-     * Reconcile ChatwootConversations that may have been deleted in Chatwoot.
-     * 
-     * This runs after a full sync is complete (no more pages remaining).
-     * It checks conversations that haven't been synced recently and verifies
-     * they still exist in Chatwoot. If not found (HTTP 404), the conversation's
-     * reconcileFailCount is incremented. Only after RECONCILE_FAIL_THRESHOLD
-     * consecutive confirmed 404 responses will the conversation be removed
-     * from EspoCRM. This prevents data loss from transient API errors.
-     */
-    private function reconcileDeletedConversations(
-        string $platformUrl,
-        string $apiKey,
-        int $chatwootAccountId,
-        string $espoAccountId
-    ): void {
-        $this->log->info("SyncConversationsFromChatwoot: Starting reconciliation for account {$espoAccountId}");
-
-        $oneHourAgo = date('Y-m-d H:i:s', time() - 3600);
-        
-        $conversationsToCheck = $this->entityManager
-            ->getRDBRepository('ChatwootConversation')
-            ->where([
-                'chatwootAccountId' => $espoAccountId,
-                'lastSyncedAt<' => $oneHourAgo,
-            ])
-            ->limit(50)
-            ->find();
-
-        $checkedCount = 0;
-        $deletedCount = 0;
-        $markedCount = 0;
-
-        foreach ($conversationsToCheck as $conversation) {
-            $chatwootConversationId = $conversation->get('chatwootConversationId');
-            
-            if (!$chatwootConversationId) {
-                continue;
-            }
-            
-            $isConfirmed404 = false;
-
-            try {
-                $chatwootConversation = $this->apiClient->getConversation(
-                    $platformUrl,
-                    $apiKey,
-                    $chatwootAccountId,
-                    $chatwootConversationId
-                );
-                
-                if ($chatwootConversation === null) {
-                    $isConfirmed404 = true;
-                } else {
-                    // Conversation exists — reset fail counter and update sync timestamp
-                    $conversation->set('lastSyncedAt', date('Y-m-d H:i:s'));
-                    $conversation->set('reconcileFailCount', 0);
-                    $this->entityManager->saveEntity($conversation, ['silent' => true]);
-                }
-                
-            } catch (\Exception $e) {
-                $msg = $e->getMessage();
-                $httpCode = $this->extractHttpStatusCode($msg);
-
-                if ($httpCode === 404) {
-                    $isConfirmed404 = true;
-                } else {
-                    // Any non-404 error (500, timeout, class issues, etc.) — never treat as deletion
-                    $this->log->warning(
-                        "SyncConversationsFromChatwoot: Reconciliation stopped for account {$espoAccountId} " .
-                        "after a non-404 error on conversation {$chatwootConversationId} " .
-                        "(HTTP {$httpCode}): {$msg}"
-                    );
-
-                    // Fail fast instead of amplifying an outage with the rest of the reconciliation batch.
-                    break;
-                }
-            }
-
-            if ($isConfirmed404) {
-                $failCount = (int)$conversation->get('reconcileFailCount') + 1;
-                
-                if ($failCount >= self::RECONCILE_FAIL_THRESHOLD) {
-                    $this->log->warning(
-                        "SyncConversationsFromChatwoot: Conversation {$chatwootConversationId} " .
-                        "confirmed gone from Chatwoot after {$failCount} consecutive checks, " .
-                        "removing from EspoCRM (entity: {$conversation->getId()})"
-                    );
-                    $this->handleDeletedConversation($conversation);
-                    $deletedCount++;
-                } else {
-                    $this->log->info(
-                        "SyncConversationsFromChatwoot: Conversation {$chatwootConversationId} " .
-                        "not found in Chatwoot (strike {$failCount}/" . self::RECONCILE_FAIL_THRESHOLD . "), " .
-                        "will retry before deleting"
-                    );
-                    $conversation->set('reconcileFailCount', $failCount);
-                    $this->entityManager->saveEntity($conversation, ['silent' => true]);
-                    $markedCount++;
-                }
-            }
-            
-            $checkedCount++;
-        }
-
-        if ($checkedCount > 0) {
-            $this->log->info(
-                "SyncConversationsFromChatwoot: Reconciliation complete - " .
-                "checked {$checkedCount}, deleted {$deletedCount}, marked {$markedCount}"
-            );
-        }
-    }
-
-    /**
-     * Extract HTTP status code from an error message string.
-     * Returns the status code (e.g. 404, 500) or 0 if not found.
-     */
-    private function extractHttpStatusCode(string $message): int
-    {
-        // Match patterns like "HTTP 404", "HTTP 500", "status 404", "code 404"
-        if (preg_match('/\bHTTP\s+(\d{3})\b/i', $message, $matches)) {
-            return (int)$matches[1];
-        }
-        if (preg_match('/\b(?:status|code)\s+(\d{3})\b/i', $message, $matches)) {
-            return (int)$matches[1];
-        }
-        // Match standalone 3-digit HTTP codes that look like status codes
-        if (preg_match('/\b(4\d{2}|5\d{2})\b/', $message, $matches)) {
-            return (int)$matches[1];
-        }
-        return 0;
-    }
-
-    /**
-     * Handle a ChatwootConversation that has been confirmed deleted from Chatwoot
-     * after multiple consecutive 404 responses.
-     * Removes the conversation and its associated messages from EspoCRM.
-     */
-    private function handleDeletedConversation(Entity $conversation): void
-    {
-        $conversationId = $conversation->getId();
-        $chatwootConversationId = $conversation->get('chatwootConversationId');
-
-        $this->log->warning(
-            "SyncConversationsFromChatwoot: Removing conversation {$chatwootConversationId} " .
-            "(entity {$conversationId}) from EspoCRM — confirmed deleted in Chatwoot"
-        );
-
-        // skipChatwootDelete tells the VerifyExistsInChatwoot hook to not call the
-        // Chatwoot API since we already confirmed the conversation is gone there
-        $this->entityManager->removeEntity($conversation, [
-            'cascadeParent' => true,
-            'skipChatwootDelete' => true,
-        ]);
     }
 
     /**
