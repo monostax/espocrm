@@ -31,8 +31,9 @@ use Throwable;
  * - a silent AI agent: no inbox, so Chatwoot never assigns it a conversation and it never replies. It manages the
  *   default funnel, which the opportunity tracker (gtm/06) writes through; "Ative a IA" later only connects an inbox;
  * - Em dia switched on, so the first read can analyse the imported conversations;
- * - the feature packs the plan includes (campaigns, journeys, playbooks, calls, meetings): one plan with everything
- *   since 2026-11-11 (gtm/07), so nothing a trial uses disappears after paying.
+ * - the feature packs the plan includes (campaigns, journeys, playbooks, calls, meetings, b2b, enrichment): one plan
+ *   with everything since 2026-11-11 (gtm/07), so nothing a trial uses disappears after paying. b2b (Empresas) and
+ *   enrichment joined on 2026-11-20.
  *
  * A signup that came from the monostax.ai site preview (/previa) starts with what the visitor saw there instead:
  * the funnel stages it proposed, and the agent's instructions and knowledge base (the agent stays silent).
@@ -43,8 +44,11 @@ class WorkspaceStarter
 {
     public const FUNNEL_NAME = 'Vendas';
 
-    /** Feature packs (app.featureVerticals) every self-service workspace gets. */
-    public const FEATURE_PACKS = ['campaigns', 'journeys', 'playbooks', 'calls', 'meetings'];
+    /**
+     * Feature packs (app.featureVerticals) every self-service workspace gets. b2b is a vertical rather than a marker
+     * pack: its role is what grants Accounts (the base roles deny them), so it is attached the same way.
+     */
+    public const FEATURE_PACKS = ['campaigns', 'journeys', 'playbooks', 'calls', 'meetings', 'b2b', 'enrichment'];
 
     /**
      * The default funnel's stages. Ganho and Perdido are the Monostax default rule (gtm/06 §"Decided 2026-11-10"),
@@ -126,7 +130,7 @@ class WorkspaceStarter
         foreach (array_diff(self::FEATURE_PACKS, $this->verticals->getTenantVerticals((string) $tenant->getId())) as $pack) {
             $staticId = $definitions[$pack]['roleStaticId'] ?? null;
 
-            if (!is_string($staticId) || !($definitions[$pack]['pack'] ?? false)) {
+            if (!is_string($staticId) || $staticId === '') {
                 throw new RuntimeException("Feature pack '{$pack}' is not defined.");
             }
 

@@ -114,9 +114,10 @@ enabled = CRM_SELF_SERVICE_ENABLED is exactly "true"  AND  not paused
    `tenant-admin:<id>`), never by name, so same-named businesses never share
    a team. The Tenant starts on plan `monostax` (the one plan, gtm/07), trial.
    - `featurePacks`: the feature packs the plan includes (campaigns, journeys,
-     playbooks, calls, meetings; `WorkspaceStarter::FEATURE_PACKS`), as roles
-     on the base team, the same way the `feature-packs` command switches them
-     on. Packs already on are left alone.
+     playbooks, calls, meetings, b2b, enrichment;
+     `WorkspaceStarter::FEATURE_PACKS`), as roles on the base team, the same
+     way the `feature-packs` command switches them on. `b2b` is the role that
+     grants Accounts (Empresas), not a marker. Packs already on are left alone.
 2. `owner`: the user joins the tenant, its base and admin teams, and gets the
    base team as default team. Instance administrators can't own a workspace.
 3. `chatwootAccount`: the ChatwootAccount on the server-chosen platform

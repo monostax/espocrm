@@ -1,5 +1,5 @@
 {
-    "feature-packs": {
+    "featurePacks": {
         "className": "Espo\\Modules\\Global\\Classes\\ConsoleCommands\\FeaturePacks",
         "listed": true,
         "noSystemUser": true,
