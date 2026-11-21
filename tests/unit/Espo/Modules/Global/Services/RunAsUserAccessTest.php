@@ -8,6 +8,7 @@ use Espo\Core\ApplicationState;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Entities\User;
 use Espo\Modules\Global\Services\RunAsUserAccess;
+use Espo\Modules\Global\Tools\Tenant\TenantVisibility;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\EntityManager;
 use PHPUnit\Framework\TestCase;
@@ -39,7 +40,7 @@ class RunAsUserAccessTest extends TestCase
         return $user;
     }
 
-    private function makeAccess(User $actor, User $target): RunAsUserAccess
+    private function makeAccess(User $actor, User $target, bool $covers = true): RunAsUserAccess
     {
         $applicationState = $this->createMock(ApplicationState::class);
         $applicationState->method('isLogged')->willReturn(true);
@@ -54,7 +55,52 @@ class RunAsUserAccessTest extends TestCase
         $userTenantResolver = $this->createMock(UserTenantResolver::class);
         $userTenantResolver->method('resolveTenantIds')->willReturn([]);
 
-        return new RunAsUserAccess($entityManager, $applicationState, $userTenantResolver);
+        $visibility = $this->createMock(TenantVisibility::class);
+        $visibility->method('covers')->willReturn($covers);
+
+        return new class($entityManager, $applicationState, $userTenantResolver, $visibility) extends RunAsUserAccess {
+            public function __construct(
+                EntityManager $entityManager,
+                ApplicationState $applicationState,
+                UserTenantResolver $userTenantResolver,
+                private TenantVisibility $visibility,
+            ) {
+                parent::__construct($entityManager, $applicationState, $userTenantResolver);
+            }
+
+            protected function tenantVisibility(): TenantVisibility
+            {
+                return $this->visibility;
+            }
+        };
+    }
+
+    /**
+     * Monostax staff belong to many workspaces. Running a tenant's automation
+     * as them would read every workspace they belong to.
+     */
+    public function testTenantAdminCannotDelegateToMemberOfOtherWorkspaces(): void
+    {
+        $actor = $this->user('tenant-admin-1');
+        $target = $this->user('staff-1');
+
+        $access = $this->makeAccess($actor, $target, covers: false);
+
+        $this->expectException(Forbidden::class);
+        $this->expectExceptionMessage('also works in other workspaces');
+
+        $access->assertCanSet('staff-1', 'tenant-1');
+    }
+
+    public function testInstanceAdminMayDelegateToMemberOfOtherWorkspaces(): void
+    {
+        $actor = $this->user('admin-1', isAdmin: true, isRegular: false);
+        $target = $this->user('staff-1');
+
+        $access = $this->makeAccess($actor, $target, covers: false);
+
+        $access->assertCanSet('staff-1', 'tenant-1');
+        $this->addToAssertionCount(1);
     }
 
     public function testNonAdminSetterCannotDelegateToAdminUser(): void

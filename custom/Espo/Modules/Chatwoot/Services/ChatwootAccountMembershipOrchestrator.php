@@ -45,6 +45,64 @@ class ChatwootAccountMembershipOrchestrator
     ) {}
 
     /**
+     * Adopting an unlinked Chatwoot user hands its accounts, through Chatwoot
+     * SSO, to whoever holds the CRM user. A tenant admin can create a CRM user
+     * with any free email, and provisioning then runs as a system job, so the
+     * check rests on the data: every account the remote user is already in
+     * must be one this CRM user reaches through their own teams.
+     */
+    private function remoteAccountsWithinUser(
+        string $platformUrl,
+        string $accessToken,
+        int $remoteUserId,
+        Entity $account,
+        Entity $user,
+    ): bool {
+        try {
+            $remote = $this->apiClient->getUser($platformUrl, $accessToken, $remoteUserId);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        $outside = [];
+
+        foreach ((array) ($remote['accounts'] ?? []) as $item) {
+            $id = (int) (is_array($item) ? ($item['id'] ?? 0) : 0);
+
+            if ($id > 0 && $id !== (int) $account->get('chatwootAccountId')) {
+                $outside[$id] = true;
+            }
+        }
+
+        if ($outside === []) {
+            return true;
+        }
+
+        $teamIds = $user instanceof CoreEntity ? $user->getLinkMultipleIdList('teams') : [];
+
+        if ($teamIds === []) {
+            return false;
+        }
+
+        $reachable = $this->entityManager->getRDBRepository('ChatwootAccount')
+            ->select(['id', 'chatwootAccountId'])
+            ->join('teams')
+            ->where([
+                'teams.id' => $teamIds,
+                'platformId' => $account->get('platformId'),
+                'chatwootAccountId' => array_keys($outside),
+            ])
+            ->distinct()
+            ->find();
+
+        foreach ($reachable as $reachableAccount) {
+            unset($outside[(int) $reachableAccount->get('chatwootAccountId')]);
+        }
+
+        return $outside === [];
+    }
+
+    /**
      * UI path: add an agent/admin under ACL for the current user.
      *
      * @throws BadRequest
@@ -195,6 +253,16 @@ class ChatwootAccountMembershipOrchestrator
                 // itself. Adopting one that already existed (e.g. left behind
                 // by a deleted CRM user) would hand over its other accounts.
                 if ($existingRemoteUser && $emailVerified) {
+                    throw new Conflict('chatwootUserAlreadyExists');
+                }
+
+                if ($existingRemoteUser &&
+                    !$this->remoteAccountsWithinUser($platformUrl, $accessToken, $remoteUserId, $account, $user)) {
+                    $this->log->warning(
+                        "Refused to link Chatwoot user {$remoteUserId} to CRM user {$userId}: "
+                        . 'it belongs to accounts outside this user\'s teams.'
+                    );
+
                     throw new Conflict('chatwootUserAlreadyExists');
                 }
 

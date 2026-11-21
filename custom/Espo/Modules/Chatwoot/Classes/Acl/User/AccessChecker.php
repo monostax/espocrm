@@ -13,6 +13,7 @@ use Espo\Core\AclManager;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ManagedIdentityPolicy;
 use Espo\ORM\Entity;
+use Espo\ORM\EntityManager;
 
 /** Keep the existing tenant-aware user ACL, but never delegate user administration to an AI principal. */
 class AccessChecker extends \Espo\Modules\Global\Classes\Acl\User\AccessChecker implements
@@ -21,9 +22,10 @@ class AccessChecker extends \Espo\Modules\Global\Classes\Acl\User\AccessChecker 
     public function __construct(
         private DefaultAccessChecker $defaults,
         AclManager $aclManager,
+        EntityManager $entityManager,
         private ManagedIdentityPolicy $policy,
     ) {
-        parent::__construct($defaults, $aclManager);
+        parent::__construct($defaults, $aclManager, $entityManager);
     }
 
     private function isManaged(User $user): bool

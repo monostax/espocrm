@@ -22,12 +22,24 @@ use Espo\Core\Acl\Table;
 use Espo\Core\Acl\Traits\DefaultAccessCheckerDependency;
 use Espo\Core\AclManager;
 use Espo\Core\ORM\Entity as CoreEntity;
+use Espo\Modules\Global\Tools\Tenant\TenantAdminScope;
+use Espo\Modules\Global\Tools\Tenant\TenantVisibility;
+use Espo\ORM\EntityManager;
 
 /**
  * Custom ACL Access Checker for User.
  *
  * Allows regular users to create/edit/delete other users within their own teams.
  * Admins retain full access. Super admin and system user protections are preserved.
+ *
+ * Editing or deleting another user also requires covering them (see
+ * TenantVisibility): a tenant admin who shares one team with a member of
+ * several workspaces must not deactivate, delete or re-address that account,
+ * since the change applies in every workspace. Re-addressing is a takeover:
+ * the email is the login and password recovery mails it.
+ *
+ * Deleting also requires administering every workspace of the target: plain
+ * members may edit colleagues but not remove them (or the owner).
  *
  * @implements AccessEntityCREDSChecker<User>
  */
@@ -38,7 +50,26 @@ class AccessChecker implements AccessEntityCREDSChecker
     public function __construct(
         private DefaultAccessChecker $defaultAccessChecker,
         private AclManager $aclManager,
+        private EntityManager $entityManager,
     ) {}
+
+    private function coversUser(User $user, Entity $entity): bool
+    {
+        return $entity instanceof User && $this->tenantVisibility()->covers($user, $entity);
+    }
+
+    /**
+     * Fresh per check: access checkers are cached for the process lifetime.
+     */
+    protected function tenantVisibility(): TenantVisibility
+    {
+        return TenantVisibility::create($this->entityManager);
+    }
+
+    protected function tenantAdminScope(): TenantAdminScope
+    {
+        return TenantAdminScope::create($this->entityManager);
+    }
 
     /**
      * Check if the current user shares at least one team with the target user entity.
@@ -150,7 +181,7 @@ class AccessChecker implements AccessEntityCREDSChecker
             return false;
         }
 
-        return $this->sharesTeamWithUser($user, $entity);
+        return $this->sharesTeamWithUser($user, $entity) && $this->coversUser($user, $entity);
     }
 
     /**
@@ -190,7 +221,10 @@ class AccessChecker implements AccessEntityCREDSChecker
             return false;
         }
 
-        return $this->sharesTeamWithUser($user, $entity);
+        return $this->sharesTeamWithUser($user, $entity) &&
+            $this->coversUser($user, $entity) &&
+            $entity instanceof User &&
+            $this->tenantAdminScope()->administers($user, $entity);
     }
 
     /**

@@ -41,6 +41,19 @@ class SocialSignIn
         SocialIdentity::MICROSOFT => 'microsoft-365',
     ];
 
+    /**
+     * The ID token is trusted without a signature check because it comes over
+     * TLS straight from the provider's token endpoint. That only holds for the
+     * real endpoint, so the host is pinned.
+     */
+    private const TOKEN_HOSTS = [
+        SocialIdentity::GOOGLE => 'oauth2.googleapis.com',
+        SocialIdentity::MICROSOFT => 'login.microsoftonline.com',
+    ];
+
+    /** Extra exact token URLs (tests' fake provider). Server config only. */
+    public const TRUSTED_TOKEN_ENDPOINTS_CONFIG = 'selfServiceTrustedSocialTokenEndpoints';
+
     private const STATE_TTL_SECONDS = 600;
     private const IDENTITY_TTL_SECONDS = 1800;
 
@@ -213,6 +226,18 @@ class SocialSignIn
     {
         $record = $this->findProvider($provider) ?? throw new SignupRejected(SignupRejected::SOCIAL_UNAVAILABLE);
 
+        $extra = $this->config->get(self::TRUSTED_TOKEN_ENDPOINTS_CONFIG);
+
+        if (!self::isTrustedTokenEndpoint(
+            $provider,
+            (string) $record->get('tokenEndpoint'),
+            is_array($extra) ? array_values(array_filter($extra, 'is_string')) : [],
+        )) {
+            $this->log->error("SelfService: {$provider} sign-in provider has an untrusted token endpoint.");
+
+            throw new SignupRejected(SignupRejected::SOCIAL_UNAVAILABLE);
+        }
+
         try {
             $secret = $this->crypt->decrypt((string) $record->get('clientSecret'));
         } catch (Throwable) {
@@ -227,6 +252,31 @@ class SocialSignIn
         ];
     }
 
+    /**
+     * @param list<string> $extraUrls
+     */
+    public static function isTrustedTokenEndpoint(string $provider, string $url, array $extraUrls = []): bool
+    {
+        if ($url !== '' && in_array($url, $extraUrls, true)) {
+            return true;
+        }
+
+        $host = self::TOKEN_HOSTS[$provider] ?? null;
+        $parts = parse_url($url);
+
+        return $host !== null &&
+            is_array($parts) &&
+            ($parts['scheme'] ?? null) === 'https' &&
+            strtolower((string) ($parts['host'] ?? '')) === $host &&
+            !isset($parts['port']) &&
+            !isset($parts['user']);
+    }
+
+    /**
+     * Only an admin can mark a provider globally shared. Tenant roles may
+     * create OAuthProvider rows for their own integrations; one of those must
+     * never become the sign-in app for the whole instance.
+     */
     private function findProvider(string $provider): ?\Espo\ORM\Entity
     {
         $type = self::PROVIDER_TYPES[$provider] ?? null;
@@ -240,6 +290,7 @@ class SocialSignIn
             ->where([
                 'provider' => $type,
                 'isActive' => true,
+                'isGloballyShared' => true,
                 'AND' => [
                     ['clientId!=' => null], ['clientId!=' => ''],
                     ['clientSecret!=' => null], ['clientSecret!=' => ''],
@@ -250,12 +301,17 @@ class SocialSignIn
             ->findOne();
     }
 
+    /**
+     * By login only. `emailAddress` filters match secondary addresses too,
+     * which would let whoever added an address to an account sign in to it.
+     * EmailIdentity keeps userName equal to the primary address.
+     */
     private function findUser(string $email): ?User
     {
         /** @var ?User */
         return $this->entityManager
             ->getRDBRepository(User::ENTITY_TYPE)
-            ->where(['OR' => [['userName' => $email], ['emailAddress' => $email]]])
+            ->where(['userName' => strtolower(trim($email))])
             ->findOne();
     }
 

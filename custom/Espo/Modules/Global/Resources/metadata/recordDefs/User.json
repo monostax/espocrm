@@ -13,7 +13,12 @@
     ],
     "listLoaderClassNameList": [
         "__APPEND__",
-        "Espo\\Modules\\Global\\Classes\\FieldProcessing\\User\\RoleNameLoader"
+        "Espo\\Modules\\Global\\Classes\\FieldProcessing\\User\\RoleNameLoader",
+        "Espo\\Modules\\Global\\Classes\\FieldProcessing\\User\\TenantTeamsListLoader"
+    ],
+    "outputFilterClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\Global\\Classes\\Record\\User\\TenantTeamsOutputFilter"
     ],
     "beforeCreateHookClassNameList": [
         "__APPEND__",

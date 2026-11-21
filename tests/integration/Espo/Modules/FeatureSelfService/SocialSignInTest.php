@@ -6,6 +6,7 @@ namespace tests\integration\Espo\Modules\FeatureSelfService;
 
 use Espo\Core\Application;
 use Espo\Core\Application\ApplicationParams;
+use Espo\Core\Utils\Config\ConfigWriter;
 use Espo\Core\Utils\Crypt;
 use Espo\Entities\User;
 use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
@@ -61,8 +62,14 @@ class SocialSignInTest extends TestCase
             'clientSecret' => $this->app->getInjectableFactory()->create(Crypt::class)->encrypt('test-secret'),
             'authorizationEndpoint' => 'https://accounts.google.com/o/oauth2/v2/auth',
             'tokenEndpoint' => rtrim($this->fake, '/') . '/oauth/token',
+            'isGloballyShared' => true,
         ]);
         $this->em->saveEntity($google, ['skipHooks' => true]);
+
+        // Sign-in only trusts Google's real token host; allow the fake one here.
+        $writer = $this->app->getInjectableFactory()->create(ConfigWriter::class);
+        $writer->set(SocialSignIn::TRUSTED_TOKEN_ENDPOINTS_CONFIG, [rtrim($this->fake, '/') . '/oauth/token']);
+        $writer->save();
     }
 
     public function testANewGoogleUserCreatesTheWorkspaceWithoutAnEmailCode(): void

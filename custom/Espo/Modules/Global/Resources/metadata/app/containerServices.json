@@ -1,0 +1,5 @@
+{
+    "aclManager": {
+        "loaderClassName": "Espo\\Modules\\Global\\Tools\\Tenant\\TenantAclLoader"
+    }
+}

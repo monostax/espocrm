@@ -1,5 +1,5 @@
 {
-    "readLoaderClassNameList": [
+    "listLoaderClassNameList": [
         "Espo\\Modules\\Global\\Classes\\FieldProcessing\\Common\\GlobalSharingTeamsFilterLoader"
     ]
 }

@@ -13,6 +13,7 @@ namespace Espo\Modules\Global\Classes\FieldProcessing\Common;
 
 use Espo\Core\FieldProcessing\Loader;
 use Espo\Core\FieldProcessing\Loader\Params;
+use Espo\Core\Record\Output\Filter;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
@@ -23,10 +24,16 @@ use stdClass;
  * output to only include teams the current user belongs to.
  * Prevents globally-shared entities from leaking team names.
  *
+ * Registered as an output filter (read, list, related and save responses)
+ * and a list loader (export and reports skip output filters). Never as a read
+ * loader: Record\Service::update() runs read loaders on the entity it saves,
+ * so a filtered `teamsIds` there would unlink every team the editor is not in.
+ *
  * @implements Loader<Entity>
+ * @implements Filter<Entity>
  * @noinspection PhpUnused
  */
-class GlobalSharingTeamsFilterLoader implements Loader
+class GlobalSharingTeamsFilterLoader implements Loader, Filter
 {
     public function __construct(
         private User $user,
@@ -34,6 +41,11 @@ class GlobalSharingTeamsFilterLoader implements Loader
     ) {}
 
     public function process(Entity $entity, Params $params): void
+    {
+        $this->filter($entity);
+    }
+
+    public function filter(Entity $entity): void
     {
         if ($this->user->isAdmin()) {
             return;

@@ -8,6 +8,7 @@ use Espo\Core\ApplicationState;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Entities\User;
 use Espo\Modules\Global\Classes\Utils\TenantRoleAuth;
+use Espo\Modules\Global\Tools\Tenant\TenantVisibility;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\EntityManager;
 
@@ -61,6 +62,16 @@ class RunAsUserAccess
             );
         }
 
+        // Same escalation for a member of several workspaces (Monostax staff):
+        // their identity reads every workspace they belong to through any
+        // Journey/Automation filter, not only this one.
+        if ($actor->getId() !== $runAsUserId && !$this->tenantVisibility()->covers($actor, $target)) {
+            throw new Forbidden(
+                'runAsUser also works in other workspaces (tenants). Only an instance '
+                . 'administrator can delegate an automation to them.'
+            );
+        }
+
         if ($this->hasStrictTenantAdminRole($actor)) {
             if ($entityTenantId !== null && $entityTenantId !== '') {
                 if (!$this->userBelongsToTenant($runAsUserId, $entityTenantId)) {
@@ -80,6 +91,11 @@ class RunAsUserAccess
         if ($actor->getId() !== $runAsUserId) {
             throw new Forbidden('You may only set runAsUser to yourself.');
         }
+    }
+
+    protected function tenantVisibility(): TenantVisibility
+    {
+        return TenantVisibility::create($this->entityManager);
     }
 
     public function isEligibleRunAsUser(User $user): bool

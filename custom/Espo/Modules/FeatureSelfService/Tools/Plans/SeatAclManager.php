@@ -6,10 +6,11 @@ namespace Espo\Modules\FeatureSelfService\Tools\Plans;
 
 use Espo\Core\Acl\Table;
 use Espo\Entities\User;
+use Espo\Modules\Global\Tools\Tenant\TenantAclManager;
 use Espo\ORM\Entity;
 use Espo\ORM\Query\SelectBuilder;
 
-class SeatAclManager extends \Espo\Core\AclManager
+class SeatAclManager extends TenantAclManager
 {
     public function checkEntity(User $user, Entity $entity, string $action = Table::ACTION_READ): bool
     {

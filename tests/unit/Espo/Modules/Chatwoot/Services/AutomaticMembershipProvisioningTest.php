@@ -29,6 +29,9 @@ class AutomaticMembershipProvisioningTest extends TestCase
     private ChatwootAccountUserMembershipService $memberships;
     private TransactionManager $tm;
 
+    /** @var list<Entity> ChatwootAccounts the user reaches through their teams */
+    private array $reachableAccounts = [];
+
     private function entity(string $type, array $values): Entity
     {
         $attributes = [];
@@ -93,6 +96,7 @@ class AutomaticMembershipProvisioningTest extends TestCase
         $this->em->method('getRDBRepository')->willReturnMap([
             ['User', $users], ['ChatwootUser', $identityRepository],
             ['ChatwootAccountUserMembership', $membershipRepository],
+            ['ChatwootAccount', $this->reachableAccountRepository()],
         ]);
         $this->em->method('createEntity')->willReturnCallback(function ($type, $values, $options) {
             $this->assertSame('ChatwootUser', $type);
@@ -102,6 +106,50 @@ class AutomaticMembershipProvisioningTest extends TestCase
             $this->assertArrayNotHasKey('skipHooks', $options, 'Email and team savers must run.');
             return $this->identity = $this->entity($type, ['id' => 'identity'] + $values);
         });
+    }
+
+    private function reachableAccountRepository(): RDBRepository
+    {
+        $builder = $this->createMock(RDBSelectBuilder::class);
+        $builder->method('join')->willReturnSelf();
+        $builder->method('where')->willReturnSelf();
+        $builder->method('distinct')->willReturnSelf();
+        $builder->method('find')->willReturnCallback(fn () => new EntityCollection($this->reachableAccounts));
+
+        $repository = $this->createMock(RDBRepository::class);
+        $repository->method('select')->willReturn($builder);
+
+        return $repository;
+    }
+
+    /**
+     * A tenant admin can create a CRM user with the email of a Chatwoot user
+     * no CRM identity owns yet. Linking it would hand over, through Chatwoot
+     * SSO, every other account that person is in.
+     */
+    public function testRefusesToAdoptARemoteUserFromAnotherTenantsAccount(): void
+    {
+        $this->api->expects($this->once())->method('createUser')->willReturn(['id' => 93, 'existing' => true]);
+        $this->api->method('getUser')->willReturn(['id' => 93, 'accounts' => [['id' => 9], ['id' => 77]]]);
+        $this->api->expects($this->never())->method('fetchUserAccessToken');
+        $this->api->expects($this->never())->method('attachUserToAccount');
+
+        $this->expectException(\Espo\Core\Exceptions\Conflict::class);
+
+        $this->service()->ensureUserMembership($this->account, $this->user, null);
+    }
+
+    public function testAdoptsARemoteUserWhoseOtherAccountsTheUserAlreadyReaches(): void
+    {
+        $this->reachableAccounts = [$this->entity('ChatwootAccount', ['id' => 'other', 'chatwootAccountId' => 77])];
+        $this->api->expects($this->once())->method('createUser')->willReturn(['id' => 93, 'existing' => true]);
+        $this->api->method('getUser')->willReturn(['id' => 93, 'accounts' => [['id' => 77]]]);
+        $this->api->expects($this->once())->method('fetchUserAccessToken')->willReturn('user-token');
+        $this->expectMembershipCreate();
+
+        $this->service()->ensureUserMembership($this->account, $this->user, null);
+
+        $this->assertSame('user-token', $this->identity->get('userAccessToken'));
     }
 
     private function service(): ChatwootAccountMembershipOrchestrator

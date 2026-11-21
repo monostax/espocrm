@@ -6,6 +6,7 @@ namespace Espo\Modules\FeatureSelfService\Tools\Plans;
 
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Modules\Global\Hooks\User\ProtectAccountChange;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Utils\Log;
 use Espo\Entities\User;
@@ -152,7 +153,8 @@ class SeatAccess
 
     private function revoke(Entity $tenant, User $user, array $snapshot): void
     {
-        $options = [self::SAVE_OPTION => true];
+        // change() asserted the actor administers this workspace.
+        $options = [self::SAVE_OPTION => true, ProtectAccountChange::WORKSPACE_ADMIN_VERIFIED => true];
         $relation = $this->entityManager->getRDBRepository('Tenant')->getRelation($tenant, 'users');
         if ($snapshot['tenantRelated']) $relation->unrelateById($user->getId(), $options);
         $teams = $this->entityManager->getRDBRepository('User')->getRelation($user, 'teams');
@@ -165,7 +167,8 @@ class SeatAccess
 
     private function restore(Entity $tenant, User $user, array $snapshot): void
     {
-        $options = [self::SAVE_OPTION => true];
+        // change() asserted the actor administers this workspace.
+        $options = [self::SAVE_OPTION => true, ProtectAccountChange::WORKSPACE_ADMIN_VERIFIED => true];
         if ($snapshot['tenantRelated'] ?? false) {
             $this->entityManager->getRDBRepository('Tenant')->getRelation($tenant, 'users')->relateById($user->getId(), null, $options);
         }

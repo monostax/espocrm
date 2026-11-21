@@ -69,6 +69,12 @@ class Binding implements BindingProcessor
             \Espo\Tools\Import\Import::class,
             \Espo\Modules\Global\Tools\Import\Import::class
         );
+
+        // Audited team changes on a multi-workspace user name other tenants.
+        $binder->bindImplementation(
+            \Espo\Tools\Stream\NoteAccessControl::class,
+            \Espo\Modules\Global\Tools\Stream\TenantNoteAccessControl::class
+        );
     }
 }
 
