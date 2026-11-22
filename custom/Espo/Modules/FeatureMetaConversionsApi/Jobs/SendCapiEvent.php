@@ -8,6 +8,7 @@ use Espo\Core\Job\Job;
 use Espo\Core\Job\Job\Data;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureMetaConversionsApi\Entities\MetaCapiDataset;
+use Espo\Modules\FeatureMetaConversionsApi\Entities\MetaCapiEventLog;
 use Espo\Modules\FeatureMetaConversionsApi\Services\CapiDispatcher;
 use Espo\ORM\EntityManager;
 
@@ -61,6 +62,14 @@ class SendCapiEvent implements Job
             return;
         }
 
+        // A deal's stage events go out once each (2026-11-22): a reopened deal that enters the stage again, or leaves
+        // it again, sends nothing new. Jobs for one deal run in its own group, one at a time, so the check is not raced.
+        if ($entityType === 'Opportunity' && is_array($context) && array_key_exists('opportunityStageToId', $context)
+            && $this->alreadySent($entityId, $eventName)) {
+            $this->log->info(sprintf('SendCapiEvent: %s already sent for Opportunity %s; skipping.', $eventName, $entityId));
+            return;
+        }
+
         $dataset = null;
 
         if (is_string($datasetId) && $datasetId !== '') {
@@ -81,5 +90,18 @@ class SendCapiEvent implements Job
             $dataset,
             is_array($context) ? $context : [],
         );
+    }
+
+    private function alreadySent(string $opportunityId, string $eventName): bool
+    {
+        return (bool) $this->entityManager->getRDBRepository(MetaCapiEventLog::ENTITY_TYPE)
+            ->select(['id'])
+            ->where([
+                'opportunityId' => $opportunityId,
+                'eventName' => $eventName,
+                'status' => MetaCapiEventLog::STATUS_SENT,
+                'deleted' => false,
+            ])
+            ->findOne();
     }
 }

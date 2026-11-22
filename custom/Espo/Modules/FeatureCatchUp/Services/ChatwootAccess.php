@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureCatchUp\Services;
 
 use Espo\Core\Acl;
+use Espo\Core\AclManager;
 use Espo\Core\Utils\Log;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
@@ -37,7 +38,20 @@ class ChatwootAccess
         private User $user,
         private ChatwootApiClient $api,
         private Log $log,
+        private ?AclManager $aclManager = null,
     ) {}
+
+    /**
+     * The same question for another user, with that user's CRM ACL and Chatwoot user: whether someone a deal is about
+     * to be handed to can open its conversations. Fails closed like the reader's own checks.
+     */
+    public function forUser(User $user): self
+    {
+        if (!$this->aclManager) {
+            throw new \LogicException('ChatwootAccess::forUser needs the ACL manager.');
+        }
+        return new self($this->em, new Acl($this->aclManager, $user), $user, $this->api, $this->log, $this->aclManager);
+    }
 
     /**
      * @param array<string, Entity> $conversations CRM ChatwootConversation entities keyed by id

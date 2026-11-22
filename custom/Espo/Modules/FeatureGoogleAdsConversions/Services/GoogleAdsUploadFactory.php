@@ -34,7 +34,8 @@ class GoogleAdsUploadFactory
     ) {}
 
     /**
-     * Returns null when this exact stage-entry was already materialized.
+     * Returns null when this exact stage-entry was already materialized, or when the deal already sent this mapping's
+     * conversion.
      */
     public function createForOpportunity(
         Opportunity $opportunity,
@@ -44,6 +45,11 @@ class GoogleAdsUploadFactory
         DateTimeImmutable $eventTime,
         bool $validateOnly = false,
     ): ?GoogleAdsConversionUpload {
+        // Each mapping's conversion goes out once per deal (2026-11-22): reopening a deal and moving it into the
+        // mapped stage again sends nothing new. An upload that failed for good or was skipped does not count.
+        if (!$validateOnly && $this->alreadyUploaded($opportunity->getId(), $mapping->getId())) {
+            return null;
+        }
         $destination = $this->assertConfiguration($opportunity, $mapping, $stageToId);
         $tenantId = (string) $opportunity->get('tenantId');
         $idempotencyKey = hash('sha256', implode('|', [
@@ -331,6 +337,24 @@ class GoogleAdsUploadFactory
         ksort($clickIds);
 
         return hash('sha256', json_encode([$clickIds, $userData]) ?: '');
+    }
+
+    private function alreadyUploaded(string $opportunityId, string $mappingId): bool
+    {
+        return (bool) $this->entityManager
+            ->getRDBRepository(GoogleAdsConversionUpload::ENTITY_TYPE)
+            ->select(['id'])
+            ->where([
+                'opportunityId' => $opportunityId,
+                'mappingId' => $mappingId,
+                'validateOnly' => false,
+                'status!=' => [
+                    GoogleAdsConversionUpload::STATUS_FAILED_PERMANENT,
+                    GoogleAdsConversionUpload::STATUS_SKIPPED,
+                ],
+                'deleted' => false,
+            ])
+            ->findOne();
     }
 
     private function findByIdempotencyKey(string $key): ?GoogleAdsConversionUpload

@@ -220,6 +220,12 @@
             "tooltip": true,
             "entity": "ChatwootAccountUserMembership"
         },
+        "followupByWatcher": {
+            "type": "bool",
+            "default": false,
+            "readOnly": true,
+            "tooltip": true
+        },
         "stageProbability": {
             "type": "foreign",
             "link": "opportunityStage",

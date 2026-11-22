@@ -117,14 +117,28 @@ class TrackStageChange implements AfterSave
             return;
         }
 
-        if ($newStatus === 'Won') {
+        // A deal is won or lost once (2026-11-22): a reopened deal closed again records no second outcome.
+        if ($newStatus === 'Won' && !$this->recorded(self::CODE_WON, $entity->getId())) {
             $this->recorder->record($tenantId, self::CODE_WON, $base + [
                 'value' => $entity->get('amount'),
                 'currency' => $entity->get('amountCurrency'),
             ]);
-        } elseif ($newStatus === 'Lost') {
+        } elseif ($newStatus === 'Lost' && !$this->recorded(self::CODE_LOST, $entity->getId())) {
             $this->recorder->record($tenantId, self::CODE_LOST, $base);
         }
+    }
+
+    private function recorded(string $code, string $opportunityId): bool
+    {
+        return (bool) $this->entityManager->getRDBRepository('TrackingEvent')
+            ->select(['id'])
+            ->where([
+                'code' => $code,
+                'parentType' => Opportunity::ENTITY_TYPE,
+                'parentId' => $opportunityId,
+                'deleted' => false,
+            ])
+            ->findOne();
     }
 
     /**

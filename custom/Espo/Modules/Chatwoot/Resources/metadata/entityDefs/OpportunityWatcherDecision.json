@@ -5,11 +5,14 @@
         "conversationId": {"type": "int", "readOnly": true},
         "outcome": {
             "type": "enum",
-            "options": ["none", "vetoed", "noCredits", "moved", "blocked", "stale", "reverted", "off"],
+            "options": ["none", "vetoed", "noCredits", "moved", "blocked", "stale", "reverted", "off", "act", "applied", "refused", "blocked_by_person_step"],
             "readOnly": true
         },
         "fromStageId": {"type": "varchar", "maxLength": 24, "readOnly": true},
         "toStageId": {"type": "varchar", "maxLength": 24, "readOnly": true},
+        "stageOutcome": {"type": "varchar", "maxLength": 32, "readOnly": true},
+        "assignedUserId": {"type": "varchar", "maxLength": 24, "readOnly": true},
+        "actions": {"type": "jsonArray", "readOnly": true},
         "probability": {"type": "float", "readOnly": true},
         "model": {"type": "varchar", "maxLength": 100, "readOnly": true},
         "reason": {"type": "text", "readOnly": true},
@@ -23,6 +26,7 @@
     "indexes": {
         "opportunityCreated": {"columns": ["opportunityId", "createdAt", "deleted"]},
         "opportunityStageOutcome": {"columns": ["opportunityId", "toStageId", "outcome", "deleted"]},
+        "opportunityAssignee": {"columns": ["opportunityId", "assignedUserId", "deleted"]},
         "run": {"columns": ["runId", "opportunityId"], "unique": true}
     },
     "collection": {"orderBy": "createdAt", "order": "desc"}

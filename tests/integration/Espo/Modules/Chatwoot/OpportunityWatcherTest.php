@@ -4,125 +4,26 @@ declare(strict_types=1);
 
 namespace tests\integration\Espo\Modules\Chatwoot;
 
+require_once __DIR__ . '/OpportunityWatcherTestCase.php';
+
 use Espo\Core\Application;
 use Espo\Core\Application\ApplicationParams;
+use DateTimeImmutable;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\Job\Job\Data;
 use Espo\Core\Utils\Database\Schema\SchemaManager;
 use Espo\Entities\User;
 use Espo\Core\Utils\Config\ConfigWriter;
 use Espo\Modules\Chatwoot\Rebuild\StartOpportunityWatcher;
 use Espo\Modules\Chatwoot\Services\OpportunityWatcher;
+use Espo\Modules\FeatureGoogleAdsConversions\Services\GoogleAdsUploadFactory;
+use Espo\Modules\FeatureMetaConversionsApi\Jobs\SendCapiEvent;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
-use PHPUnit\Framework\TestCase;
 
 /** Uses a disposable installed database (data/config.php), real ACL, Opportunity and Note hooks, and transactions. */
-class OpportunityWatcherTest extends TestCase
+class OpportunityWatcherTest extends OpportunityWatcherTestCase
 {
-    private static bool $schemaReady = false;
-    private Application $app;
-    private EntityManager $em;
-    private Entity $tenant;
-    private Entity $team;
-    private Entity $role;
-    private User $ai;
-    private Entity $funnel;
-    /** @var array<string, Entity> */
-    private array $stages = [];
-
-    protected function setUp(): void
-    {
-        if (getenv('ESPO_WATCHER_TEST') !== '1') {
-            self::markTestSkipped('Set ESPO_WATCHER_TEST=1 only with a disposable data/config.php database.');
-        }
-        $this->app = new Application(new ApplicationParams(noErrorHandler: true));
-        if (!self::$schemaReady) {
-            $this->app->getInjectableFactory()->create(SchemaManager::class)->rebuild();
-            self::$schemaReady = true;
-        }
-        $this->em = $this->app->getContainer()->getByClass(EntityManager::class);
-        if (!$this->em->getRDBRepository('User')->where(['userName' => 'system'])->findOne()) {
-            $this->create('User', ['userName' => 'system', 'type' => 'system', 'isActive' => true]);
-        }
-        $this->app->setupSystemUser();
-        $this->team = $this->create('Team', ['name' => 'Watcher test']);
-        $this->tenant = $this->create('Tenant', ['name' => 'Watcher test', 'baseUserTeamId' => $this->team->getId()]);
-        $this->role = $this->create('Role', ['name' => 'Watcher test', 'data' => (object) [
-            'Opportunity' => (object) ['read' => 'all', 'stream' => 'all', 'create' => 'yes', 'edit' => 'all', 'delete' => 'no'],
-            'OpportunityStage' => (object) ['read' => 'all'],
-            'Funnel' => (object) ['read' => 'all'],
-            'Note' => (object) ['read' => 'all', 'create' => 'yes', 'edit' => 'own', 'delete' => 'own'],
-            'User' => (object) ['read' => 'all'],
-            'Team' => (object) ['read' => 'all'],
-        ]]);
-        $this->ai = $this->user($this->team);
-        $this->funnel = $this->create('Funnel', ['name' => 'Orçamentos', 'tenantId' => $this->tenant->getId(), 'isActive' => true]);
-        foreach ([['lead', 'Novo lead', 10, 10], ['proposal', 'Proposta enviada', 20, 50], ['won', 'Ganho', 30, 100], ['lost', 'Perdido', 40, 0]]
-            as [$key, $name, $order, $probability]) {
-            $this->stages[$key] = $this->create('OpportunityStage', [
-                'name' => $name, 'order' => $order, 'probability' => $probability, 'funnelId' => $this->funnel->getId(), 'isActive' => true,
-            ]);
-        }
-    }
-
-    private function create(string $type, array $data): Entity
-    {
-        return $this->em->createEntity($type, $data, ['skipHooks' => true]);
-    }
-
-    private function user(Entity $team): User
-    {
-        $user = $this->create('User', [
-            'userName' => 'watcher-' . bin2hex(random_bytes(6)), 'type' => 'regular', 'isActive' => true,
-        ]);
-        $this->em->getRDBRepository('User')->getRelation($user, 'teams')->relate($team);
-        $this->em->getRDBRepository('User')->getRelation($user, 'roles')->relate($this->role);
-        return $this->em->getEntityById('User', $user->getId());
-    }
-
-    private function service(?User $actor = null): OpportunityWatcher
-    {
-        $actor = $this->em->getEntityById('User', ($actor ?? $this->ai)->getId());
-        return (new Application(new ApplicationParams(noErrorHandler: true, services: ['user' => $actor])))
-            ->getInjectableFactory()->create(OpportunityWatcher::class);
-    }
-
-    private function deal(string $stage = 'lead', array $extra = []): Entity
-    {
-        // Created through the hooks, as the product creates deals: status and stage timing start out consistent.
-        $app = new Application(new ApplicationParams(noErrorHandler: true, services: ['user' => $this->em->getEntityById('User', $this->ai->getId())]));
-        $deal = $app->getContainer()->getByClass(EntityManager::class)->createEntity('Opportunity', [
-            'name' => 'Ressonância - Maria', 'tenantId' => $this->tenant->getId(), 'assignedUserId' => $this->ai->getId(),
-            'teamsIds' => [$this->team->getId()], 'funnelId' => $this->funnel->getId(),
-            'opportunityStageId' => $this->stages[$stage]->getId(), 'amount' => 350, 'closeDate' => date('Y-m-d'),
-        ] + $extra);
-        return $this->em->getEntityById('Opportunity', $deal->getId());
-    }
-
-    private function body(string $outcome, string $from, ?string $to, array $extra = []): object
-    {
-        return (object) array_merge([
-            'outcome' => $outcome, 'runId' => 'run-' . bin2hex(random_bytes(8)), 'model' => 'nace-ai/drex-max-20261016',
-            'conversationId' => 77, 'expectedStageId' => $this->stages[$from]->getId(),
-            'toStageId' => $to ? $this->stages[$to]->getId() : null,
-            'reason' => 'A cliente confirmou o horário e enviou o comprovante do Pix às 14:07.', 'probability' => 0.97,
-            'messageWindow' => (object) ['from' => '2026-11-17T17:02:00.000Z', 'to' => '2026-11-17T17:10:00.000Z'],
-            'details' => (object) ['mode' => 'write'],
-        ], $extra);
-    }
-
-    private function notes(string $id, string $type): array
-    {
-        return iterator_to_array($this->em->getRDBRepository('Note')
-            ->where(['parentType' => 'Opportunity', 'parentId' => $id, 'type' => $type])->order('number')->find());
-    }
-
-    private function decisions(string $id): array
-    {
-        return array_map(fn ($row) => $row->get('outcome'), iterator_to_array(
-            $this->em->getRDBRepository('OpportunityWatcherDecision')->where(['opportunityId' => $id])->order('createdAt')->find()));
-    }
-
     public function testNewDealsAreWatchedByDefault(): void
     {
         self::assertTrue($this->deal()->get('aiWatchEnabled'));
@@ -198,24 +99,118 @@ class OpportunityWatcherTest extends TestCase
         self::assertSame(['off'], $this->decisions($deal->getId()));
     }
 
-    public function testOnlyForwardMovesFromTheExpectedOpenStageAreApplied(): void
+    public function testMovesGoToAnyOtherActiveStageOfTheFunnelFromTheExpectedStage(): void
     {
         $deal = $this->deal('proposal');
         $id = $deal->getId();
         // The deal is no longer where the decision saw it.
         self::assertSame('stale', $this->service()->decide($id, $this->body('move', 'lead', 'proposal'))->outcome);
-        // Never backwards.
-        self::assertSame('stale', $this->service()->decide($id, $this->body('move', 'proposal', 'lead'))->outcome);
-        // A stage of another funnel.
+        // Its own stage is no move.
+        self::assertSame('stale', $this->service()->decide($id, $this->body('move', 'proposal', 'proposal'))->outcome);
+        // A stage of another funnel, or a switched-off stage.
         $other = $this->create('Funnel', ['name' => 'Outro', 'tenantId' => $this->tenant->getId(), 'isActive' => true]);
         $foreign = $this->create('OpportunityStage', ['name' => 'X', 'order' => 90, 'probability' => 100, 'funnelId' => $other->getId(), 'isActive' => true]);
         self::assertSame('stale', $this->service()->decide($id, $this->body('move', 'proposal', null, ['toStageId' => $foreign->getId()]))->outcome);
+        $retired = $this->create('OpportunityStage', ['name' => 'Antigo', 'order' => 5, 'probability' => 5, 'funnelId' => $this->funnel->getId(), 'isActive' => false]);
+        self::assertSame('stale', $this->service()->decide($id, $this->body('move', 'proposal', null, ['toStageId' => $retired->getId()]))->outcome);
         self::assertSame($this->stages['proposal']->getId(), $this->em->getEntityById('Opportunity', $id)->get('opportunityStageId'));
 
-        // Lost closes it; a closed deal is never moved again.
+        // Backwards is a move like any other.
+        self::assertSame('moved', $this->service()->decide($id, $this->body('move', 'proposal', 'lead'))->outcome);
+        self::assertSame($this->stages['lead']->getId(), $this->em->getEntityById('Opportunity', $id)->get('opportunityStageId'));
+    }
+
+    public function testAClosedDealCanBeReopenedOrSwitchedBetweenWonAndLost(): void
+    {
+        $deal = $this->deal('proposal');
+        $id = $deal->getId();
         self::assertSame('moved', $this->service()->decide($id, $this->body('move', 'proposal', 'lost'))->outcome);
         self::assertSame('Lost', $this->em->getEntityById('Opportunity', $id)->get('status'));
-        self::assertSame('stale', $this->service()->decide($id, $this->body('move', 'lost', 'won'))->outcome);
+
+        // Lost to Won: the deal was closed the wrong way.
+        $result = $this->service()->decide($id, $this->body('move', 'lost', 'won'));
+        self::assertSame('moved', $result->outcome);
+        self::assertSame('Won', $result->status);
+
+        // Won back to an open stage reopens it: the status follows the stage and the close date is cleared.
+        $result = $this->service()->decide($id, $this->body('move', 'won', 'proposal'));
+        self::assertSame('moved', $result->outcome);
+        self::assertSame('Open', $result->status);
+        $reopened = $this->em->getEntityById('Opportunity', $id);
+        self::assertSame($this->stages['proposal']->getId(), $reopened->get('opportunityStageId'));
+        self::assertNull($reopened->get('closeDate'));
+
+        $posts = array_values(array_filter($this->notes($id, 'Post'), fn ($note) => $note->get('data')->opportunityWatcher ?? null));
+        $last = end($posts)->get('data')->opportunityWatcher;
+        self::assertSame('moved', $last->kind);
+        self::assertSame('Won', $last->fromStatus);
+        self::assertSame('Open', $last->toStatus);
+        self::assertSame(['moved', 'moved', 'moved'], $this->decisions($id));
+    }
+
+    public function testTheWatcherMayReturnToAStageItLeftItself(): void
+    {
+        $deal = $this->deal('lead');
+        $id = $deal->getId();
+        self::assertSame('moved', $this->service()->decide($id, $this->body('move', 'lead', 'proposal'))->outcome);
+        sleep(1); // createdAt has second precision: the move out must come after the move in.
+        self::assertSame('moved', $this->service()->decide($id, $this->body('move', 'proposal', 'lead'))->outcome);
+        self::assertSame('moved', $this->service()->decide($id, $this->body('move', 'lead', 'proposal'))->outcome);
+        self::assertSame($this->stages['proposal']->getId(), $this->em->getEntityById('Opportunity', $id)->get('opportunityStageId'));
+    }
+
+    public function testAReopenedDealRecordsItsWinOnlyOnce(): void
+    {
+        $deal = $this->deal('proposal');
+        $id = $deal->getId();
+        $wins = fn () => $this->em->getRDBRepository('TrackingEvent')
+            ->where(['code' => 'opportunity_won', 'parentType' => 'Opportunity', 'parentId' => $id])->count();
+        self::assertSame('moved', $this->service()->decide($id, $this->body('move', 'proposal', 'won'))->outcome);
+        self::assertSame(1, $wins(), 'the first win is tracked');
+        self::assertSame('moved', $this->service()->decide($id, $this->body('move', 'won', 'proposal'))->outcome);
+        self::assertSame('moved', $this->service()->decide($id, $this->body('move', 'proposal', 'won'))->outcome);
+        self::assertSame(1, $wins());
+    }
+
+    public function testAMetaStageEventAlreadySentForTheDealIsNotSentAgain(): void
+    {
+        $deal = $this->deal('proposal');
+        $id = $deal->getId();
+        $this->create('MetaCapiEventLog', [
+            'name' => 'Purchase — Opportunity', 'eventName' => 'Purchase', 'status' => 'Sent',
+            'subjectType' => 'Opportunity', 'subjectId' => $id, 'opportunityId' => $id, 'tenantId' => $this->tenant->getId(),
+        ]);
+        $logs = fn (string $event) => $this->em->getRDBRepository('MetaCapiEventLog')->where(['opportunityId' => $id, 'eventName' => $event])->count();
+        $job = $this->app->getInjectableFactory()->create(SendCapiEvent::class);
+        $context = ['opportunityStageFromId' => $this->stages['proposal']->getId(), 'opportunityStageToId' => $this->stages['won']->getId()];
+
+        $job->run(Data::create(['entityType' => 'Opportunity', 'entityId' => $id, 'eventName' => 'Purchase', 'context' => $context]));
+        self::assertSame(1, $logs('Purchase'), 'nothing new for an event the deal already sent');
+        // Another event still goes through the dispatcher, which logs it (skipped here: no dataset is configured).
+        $job->run(Data::create(['entityType' => 'Opportunity', 'entityId' => $id, 'eventName' => 'Lead', 'context' => $context]));
+        self::assertSame(1, $logs('Lead'));
+    }
+
+    public function testAGoogleAdsConversionAlreadyUploadedForTheDealIsNotUploadedAgain(): void
+    {
+        $deal = $this->deal('proposal');
+        $mapping = $this->em->getEntityById('GoogleAdsConversionMapping', $this->create('GoogleAdsConversionMapping', [
+            'name' => 'Ganho', 'tenantId' => $this->tenant->getId(), 'funnelId' => $this->funnel->getId(),
+            'opportunityStageId' => $this->stages['won']->getId(),
+        ])->getId());
+        $upload = $this->create('GoogleAdsConversionUpload', [
+            'name' => 'Ganho', 'opportunityId' => $deal->getId(), 'mappingId' => $mapping->getId(), 'status' => 'Sent',
+            'validateOnly' => false, 'idempotencyKey' => bin2hex(random_bytes(16)), 'tenantId' => $this->tenant->getId(),
+        ]);
+        $factory = $this->app->getInjectableFactory()->create(GoogleAdsUploadFactory::class);
+        $deal = $this->em->getEntityById('Opportunity', $deal->getId());
+        self::assertNull($factory->createForOpportunity($deal, $mapping, $this->stages['proposal']->getId(), $this->stages['won']->getId(), new DateTimeImmutable()));
+
+        // An upload that failed for good does not count: the factory goes on (and stops here at the missing destination).
+        $upload->set('status', 'FailedPermanent');
+        $this->em->saveEntity($upload, ['skipHooks' => true]);
+        $this->expectExceptionMessage('Google Ads destination is missing.');
+        $factory->createForOpportunity($deal, $mapping, $this->stages['proposal']->getId(), $this->stages['won']->getId(), new DateTimeImmutable());
     }
 
     public function testDecisionsThatMoveNothingAreOnlyLogged(): void

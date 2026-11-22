@@ -48,6 +48,7 @@ class PostStageChange implements AfterSave
                     'toStageId' => $to->getId(),
                     'toStageName' => $to->get('name'),
                     'status' => $entity->get('status'),
+                    'fromStatus' => $entity->getFetched('status'),
                 ],
             ]);
         } catch (Throwable $e) {

@@ -7,27 +7,30 @@ namespace Espo\Modules\Global\Controllers;
 use Espo\Core\Acl;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
-use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Utils\Metadata;
 use Espo\Entities\User;
-use Espo\Modules\Global\Classes\NextAction\PendingActivity;
-use Espo\Modules\Global\Classes\NextAction\TenantActivities;
+use Espo\Modules\Global\Tools\NextAction\NextActionWriter;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use stdClass;
 
+/** The people's next-action picker. The rules live in NextActionWriter, which the opportunity watcher shares. */
 abstract class RecordNextAction
 {
+    private NextActionWriter $writer;
+
     public function __construct(
         protected EntityManager $entityManager,
         private Acl $acl,
         private User $user,
-        private ServiceContainer $records,
-        private Metadata $metadata,
-    ) {}
+        ServiceContainer $records,
+        Metadata $metadata,
+    ) {
+        $this->writer = new NextActionWriter($entityManager, $acl, $records, $metadata);
+    }
 
     abstract protected function entityType(): string;
 
@@ -51,33 +54,18 @@ abstract class RecordNextAction
                 if (!is_string($body->name ?? null) || trim($body->name) === '') {
                     throw new BadRequest('An actionable task name is required.');
                 }
-                // Use normal record creation for validation, assignments, ACL and activity hooks.
-                $created = $this->records->get('Task')->create((object) [
+                $activity = $this->writer->createTask($record, (object) [
                     'name' => trim($body->name),
-                    'status' => 'Planned',
-                    'parentType' => $record->getEntityType(),
-                    'parentId' => $record->getId(),
                     'assignedUserId' => $record->get('assignedUserId') ?: $this->user->getId(),
                     'teamsIds' => $this->taskTeamIds($record),
                     'dateEndDate' => $body->dateEndDate ?? null,
-                ])->getEntity();
-                $activity = $this->activity($record, 'Task', $created->getId());
-                $this->checkPending($activity);
+                ]);
             } elseif ($body->activityId ?? null) {
-                $activity = $this->activity($record, $body->activityType ?? null, $body->activityId, true);
-                $this->checkPending($activity);
-                if (!$this->belongsTo($activity, $record)) {
-                    // Unlinked or elsewhere in the workspace (e.g. a conversation's task):
-                    // the step moves to this record, since deal buckets follow the parent.
-                    $type = $activity->getEntityType();
-                    if (!$this->acl->checkEntityEdit($activity) || !$this->acl->checkField($type, 'parent', 'edit')) {
-                        throw new Forbidden();
-                    }
-                    $this->checkNotAnotherStep($activity);
-                    $this->records->get($type)->update($activity->getId(), (object) [
-                        'parentType' => $record->getEntityType(),
-                        'parentId' => $record->getId(),
-                    ]);
+                $activity = $this->writer->activity($record, $body->activityType ?? null, $body->activityId, true);
+                $this->writer->checkPending($activity);
+                if (!$this->writer->belongsTo($activity, $record)) {
+                    // Unlinked or elsewhere in the workspace (e.g. a conversation's task).
+                    $this->writer->moveHere($activity, $record);
                 }
             } else {
                 $activity = null;
@@ -92,19 +80,11 @@ abstract class RecordNextAction
         return $this->entityManager->getTransactionManager()->run(function () use ($request): object {
             $record = $this->record($request);
             $this->checkExpected($record, $request->getParsedBody());
-            $activity = $this->activity(
+            $activity = $this->writer->activity(
                 $record, $record->get('nextActionType'), $record->get('nextActionId'),
             );
-            $this->checkPending($activity);
-            $type = $activity->getEntityType();
-            if (!$this->acl->checkEntityEdit($activity) || !$this->acl->checkField($type, 'status', 'edit')) {
-                throw new Forbidden();
-            }
-            $status = $this->metadata->get(['scopes', $type, 'completedStatusList', 0]);
-            if (!$status) {
-                throw new BadRequest('Activity completion is not configured.');
-            }
-            $this->records->get($type)->update($activity->getId(), (object) ['status' => $status]);
+            $this->writer->checkPending($activity);
+            $this->writer->complete($activity);
 
             // Completion and clearing the reference either both succeed or both roll back.
             return $this->saveSelection($request, null);
@@ -131,66 +111,7 @@ abstract class RecordNextAction
         if (!property_exists($body, 'expectedId') || !property_exists($body, 'expectedType')) {
             throw new BadRequest('The displayed next-action reference is required.');
         }
-        if (($record->get('nextActionId') ?: null) !== $body->expectedId ||
-            ($record->get('nextActionType') ?: null) !== $body->expectedType) {
-            throw new Conflict('The next action has changed. Refresh and try again.');
-        }
-    }
-
-    private function activity(Entity $record, mixed $type, mixed $id, bool $allowUnlinked = false): Entity
-    {
-        if (!in_array($type, ['Task', 'Call', 'Meeting'], true) || !is_string($id) || $id === '') {
-            throw new BadRequest('A supported activity reference is required.');
-        }
-        $parent = ['parentType' => $record->getEntityType(), 'parentId' => $record->getId()];
-        $where = $parent;
-        if ($allowUnlinked) {
-            $options = [$parent, ['parentId' => null]];
-            // Same reach as the Activities inbox: any activity of the record's workspace.
-            $tenant = TenantActivities::where($this->entityManager, $type, $record->get('tenantId'));
-            if ($tenant) {
-                $options[] = $tenant;
-            }
-            $where = ['OR' => $options];
-        }
-        $activity = $this->entityManager->getRDBRepository($type)->where([
-            'id' => $id, ...$where,
-        ])->forUpdate()->findOne();
-        if (!$activity) {
-            throw new NotFound();
-        }
-        if (!$this->acl->checkEntityRead($activity) || !$this->acl->checkField($type, 'status')) {
-            throw new Forbidden();
-        }
-        return $activity;
-    }
-
-    private function belongsTo(Entity $activity, Entity $record): bool
-    {
-        return $activity->get('parentType') === $record->getEntityType() && $activity->get('parentId') === $record->getId();
-    }
-
-    /** Moving another deal's or initiative's current step would silently empty its slot. */
-    private function checkNotAnotherStep(Entity $activity): void
-    {
-        $type = $activity->get('parentType');
-        if (!in_array($type, ['Opportunity', 'Initiative'], true) || !$activity->get('parentId')) {
-            return;
-        }
-        // Lock the other record so its own next-action selection cannot race this move.
-        $other = $this->entityManager->getRDBRepository($type)
-            ->where(['id' => $activity->get('parentId')])->forUpdate()->findOne();
-        if ($other && $other->get('nextActionId') === $activity->getId() &&
-            $other->get('nextActionType') === $activity->getEntityType()) {
-            throw new Conflict('This activity is already the next step of another record.');
-        }
-    }
-
-    private function checkPending(Entity $activity): void
-    {
-        if (!PendingActivity::isPending($activity, $this->metadata)) {
-            throw new Conflict('Choose an unfinished, active activity.');
-        }
+        $this->writer->checkExpected($record, $body->expectedId, $body->expectedType);
     }
 
     private function saveSelection(Request $request, ?Entity $activity): object
@@ -200,19 +121,6 @@ abstract class RecordNextAction
         // instead of saving the pre-hook entity with a stale version baseline.
         $record = $this->record($request);
         $this->checkExpected($record, $request->getParsedBody());
-        $record->set('nextActionId', $activity?->getId());
-        $record->set('nextActionType', $activity?->getEntityType());
-        $this->entityManager->saveEntity($record);
-        $result = (object) [
-            'id' => $record->getId(),
-            'nextActionId' => $record->get('nextActionId'),
-            'nextActionType' => $record->get('nextActionType'),
-        ];
-        // A person's step pauses the AI follow-up (PauseFollowupForPersonStep); return the result.
-        if ($record->hasAttribute('followupTimer')) {
-            $result->followupTimer = $record->get('followupTimer');
-            $result->followupStatus = $record->get('followupStatus');
-        }
-        return $result;
+        return $this->writer->save($record, $activity);
     }
 }
