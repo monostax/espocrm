@@ -80,7 +80,8 @@ trait EnrichmentExecutionCases
             $manager->method('getPDO')->willReturn($pdo);
             $candidate = new \Espo\Modules\FeatureCredits\Enrichment\CandidateApplication($manager,$this->executionAccess,$purchases,
                 $this->createStub(\Espo\Modules\FeatureCredits\Enrichment\ApplicationRecords::class),$this->createStub(Clock::class));
-            $batch = new \Espo\Modules\FeatureCredits\Enrichment\BatchApplication($manager,$fields,$review,$candidate);
+            $batch = new \Espo\Modules\FeatureCredits\Enrichment\BatchApplication($manager,$fields,$review,$candidate,
+                $this->createStub(\Espo\Core\Utils\Log::class));
             $outcome = $batch->apply('tenant',$quote['id'],['products'=>['email','phone'],'targetId'=>'contact']);
             self::assertSame(['emailsFound'=>2,'phonesFound'=>2,'emailsAdded'=>0,'phonesAdded'=>0,'needsReview'=>1],$outcome);
             self::assertSame(['person@example.test',null],$pdo->query("SELECT email_address,phone_number FROM contact WHERE id='contact'")->fetch(PDO::FETCH_NUM));

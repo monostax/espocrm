@@ -130,20 +130,6 @@ class DefaultSqlExecutor implements SqlExecutor
 
     private function isExceptionIsDeadlock(Exception $e): bool
     {
-        if (!$e instanceof PDOException || !$e->errorInfo) {
-            return false;
-        }
-
-        $state = $e->errorInfo[0] ?? null;
-
-        if ($state === '40P01') {
-            return true;
-        }
-
-        if ($state === 'HY000' && (int) $e->errorInfo[1] === 1020) {
-            return true;
-        }
-
-        return $state === '40001' && (int) $e->errorInfo[1] === 1213;
+        return $e instanceof PDOException && DeadlockException::isDeadlock($e);
     }
 }

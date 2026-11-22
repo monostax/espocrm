@@ -34,6 +34,7 @@ use Espo\ORM\QueryComposer\MysqlQueryComposer;
 use Espo\ORM\TransactionManager;
 use PDO;
 use PDOException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -429,6 +430,184 @@ class TransactionManagerTest extends TestCase
             $this->assertStringContainsString('transaction was aborted', $e->getMessage());
         }
 
+        $this->assertSame(0, $this->manager->getLevel());
+    }
+
+    private static function pdoError(string $state, int $code): PDOException
+    {
+        $e = new PDOException("SQLSTATE[$state]: database error $code");
+        $e->errorInfo = [$state, $code, 'database error'];
+
+        return $e;
+    }
+
+    public static function databaseErrors(): iterable
+    {
+        yield 'MySQL/MariaDB deadlock' => ['40001', 1213, true];
+        yield 'MariaDB record changed since read' => ['HY000', 1020, true];
+        yield 'PostgreSQL deadlock' => ['40P01', 7, true];
+        yield 'lock wait timeout' => ['HY000', 1205, false];
+        yield 'duplicate key' => ['23000', 1062, false];
+        yield 'serialization failure without the deadlock code' => ['40001', 0, false];
+    }
+
+    #[DataProvider('databaseErrors')]
+    public function testDeadlockDetection(string $state, int $code, bool $deadlock): void
+    {
+        $this->assertSame($deadlock, DeadlockException::isDeadlock(self::pdoError($state, $code)));
+    }
+
+    public function testDeadlockDetectionNeedsTheDatabaseErrorInfo(): void
+    {
+        $this->assertTrue(DeadlockException::isDeadlock(new DeadlockException()));
+        $this->assertFalse(DeadlockException::isDeadlock(new PDOException('Deadlock')));
+        $this->assertFalse(DeadlockException::isDeadlock(new RuntimeException('Deadlock')));
+    }
+
+    /**
+     * A raw PDO statement in the function (not through the ORM executor) deadlocks: the database
+     * already rolled the transaction back, and the whole function runs again.
+     */
+    public function testRawPdoDeadlockRerunsTheWholeTransaction(): void
+    {
+        $this->transactionActive = false;
+
+        $this->pdo
+            ->expects($this->exactly(2))
+            ->method('beginTransaction')
+            ->willReturnCallback(function () {
+                $this->transactionActive = true;
+
+                return true;
+            });
+
+        $this->pdo
+            ->expects($this->once())
+            ->method('commit')
+            ->willReturnCallback(function () {
+                $this->transactionActive = false;
+
+                return true;
+            });
+
+        $this->pdo
+            ->expects($this->never())
+            ->method('rollBack');
+
+        $calls = 0;
+
+        $result = $this->manager->run(function () use (&$calls) {
+            if (++$calls === 1) {
+                $this->transactionActive = false;
+
+                throw self::pdoError('40001', 1213);
+            }
+
+            return 'applied';
+        });
+
+        $this->assertSame('applied', $result);
+        $this->assertSame(2, $calls);
+        $this->assertSame(0, $this->manager->getLevel());
+    }
+
+    public function testRawPdoDeadlockInANestedScopeRerunsFromTheOutermost(): void
+    {
+        $this->transactionActive = false;
+
+        $this->pdo
+            ->expects($this->exactly(2))
+            ->method('beginTransaction')
+            ->willReturnCallback(function () {
+                $this->transactionActive = true;
+
+                return true;
+            });
+
+        $this->pdo->method('exec')->willReturn(1);
+
+        $this->pdo
+            ->expects($this->once())
+            ->method('commit')
+            ->willReturnCallback(function () {
+                $this->transactionActive = false;
+
+                return true;
+            });
+
+        $outer = 0;
+        $inner = 0;
+
+        $this->manager->run(function () use (&$outer, &$inner) {
+            $outer++;
+
+            $this->manager->run(function () use (&$inner) {
+                if (++$inner === 1) {
+                    $this->transactionActive = false;
+
+                    throw self::pdoError('40P01', 7);
+                }
+            });
+        });
+
+        $this->assertSame([2, 2], [$outer, $inner]);
+        $this->assertSame(0, $this->manager->getLevel());
+    }
+
+    public function testRawPdoDeadlockGivesUpAfterFourAttempts(): void
+    {
+        $this->transactionActive = false;
+
+        $this->pdo
+            ->expects($this->exactly(4))
+            ->method('beginTransaction')
+            ->willReturnCallback(function () {
+                $this->transactionActive = true;
+
+                return true;
+            });
+
+        $calls = 0;
+
+        try {
+            $this->manager->run(function () use (&$calls) {
+                $calls++;
+                $this->transactionActive = false;
+
+                throw self::pdoError('40001', 1213);
+            });
+
+            $this->fail('Expected the deadlock after the last attempt.');
+        } catch (PDOException $e) {
+            $this->assertTrue(DeadlockException::isDeadlock($e));
+        }
+
+        $this->assertSame(4, $calls);
+        $this->assertSame(0, $this->manager->getLevel());
+    }
+
+    public function testOtherPdoErrorsRollBackWithoutRerunning(): void
+    {
+        $failure = self::pdoError('23000', 1062);
+
+        $this->pdo->expects($this->once())->method('beginTransaction');
+        $this->pdo->expects($this->once())->method('rollBack');
+
+        $calls = 0;
+
+        try {
+            $this->manager->run(function () use (&$calls, $failure) {
+                $calls++;
+
+                throw $failure;
+            });
+
+            $this->fail('Expected the duplicate key error.');
+        } catch (PDOException $e) {
+            $this->assertSame($failure, $e);
+        }
+
+        $this->assertSame(1, $calls);
         $this->assertSame(0, $this->manager->getLevel());
     }
 }

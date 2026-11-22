@@ -9,6 +9,7 @@ use Espo\Core\Exceptions\NotFound;
 use Espo\Modules\FeatureCredits\Accounting\Amount;
 use Espo\Modules\FeatureCredits\Accounting\Clock;
 use Espo\Modules\FeatureCredits\Accounting\GrantInput;
+use Espo\Modules\FeatureCredits\Accounting\OwnedTransaction;
 use Espo\Modules\FeatureCredits\Accounting\RecordId;
 use Espo\Modules\FeatureCredits\Accounting\ReservationInput;
 use Espo\Modules\FeatureCredits\Accounting\Reservations;
@@ -330,18 +331,12 @@ final class Quotes
     {
         $pdo = $this->entityManager->getPDO();
         if ($pdo->inTransaction()) throw new LogicException('Quote command owns its transaction.');
-        $pdo->beginTransaction();
-        try {
+        return OwnedTransaction::run($pdo, function () use ($pdo, $tenantId, $callback): array {
             $q = $pdo->prepare('SELECT id FROM tenant WHERE id=? AND deleted=FALSE FOR UPDATE');
             $q->execute([$tenantId]);
             if (!$q->fetchColumn()) throw new NotFound('Unknown enrichment tenant.');
-            $result = $callback($pdo);
-            $pdo->commit();
-            return $result;
-        } catch (Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            throw $e;
-        }
+            return $callback($pdo);
+        });
     }
 
     private function lockedTarget(PDO $pdo, QuoteInput $input): Entity

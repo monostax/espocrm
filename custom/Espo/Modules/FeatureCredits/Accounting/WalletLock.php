@@ -9,14 +9,16 @@ use Espo\Core\Exceptions\NotFound;
 use Espo\ORM\EntityManager;
 use LogicException;
 use PDO;
-use Throwable;
 
 /** Shared lock order: Tenant -> wallet -> grants -> reservations/allocations -> postings. */
 final class WalletLock
 {
     public function __construct(private EntityManager $entityManager, private Clock $clock) {}
 
-    /** Internal service boundary. The callback and wallet creation commit or roll back together. */
+    /**
+     * Internal service boundary. The callback and wallet creation commit or roll back together.
+     * A deadlock aborts both, and the whole sequence (locks, wallet, callback) runs again.
+     */
     public function run(string $tenantId, callable $callback): mixed
     {
         GrantInput::identity($tenantId);
@@ -28,8 +30,7 @@ final class WalletLock
             $pdo->getAttribute(PDO::ATTR_ERRMODE) !== PDO::ERRMODE_EXCEPTION) {
             throw new LogicException('Accounting requires MySQL/PostgreSQL PDO with exception mode.');
         }
-        $pdo->beginTransaction();
-        try {
+        return OwnedTransaction::run($pdo, function () use ($pdo, $tenantId, $callback): mixed {
             $query = $pdo->prepare('SELECT id FROM tenant WHERE id = ? AND deleted = FALSE FOR UPDATE');
             $query->execute([$tenantId]);
             if ($query->fetchColumn() !== $tenantId) {
@@ -51,15 +52,8 @@ final class WalletLock
                 throw new Conflict('Invalid wallet ownership or deleted financial record.');
             }
             WalletDebt::assertWallet($pdo, $tenantId, $wallet['balance'], $wallet['reserved_credits']);
-            $result = $callback($pdo, $wallet, $now);
-            $pdo->commit();
-            return $result;
-        } catch (Throwable $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-            throw $e;
-        }
+            return $callback($pdo, $wallet, $now);
+        });
     }
 
     public static function assertProjection(string $remaining, string $reserved): void

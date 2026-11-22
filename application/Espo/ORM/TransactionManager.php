@@ -96,7 +96,16 @@ class TransactionManager
             $result = $function();
 
             $this->commit();
-        } catch (DeadlockException $e) {
+        } catch (Throwable $e) {
+            // Raw PDO statements in the function report a deadlock as a plain PDOException,
+            // not as the ORM executor's DeadlockException; both abort the whole transaction.
+            if (!DeadlockException::isDeadlock($e)) {
+                $this->rollback();
+
+                /** @var PDOException $e */
+                throw $e;
+            }
+
             // The entire transaction is aborted, including save points.
 
             $this->level --;
@@ -114,11 +123,6 @@ class TransactionManager
             }
 
             return $this->runInternal($function, $counter);
-        } catch (Throwable $e) {
-            $this->rollback();
-
-            /** @var PDOException $e */
-            throw $e;
         }
 
         return $result;

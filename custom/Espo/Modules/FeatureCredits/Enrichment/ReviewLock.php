@@ -6,6 +6,7 @@ namespace Espo\Modules\FeatureCredits\Enrichment;
 
 use Espo\Core\Exceptions\NotFound;
 use Espo\Modules\FeatureCredits\Accounting\GrantInput;
+use Espo\Modules\FeatureCredits\Accounting\OwnedTransaction;
 use Espo\ORM\EntityManager;
 
 /** Serialize receipt reads with purchases/erasure, without creating an unfunded tenant's wallet. */
@@ -17,14 +18,10 @@ final class ReviewLock
     {
         GrantInput::identity($tenant); $pdo = $this->em->getPDO();
         if ($pdo->inTransaction()) throw new \LogicException('Purchased review must own its transaction.');
-        $pdo->beginTransaction();
-        try {
+        return OwnedTransaction::run($pdo, function () use ($pdo, $tenant, $read): mixed {
             $q = $pdo->prepare('SELECT id FROM tenant WHERE id=? AND deleted=FALSE FOR UPDATE'); $q->execute([$tenant]);
             if (!$q->fetchColumn()) throw new NotFound('Unknown enrichment tenant.');
-            $result = $read($pdo); $pdo->commit(); return $result;
-        } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            throw $e;
-        }
+            return $read($pdo);
+        });
     }
 }

@@ -29,10 +29,34 @@
 
 namespace Espo\ORM\Exceptions;
 
+use PDOException;
 use RuntimeException;
+use Throwable;
 
 /**
  * @since 10.1.0
  */
 class DeadlockException extends RuntimeException
-{}
+{
+    /**
+     * Whether the database aborted the whole transaction to break a lock cycle, so the entire
+     * transaction may run again: PostgreSQL 40P01, MySQL/MariaDB 1213, and MariaDB 1020 (a record
+     * changed since it was read, under snapshot isolation). Raw PDO statements report these as a
+     * plain PDOException; the ORM executor wraps them in this exception.
+     */
+    public static function isDeadlock(Throwable $e): bool
+    {
+        if ($e instanceof self) {
+            return true;
+        }
+
+        if (!$e instanceof PDOException || !$e->errorInfo) {
+            return false;
+        }
+
+        $state = $e->errorInfo[0] ?? null;
+        $code = (int) ($e->errorInfo[1] ?? 0);
+
+        return $state === '40P01' || ($state === 'HY000' && $code === 1020) || ($state === '40001' && $code === 1213);
+    }
+}

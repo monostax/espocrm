@@ -8,9 +8,11 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\Utils\Log;
 use Espo\ORM\EntityManager;
 use InvalidArgumentException;
 use PDO;
+use Throwable;
 
 /**
  * Summarizes purchased contact channels for manual selection. Company partner searches also
@@ -19,7 +21,7 @@ use PDO;
 final class BatchApplication
 {
     public function __construct(private EntityManager $em, private FieldReview $fields,
-        private PurchasedReview $purchases, private CandidateApplication $candidates) {}
+        private PurchasedReview $purchases, private CandidateApplication $candidates, private Log $log) {}
 
     /** @return array<string, int> */
     public function apply(string $tenant, string $quoteId, array $request): array
@@ -70,6 +72,12 @@ final class BatchApplication
                     'createIfUnmatched' => true, 'contactData' => (object) $data]));
                 $outcome['sociosApplied']++;
             } catch (BadRequest | Conflict | Forbidden | NotFound | InvalidArgumentException) {
+                $outcome['needsReview']++;
+            } catch (Throwable $e) {
+                // Anything else (a deadlock that kept recurring, say) leaves only this sócio for review:
+                // the company's other sócios still apply and the run keeps its counts.
+                $this->log->warning('Bulk enrichment could not apply a purchased sócio.',
+                    ['purchaseId' => $purchaseId, 'exception' => $e]);
                 $outcome['needsReview']++;
             }
         }
