@@ -51,6 +51,23 @@ const PROVIDER_ICONS = {
         '</svg>',
 };
 
+// Where a code went, over the step's title: the email code and the phone code must never look alike.
+const STEP_ICONS = {
+    email: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 7.4 5.4a1.9 1.9 0 0 0 2.2 0L20.5 7"/>' +
+        '</svg>',
+    whatsapp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.08-.3-.15-1.26-.46-2.39-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.7.63.71.22 1.36.19 1.87.12.57-.09 1.76-.72 2-1.41.25-.7.25-1.29.18-1.42-.08-.12-.27-.2-.57-.34m-5.42 7.4h-.01a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.89-9.88a9.82 9.82 0 0 1 9.88 9.89c0 5.45-4.44 9.88-9.88 9.88m8.41-18.3A11.82 11.82 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.88 11.88 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.34 11.89-11.9a11.82 11.82 0 0 0-3.48-8.41z"/></svg>',
+    sms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M20 15a2 2 0 0 1-2 2H8l-4 3.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01" stroke-width="2.25"/>' +
+        '</svg>',
+};
+
+// How long a code that checks out shows its check before the next step.
+const SUCCESS_MS = 900;
+const SUCCESS_REDUCED_MS = 400;
+
 const escape = value => String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -437,13 +454,41 @@ export default class extends LoginView {
     }
 
     /**
-     * A step's title and an optional description, given as HTML.
+     * A step's title and an optional description, given as HTML. A code step names where the code went
+     * (`icon`: email, whatsapp or sms) with a mark over the title, which turns into a check once the code
+     * checks out (selfServiceSucceed).
      */
-    selfServiceHeader(titleKey, descriptionHtml) {
+    selfServiceHeader(titleKey, descriptionHtml, icon) {
+        const badge = icon ? `<div class="login-badge login-badge-${icon}" data-role="step-badge" aria-hidden="true">
+                <span class="login-badge-icon">${STEP_ICONS[icon]}</span>
+                <svg class="login-badge-check" viewBox="0 0 24 24"><path pathLength="1" d="m6.5 12.5 3.7 3.7 7.3-8.2"/></svg>
+            </div>` : '';
+
         return `<header class="login-header">
+            ${badge}
             <h1 class="login-title">${escape(this.selfServiceText(titleKey))}</h1>
             ${descriptionHtml ? `<p class="login-description">${descriptionHtml}</p>` : ''}
         </header>`;
+    }
+
+    /**
+     * A code that checked out: the step's mark turns into a check and the code field goes green, and the
+     * step holds still (inert) until the next one replaces it.
+     */
+    selfServiceSucceed(form) {
+        const badge = form.querySelector('[data-role="step-badge"]');
+
+        if (!badge) {
+            return Promise.resolve();
+        }
+
+        const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+        form.inert = true;
+        form.classList.add('is-success');
+        badge.classList.add('is-success');
+
+        return new Promise(resolve => setTimeout(resolve, reduced ? SUCCESS_REDUCED_MS : SUCCESS_MS));
     }
 
     /**
@@ -646,7 +691,7 @@ export default class extends LoginView {
 
         this.selfServiceRender(
             `<form data-role="self-service-code" class="login-form" novalidate>
-                ${this.selfServiceHeader('codeTitle', this.selfServiceEmphasis('codeSent', '{email}', state.email))}
+                ${this.selfServiceHeader('codeTitle', this.selfServiceEmphasis('codeSent', '{email}', state.email), 'email')}
                 <div class="login-field">
                     <label for="self-service-code" class="login-label">${escape(this.selfServiceText('code'))}</label>
                     <input type="text" id="self-service-code" name="code" class="form-control login-code"
@@ -731,7 +776,7 @@ export default class extends LoginView {
             .then(result => {
                 Espo.Ui.notify(false);
                 this.selfServiceSave({...state, verified: true});
-                this.selfServiceProgress(result, 0);
+                this.selfServiceSucceed(form).then(() => this.selfServiceProgress(result, 0));
             })
             .catch(xhr => {
                 button.disabled = false;
@@ -824,7 +869,7 @@ export default class extends LoginView {
 
         this.selfServiceRender(
             `<form data-role="self-service-phone" class="login-form" novalidate>
-                ${this.selfServiceHeader('phoneTitle', intro)}
+                ${this.selfServiceHeader('phoneTitle', intro, sent && phone.sms ? 'sms' : 'whatsapp')}
                 <div class="login-field">
                     <label for="self-service-phone-code" class="login-label">${escape(this.selfServiceText('code'))}</label>
                     <input type="text" id="self-service-phone-code" name="code" class="form-control login-code"
@@ -939,7 +984,7 @@ export default class extends LoginView {
             .then(result => {
                 Espo.Ui.notify(false);
                 clearInterval(this.selfServiceResendTimer);
-                this.selfServiceProgress(result, 0);
+                this.selfServiceSucceed(form).then(() => this.selfServiceProgress(result, 0));
             })
             .catch(xhr => {
                 button.disabled = false;
