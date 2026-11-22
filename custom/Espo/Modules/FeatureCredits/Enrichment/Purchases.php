@@ -143,12 +143,13 @@ final class Purchases
                         $contradiction = true;
                     }
                 }
-                $groups[$purchase['candidate_group']] = true;
+                // A list, not ID-keyed: PHP turns an all-digit key ("12345678901234567") into an int.
+                if (!in_array((string) $purchase['candidate_group'],$groups,true)) $groups[] = (string) $purchase['candidate_group'];
                 $matched[] = [$purchase,$facts];
             }
             if ($contradiction || count($groups) > 1) return CandidateConflicts::blockLocked($pdo,$tenant,
-                [$source['id'],...array_keys($groups)],$now,$contradiction ? 'identity_contradiction' : 'identity_bridge');
-            $group = $groups ? array_key_first($groups) : $source['id'];
+                [$source['id'],...$groups],$now,$contradiction ? 'identity_contradiction' : 'identity_bridge');
+            $group = $groups ? $groups[0] : $source['id'];
             if (CandidateConflicts::statusLocked($pdo,$tenant,$group) !== null) {
                 return CandidateConflicts::blockLocked($pdo,$tenant,[$source['id']],$now,'identity_contradiction');
             }

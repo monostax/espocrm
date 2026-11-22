@@ -401,6 +401,29 @@ trait EnrichmentCandidateCacheCases
         });
     }
 
+    /** Candidate IDs are random hex: about one in 3,000 is all digits, which PHP turns into an int array key. */
+    #[DataProvider('dialects')]
+    public function testAllDigitCandidateIdStillMatchesItsPurchasedPerson(string $dialect): void
+    {
+        $this->database($dialect,function (PDO $pdo,Quotes $quotes,Catalog $catalog): void {
+            $this->discoveryCatalog($pdo,$catalog); $reservations = $this->fundAdmission($pdo,'30');
+            [$purchases,,,,$cache] = $this->purchaseServices($pdo);
+            [$quote] = $this->fundedDiscovery($pdo,$quotes,$reservations,['count' => 2,'waterfall' => true,'budget' => '24']);
+            $first = $this->cached($cache,$quote['id'],'first',['cpf' => '52998224725']);
+            $digits = '12345678901234567';
+            $pdo->prepare('UPDATE enrichment_candidate_cache SET id=? WHERE id=?')->execute([$digits,$first['id']]);
+            $receipt = $purchases->purchaseCached('tenant',$quote['id'],$digits);
+            $repeat = $this->cached($cache,$quote['id'],'repeat',['cpf' => '52998224725','role' => ' Administrator '],'hub');
+            $this->assertSame($receipt,$purchases->purchaseCached('tenant',$quote['id'],$repeat['id']));
+            $second = $this->cached($cache,$quote['id'],'second');
+            $purchases->purchaseCached('tenant',$quote['id'],$second['id']);
+            $extra = $this->cached($cache,$quote['id'],'extra',['cpf' => '52998224725','ownershipPercentage' => '25.0'],'hub');
+            $purchases->purchaseCached('tenant',$quote['id'],$extra['id']);
+            $this->assertSame([['candidate',$digits],['candidate',$second['id']],['supplement',$digits]], $pdo->query(
+                "SELECT purchase_kind,candidate_group FROM enrichment_purchase ORDER BY purchase_kind,candidate_group='$digits' DESC")->fetchAll(PDO::FETCH_NUM));
+        });
+    }
+
     #[DataProvider('dialects')]
     public function testCacheFencesAccountIdentityCapabilityDeadlineAndRollback(string $dialect): void
     {

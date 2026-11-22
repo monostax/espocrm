@@ -462,18 +462,13 @@ final class DispatchStore
         $pdo = $this->entityManager->getPDO();
         if ($pdo->inTransaction() || !in_array($pdo->getAttribute(PDO::ATTR_DRIVER_NAME), ['mysql', 'pgsql'], true) ||
             $pdo->getAttribute(PDO::ATTR_ERRMODE) !== PDO::ERRMODE_EXCEPTION) throw new LogicException('Mailbox requires its own supported transaction.');
-        $pdo->beginTransaction();
-        try {
+        // Callbacks only touch the database; a deadlock reruns the whole locked sequence.
+        return OwnedTransaction::run($pdo, function () use ($pdo, $tenantId, $callback): mixed {
             $query = $pdo->prepare('SELECT id FROM tenant WHERE id=? AND deleted=FALSE FOR UPDATE');
             $query->execute([$tenantId]);
             if ($query->fetchColumn() !== $tenantId) throw new NotFound('Unknown execution tenant.');
-            $result = $callback($pdo, $this->clock->now());
-            $pdo->commit();
-            return $result;
-        } catch (Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            throw $e;
-        }
+            return $callback($pdo, $this->clock->now());
+        });
     }
 
     private function one(PDO $pdo, string $sql, array $params): ?array
