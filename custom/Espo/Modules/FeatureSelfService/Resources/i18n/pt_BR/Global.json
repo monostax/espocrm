@@ -55,15 +55,18 @@
         "detailsSignedInAs": "Sua conta será criada com {email}.",
         "back": "Voltar",
         "phoneTitle": "Confirme seu WhatsApp",
-        "phoneIntro": "Envie a mensagem abaixo do seu WhatsApp para o Monostax. É por ele que o Em dia vai te avisar dos clientes esperando resposta. Você pode desligar quando quiser.",
-        "phoneOpen": "Abrir o WhatsApp",
-        "phoneManual": "Ou envie {text} para {number}.",
-        "phoneScan": "No computador? Aponte a câmera do celular para o código.",
-        "phoneWaiting": "Esperando sua mensagem…",
-        "phoneVerified": "WhatsApp confirmado. Criando seu espaço…",
-        "phoneTaken": "Este WhatsApp já tem um espaço no Monostax. Entre com seu e-mail ou envie de outro número.",
-        "phoneNewCode": "Gerar outro código",
-        "phoneExpired": "O código expirou. Gere outro."
+        "phoneHint": "Vamos enviar um código para confirmar este número.",
+        "phoneCountry": "País",
+        "phoneCountrySearch": "Buscar país",
+        "phoneSent": "Enviamos um código de 6 dígitos para {number} no WhatsApp.",
+        "phoneSentSms": "Enviamos um código de 6 dígitos para {number} por SMS.",
+        "phoneNotSent": "Não conseguimos enviar o código agora. Reenvie ou troque o número.",
+        "phoneSms": "Receber por SMS",
+        "phoneSmsIn": "Receber por SMS em {seconds}s",
+        "phoneSmsSent": "Enviamos o código por SMS.",
+        "phoneChange": "Trocar número",
+        "phoneSend": "Enviar código",
+        "phoneTaken": "Este número já tem um espaço no Monostax. Entre com seu e-mail ou use outro número."
     },
     "selfServiceErrors": {
         "GENERIC": "Algo deu errado. Tente de novo.",
@@ -84,6 +87,10 @@
         "EMAIL_NOT_SENT": "Não conseguimos enviar o código agora. Tente de novo em alguns minutos.",
         "SOCIAL_FAILED": "Não conseguimos entrar com essa conta. Tente de novo.",
         "SOCIAL_EMAIL_UNVERIFIED": "Essa conta não tem um e-mail verificado. Crie sua conta com e-mail e senha.",
-        "SOCIAL_UNAVAILABLE": "Essa forma de entrar não está disponível agora."
+        "SOCIAL_UNAVAILABLE": "Essa forma de entrar não está disponível agora.",
+        "SMS_TOO_SOON": "Espere alguns segundos para pedir por SMS.",
+        "SEND_FAILED": "Não conseguimos enviar o código agora. Tente de novo em instantes.",
+        "PHONE_TAKEN": "Este número já tem um espaço no Monostax. Entre com seu e-mail ou use outro número.",
+        "PHONE_TOO_MANY_ATTEMPTS": "Muitas tentativas com código errado. Peça um novo código."
     }
 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureWhatsAppNotifications\Tools;
 
 use Espo\Core\Utils\Log;
-use Espo\Modules\FeatureSelfService\Tools\Signup\Signups;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Throwable;
@@ -14,8 +13,7 @@ use Throwable;
  * Events of the Avisos inbox, from Chatwoot's account webhook (Chatwoot\Controllers\DeliveryWebhook, only when its
  * signature checked out):
  *
- * - `message_created`, incoming: a tap (a payload we signed, from the number of the subscription it names), a code
- *   (signup or Settings), a stop word, the reply after "Editar", "em dia"/"próximo" (the next card), or anything else
+ * - `message_created`, incoming: a tap (a payload we signed, from the number of the subscription it names), a stop word, the reply after "Editar", "em dia"/"próximo" (the next card), or anything else
  *   from a subscriber, which goes to their AI (Assistant: their main AI chat, answered back here). With one number in
  *   several workspaces the text goes to the workspace of our last message to them (within 30 minutes), else the one
  *   whose AI they last talked to, or waits until they choose one ("trocar" asks again). Every incoming message opens
@@ -38,15 +36,12 @@ class Inbound
         private EntityManager $em,
         private Avisos $avisos,
         private Tokens $tokens,
-        private PhoneCodes $codes,
         private Subscriptions $subscriptions,
         private Taps $taps,
         private Workspaces $workspaces,
-        private Signups $signups,
         private Charges $charges,
         private Assistant $assistant,
         private Log $log,
-        private Settings $settings,
     ) {}
 
     /** Whether the event was the Avisos inbox's (then nothing else should handle it). */
@@ -98,11 +93,6 @@ class Inbound
         $token = $this->tokens->parse($payload);
         if ($token) {
             $this->tap($token, $phone);
-            return;
-        }
-        $code = PhoneCodes::extract($text);
-        if ($code !== null) {
-            $this->code($code, $phone, $contactId, $conversationId, PhoneCodes::meant($text));
             return;
         }
         if (in_array(mb_strtolower(trim((string) preg_replace('/[^\p{L}\p{N} ]+/u', '', $text))), self::STOP_WORDS, true)) {
@@ -201,44 +191,6 @@ class Inbound
             return;
         }
         $token['kind'] === 'c' ? $this->taps->cardTap($subscription, $card, $token) : $this->taps->subscriptionTap($subscription, $token);
-    }
-
-    private function code(string $code, string $phone, int $contactId, int $conversationId, bool $meant): void
-    {
-        $row = $this->codes->redeem($code, $phone);
-        if (!$row) {
-            if ($meant && $conversationId > 0) $this->avisos->reply($conversationId, $phone, 'code_reply', Copy::t('pt_BR', 'code.unknown'));
-            return;
-        }
-        if ($row->get('purpose') === PhoneCodes::SIGNUP) {
-            $result = $this->signups->phoneVerified((string) $row->get('signupId'), $phone);
-            if ($conversationId > 0) {
-                $this->avisos->reply($conversationId, $phone, 'code_reply', Copy::t('pt_BR', $result === Signups::PHONE_TAKEN ? 'signup.taken' : 'signup.ok'));
-            }
-            return;
-        }
-        $subscription = $this->subscriptions->activate((string) $row->get('userId'), (string) $row->get('chatwootAccountId'), $phone, 'settings',
-            $contactId ?: null, $conversationId ?: null);
-        $this->welcome($subscription);
-    }
-
-    /** Names every workspace the number now reaches for this person (one code turns them all on). */
-    public function welcome(Entity $subscription): void
-    {
-        $workspace = $this->workspaces->of($subscription);
-        $user = $this->em->getEntityById('User', (string) $subscription->get('userId'));
-        $names = [$workspace['name'] ?: '—'];
-        foreach ($this->subscriptions->activeForPhone((string) $subscription->get('phone')) as $each) {
-            if ($each->getId() === $subscription->getId() || $each->get('userId') !== $subscription->get('userId')) continue;
-            $names[] = $this->workspaces->of($each)['name'] ?: '—';
-        }
-        $names = array_map(fn (string $name) => '*' . str_replace(['*', '_', '~', '`'], '', $name) . '*', array_values(array_unique($names)));
-        $vars = ['name' => (string) ($user?->get('firstName') ?: $user?->get('name') ?: ''),
-            'workspace' => Copy::list($workspace['language'], array_slice($names, 0, 5), max(0, count($names) - 5)),
-            'time' => Copy::times($workspace['language'], $this->settings->pushTimes())];
-        $text = Copy::t($workspace['language'], $subscription->get('morningEnabled') ? 'welcome.morning' : 'welcome', $vars);
-        // No buttons (2026-11-13): the welcome says to write "em dia" for the cards.
-        $this->avisos->text($subscription, 'welcome', $text);
     }
 
     /**

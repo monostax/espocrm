@@ -8,6 +8,7 @@ use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\Exceptions\ServiceUnavailable;
 use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Services\Rollout;
 use Espo\Modules\FeatureCatchUp\Services\Workspace;
@@ -17,8 +18,8 @@ use Throwable;
 
 /**
  * The verified number is the person's, not the workspace's (2026-11-13). Each person turns it on for themselves (Meta
- * wants the recipient's own opt-in): Settings › Notificações no WhatsApp gives a code that the person sends from their
- * WhatsApp, or the signup's WhatsApp check does it for the owner. One code turns it on in every workspace of theirs with
+ * wants the recipient's own opt-in): in Settings › Notificações no WhatsApp they type their number and the 6-digit code
+ * we send to it (PhoneCodes), or the signup's phone check does it for the owner. One code turns it on in every workspace of theirs with
  * Em dia on (`spread`); a workspace they join later gets it the first time it is needed. "PARAR" or the app's "Parar
  * avisos" stops it everywhere; only a new code turns it back on.
  *
@@ -58,12 +59,34 @@ class Subscriptions
         return $this->view($account, $available);
     }
 
-    /** POST /WhatsAppNotifications/code: a new code to send from WhatsApp (turning it on, a new number, or back on). */
+    /**
+     * POST /WhatsAppNotifications/code: a 6-digit code by WhatsApp to the number typed in Settings (turning it on, a new
+     * number, or back on); with `channel: sms`, the open code's number gets it by SMS.
+     */
     public function code(Request $request): array
     {
         ['account' => $account] = $this->workspace->account($request);
         if (!$this->available($account)) throw new Forbidden('Em dia is not on for this workspace.');
-        $this->codes->issue(PhoneCodes::SUBSCRIPTION, ['userId' => $this->user->getId(), 'chatwootAccountId' => $account->getId()]);
+        $body = $request->getParsedBody();
+        $owner = $this->owner($account);
+        if (($body->channel ?? null) === 'sms') {
+            $this->rejected(fn () => $this->codes->sms(PhoneCodes::SUBSCRIPTION, $owner));
+        } else {
+            $phone = (string) ($body->phone ?? '');
+            if (!preg_match('/^\+[1-9]\d{9,14}$/D', $phone)) throw BadRequest::createWithBody('INVALID_PHONE', (string) json_encode(['code' => 'INVALID_PHONE']));
+            $this->rejected(fn () => $this->codes->send(PhoneCodes::SUBSCRIPTION, $owner, $phone));
+        }
+        return $this->view($account, true);
+    }
+
+    /** POST /WhatsAppNotifications/verify: the right code turns it on with that number, in every workspace of theirs. */
+    public function verify(Request $request): array
+    {
+        ['account' => $account] = $this->workspace->account($request);
+        if (!$this->available($account)) throw new Forbidden('Em dia is not on for this workspace.');
+        $code = (string) ($request->getParsedBody()->code ?? '');
+        $phone = $this->rejected(fn () => $this->codes->check(PhoneCodes::SUBSCRIPTION, $this->owner($account), $code));
+        $this->activate($this->user->getId(), $account->getId(), $phone, 'settings');
         return $this->view($account, true);
     }
 
@@ -114,18 +137,20 @@ class Subscriptions
      * A verified number: the person's subscription in that workspace, active with this number, and the same in their
      * other workspaces (`spread`). Another person's active subscription with the same number in the workspace where it
      * was verified stops (`moved`): one number, one person per workspace.
+     *
+     * A code we sent opens no 24h window: only a message from the person does (Inbound). A new number starts with no
+     * window and no Avisos thread; the same number keeps both.
      */
-    public function activate(string $userId, string $accountId, string $phone, string $source, ?int $contactId, ?int $conversationId): Entity
+    public function activate(string $userId, string $accountId, string $phone, string $source): Entity
     {
         $account = $this->em->getEntityById('ChatwootAccount', $accountId) ?? throw new NotFound();
         $user = $this->em->getEntityById('User', $userId) ?? throw new NotFound();
         $subscription = $this->find($userId, $accountId) ?? $this->em->getNewEntity('WhatsAppNotificationSubscription');
-        $now = gmdate('Y-m-d H:i:s');
         $subscription->set([
             ...$this->identity($user, $account),
-            'phone' => $phone, 'status' => 'active', 'source' => $source, 'verifiedAt' => $now,
-            'stoppedAt' => null, 'stopReason' => null, 'lastInboundAt' => $now,
-            'avisosContactId' => $contactId, 'avisosConversationId' => $conversationId,
+            ...($subscription->get('phone') !== $phone ? ['lastInboundAt' => null, 'avisosContactId' => null, 'avisosConversationId' => null] : []),
+            'phone' => $phone, 'status' => 'active', 'source' => $source, 'verifiedAt' => gmdate('Y-m-d H:i:s'),
+            'stoppedAt' => null, 'stopReason' => null,
         ]);
         $this->em->saveEntity($subscription);
         $others = $this->em->getRDBRepository('WhatsAppNotificationSubscription')->where([
@@ -237,6 +262,29 @@ class Subscriptions
         return array_values(array_filter($subscriptions, fn (Entity $subscription) => $this->workspaces->live($subscription)));
     }
 
+    /** @return array{userId: string, chatwootAccountId: string} */
+    private function owner(Entity $account): array
+    {
+        return ['userId' => $this->user->getId(), 'chatwootAccountId' => $account->getId()];
+    }
+
+    /**
+     * A code step the person can retry: its reason in the body for Settings to say (SEND_FAILED is ours, 503).
+     *
+     * @template T
+     * @param callable(): T $step
+     * @return T
+     */
+    private function rejected(callable $step): mixed
+    {
+        try {
+            return $step();
+        } catch (CodeRejected $e) {
+            $body = (string) json_encode(['code' => $e->reason]);
+            throw $e->reason === CodeRejected::SEND_FAILED ? ServiceUnavailable::createWithBody($e->reason, $body) : Forbidden::createWithBody($e->reason, $body);
+        }
+    }
+
     /** @return array<string, mixed> who and where, the same on every row */
     private function identity(Entity $user, Entity $account): array
     {
@@ -294,7 +342,8 @@ class Subscriptions
                 'alertHours' => ['start' => (string) $subscription->get('alertStart'), 'end' => (string) $subscription->get('alertEnd')],
                 'stoppedAt' => $at($subscription->get('stoppedAt')), 'stopReason' => $subscription->get('stopReason'),
             ] : null,
-            'pending' => $available ? $this->codes->pending(PhoneCodes::SUBSCRIPTION, ['userId' => $this->user->getId(), 'chatwootAccountId' => $account->getId()]) : null,
+            // The code waiting to be typed: where it went and when the person may ask again (never the code).
+            'pending' => $available ? $this->codes->pending(PhoneCodes::SUBSCRIPTION, $this->owner($account)) : null,
             'lastDelivery' => $last ? [
                 'kind' => in_array($last->get('kind'), self::KINDS, true) ? $last->get('kind') : 'reply',
                 'status' => $last->get('status') === 'queued' ? 'sent' : $last->get('status'),

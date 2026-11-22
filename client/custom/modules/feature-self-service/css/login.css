@@ -441,33 +441,123 @@
     }
 }
 
-/* WhatsApp check: QR code on a computer, the link button on a phone. */
-#login.login-card .login-qrcode {
+/* Phone fields: the country (flag and dial code) before the number, as in Chatwoot. */
+#login.login-card .login-phone {
+    position: relative;
     display: flex;
-    justify-content: center;
-    margin: 8px 0 4px;
 }
 
-#login.login-card .login-qrcode img,
-#login.login-card .login-qrcode canvas {
-    border-radius: 8px;
+#login.login-card .login-phone-country {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    height: var(--login-control-height);
+    padding: 0 10px;
+    color: var(--login-fg);
+    font-size: var(--login-font);
+    font-variant-numeric: tabular-nums;
+    background: var(--login-field);
+    border: 1px solid var(--login-field-border);
+    border-right: 0;
+    border-radius: var(--login-radius) 0 0 var(--login-radius);
+    cursor: pointer;
 }
 
-#login.login-card .login-qrcode-hint {
-    text-align: center;
+#login.login-card .login-phone-country:hover {
+    background: var(--login-hover);
 }
 
-#login.login-card a.login-button {
-    display: block;
-    text-align: center;
-    text-decoration: none;
+#login.login-card .login-phone-country:focus-visible {
+    outline: 2px solid var(--login-ring);
+    outline-offset: -2px;
 }
 
-@media (max-width: 600px) {
-    #login.login-card .login-qrcode,
-    #login.login-card .login-qrcode-hint {
-        display: none;
-    }
+#login.login-card .login-phone .form-control {
+    flex: 1;
+    min-width: 0;
+    border-radius: 0 var(--login-radius) var(--login-radius) 0;
+}
+
+#login.login-card .login-flag {
+    flex: none;
+    width: 20px;
+    height: 15px;
+    border-radius: 2px;
+    object-fit: cover;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 8%);
+}
+
+#login.login-card .login-phone-menu {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    padding: 6px;
+    background: var(--login-surface);
+    border: 1px solid var(--login-rim);
+    border-radius: var(--login-radius);
+    box-shadow: 0 12px 32px -12px rgb(0 0 0 / 25%);
+}
+
+#login.login-card .login-phone-menu[hidden] {
+    display: none;
+}
+
+#login.login-card .login-phone-search {
+    width: 100%;
+}
+
+#login.login-card .login-phone-list {
+    max-height: 240px;
+    margin: 6px 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+#login.login-card .login-phone-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#login.login-card .login-phone-list li:hover,
+#login.login-card .login-phone-list li[aria-selected="true"] {
+    background: var(--login-hover);
+}
+
+#login.login-card .login-phone-list li[hidden] {
+    display: none;
+}
+
+#login.login-card .login-phone-option-dial {
+    margin-left: auto;
+    color: var(--login-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Phone check: the links wrap when "Receber por SMS" joins them; "Trocar número" opens under them. */
+#login.login-card form[data-role="self-service-phone"] .login-links {
+    flex-wrap: wrap;
+}
+
+#login.login-card form[data-role="self-service-phone"] .login-description strong {
+    white-space: nowrap;
+}
+
+#login.login-card .login-phone-change {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#login.login-card .login-phone-change[hidden] {
+    display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

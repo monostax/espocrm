@@ -4,124 +4,255 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureWhatsAppNotifications\Tools;
 
+use Espo\Core\Utils\Log;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Repository\RDBSelectBuilder;
+use Throwable;
 
 /**
- * Proving a WhatsApp number: the person sends a code FROM that number to the Avisos number (a wa.me link with the text
- * ready, or its QR code). The sender is the number, so nothing typed is trusted, and the message opens Meta's 24h
- * window. Used by Settings › Notificações no WhatsApp (`subscription`) and by self-service signup (`signup`).
+ * Proving a phone number with a 6-digit code we send to it (the user, 2026-11-22: no more QR code or wa.me link).
+ * The code goes as Meta's authentication template from the Avisos number (CodeWhatsApp); on request, "Receber por
+ * SMS" sends one by Twilio Verify, which picks its own code, so either code proves the number. Used by self-service
+ * signup (`signup`) and Settings › Notificações no WhatsApp (`subscription`).
  *
- * Codes are 8 characters from an alphabet without look-alikes, valid 15 minutes, used once. A number with 5 wrong
- * codes in an hour is ignored for the rest of the hour, so a code can't be guessed from a phone.
+ * Only an HMAC of our code is stored. A code lasts 10 minutes (the template says so) and takes 5 wrong tries. Sends
+ * are capped per person (a new code at most once a minute, 5 an hour), per number (5 an hour, 10 a day) and, for SMS,
+ * per IP address, so the form can't be used to flood a number or to run up SMS costs.
  */
 class PhoneCodes
 {
     public const SUBSCRIPTION = 'subscription';
     public const SIGNUP = 'signup';
-    public const TTL_SECONDS = 900;
-    private const ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-    private const FAILS_PER_HOUR = 5;
-    private const PATTERN = '/(?<![0-9A-Z])([2-9A-HJ-NP-Z]{4})-([2-9A-HJ-NP-Z]{4})(?![0-9A-Z])/';
+    public const TTL_SECONDS = 600;
+    public const RESEND_SECONDS = 60;
+    private const MAX_ATTEMPTS = 5;
+    private const SENDS_PER_OWNER_PER_HOUR = 5;
+    private const SENDS_PER_PHONE_PER_HOUR = 5;
+    private const SENDS_PER_PHONE_PER_DAY = 10;
+    private const SMS_PER_IP_PER_HOUR = 5;
 
-    public function __construct(private EntityManager $em, private Settings $settings) {}
+    public function __construct(
+        private EntityManager $em,
+        private Settings $settings,
+        private CodeWhatsApp $whatsApp,
+        private TwilioVerify $sms,
+        private Log $log,
+    ) {}
 
     /**
-     * A new code; older unused ones for the same person and workspace (or signup) stop working.
+     * A new code to $phone by WhatsApp; older ones of the same person (or signup) stop working. When Meta refuses the
+     * number outright, the code goes by SMS instead.
      *
      * @param array{userId?: string, chatwootAccountId?: string, signupId?: string} $owner
-     * @return array{code: string, text: string, link: string, expiresAt: string}
+     * @return array<string, mixed> what the screen shows (view)
+     * @throws CodeRejected
      */
-    public function issue(string $purpose, array $owner): array
+    public function send(string $purpose, array $owner, string $phone, ?string $ipAddress = null): array
     {
-        foreach ($this->open($purpose, $owner) as $old) {
-            $old->set(['usedAt' => gmdate('Y-m-d H:i:s'), 'code' => null]);
+        $last = $this->latest($purpose, $owner);
+        // A minute between codes to the same number; a corrected number ("Trocar número") needn't wait.
+        if ($last && $last->get('phone') === $phone && self::time($last->get('sentAt')) + self::RESEND_SECONDS > time()) {
+            throw new CodeRejected(CodeRejected::RESEND_TOO_SOON);
+        }
+        $hour = gmdate('Y-m-d H:i:s', time() - 3600);
+        if ($this->rows([...$this->ownerWhere($purpose, $owner), 'createdAt>=' => $hour])->count() >= self::SENDS_PER_OWNER_PER_HOUR) {
+            throw new CodeRejected(CodeRejected::RATE_LIMITED);
+        }
+        $this->assertPhoneBelowLimits($phone);
+
+        $now = gmdate('Y-m-d H:i:s');
+        foreach ($this->rows($this->openWhere($purpose, $owner))->find() as $old) {
+            $old->set('usedAt', $now);
             $this->em->saveEntity($old);
         }
-        $raw = '';
-        for ($i = 0; $i < 8; $i++) $raw .= self::ALPHABET[random_int(0, strlen(self::ALPHABET) - 1)];
-        $code = substr($raw, 0, 4) . '-' . substr($raw, 4);
+        $code = sprintf('%06d', random_int(0, 999999));
         $row = $this->em->createEntity('WhatsAppPhoneCode', [
-            'purpose' => $purpose, 'codeHash' => hash('sha256', $code), 'code' => $code,
+            'purpose' => $purpose, 'phone' => $phone, 'attempts' => 0, 'sends' => 1, 'sentAt' => $now,
             'userId' => $owner['userId'] ?? null, 'chatwootAccountId' => $owner['chatwootAccountId'] ?? null,
-            'signupId' => $owner['signupId'] ?? null, 'expiresAt' => gmdate('Y-m-d H:i:s', time() + self::TTL_SECONDS),
+            'signupId' => $owner['signupId'] ?? null, 'ipAddress' => $ipAddress !== null ? mb_substr($ipAddress, 0, 45) : null,
+            'expiresAt' => gmdate('Y-m-d H:i:s', time() + self::TTL_SECONDS),
         ]);
-        return $this->present($row);
+        $row->set('codeHash', $this->hash($row, $code));
+        $this->em->saveEntity($row);
+
+        try {
+            $row->set('waPhone', $this->whatsApp->send($phone, $code));
+            $this->em->saveEntity($row);
+        } catch (Throwable $e) {
+            $this->log->warning("PhoneCodes: WhatsApp code {$row->getId()} failed, sending by SMS: " . $e->getMessage());
+            $this->startSms($row);
+        }
+        return $this->view($row);
     }
 
     /**
-     * The code still waiting for its message, if any.
+     * "Receber por SMS": the open code's number gets a Twilio Verify SMS, once the WhatsApp one had time to arrive.
      *
      * @param array{userId?: string, chatwootAccountId?: string, signupId?: string} $owner
-     * @return ?array{code: string, text: string, link: string, expiresAt: string}
+     * @return array<string, mixed>
+     * @throws CodeRejected
+     */
+    public function sms(string $purpose, array $owner, ?string $ipAddress = null): array
+    {
+        $row = $this->open($purpose, $owner) ?? throw new CodeRejected(CodeRejected::CODE_EXPIRED);
+        $smsAt = $row->get('smsAt');
+        $from = $smsAt ? self::time($smsAt) + self::RESEND_SECONDS : self::time($row->get('sentAt')) + $this->settings->smsAfterSeconds();
+        if ($from > time()) throw new CodeRejected($smsAt ? CodeRejected::RESEND_TOO_SOON : CodeRejected::SMS_TOO_SOON);
+        $this->assertPhoneBelowLimits((string) $row->get('phone'));
+        if ($ipAddress !== null) {
+            $since = gmdate('Y-m-d H:i:s', time() - 3600);
+            if ($this->rows(['ipAddress' => $ipAddress, 'smsAt>=' => $since])->count() >= self::SMS_PER_IP_PER_HOUR) {
+                throw new CodeRejected(CodeRejected::RATE_LIMITED);
+            }
+            $row->set('ipAddress', mb_substr($ipAddress, 0, 45));
+        }
+        $this->startSms($row);
+        return $this->view($row);
+    }
+
+    /**
+     * The code the person typed. Returns the proven number, as WhatsApp knows it when the WhatsApp send told us
+     * (Brazil's mobile 9th digit): Avisos matches incoming messages by that number.
+     *
+     * @param array{userId?: string, chatwootAccountId?: string, signupId?: string} $owner
+     * @throws CodeRejected
+     */
+    public function check(string $purpose, array $owner, string $code): string
+    {
+        $row = $this->open($purpose, $owner) ?? throw new CodeRejected(CodeRejected::CODE_EXPIRED);
+        if ((int) $row->get('attempts') >= self::MAX_ATTEMPTS) throw new CodeRejected(CodeRejected::TOO_MANY_ATTEMPTS);
+        // Count the attempt before comparing, so failures always add up.
+        $row->set('attempts', (int) $row->get('attempts') + 1);
+        $this->em->saveEntity($row);
+
+        $code = (string) preg_replace('/\D/', '', $code);
+        $right = strlen($code) === 6 && hash_equals((string) $row->get('codeHash'), $this->hash($row, $code));
+        if (!$right && $row->get('smsAt') && strlen($code) >= 4) $right = $this->sms->check((string) $row->get('phone'), $code);
+        if (!$right) throw new CodeRejected(CodeRejected::INVALID_CODE);
+
+        $row->set('usedAt', gmdate('Y-m-d H:i:s'));
+        $this->em->saveEntity($row);
+        return (string) ($row->get('waPhone') ?: $row->get('phone'));
+    }
+
+    /**
+     * The code waiting to be typed, for the screen, or null.
+     *
+     * @param array{userId?: string, chatwootAccountId?: string, signupId?: string} $owner
+     * @return ?array<string, mixed>
      */
     public function pending(string $purpose, array $owner): ?array
     {
-        $row = $this->open($purpose, $owner)[0] ?? null;
-        return $row ? $this->present($row) : null;
+        $row = $this->open($purpose, $owner);
+        return $row ? $this->view($row) : null;
     }
 
-    /** The code in a message, normalised ("7KQ2-M9XP"), or null. */
-    public static function extract(string $text): ?string
+    /** "+55 11 91234-5678" for people to read. */
+    public static function display(string $phone): string
     {
-        return preg_match(self::PATTERN, mb_strtoupper($text), $m) ? "{$m[1]}-{$m[2]}" : null;
-    }
-
-    /** Whether a message meant to carry a code (our prefilled texts start this way), so a wrong one gets an answer. */
-    public static function meant(string $text): bool
-    {
-        return (bool) preg_match('/^\s*(ativar|confirmar|activate|confirm)\b/iu', $text);
+        $digits = (string) preg_replace('/\D/', '', $phone);
+        if (preg_match('/^55(\d{2})(\d{4,5})(\d{4})$/', $digits, $m)) return "+55 {$m[1]} {$m[2]}-{$m[3]}";
+        return $digits !== '' ? '+' . $digits : $phone;
     }
 
     /**
-     * Use a code sent from $phone: the code's row, now spent, or null when it is unknown, expired or used, or the number
-     * has failed too often this hour.
+     * Where the code went and when the person may ask again: a new code after a minute, the SMS after
+     * smsAfterSeconds (then a minute between SMS). The code itself never leaves here.
+     *
+     * @return array<string, mixed>
      */
-    public function redeem(string $code, string $phone): ?Entity
+    private function view(Entity $row): array
     {
-        $since = gmdate('Y-m-d H:i:s', time() - 3600);
-        $fails = $this->em->getRDBRepository('WhatsAppNotification')
-            ->where(['phone' => $phone, 'kind' => 'code_failed', 'createdAt>=' => $since])->count();
-        if ($fails >= self::FAILS_PER_HOUR) return null;
-        $row = $this->em->getRDBRepository('WhatsAppPhoneCode')->where([
-            'codeHash' => hash('sha256', $code), 'usedAt' => null, 'expiresAt>' => gmdate('Y-m-d H:i:s'),
-        ])->findOne();
-        if (!$row) {
-            $this->em->createEntity('WhatsAppNotification', [
-                'direction' => 'in', 'kind' => 'code_failed', 'phone' => $phone, 'sendKey' => 'code_failed:' . bin2hex(random_bytes(10)),
-            ]);
-            return null;
-        }
-        $row->set(['usedAt' => gmdate('Y-m-d H:i:s'), 'phone' => $phone, 'code' => null]);
-        $this->em->saveEntity($row);
-        return $row;
+        $at = fn (int $time) => gmdate(DATE_ATOM, $time);
+        $sentAt = self::time($row->get('sentAt'));
+        $smsAt = $row->get('smsAt') ? self::time($row->get('smsAt')) : null;
+        return [
+            'phone' => (string) $row->get('phone'),
+            'display' => self::display((string) $row->get('phone')),
+            'whatsApp' => (bool) $row->get('waPhone'),
+            'sms' => $smsAt !== null,
+            'smsAvailable' => $this->sms->available(),
+            'sentAt' => $at($sentAt),
+            'resendAt' => $at($sentAt + self::RESEND_SECONDS),
+            'smsAt' => $at($smsAt !== null ? $smsAt + self::RESEND_SECONDS : $sentAt + $this->settings->smsAfterSeconds()),
+            'expiresAt' => $at(self::time($row->get('expiresAt'))),
+        ];
     }
 
-    /** @return array{code: string, text: string, link: string, expiresAt: string} */
-    private function present(Entity $row): array
+    /** @throws CodeRejected */
+    private function startSms(Entity $row): void
     {
-        $code = (string) $row->get('code');
-        $text = ($row->get('purpose') === self::SIGNUP ? 'Confirmar WhatsApp ' : 'Ativar Em dia ') . $code;
-        return [
-            'code' => $code, 'text' => $text,
-            'link' => 'https://wa.me/' . preg_replace('/\D/', '', $this->settings->number()) . '?text=' . rawurlencode($text),
-            'expiresAt' => gmdate(DATE_ATOM, (int) strtotime($row->get('expiresAt') . ' UTC')),
-        ];
+        try {
+            $sid = $this->sms->start((string) $row->get('phone'));
+        } catch (Throwable $e) {
+            $this->log->warning("PhoneCodes: SMS code {$row->getId()} failed: " . $e->getMessage());
+            throw new CodeRejected(CodeRejected::SEND_FAILED);
+        }
+        $row->set(['smsAt' => gmdate('Y-m-d H:i:s'), 'smsSid' => $sid, 'sends' => (int) $row->get('sends') + 1]);
+        $this->em->saveEntity($row);
+    }
+
+    /** @throws CodeRejected */
+    private function assertPhoneBelowLimits(string $phone): void
+    {
+        $sends = function (int $seconds) use ($phone): int {
+            $total = 0;
+            foreach ($this->rows(['phone' => $phone, 'createdAt>=' => gmdate('Y-m-d H:i:s', time() - $seconds)])->find() as $row) {
+                $total += max(1, (int) $row->get('sends'));
+            }
+            return $total;
+        };
+        if ($sends(3600) >= self::SENDS_PER_PHONE_PER_HOUR || $sends(86400) >= self::SENDS_PER_PHONE_PER_DAY) {
+            throw new CodeRejected(CodeRejected::RATE_LIMITED);
+        }
+    }
+
+    private function hash(Entity $row, string $code): string
+    {
+        return hash_hmac('sha256', 'phone-code:' . $row->getId() . ':' . $code, $this->settings->secret());
+    }
+
+    /** @param array{userId?: string, chatwootAccountId?: string, signupId?: string} $owner */
+    private function open(string $purpose, array $owner): ?Entity
+    {
+        return $this->rows($this->openWhere($purpose, $owner))->order('createdAt', 'DESC')->findOne();
+    }
+
+    /** @param array{userId?: string, chatwootAccountId?: string, signupId?: string} $owner */
+    private function latest(string $purpose, array $owner): ?Entity
+    {
+        return $this->rows($this->ownerWhere($purpose, $owner))->order('createdAt', 'DESC')->findOne();
     }
 
     /**
      * @param array{userId?: string, chatwootAccountId?: string, signupId?: string} $owner
-     * @return list<Entity>
+     * @return array<string, mixed>
      */
-    private function open(string $purpose, array $owner): array
+    private function openWhere(string $purpose, array $owner): array
     {
-        $where = ['purpose' => $purpose, 'usedAt' => null, 'expiresAt>' => gmdate('Y-m-d H:i:s')];
-        if ($purpose === self::SIGNUP) {
-            $where['signupId'] = $owner['signupId'] ?? '';
-        } else {
-            $where['userId'] = $owner['userId'] ?? '';
-            $where['chatwootAccountId'] = $owner['chatwootAccountId'] ?? '';
-        }
-        return iterator_to_array($this->em->getRDBRepository('WhatsAppPhoneCode')->where($where)->order('createdAt', 'DESC')->find());
+        return [...$this->ownerWhere($purpose, $owner), 'usedAt' => null, 'expiresAt>' => gmdate('Y-m-d H:i:s')];
+    }
+
+    /**
+     * @param array{userId?: string, chatwootAccountId?: string, signupId?: string} $owner
+     * @return array<string, mixed>
+     */
+    private function ownerWhere(string $purpose, array $owner): array
+    {
+        return $purpose === self::SIGNUP
+            ? ['purpose' => $purpose, 'signupId' => $owner['signupId'] ?? '']
+            : ['purpose' => $purpose, 'userId' => $owner['userId'] ?? '', 'chatwootAccountId' => $owner['chatwootAccountId'] ?? ''];
+    }
+
+    /** @param array<string, mixed> $where */
+    private function rows(array $where): RDBSelectBuilder
+    {
+        return $this->em->getRDBRepository('WhatsAppPhoneCode')->where($where);
+    }
+
+    private static function time(mixed $value): int
+    {
+        return (int) strtotime((string) $value . ' UTC');
     }
 }

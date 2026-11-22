@@ -31,6 +31,10 @@ class SignupRejected extends RuntimeException
     public const INVALID_CODE = 'INVALID_CODE';
     public const CODE_EXPIRED = 'CODE_EXPIRED';
     public const TOO_MANY_ATTEMPTS = 'TOO_MANY_ATTEMPTS';
+    public const SMS_TOO_SOON = 'SMS_TOO_SOON';
+    public const SEND_FAILED = 'SEND_FAILED';
+    public const PHONE_TAKEN = 'PHONE_TAKEN';
+    public const PHONE_TOO_MANY_ATTEMPTS = 'PHONE_TOO_MANY_ATTEMPTS';
     public const NOT_FOUND = 'SIGNUP_NOT_FOUND';
     public const EMAIL_NOT_SENT = 'EMAIL_NOT_SENT';
     public const SOCIAL_FAILED = 'SOCIAL_FAILED';

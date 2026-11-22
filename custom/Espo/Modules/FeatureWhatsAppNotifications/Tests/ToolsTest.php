@@ -115,17 +115,11 @@ class ToolsTest extends TestCase
         $this->assertNull($tokens->parse(str_replace('ed1.c.', 'ed1.s.', $payload)));
     }
 
-    public function testCodesAreFoundOnlyInTheirOwnShape(): void
+    public function testPhonesReadLikeBrazilianNumbers(): void
     {
-        $this->assertSame('7KQ2-M9XP', PhoneCodes::extract('Ativar Em dia 7KQ2-M9XP'));
-        $this->assertSame('7KQ2-M9XP', PhoneCodes::extract('confirmar whatsapp 7kq2-m9xp'));
-        // Look-alike characters (0, 1, I, O) are not in the alphabet, and a code needs its hyphen.
-        $this->assertNull(PhoneCodes::extract('Ativar 7KQ2M9XP'));
-        $this->assertNull(PhoneCodes::extract('Ativar 70Q2-M9XP'));
-        $this->assertNull(PhoneCodes::extract('oi, tudo bem?'));
-        $this->assertNull(PhoneCodes::extract('STRENGTH'));
-        $this->assertTrue(PhoneCodes::meant('Ativar Em dia 7KQ2-M9XP'));
-        $this->assertFalse(PhoneCodes::meant('em dia'));
+        $this->assertSame('+55 11 91234-5678', PhoneCodes::display('+5511912345678'));
+        $this->assertSame('+55 91 4040-3376', PhoneCodes::display('+559140403376'));
+        $this->assertSame('+14155550100', PhoneCodes::display('+14155550100'));
     }
 
     public function testWaitReadsLikeAPerson(): void
@@ -201,6 +195,20 @@ class ToolsTest extends TestCase
         $this->assertTrue($on->signupVerification());
         $this->assertSame('monostax_resumo_diario', $on->digestTemplate());
         $this->assertFalse($this->settings(['enabled' => true, 'signupVerification' => false])->signupVerification());
+    }
+
+    public function testThePhoneCodeConfigHasItsDefaultsAndNoSmsUntilAServiceIsSet(): void
+    {
+        $settings = $this->settings();
+        $this->assertSame('monostax_codigo_verificacao', $settings->codeTemplate());
+        $this->assertSame('pt_BR', $settings->codeLanguage());
+        $this->assertNull($settings->twilioVerifyServiceSid());
+        $this->assertSame(20, $settings->smsAfterSeconds());
+        $sid = 'VA' . str_repeat('0a', 16);
+        $on = $this->settings(['otp' => ['twilioVerifyServiceSid' => $sid, 'smsAfterSeconds' => 30]]);
+        $this->assertSame($sid, $on->twilioVerifyServiceSid());
+        $this->assertSame(30, $on->smsAfterSeconds());
+        $this->assertNull($this->settings(['otp' => ['twilioVerifyServiceSid' => 'not-a-sid']])->twilioVerifyServiceSid());
     }
 }
 

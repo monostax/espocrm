@@ -11,8 +11,8 @@
 /**
  * The login page plus self-service signup (clientDefs.App.loginView).
  *
- * Signup: form → emailed code → WhatsApp check (the person sends a code from
- * their WhatsApp; status `phone`) → workspace creation → login with a one-time
+ * Signup: form → emailed code → phone check (a 6-digit code we send to the
+ * number in the form, by WhatsApp or SMS; status `phone`) → workspace creation → login with a one-time
  * ticket through the normal login request, then the usual Chatwoot redirect.
  * Shown only while the server reports self-service as enabled. Open it
  * directly with `?signup` or `#signup`.
@@ -25,6 +25,8 @@
  * bound in afterRender instead.
  */
 import LoginView from 'views/login';
+import {byIso, countries, countryName, defaultCountry, flagUrl, joinPhone, splitPhone}
+    from 'feature-self-service:helpers/phone-countries';
 
 const STORAGE_KEY = 'selfServiceSignup';
 const POLL_MS = 2000;
@@ -77,6 +79,7 @@ export default class extends LoginView {
                 }
 
                 this.selfServiceProviders = config.providers || [];
+                this.selfServicePhoneCheck = !!config.phoneCheck;
                 this.selfServiceAddLink();
 
                 if (this.selfServiceRestore()) {
@@ -242,7 +245,7 @@ export default class extends LoginView {
         this.selfServiceRender(
             `<form data-role="self-service-details" class="login-form" novalidate>
                 ${this.selfServiceHeader('detailsTitle', this.selfServiceEmphasis('detailsSignedInAs', '{email}', result.email))}
-                ${this.selfServiceField('phone', 'tel', 'tel', 'maxlength="20" placeholder="(11) 91234-5678"')}
+                ${this.selfServicePhoneField('self-service-phone', '', this.selfServicePhoneHint())}
                 ${this.selfServiceField('company', 'text', 'organization', 'maxlength="100"', this.selfServicePreview().company)}
                 ${this.selfServiceTermsCheckbox(false)}
                 ${this.selfServiceActions('submit')}
@@ -263,7 +266,7 @@ export default class extends LoginView {
 
             Espo.Ajax.postRequest('SelfService/oauth/complete', {
                 identity: result.identity,
-                phone: form.querySelector('[name="phone"]').value,
+                phone: this.selfServicePhoneValue(form),
                 company: form.querySelector('[name="company"]').value,
                 acceptTerms: form.querySelector('[name="acceptTerms"]').checked,
                 language: this.getConfig().get('language') === 'en_US' ? 'en_US' : 'pt_BR',
@@ -298,6 +301,139 @@ export default class extends LoginView {
                 <a href="${PRIVACY_URL}" target="_blank" rel="noopener">${escape(this.selfServiceText('privacy'))}</a>
             </span>
         </label>`;
+    }
+
+    /** Under the phone field, when the signup checks the number: a code will go to it. */
+    selfServicePhoneHint() {
+        return this.selfServicePhoneCheck ? 'phoneHint' : null;
+    }
+
+    /**
+     * A phone field: the country (flag and dial code, starting on the browser's
+     * time zone) before the number, as in Chatwoot. Read it with
+     * selfServicePhoneValue; selfServiceRender wires the country menu.
+     */
+    selfServicePhoneField(id, value, hintKey) {
+        const {country, national} = splitPhone(value, this.selfServicePhoneCountry || defaultCountry());
+        const search = escape(this.selfServiceText('phoneCountrySearch'));
+        const hint = hintKey ?
+            `<p class="login-hint" id="${id}-hint">${escape(this.selfServiceText(hintKey))}</p>` : '';
+
+        return `<div class="login-field" data-role="phone-field" data-iso="${country.iso}">
+            <label for="${id}" class="login-label">${escape(this.selfServiceText('phone'))}</label>
+            <div class="login-phone">
+                <button type="button" class="login-phone-country" data-action="phoneCountry" aria-haspopup="listbox"
+                    aria-expanded="false" aria-label="${escape(this.selfServiceText('phoneCountry'))}">
+                    <img class="login-flag" src="${flagUrl(country.iso)}" alt="" width="20" height="15">
+                    <span class="login-phone-dial">+${country.dial}</span>
+                </button>
+                <input type="tel" id="${id}" name="phone" class="form-control" autocomplete="tel-national"
+                    inputmode="tel" maxlength="20" value="${escape(national)}"
+                    placeholder="${country.iso === 'BR' ? '(11) 91234-5678' : ''}"
+                    ${hintKey ? `aria-describedby="${id}-hint"` : ''}>
+                <div class="login-phone-menu" hidden>
+                    <input type="search" class="form-control login-phone-search" placeholder="${search}" aria-label="${search}">
+                    <ul class="login-phone-list" role="listbox" aria-label="${escape(this.selfServiceText('phoneCountry'))}"></ul>
+                </div>
+            </div>
+            ${hint}
+        </div>`;
+    }
+
+    /** The number with its country's dial code ("+5511912345678"), for the CRM. */
+    selfServicePhoneValue(scope) {
+        const field = scope.querySelector('[data-role="phone-field"]');
+
+        return joinPhone(byIso(field.dataset.iso) || defaultCountry(), field.querySelector('[name="phone"]').value);
+    }
+
+    /** The country menu of a phone field: names in the page's language, searchable, flags loaded as they show. */
+    selfServiceBindPhone(field) {
+        const button = field.querySelector('[data-action="phoneCountry"]');
+        const menu = field.querySelector('.login-phone-menu');
+        const search = menu.querySelector('.login-phone-search');
+        const list = menu.querySelector('.login-phone-list');
+        const number = field.querySelector('[name="phone"]');
+        const language = this.getConfig().get('language') === 'en_US' ? 'en' : 'pt-BR';
+
+        const close = () => {
+            menu.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+            document.removeEventListener('click', outside, true);
+        };
+        const outside = event => {
+            if (!field.contains(event.target)) {
+                close();
+            }
+        };
+        const pick = iso => {
+            const country = byIso(iso);
+
+            if (!country) {
+                return;
+            }
+
+            this.selfServicePhoneCountry = country;
+            field.dataset.iso = country.iso;
+            button.querySelector('.login-flag').src = flagUrl(country.iso);
+            button.querySelector('.login-phone-dial').textContent = '+' + country.dial;
+            number.placeholder = country.iso === 'BR' ? '(11) 91234-5678' : '';
+            close();
+            number.focus();
+        };
+        const filter = () => {
+            const query = search.value.trim().toLowerCase().replace(/^\+/, '');
+
+            list.querySelectorAll('li').forEach(item => {
+                item.hidden = !!query && !item.dataset.search.includes(query);
+            });
+        };
+
+        button.addEventListener('click', () => {
+            if (!menu.hidden) {
+                close();
+
+                return;
+            }
+
+            if (!list.children.length) {
+                list.innerHTML = countries
+                    .map(country => ({...country, name: countryName(country.iso, language)}))
+                    .sort((a, b) => a.name.localeCompare(b.name, language))
+                    .map(country => `<li role="option" data-iso="${country.iso}"
+                        data-search="${escape(`${country.name} ${country.dial} ${country.iso}`.toLowerCase())}">
+                        <img class="login-flag" src="${flagUrl(country.iso)}" alt="" width="20" height="15" loading="lazy">
+                        <span>${escape(country.name)}</span><span class="login-phone-option-dial">+${country.dial}</span>
+                    </li>`)
+                    .join('');
+            }
+
+            list.querySelectorAll('li').forEach(item => {
+                item.setAttribute('aria-selected', String(item.dataset.iso === field.dataset.iso));
+            });
+            search.value = '';
+            filter();
+            menu.hidden = false;
+            button.setAttribute('aria-expanded', 'true');
+            document.addEventListener('click', outside, true);
+            search.focus();
+            list.querySelector('[aria-selected="true"]')?.scrollIntoView({block: 'nearest'});
+        });
+
+        search.addEventListener('input', filter);
+        search.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                close();
+                button.focus();
+            }
+
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                pick(list.querySelector('li:not([hidden])')?.dataset.iso);
+            }
+        });
+        list.addEventListener('click', event => pick(event.target.closest('li')?.dataset.iso));
     }
 
     /**
@@ -373,6 +509,8 @@ export default class extends LoginView {
     selfServiceRender(html) {
         this.selfServiceToggle(true);
         this.selfServiceContainer.innerHTML = html;
+        this.selfServiceContainer.querySelectorAll('[data-role="phone-field"]')
+            .forEach(field => this.selfServiceBindPhone(field));
 
         const form = this.selfServiceContainer.querySelector('form');
 
@@ -447,7 +585,7 @@ export default class extends LoginView {
                 ${this.selfServiceSocialButtons('before')}
                 ${field('name', 'text', 'name', 'maxlength="100"')}
                 ${field('email', 'email', 'email', 'maxlength="254" autocapitalize="off" spellcheck="false"')}
-                ${field('phone', 'tel', 'tel', 'maxlength="20" placeholder="(11) 91234-5678"')}
+                ${this.selfServicePhoneField('self-service-phone', values.phone, this.selfServicePhoneHint())}
                 ${field('company', 'text', 'organization', 'maxlength="100"')}
                 ${field('password', 'password', 'new-password', 'maxlength="128" minlength="8"', 'passwordHint')}
                 ${this.selfServiceTermsCheckbox(values.acceptTerms)}
@@ -475,7 +613,7 @@ export default class extends LoginView {
         const data = {
             name: value('name'),
             email: value('email').trim(),
-            phone: value('phone'),
+            phone: this.selfServicePhoneValue(form),
             company: value('company'),
             password: value('password'),
             acceptTerms: form.querySelector('[name="acceptTerms"]').checked,
@@ -631,11 +769,13 @@ export default class extends LoginView {
         }
 
         if (result.status === 'phone') {
+            // Nothing to wait for: the step goes on when the code is typed in.
             this.selfServiceShowPhone(result.phone || {});
-            // The "slow" hint counts from the end of this step.
-            polls = -1;
-        } else if (polls === 0 || this.selfServicePhoneKey) {
-            this.selfServicePhoneKey = null;
+
+            return;
+        }
+
+        if (polls === 0) {
             this.selfServiceRender(
                 `<div class="login-form">
                     ${this.selfServiceHeader('creating')}
@@ -666,88 +806,150 @@ export default class extends LoginView {
                     }
 
                     // A failed poll keeps the step on screen.
-                    this.selfServiceProgress(this.selfServicePhoneKey ?
-                        {status: 'phone', phone: this.selfServicePhoneLast} : {status: 'provisioning'}, polls + 1);
+                    this.selfServiceProgress({status: 'provisioning'}, polls + 1);
                 });
         }, POLL_MS);
     }
 
     /**
-     * The WhatsApp check: a QR code (on a computer) and a link (on the phone)
-     * that open WhatsApp with the code ready to send to the Avisos number.
-     * Drawn again only when the code or its state changes, so polling doesn't
-     * redraw the QR code.
+     * The phone check: the 6-digit code we sent to the number in the form, by
+     * WhatsApp (or by SMS on request). "Trocar número" corrects the number and
+     * sends a new code. Nothing is polled: the code typed in moves on.
      */
     selfServiceShowPhone(phone) {
-        const key = [phone.code, phone.taken, phone.verified].join('|');
-
-        this.selfServicePhoneLast = phone;
-
-        if (this.selfServicePhoneKey === key) {
-            return;
-        }
-
-        this.selfServicePhoneKey = key;
-
-        const manual = escape(this.selfServiceText('phoneManual'))
-            .replace('{text}', () => `<strong>${escape(phone.text)}</strong>`)
-            .replace('{number}', () => `<strong>${escape(phone.number)}</strong>`);
+        const sent = phone.pending && (phone.whatsApp || phone.sms);
+        const intro = sent ?
+            this.selfServiceEmphasis(phone.sms ? 'phoneSentSms' : 'phoneSent', '{number}', phone.display || '') :
+            escape(this.selfServiceText('phoneNotSent'));
 
         this.selfServiceRender(
-            `<div class="login-form" data-role="self-service-phone">
-                ${this.selfServiceHeader('phoneTitle', escape(this.selfServiceText('phoneIntro')))}
-                <div class="login-qrcode" data-role="phone-qr" aria-hidden="true"></div>
-                <p class="login-hint login-qrcode-hint">${escape(this.selfServiceText('phoneScan'))}</p>
-                <a class="login-button login-button-primary" href="${escape(phone.link)}" target="_blank"
-                    rel="noopener">${escape(this.selfServiceText('phoneOpen'))}</a>
-                <p class="login-hint">${manual}</p>
-                <p class="login-status" aria-live="polite">
-                    <span class="login-spinner" aria-hidden="true"></span>
-                    <span>${escape(this.selfServiceText(phone.verified ? 'phoneVerified' : 'phoneWaiting'))}</span>
-                </p>
-                <p class="login-error" role="alert" ${phone.taken ? '' : 'hidden'}>${escape(this.selfServiceText('phoneTaken'))}</p>
-                <div class="login-links">
-                    <button type="button" class="login-text-link" data-action="phoneNewCode">${escape(this.selfServiceText('phoneNewCode'))}</button>
+            `<form data-role="self-service-phone" class="login-form" novalidate>
+                ${this.selfServiceHeader('phoneTitle', intro)}
+                <div class="login-field">
+                    <label for="self-service-phone-code" class="login-label">${escape(this.selfServiceText('code'))}</label>
+                    <input type="text" id="self-service-phone-code" name="code" class="form-control login-code"
+                        inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\\d{6}">
                 </div>
-            </div>`
+                ${this.selfServiceActions('confirm')}
+                <div class="login-links">
+                    <button type="button" class="login-text-link" data-action="phoneChange">${escape(this.selfServiceText('phoneChange'))}</button>
+                    <button type="button" class="login-text-link" data-action="phoneResend"></button>
+                    <button type="button" class="login-text-link" data-action="phoneSms" hidden></button>
+                </div>
+                <div class="login-phone-change" data-role="phone-change" hidden>
+                    ${this.selfServicePhoneField('self-service-phone-new', phone.phone || '', null)}
+                    <button type="button" class="login-button" data-action="phoneSend">${escape(this.selfServiceText('phoneSend'))}</button>
+                </div>
+            </form>`
         );
 
-        const box = this.selfServiceContainer.querySelector('[data-role="phone-qr"]');
+        const form = this.selfServiceContainer.querySelector('form');
+        const resend = form.querySelector('[data-action="phoneResend"]');
+        const sms = form.querySelector('[data-action="phoneSms"]');
+        const change = form.querySelector('[data-role="phone-change"]');
+        const resendAt = Date.parse(phone.resendAt || '') || 0;
+        const smsAt = Date.parse(phone.smsAt || '') || 0;
 
-        Espo.loader.requirePromise('lib!qrcodejs').then(QRCode => {
-            if (!box.isConnected || !phone.link) {
-                return;
-            }
+        // The links say when they work; a code that never went out can be asked for at once.
+        const tick = () => {
+            const now = Date.now();
+            const resendLeft = sent ? Math.ceil((resendAt - now) / 1000) : 0;
+            const smsLeft = Math.ceil((smsAt - now) / 1000);
 
-            new QRCode(box, {
-                text: phone.link,
-                width: 176,
-                height: 176,
-                colorDark: '#000000',
-                colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.M,
-            });
-        });
+            resend.disabled = resendLeft > 0;
+            resend.textContent = resendLeft > 0 ?
+                this.selfServiceText('resendIn').replace('{seconds}', String(resendLeft)) :
+                this.selfServiceText('resend');
 
-        const newCode = this.selfServiceContainer.querySelector('[data-action="phoneNewCode"]');
+            sms.hidden = !phone.pending || !phone.smsAvailable;
+            sms.disabled = smsLeft > 0;
+            sms.textContent = smsLeft > 0 ?
+                this.selfServiceText('phoneSmsIn').replace('{seconds}', String(smsLeft)) :
+                this.selfServiceText('phoneSms');
+        };
 
-        newCode.addEventListener('click', () => {
+        clearInterval(this.selfServiceResendTimer);
+        tick();
+        this.selfServiceResendTimer = setInterval(tick, 1000);
+
+        const ask = (button, body, notice) => {
             const state = this.selfServiceState();
 
-            newCode.disabled = true;
+            button.disabled = true;
 
-            Espo.Ajax.postRequest(`SelfService/signup/${encodeURIComponent(state.signupId)}/phone`, {token: state.token})
+            Espo.Ajax.postRequest(`SelfService/signup/${encodeURIComponent(state.signupId)}/phone`, {token: state.token, ...body})
                 .then(result => {
-                    if (result.status === 'phone') {
-                        this.selfServicePhoneKey = null;
-                        this.selfServiceShowPhone(result.phone || {});
+                    if (result.status !== 'phone') {
+                        this.selfServiceProgress(result, 0);
+
+                        return;
+                    }
+
+                    this.selfServiceShowPhone(result.phone || {});
+
+                    if (notice) {
+                        Espo.Ui.success(this.selfServiceText(notice));
                     }
                 })
                 .catch(xhr => {
-                    newCode.disabled = false;
+                    button.disabled = false;
                     this.selfServiceError(xhr);
                 });
+        };
+
+        resend.addEventListener('click', () => !resend.disabled && ask(resend, {}, 'resent'));
+        sms.addEventListener('click', () => !sms.disabled && ask(sms, {channel: 'sms'}, 'phoneSmsSent'));
+        form.querySelector('[data-action="phoneChange"]').addEventListener('click', () => {
+            change.hidden = false;
+            change.querySelector('[name="phone"]').focus();
         });
+
+        const sendTo = form.querySelector('[data-action="phoneSend"]');
+
+        sendTo.addEventListener('click', () => ask(sendTo, {phone: this.selfServicePhoneValue(change)}, null));
+
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            this.selfServiceVerifyPhone(form, change);
+        });
+
+        if (phone.taken) {
+            const line = form.querySelector('.login-error');
+
+            line.textContent = this.selfServiceText('phoneTaken');
+            line.hidden = false;
+            change.hidden = false;
+        }
+
+        form.querySelector('[name="code"]').focus();
+    }
+
+    selfServiceVerifyPhone(form, change) {
+        const state = this.selfServiceState();
+        const code = form.querySelector('[name="code"]').value.replace(/\D/g, '');
+        const button = form.querySelector('[type="submit"]');
+
+        button.disabled = true;
+        Espo.Ui.notifyWait();
+
+        Espo.Ajax.postRequest(`SelfService/signup/${encodeURIComponent(state.signupId)}/phone/verify`, {
+            token: state.token,
+            code: code,
+        })
+            .then(result => {
+                Espo.Ui.notify(false);
+                clearInterval(this.selfServiceResendTimer);
+                this.selfServiceProgress(result, 0);
+            })
+            .catch(xhr => {
+                button.disabled = false;
+                this.selfServiceError(xhr, reason => {
+                    // The number already has a workspace: another one can be tried right here.
+                    if (reason === 'PHONE_TAKEN') {
+                        change.hidden = false;
+                    }
+                });
+            });
     }
 
     selfServiceLogin(ticket) {

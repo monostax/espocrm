@@ -24,7 +24,10 @@ use Espo\Core\Utils\Config;
  *   templateLanguage     pt_BR
  *   hotLeadMinutes       minimum wait before a hot-lead alert (60)
  *   hotLeadDailyCap      hot-lead alerts per person per day (2)
- *   signupVerification   self-service signup verifies the WhatsApp number (default: same as enabled)
+ *   signupVerification   self-service signup verifies the phone number (default: same as enabled)
+ *   otp                  the 6-digit phone code (PhoneCodes): `template` (Meta authentication template,
+ *                        monostax_codigo_verificacao), `language` (pt_BR), `twilioVerifyServiceSid` (VA…, for
+ *                        "Receber por SMS"; unset: no SMS), `smsAfterSeconds` (20: when the SMS may be asked for)
  *   rates                Meta's price per delivered message by pricing category, in BRL
  *   brlPerCredit         what one credit is worth in BRL, to turn Meta's price into credits
  */
@@ -114,6 +117,27 @@ class Settings
         return max(0, (int) ($this->all()['hotLeadDailyCap'] ?? 2));
     }
 
+    public function codeTemplate(): string
+    {
+        return (string) ($this->otp()['template'] ?? 'monostax_codigo_verificacao');
+    }
+
+    public function codeLanguage(): string
+    {
+        return (string) ($this->otp()['language'] ?? 'pt_BR');
+    }
+
+    public function twilioVerifyServiceSid(): ?string
+    {
+        $sid = $this->otp()['twilioVerifyServiceSid'] ?? null;
+        return is_string($sid) && preg_match('/^VA[0-9a-f]{32}$/', $sid) ? $sid : null;
+    }
+
+    public function smsAfterSeconds(): int
+    {
+        return max(0, (int) ($this->otp()['smsAfterSeconds'] ?? 20));
+    }
+
     /** @return array<string, string> pricing category => BRL */
     public function rates(): array
     {
@@ -132,6 +156,13 @@ class Settings
         $key = (string) $this->config->get('cryptKey');
         if ($key === '') throw new \RuntimeException('cryptKey is not set.');
         return hash_hmac('sha256', 'whatsapp-notifications-v1', $key);
+    }
+
+    /** @return array<string, mixed> */
+    private function otp(): array
+    {
+        $otp = $this->all()['otp'] ?? null;
+        return is_array($otp) ? $otp : [];
     }
 
     /** @return array<string, mixed> */

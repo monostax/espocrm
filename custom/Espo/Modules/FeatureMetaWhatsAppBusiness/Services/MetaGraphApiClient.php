@@ -572,6 +572,31 @@ class MetaGraphApiClient
     }
 
     /**
+     * Send one template message to $to (E.164) from the phone number.
+     *
+     * @param list<array<string, mixed>> $components Meta's template components (body, button parameters)
+     * @return array<string, mixed> Decoded response (`contacts[].wa_id`, `messages[].id`)
+     * @throws Error
+     */
+    public function sendTemplateMessage(
+        string $accessToken,
+        string $phoneNumberId,
+        string $to,
+        string $templateName,
+        string $language,
+        array $components,
+        string $apiVersion = self::DEFAULT_API_VERSION,
+    ): array {
+        return $this->requestPostJson(self::GRAPH_API_BASE . "/{$apiVersion}/{$phoneNumberId}/messages", $accessToken, [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => ltrim($to, '+'),
+            'type' => 'template',
+            'template' => ['name' => $templateName, 'language' => ['code' => $language], 'components' => $components],
+        ]);
+    }
+
+    /**
      * Perform an authenticated GET request to the Meta Graph API.
      *
      * @param string $url Full URL

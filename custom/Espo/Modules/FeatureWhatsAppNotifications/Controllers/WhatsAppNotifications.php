@@ -38,6 +38,11 @@ class WhatsAppNotifications
         return (object) $this->subscriptions->code($request);
     }
 
+    public function postActionVerify(Request $request): object
+    {
+        return (object) $this->subscriptions->verify($request);
+    }
+
     public function postActionStop(Request $request): object
     {
         return (object) $this->subscriptions->stopMine($request);

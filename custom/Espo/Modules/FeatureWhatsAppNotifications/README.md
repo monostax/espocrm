@@ -4,13 +4,17 @@ Each person gets their Em dia cards in WhatsApp, from our number "Monostax - Avi
 
 Off until the config says otherwise (see Config).
 
-## Turning it on: a code sent from WhatsApp
+## Turning it on: a 6-digit code we send
 
-Meta wants the recipient's own opt-in, and a card quotes customers, so nothing goes to a number until the person proves they hold it. They send a code FROM that number (`PhoneCodes`): a wa.me link with the text ready ("Ativar Em dia 7KQ2-M9XP"), or its QR code. The sender is the number, nothing typed is trusted, and the message opens Meta's 24h window.
+Meta wants the recipient's own opt-in, and a card quotes customers, so nothing goes to a number until the person proves they hold it (the user, 2026-11-22: a code we send, typed in, on every screen; no more QR code or wa.me link). `PhoneCodes` sends a 6-digit code to the number the person typed:
 
-- **Settings › Notificações no WhatsApp** (Chatwoot, every member, workspaces with Em dia on): `POST /WhatsAppNotifications/code` gives the code; the incoming message activates the person's subscription in that workspace and in their other workspaces (below), and sends a welcome naming them all that says to write *em dia* for the cards.
-- **Self-service signup** (FeatureSelfService `Signups`): right after the email code, the signup waits in status `phone` until the code arrives (`SelfService/signup/:id/phone` gives a new one). The verified number becomes the owner's phone, and the user and workspace are created then (by the webhook, so a closed tab still finishes; a status poll takes over after 90 s). One free trial per verified number: a number that verified another signup is refused, and the person may send from another one. When the workspace is ready, the owner's subscription is created with that number.
-- Codes: 8 characters without look-alikes, valid 15 minutes, used once; a number with 5 wrong codes in an hour is ignored for the rest of it.
+- **WhatsApp:** the authentication template `otp.template` (`monostax_codigo_verificacao`, pt_BR, "Copiar código" button, APPROVED on the Avisos WABA 1277873257539849) from the Avisos number, sent straight to Meta with the Avisos inbox's own integration (`CodeWhatsApp`: its OAuth account and phone number id), not through Chatwoot, so no code sits in a conversation. Meta's `wa_id` for the number is kept and becomes the verified number (Brazil's mobile 9th digit), so inbound matching still works. When Meta refuses the number outright, the code goes by SMS at once.
+- **SMS** ("Receber por SMS", after `otp.smsAfterSeconds`): Twilio Verify (`TwilioVerify`, service `otp.twilioVerifyServiceSid`, the platform Twilio account of `FeatureCredits\Verification\TwilioCredentials`). Verify picks its own code, so either code proves the number. Without a service SID the link doesn't show.
+- Only an HMAC of our code is stored. A code lasts 10 minutes and takes 5 wrong tries; a new code to the same number waits a minute (a corrected number doesn't), at most 5 an hour per person, 5 an hour and 10 a day per number, and 5 SMS an hour per IP address.
+- **A code we send opens no 24h window** (only a message from the person does), so there is no welcome message, and cards go out as templates until the person writes to us. `Subscriptions::activate` keeps the window and thread of the same number and clears them for a new one.
+
+- **Settings › Notificações no WhatsApp** (Chatwoot, every member, workspaces with Em dia on): the person types their number (country picker, starting on the browser's time zone) → `POST /WhatsAppNotifications/code` `{accountId, phone}` (or `{channel: "sms"}`) → `POST /WhatsAppNotifications/verify` `{accountId, code}` turns on the person's subscription in that workspace and in their other workspaces (below). `me.pending` says where the code went and when the person may ask again, never the code.
+- **Self-service signup** (FeatureSelfService `Signups`): right after the email code, the code goes to the number in the form and the signup waits in status `phone` (`SelfService/signup/:id/phone` resends, sends by SMS or changes the number; `/phone/verify` checks the code). The right code makes the number the owner's phone and creates the user and workspace. One free trial per verified number: a number that verified another signup is refused (`PHONE_TAKEN`), and the person may try another one. When the workspace is ready, the owner's subscription is created with that number.
 
 **The verified number is the person's, not the workspace's** (the user, 2026-11-13). One code turns it on in every workspace the person belongs to (`UserTenantResolver`: tenantUser or teams) with Em dia on (`Subscriptions::spread`): same number, 24h window and Avisos thread, the person's preferences as a start. A new code also turns their stopped rows back on with the new number, keeping each workspace's switches. A workspace they join later gets its row the first time it's needed (any message from the number, `activeForPhone`, or opening Settings there), without turning a stopped row back on. A row whose person left the workspace counts for nothing (`Workspaces::live`: no pushes, not offered, not routed to).
 
@@ -74,7 +78,7 @@ When a workspace goes: tenant offboarding (FeatureSelfService) removes subscript
 
 ## Config
 
-`whatsAppNotifications` in data/config.php (`Tools/Settings`): `enabled` (default false), `signupVerification` (default: `enabled`), `inboxId` (CRM ChatwootInbox of Avisos), `number`, `cardTemplate` (`monostax_catchup_card`), `cardImage` (default false), `digestTemplate` (create it without buttons) (unset: the morning push is the first card), `templateLanguage` (`pt_BR`), `hotLeadMinutes` (60), `hotLeadDailyCap` (2), `rates`, `brlPerCredit` (0.499).
+`whatsAppNotifications` in data/config.php (`Tools/Settings`): `enabled` (default false), `signupVerification` (default: `enabled`), `otp` (`template`, `language`, `twilioVerifyServiceSid`, `smsAfterSeconds`; see Turning it on), `inboxId` (CRM ChatwootInbox of Avisos), `number`, `cardTemplate` (`monostax_catchup_card`), `cardImage` (default false), `digestTemplate` (create it without buttons) (unset: the morning push is the first card), `templateLanguage` (`pt_BR`), `hotLeadMinutes` (60), `hotLeadDailyCap` (2), `rates`, `brlPerCredit` (0.499).
 
 ## Deployment
 

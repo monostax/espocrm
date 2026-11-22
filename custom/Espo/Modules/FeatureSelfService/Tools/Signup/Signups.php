@@ -20,6 +20,7 @@ use Espo\Modules\FeatureSelfService\Tools\Policy\SelfServicePolicy;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Provisioner;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\ProvisioningRequest;
 use Espo\Modules\FeatureSelfService\Tools\Provisioning\Preview\PreviewClient;
+use Espo\Modules\FeatureWhatsAppNotifications\Tools\CodeRejected;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\PhoneCodes;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Settings as WhatsAppSettings;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Subscriptions;
@@ -30,9 +31,10 @@ use Espo\ORM\EntityManager;
  * Email-and-password signup:
  *
  *   begin   → a pending signup and a 6-digit code by email
- *   verify  → the WhatsApp check (status `phone`), or straight on when it is off
- *   phone   → the person sends a code from their WhatsApp (FeatureWhatsAppNotifications\Tools\PhoneCodes); its
- *             number becomes the owner's phone, then the CRM user and the workspace provisioning
+ *   verify  → the phone check (status `phone`), or straight on when it is off
+ *   phone   → a 6-digit code to the number typed in the form, by WhatsApp, or by SMS on request
+ *             (FeatureWhatsAppNotifications\Tools\PhoneCodes); the right code makes that number the owner's phone,
+ *             then the CRM user and the workspace provisioning
  *   status  → once the workspace is ready, a one-time login ticket
  *
  * The visitor holds the signup id and a secret token returned by begin().
@@ -56,8 +58,8 @@ class Signups
     /** A verified number whose activation hasn't finished after this long is activated by the next status poll. */
     private const ACTIVATION_RETRY_SECONDS = 90;
 
-    public const PHONE_OK = 'ok';
-    public const PHONE_TAKEN = 'taken';
+    private const PHONE_OK = 'ok';
+    private const PHONE_TAKEN = 'taken';
 
     public function __construct(
         private EntityManager $entityManager,
@@ -327,8 +329,8 @@ class Signups
     }
 
     /**
-     * The email is proven. With the WhatsApp check on, the signup waits for the person to send a code from their
-     * WhatsApp; nothing else exists until then.
+     * The email is proven. With the phone check on, the signup waits for the code we send to the number in the form;
+     * nothing else exists until then. A failed send leaves the step up, with "Reenviar".
      *
      * @return array<string, mixed>
      */
@@ -341,35 +343,42 @@ class Signups
         $signup->set(['status' => 'phone', 'codeHash' => null]);
         $this->entityManager->saveEntity($signup, ['silent' => true]);
 
+        try {
+            $this->phoneCodes->send(PhoneCodes::SIGNUP, $this->phoneOwner($signup), (string) $signup->get('phone'),
+                (string) $signup->get('ipAddress'));
+        } catch (CodeRejected $e) {
+            $this->log->warning("SelfService: phone code for signup {$signup->getId()} not sent: {$e->reason}");
+        }
+
         return $this->phoneStep($signup);
     }
 
     /**
-     * The WhatsApp step: the code to send (a new one when the last expired), the Avisos number, and whether the last
-     * number sent from already has a workspace.
+     * The phone step: where the code went and when the person may ask again (PhoneCodes, never the code), and whether
+     * the number already has a workspace.
      *
      * @return array{status: string, phone: array<string, mixed>}
      */
     private function phoneStep(Entity $signup): array
     {
-        $owner = ['signupId' => (string) $signup->getId()];
-        $code = $this->phoneCodes->pending(PhoneCodes::SIGNUP, $owner) ?? $this->phoneCodes->issue(PhoneCodes::SIGNUP, $owner);
+        $pending = $this->phoneCodes->pending(PhoneCodes::SIGNUP, $this->phoneOwner($signup));
+        $phone = (string) $signup->get('phone');
 
         return ['status' => 'phone', 'phone' => [
-            ...$code,
-            'number' => $this->whatsApp->displayNumber(),
-            'verified' => (bool) $signup->get('phoneVerifiedAt'),
+            ...($pending ?? ['phone' => $phone, 'display' => PhoneCodes::display($phone)]),
+            'pending' => $pending !== null,
             'taken' => (bool) $signup->get('phoneTakenAt'),
         ]];
     }
 
     /**
-     * POST /SelfService/signup/:id/phone: a new WhatsApp code.
+     * POST /SelfService/signup/:id/phone: a new code by WhatsApp ("Reenviar", or "Trocar número" with $phone), or
+     * the open code by SMS ($channel `sms`).
      *
      * @return array<string, mixed>
      * @throws SignupRejected
      */
-    public function phoneCode(string $signupId, string $token): array
+    public function phone(string $signupId, string $token, string $channel, ?string $phone, string $ipAddress): array
     {
         $this->policy->assertEnabled();
         $signup = $this->find($signupId, $token);
@@ -378,23 +387,67 @@ class Signups
             return $this->status($signupId, $token);
         }
 
-        $signup->set('phoneTakenAt', null);
-        $this->entityManager->saveEntity($signup, ['silent' => true]);
-        $this->phoneCodes->issue(PhoneCodes::SIGNUP, ['signupId' => (string) $signup->getId()]);
+        if ($channel !== 'sms' && $phone !== null && trim($phone) !== '') {
+            $signup->set(['phone' => SignupRequest::phone($phone), 'phoneTakenAt' => null]);
+            $this->entityManager->saveEntity($signup, ['silent' => true]);
+        }
+
+        try {
+            $channel === 'sms'
+                ? $this->phoneCodes->sms(PhoneCodes::SIGNUP, $this->phoneOwner($signup), $ipAddress)
+                : $this->phoneCodes->send(PhoneCodes::SIGNUP, $this->phoneOwner($signup), (string) $signup->get('phone'), $ipAddress);
+        } catch (CodeRejected $e) {
+            throw new SignupRejected($e->reason);
+        }
 
         return $this->phoneStep($signup);
     }
 
     /**
-     * A signup code arrived from $phone (FeatureWhatsAppNotifications\Tools\Inbound). One free trial per verified
-     * number (decided 2026-11-12): a number that already verified another signup is refused, and the person may send
-     * a new code from another number. Otherwise the number becomes the owner's phone and the account is created here,
-     * so it happens even if the signup page was closed.
+     * POST /SelfService/signup/:id/phone/verify: the code the person typed. The right one proves the number and
+     * creates the account; a number that already has a workspace is refused (PHONE_TAKEN), and another can be tried.
+     *
+     * @return array<string, mixed>
+     * @throws SignupRejected
+     */
+    public function verifyPhone(string $signupId, string $token, string $code): array
+    {
+        $this->policy->assertEnabled();
+        $signup = $this->find($signupId, $token);
+
+        if ($signup->get('status') !== 'phone') {
+            return $this->status($signupId, $token);
+        }
+
+        try {
+            $phone = $this->phoneCodes->check(PhoneCodes::SIGNUP, $this->phoneOwner($signup), $code);
+        } catch (CodeRejected $e) {
+            // Too many wrong tries ends this code only: a new one may be asked for, unlike the email step.
+            throw new SignupRejected($e->reason === CodeRejected::TOO_MANY_ATTEMPTS ? SignupRejected::PHONE_TOO_MANY_ATTEMPTS : $e->reason);
+        }
+
+        if ($this->phoneVerified((string) $signup->getId(), $phone) === self::PHONE_TAKEN) {
+            throw new SignupRejected(SignupRejected::PHONE_TAKEN);
+        }
+
+        return $this->status($signupId, $token);
+    }
+
+    /** @return array{signupId: string} */
+    private function phoneOwner(Entity $signup): array
+    {
+        return ['signupId' => (string) $signup->getId()];
+    }
+
+    /**
+     * The code proved $phone. One free trial per verified number (decided 2026-11-12): a number that already verified
+     * another signup is refused, and the person may try another number. Otherwise the number becomes the owner's
+     * phone and the account is created.
      *
      * The number stays used only while that other signup's owner exists, or is still being created (no user yet).
      * Deleting the owner (by hand or by offboarding the workspace) frees it again (decided 2026-11-19).
      */
-    public function phoneVerified(string $signupId, string $phone): string
+    private function phoneVerified(string $signupId, string $phone): string
     {
         $signup = $this->entityManager->getEntityById(self::ENTITY_TYPE, $signupId);
 
@@ -437,7 +490,7 @@ class Signups
         return self::PHONE_OK;
     }
 
-    /** A verified number whose activation didn't finish (the webhook died): the next status poll takes it over. */
+    /** A verified number whose activation didn't finish (the request died): the next status poll takes it over. */
     private function retryActivation(Entity $signup): void
     {
         $verifiedAt = $signup->get('phoneVerifiedAt');
@@ -468,12 +521,12 @@ class Signups
             $this->assertEmailAvailable((string) $signup->get('email'));
             $this->activate($signup);
         } catch (\Throwable $e) {
-            $this->log->error("SelfService: activation of signup {$signupId} after the WhatsApp check failed: " . $e->getMessage());
+            $this->log->error("SelfService: activation of signup {$signupId} after the phone check failed: " . $e->getMessage());
         }
     }
 
     /**
-     * The owner proved their WhatsApp at signup, and the step said Em dia would come there: their Avisos subscription
+     * The owner proved their number at signup, and the step said Em dia would come there: their Avisos subscription
      * in the new workspace, once it exists. Idempotent; a failure only leaves it for Settings.
      */
     private function subscribeOwner(Entity $signup, Entity $provisioning): void
@@ -499,7 +552,7 @@ class Signups
                 return;
             }
 
-            $subscriptions->activate((string) $signup->get('userId'), (string) $account->getId(), (string) $signup->get('phone'), 'signup', null, null);
+            $subscriptions->activate((string) $signup->get('userId'), (string) $account->getId(), (string) $signup->get('phone'), 'signup');
         } catch (\Throwable $e) {
             $this->log->warning("SelfService: Avisos subscription for signup {$signup->getId()} failed: " . $e->getMessage());
         }

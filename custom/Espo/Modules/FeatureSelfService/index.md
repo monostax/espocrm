@@ -59,7 +59,9 @@ The public, no-auth API is `/api/v1/SelfService/...`. Errors are `{"code": ...}`
 | `GET config` | `{state, providers}` for the login page. |
 | `POST signup` | Validates the form, emails a 6-digit code, returns `{signupId, token}`. |
 | `POST signup/:id/resend` | New code. 60 s cooldown, at most 5 per signup. |
-| `POST signup/:id/verify` | Right code: creates the owner (regular user, login = email), starts and runs provisioning. Returns `{status}` and, when ready, a `ticket`. |
+| `POST signup/:id/verify` | Right code: with the phone check on (`whatsAppNotifications.signupVerification`), sends a 6-digit code to the form's number and returns `{status: phone}`; otherwise creates the owner (regular user, login = email), starts and runs provisioning. Returns `{status}` and, when ready, a `ticket`. |
+| `POST signup/:id/phone` | Phone check: a new code by WhatsApp (`phone` to change the number), or by SMS (`channel: sms`). Limits in FeatureWhatsAppNotifications `PhoneCodes`. |
+| `POST signup/:id/phone/verify` | The phone code: proves the number (one free trial per number, `PHONE_TAKEN`), then creates the owner and the workspace as above. |
 | `POST signup/:id/status` | Progress while provisioning finishes. Returns a fresh ticket when ready, for one hour after verification. |
 | `POST oauth/start` | Provider authorization URL with a signed `state` bound to the browser's nonce. |
 | `POST oauth/finish` | Exchanges the code. An existing regular user gets a `ticket`; a new email gets a signed `identity`. |

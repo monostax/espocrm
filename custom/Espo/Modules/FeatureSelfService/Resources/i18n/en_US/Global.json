@@ -55,15 +55,18 @@
         "detailsSignedInAs": "Your account will be created with {email}.",
         "back": "Back",
         "phoneTitle": "Confirm your WhatsApp",
-        "phoneIntro": "Send the message below from your WhatsApp to Monostax. That's where Em dia will tell you about customers waiting for a reply. You can turn it off anytime.",
-        "phoneOpen": "Open WhatsApp",
-        "phoneManual": "Or send {text} to {number}.",
-        "phoneScan": "On a computer? Point your phone's camera at the code.",
-        "phoneWaiting": "Waiting for your message…",
-        "phoneVerified": "WhatsApp confirmed. Creating your workspace…",
-        "phoneTaken": "This WhatsApp already has a Monostax workspace. Log in with your email or send from another number.",
-        "phoneNewCode": "Create another code",
-        "phoneExpired": "The code expired. Create another one."
+        "phoneHint": "We'll send a code to confirm this number.",
+        "phoneCountry": "Country",
+        "phoneCountrySearch": "Search country",
+        "phoneSent": "We sent a 6-digit code to {number} on WhatsApp.",
+        "phoneSentSms": "We sent a 6-digit code to {number} by SMS.",
+        "phoneNotSent": "We couldn't send the code right now. Resend it or change the number.",
+        "phoneSms": "Get it by SMS",
+        "phoneSmsIn": "Get it by SMS in {seconds}s",
+        "phoneSmsSent": "We sent the code by SMS.",
+        "phoneChange": "Change number",
+        "phoneSend": "Send code",
+        "phoneTaken": "This number already has a Monostax workspace. Log in with your email or use another number."
     },
     "selfServiceErrors": {
         "GENERIC": "Something went wrong. Try again.",
@@ -84,6 +87,10 @@
         "EMAIL_NOT_SENT": "We could not send the code right now. Try again in a few minutes.",
         "SOCIAL_FAILED": "We could not sign you in with that account. Try again.",
         "SOCIAL_EMAIL_UNVERIFIED": "That account has no verified email. Create your account with email and password.",
-        "SOCIAL_UNAVAILABLE": "This sign-in option is not available right now."
+        "SOCIAL_UNAVAILABLE": "This sign-in option is not available right now.",
+        "SMS_TOO_SOON": "Wait a few seconds before asking for an SMS.",
+        "SEND_FAILED": "We couldn't send the code right now. Try again in a moment.",
+        "PHONE_TAKEN": "This number already has a Monostax workspace. Log in with your email or use another number.",
+        "PHONE_TOO_MANY_ATTEMPTS": "Too many wrong codes. Ask for a new code."
     }
 }

@@ -23,6 +23,7 @@ use Espo\Modules\FeatureSelfService\Tools\Signup\SignupOrigin;
 use Espo\Modules\FeatureSelfService\Tools\Signup\SignupRequest;
 use Espo\Modules\FeatureSelfService\Tools\Signup\Signups;
 use Espo\Modules\FeatureSelfService\Tools\Signup\SocialSignIn;
+use Espo\Modules\FeatureWhatsAppNotifications\Tools\Settings as WhatsAppSettings;
 
 /**
  * Public (no-auth) signup API used by the login page.
@@ -36,6 +37,7 @@ class SelfService
         private SelfServicePolicy $policy,
         private Signups $signups,
         private SocialSignIn $social,
+        private WhatsAppSettings $whatsApp,
     ) {}
 
     public function getActionConfig(): object
@@ -45,6 +47,8 @@ class SelfService
         return (object) [
             'state' => $state,
             'providers' => $state === SelfServicePolicy::STATE_ENABLED ? $this->social->availableProviders() : [],
+            // The form says a code will go to the number.
+            'phoneCheck' => $this->whatsApp->signupVerification(),
         ];
     }
 
@@ -119,10 +123,25 @@ class SelfService
         return $this->call(fn () => $this->signups->verify((string) $request->getRouteParam('id'), $this->token($request), $code));
     }
 
-    /** A new code for the signup's WhatsApp check. */
+    /** The phone check: a new code by WhatsApp (`phone` to correct the number), or the open one by SMS (`channel: sms`). */
     public function postActionPhone(Request $request): object
     {
-        return $this->call(fn () => $this->signups->phoneCode((string) $request->getRouteParam('id'), $this->token($request)));
+        $body = $request->getParsedBody();
+
+        return $this->call(fn () => $this->signups->phone(
+            (string) $request->getRouteParam('id'),
+            $this->token($request),
+            ($body->channel ?? null) === 'sms' ? 'sms' : 'whatsapp',
+            isset($body->phone) ? (string) $body->phone : null,
+            $this->ipAddress($request),
+        ));
+    }
+
+    public function postActionPhoneVerify(Request $request): object
+    {
+        $code = (string) ($request->getParsedBody()->code ?? '');
+
+        return $this->call(fn () => $this->signups->verifyPhone((string) $request->getRouteParam('id'), $this->token($request), $code));
     }
 
     public function postActionStatus(Request $request): object
@@ -146,10 +165,11 @@ class SelfService
             $body = $this->body($e->reason);
 
             throw match ($e->reason) {
-                SignupRejected::EMAIL_IN_USE => Conflict::createWithBody($e->reason, $body),
-                SignupRejected::RATE_LIMITED, SignupRejected::RESEND_TOO_SOON,
-                SignupRejected::TOO_MANY_ATTEMPTS, SignupRejected::NOT_FOUND => Forbidden::createWithBody($e->reason, $body),
-                SignupRejected::EMAIL_NOT_SENT => ServiceUnavailable::createWithBody($e->reason, $body),
+                SignupRejected::EMAIL_IN_USE, SignupRejected::PHONE_TAKEN => Conflict::createWithBody($e->reason, $body),
+                SignupRejected::RATE_LIMITED, SignupRejected::RESEND_TOO_SOON, SignupRejected::SMS_TOO_SOON,
+                SignupRejected::TOO_MANY_ATTEMPTS, SignupRejected::PHONE_TOO_MANY_ATTEMPTS,
+                SignupRejected::NOT_FOUND => Forbidden::createWithBody($e->reason, $body),
+                SignupRejected::EMAIL_NOT_SENT, SignupRejected::SEND_FAILED => ServiceUnavailable::createWithBody($e->reason, $body),
                 default => BadRequest::createWithBody($e->reason, $body),
             };
         }

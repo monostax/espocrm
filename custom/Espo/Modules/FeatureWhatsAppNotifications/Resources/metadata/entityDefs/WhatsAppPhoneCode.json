@@ -2,17 +2,25 @@
     "fields": {
         "purpose": { "type": "varchar", "maxLength": 12 },
         "codeHash": { "type": "varchar", "maxLength": 64 },
-        "code": { "type": "varchar", "maxLength": 9 },
+        "phone": { "type": "varchar", "maxLength": 20 },
+        "waPhone": { "type": "varchar", "maxLength": 20 },
         "userId": { "type": "varchar", "maxLength": 24 },
         "chatwootAccountId": { "type": "varchar", "maxLength": 24 },
         "signupId": { "type": "varchar", "maxLength": 24 },
+        "ipAddress": { "type": "varchar", "maxLength": 45 },
+        "attempts": { "type": "int", "default": 0 },
+        "sends": { "type": "int", "default": 0 },
+        "sentAt": { "type": "datetime" },
+        "smsAt": { "type": "datetime" },
+        "smsSid": { "type": "varchar", "maxLength": 34 },
         "expiresAt": { "type": "datetime" },
         "usedAt": { "type": "datetime" },
-        "phone": { "type": "varchar", "maxLength": 20 },
         "createdAt": { "type": "datetime", "readOnly": true }
     },
     "indexes": {
-        "codeHash": { "columns": ["codeHash"] },
-        "signup": { "columns": ["signupId"] }
+        "signup": { "columns": ["signupId"] },
+        "owner": { "columns": ["userId", "chatwootAccountId"] },
+        "phone": { "columns": ["phone", "createdAt"] },
+        "ip": { "columns": ["ipAddress", "smsAt"] }
     }
 }

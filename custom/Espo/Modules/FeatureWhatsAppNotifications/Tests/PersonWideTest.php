@@ -165,15 +165,16 @@ class PersonWideTest extends TestCase
         $em = $this->em($this->user());
         $this->otherPersonHoldsTheNumberInA4();
         $subscriptions = $this->subscriptions($em);
-        $verified = $subscriptions->activate('u1', 'a1', self::PHONE, 'settings', 77, 88);
+        $verified = $subscriptions->activate('u1', 'a1', self::PHONE, 'settings');
         $verified->set(['morningTime' => '07:30', 'hotLeadsEnabled' => false]);
 
         $spread = $this->subscriptionIn('a2');
         $this->assertNotNull($spread);
-        $this->assertSame(['active', self::PHONE, 'person', 77, 88, 'ta2', 2],
+        $this->assertSame(['active', self::PHONE, 'person', null, null, 'ta2', 2],
             [$spread->get('status'), $spread->get('phone'), $spread->get('source'), $spread->get('avisosContactId'),
                 $spread->get('avisosConversationId'), $spread->get('tenantId'), $spread->get('accountNumber')]);
-        $this->assertSame($verified->get('lastInboundAt'), $spread->get('lastInboundAt'), 'the 24h window is the number\'s');
+        $this->assertNull($verified->get('lastInboundAt'), 'a code we sent opens no 24h window');
+        $this->assertNull($spread->get('lastInboundAt'));
         $this->assertNull($this->subscriptionIn('a3'), 'Em dia is off there');
         $this->assertNull($this->subscriptionIn('a4'), 'another person holds the number there');
         $this->assertSame('active', $this->store['WhatsAppNotificationSubscription'][0]->get('status'));
@@ -187,9 +188,26 @@ class PersonWideTest extends TestCase
             'stopReason' => 'user', 'morningEnabled' => false, 'morningTime' => '10:00', 'source' => 'settings',
         ]);
         $this->store['WhatsAppNotificationSubscription'][] = $old;
-        $this->subscriptions($em)->activate('u1', 'a1', self::PHONE, 'settings', null, null);
+        $this->subscriptions($em)->activate('u1', 'a1', self::PHONE, 'settings');
         $this->assertSame(['active', self::PHONE, null, false, '10:00', 'settings'],
             [$old->get('status'), $old->get('phone'), $old->get('stopReason'), $old->get('morningEnabled'), $old->get('morningTime'), $old->get('source')]);
+    }
+
+    public function testVerifyingTheSameNumberKeepsItsWindowAndThreadAndANewNumberStartsWithout(): void
+    {
+        $em = $this->em($this->user());
+        $mine = $this->row('WhatsAppNotificationSubscription', [
+            'id' => 'mine', 'userId' => 'u1', 'chatwootAccountId' => 'a1', 'phone' => self::PHONE, 'status' => 'stopped',
+            'lastInboundAt' => '2026-11-22 10:00:00', 'avisosContactId' => 5, 'avisosConversationId' => 6,
+        ]);
+        $this->store['WhatsAppNotificationSubscription'][] = $mine;
+        $this->subscriptions($em)->activate('u1', 'a1', self::PHONE, 'settings');
+        $this->assertSame(['active', '2026-11-22 10:00:00', 5, 6],
+            [$mine->get('status'), $mine->get('lastInboundAt'), $mine->get('avisosContactId'), $mine->get('avisosConversationId')]);
+
+        $this->subscriptions($em)->activate('u1', 'a1', '+5511988887777', 'settings');
+        $this->assertSame(['+5511988887777', null, null, null],
+            [$mine->get('phone'), $mine->get('lastInboundAt'), $mine->get('avisosContactId'), $mine->get('avisosConversationId')]);
     }
 
     public function testAWorkspaceJoinedLaterIsAddedButAStoppedOneStaysStopped(): void
@@ -372,12 +390,11 @@ class PersonWideTest extends TestCase
         $this->assertSame('8:00, 11:00 and 15:00', Copy::times('en_US', Settings::DEFAULT_PUSH_TIMES));
     }
 
-    public function testTheWelcomeNamesEveryWorkspace(): void
+    public function testNamesReadAsAList(): void
     {
         $this->assertSame('*A*', Copy::list('pt_BR', ['*A*']));
         $this->assertSame('*A* e *B*', Copy::list('pt_BR', ['*A*', '*B*']));
         $this->assertSame('*A*, *B* e mais 3', Copy::list('pt_BR', ['*A*', '*B*'], 3));
         $this->assertSame('*A*, *B* and *C*', Copy::list('en_US', ['*A*', '*B*', '*C*']));
-        $this->assertStringContainsString('Seu Em dia de *A* e *B* agora chega aqui', Copy::t('pt_BR', 'welcome', ['name' => 'X', 'workspace' => '*A* e *B*']));
     }
 }
