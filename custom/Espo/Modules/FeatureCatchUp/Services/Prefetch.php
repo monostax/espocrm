@@ -134,7 +134,9 @@ class Prefetch
         }
 
         $status = (string) ($answer['status'] ?? '');
-        if (in_array($status, ['failed', 'limited'], true)) {
+        // Ended without a verdict: failed, the daily limit, or a workspace without credits (asking again until the deadline
+        // would queue a new analysis each time, as these let a new start through).
+        if (in_array($status, ['failed', 'limited', 'no_credits'], true)) {
             $result['failed']++;
             $this->log->warning("CatchUp prefetch: {$lane} {$id} ended {$status}.");
             return;

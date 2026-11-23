@@ -122,8 +122,9 @@ class Summary
     }
 
     /**
-     * Where each queued analysis stands, by request id, in one backend call: pending, completed, failed, limited, or
-     * expired (unknown). It reads no evidence, so the deck's polls cost no snapshot (Batch::status).
+     * Where each queued analysis stands, by request id, in one backend call: pending, completed, failed, limited,
+     * no_credits (the workspace's credits ran out, or it is frozen), or expired (unknown). Each is passed to the deck as
+     * is. It reads no evidence, so the deck's polls cost no snapshot (Batch::status).
      *
      * @param list<string> $requestIds
      * @return array<string, string>

@@ -78,17 +78,19 @@ class BatchTest extends TestCase
 
     public function testPollingBuildsASnapshotAgainOnlyForFinishedAnalyses(): void
     {
-        [$done, $waiting, $limited, $lost] = [str_repeat('1', 64), str_repeat('2', 64), str_repeat('3', 64), str_repeat('4', 64)];
-        $result = $this->batch([$done => 'completed', $waiting => 'pending', $limited => 'limited'])->status($this->request([
+        [$done, $waiting, $limited, $lost, $broke] = [str_repeat('1', 64), str_repeat('2', 64), str_repeat('3', 64), str_repeat('4', 64), str_repeat('5', 64)];
+        $result = $this->batch([$done => 'completed', $waiting => 'pending', $limited => 'limited', $broke => 'no_credits'])->status($this->request([
             ['lane' => 'deals', 'id' => 'd1', 'requestId' => $done],
             ['lane' => 'service', 'id' => 'c1', 'requestId' => $waiting],
             ['lane' => 'deals', 'id' => 'd2', 'requestId' => $limited],
             ['lane' => 'deals', 'id' => 'd3', 'requestId' => $lost],
+            ['lane' => 'service', 'id' => 'c2', 'requestId' => $broke],
         ]));
 
-        self::assertSame(['deals:d1'], $this->snapshots, 'Pending, limited and unknown requests cost no snapshot.');
+        self::assertSame(['deals:d1'], $this->snapshots, 'Pending, limited, no-credits and unknown requests cost no snapshot.');
         self::assertSame([['d1', 'pt-BR', $done]], $this->analyses, 'The finished one is stored under its request.');
-        self::assertSame(['completed', 'pending', 'limited', 'expired'], array_column($result['items'], 'status'));
+        self::assertSame(['completed', 'pending', 'limited', 'expired', 'no_credits'], array_column($result['items'], 'status'),
+            'The deck gets each status as the backend gave it.');
         self::assertSame('customer_waiting', $result['items'][0]['verdict']);
         self::assertSame(['lane' => 'service', 'id' => 'c1', 'status' => 'pending', 'requestId' => $waiting], $result['items'][1]);
     }

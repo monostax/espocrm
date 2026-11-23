@@ -93,14 +93,16 @@ class PrefetchTest extends TestCase
     public function testFailuresLimitsAndRefusalsAreCountedAndTheRestGoesOn(): void
     {
         $prefetch = $this->prefetch(
-            ['service' => [self::item('c1'), self::item('c2'), self::item('c3')]],
-            ['c1' => [['status' => 'limited']], 'c3' => [['status' => 'completed', 'verdict' => 'customer_waiting']]],
+            ['service' => [self::item('c1'), self::item('c2'), self::item('c3'), self::item('c4')]],
+            ['c1' => [['status' => 'limited']], 'c3' => [['status' => 'completed', 'verdict' => 'customer_waiting']],
+                'c4' => [['status' => 'no_credits']]],
             ['c2'],
         );
 
-        $result = $prefetch->run(12, 'UTC', 'pt-BR', 15, 0);
+        $result = $prefetch->run(12, 'UTC', 'pt-BR', 15, 10, 0);
 
-        self::assertSame(['picked' => 3, 'cards' => 1, 'quiet' => 0, 'pending' => 0, 'failed' => 2, 'waiting' => []], $result);
+        self::assertSame(['picked' => 4, 'cards' => 1, 'quiet' => 0, 'pending' => 0, 'failed' => 3, 'waiting' => []], $result);
+        self::assertSame([['c1', null], ['c3', null], ['c4', null]], $this->calls, 'No credits is not asked again (c2 is refused before any analysis).');
     }
 
     public function testStopsWaitingAtTheDeadlineAndReportsWhatIsStillPending(): void
