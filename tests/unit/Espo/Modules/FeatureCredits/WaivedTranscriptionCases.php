@@ -43,9 +43,9 @@ trait WaivedTranscriptionCases
             $command = $this->transcriptionCommand();
             $this->assertSame(['dispatchAllowed' => true, 'state' => 'claimed', 'billingState' => 'waived'], $this->dispatch($pdo, 'claimTranscription', $command));
             $this->assertFalse($this->dispatch($pdo, 'claimTranscription', $command)['dispatchAllowed']);
-            $receipt = $this->dispatch($pdo, 'finishTranscription', [...$command, 'facts' => (object) ['outcome' => 'success', 'provider' => 'openai', 'model' => 'whisper-1']]);
+            $receipt = $this->dispatch($pdo, 'finishTranscription', [...$command, 'facts' => (object) ['outcome' => 'success', 'provider' => 'openai', 'model' => 'gpt-transcribe']]);
             $this->assertSame('waived', $receipt['billingState']);
-            $this->assertSame($receipt, $this->dispatch($pdo, 'finishTranscription', [...$command, 'facts' => (object) ['outcome' => 'success', 'provider' => 'openai', 'model' => 'whisper-1']]));
+            $this->assertSame($receipt, $this->dispatch($pdo, 'finishTranscription', [...$command, 'facts' => (object) ['outcome' => 'success', 'provider' => 'openai', 'model' => 'gpt-transcribe']]));
             $this->assertFalse($this->dispatch($pdo, 'claimTranscription', $command)['dispatchAllowed']);
             foreach (['credit_usage', 'credit_request', 'credit_reservation', 'credit_allocation', 'credit_execution_route'] as $table) {
                 $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM $table")->fetchColumn());

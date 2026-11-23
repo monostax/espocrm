@@ -51,7 +51,8 @@ final readonly class DispatchInput
             if ($d->operation === 'finishTranscription') {
                 self::fields($d->facts, ['outcome', 'provider', 'model']);
                 if (!in_array($d->facts->outcome, ['success', 'failed', 'cancelled', 'unknown'], true) ||
-                    $d->facts->provider !== 'openai' || $d->facts->model !== 'whisper-1') throw new InvalidArgumentException('Only waived transcription outcomes are accepted.');
+                    // gpt-transcribe since 2026-11-23; whisper-1 still closes claims opened before the switch.
+                    $d->facts->provider !== 'openai' || !in_array($d->facts->model, ['gpt-transcribe', 'whisper-1'], true)) throw new InvalidArgumentException('Only waived transcription outcomes are accepted.');
             }
             $this->tenantId = $d->scope->tenantId;
             return;
