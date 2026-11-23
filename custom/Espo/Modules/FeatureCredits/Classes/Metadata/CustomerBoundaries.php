@@ -14,7 +14,7 @@ use stdClass;
 final class CustomerBoundaries implements AdditionalBuilder
 {
     public const CONTROLLERS = ['Credits', 'CreditWorkspace', 'CreditBalance', 'CreditHistory', 'CreditGrants',
-        'CreditReservations', 'CreditRequests', 'CreditOperations', 'CreditOperationSource', 'CreditBilling',
+        'CreditReservations', 'CreditRequests', 'CreditOperations', 'CreditOperationSource', 'CreditSummary', 'CreditBilling',
         'CreditCheckout', 'CreditSubscriptions', 'CreditEnrichmentPreview', 'CreditEnrichmentQuotes', 'CreditEnrichmentBatches',
         'CreditEnrichmentReview', 'CreditEnrichmentHistory', 'CreditEnrichmentFields', 'CreditEnrichmentApplication',
         'CreditPhoneVerification', 'CreditEmailVerification', 'CreditWhatsAppVerification', 'CreditVerificationBatches', 'AiUsage'];

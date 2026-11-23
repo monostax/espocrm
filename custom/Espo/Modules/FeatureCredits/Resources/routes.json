@@ -66,5 +66,6 @@
     {"route": "/CreditReservations", "method": "get", "params": {"controller": "CreditReservations", "action": "list"}},
     {"route": "/CreditRequests", "method": "get", "params": {"controller": "CreditRequests", "action": "list"}},
     {"route": "/CreditOperations", "method": "get", "params": {"controller": "CreditOperations", "action": "list"}},
-    {"route": "/CreditOperationSource", "method": "get", "params": {"controller": "CreditOperationSource", "action": "read"}}
+    {"route": "/CreditOperationSource", "method": "get", "params": {"controller": "CreditOperationSource", "action": "read"}},
+    {"route": "/CreditSummary", "method": "get", "params": {"controller": "CreditSummary", "action": "read"}}
 ]

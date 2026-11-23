@@ -247,16 +247,29 @@ class WhatsAppCampaignDistributionService
     {
         $distribution = $this->getDistribution($distributionId);
 
-        if ($distribution->get('status') !== 'Active' || $distribution->get('continuous')) {
+        if ($distribution->get('status') !== 'Active') {
             return false;
         }
 
-        foreach ($this->getEntries($distributionId) as $entry) {
+        $entries = $this->getEntries($distributionId);
+        $existingCampaigns = 0;
+
+        foreach ($entries as $entry) {
             $campaign = $this->entityManager->getEntityById('WhatsAppCampaign', $entry->get('campaignId'));
 
-            if ($campaign && $campaign->get('status') === 'Sending') {
-                return false;
+            if ($campaign) {
+                $existingCampaigns++;
+
+                if ($distribution->get('continuous') || $campaign->get('status') === 'Sending') {
+                    return false;
+                }
             }
+        }
+
+        // Continuous distributions stay Active as long as at least one target campaign exists,
+        // but stop cleanly if every referenced campaign has been deleted.
+        if ($distribution->get('continuous') && $existingCampaigns > 0) {
+            return false;
         }
 
         $distribution->set([
@@ -266,7 +279,9 @@ class WhatsAppCampaignDistributionService
         $this->entityManager->saveEntity($distribution);
 
         $this->log->info(
-            "WhatsAppCampaignDistributionService: Auto-stopped finished distribution {$distributionId}."
+            $existingCampaigns === 0
+                ? "WhatsAppCampaignDistributionService: Auto-stopped orphaned distribution {$distributionId} (all entry campaigns deleted)."
+                : "WhatsAppCampaignDistributionService: Auto-stopped finished distribution {$distributionId}."
         );
 
         return true;

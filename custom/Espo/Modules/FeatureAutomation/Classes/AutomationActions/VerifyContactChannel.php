@@ -25,11 +25,15 @@ use InvalidArgumentException;
  *  - check: whatsapp_registration (2 credits) · phone_identity (Twilio, 8) · email_deliverability (2)
  *  - source: enrichmentResult (default; the found value that started the run) · contactPrimary
  *  - as: result key (default = check)
+ *  - stopWhen: optional short-circuit goal ('valid_email' | 'valid_whatsapp' | 'verified_phone').
+ *    When set, candidates for the same Contact run one at a time in this channel family and skip
+ *    without spending credits once the Contact already satisfies the goal.
  *
  * Writes `payload.verification.<as>` once decided, for later `when` formulas:
  *  - the check's own outcome (registered / not_registered, verified / not_verified /
  *    insufficient_data, deliverable / risky / undeliverable / unknown)
  *  - not_applicable: the source has no value for this check (an email check on a found phone)
+ *  - skipped_already_valid: the Contact already satisfied `stopWhen` (charged nothing)
  *  - unavailable: the check cannot run for this value (reason in `verificationInfo.<as>.reason`,
  *    e.g. ownership_rejected, invalid_phone, missing_name, verification_unavailable)
  *  - failed: the provider gave no answer (charged nothing) or none came within 15 minutes
@@ -47,7 +51,15 @@ class VerifyContactChannel implements Action
         Kind::EMAIL => 'email',
     ];
 
+    /** Goal definitions for `stopWhen`: [verification_kind, required_outcome]. */
+    private const STOP_GOALS = [
+        'valid_email' => [Kind::EMAIL, 'deliverable'],
+        'valid_whatsapp' => [Kind::WHATSAPP, 'registered'],
+        'verified_phone' => [Kind::PHONE, 'verified'],
+    ];
+
     private const POLL_SECONDS = 20;
+    private const SERIAL_WAIT_SECONDS = 15;
     private const GIVE_UP_SECONDS = 900;
 
     public function __construct(
@@ -99,6 +111,25 @@ class VerifyContactChannel implements Action
         $since = is_string($pending['since'] ?? null) ? $pending['since'] : gmdate('Y-m-d H:i:s');
         $requestKey = 'automation:' . substr(hash('sha256', $item->getId() . '|' . $key), 0, 40);
         $contactId = (string) $contact->getId();
+
+        $stopWhen = is_string($context->params['stopWhen'] ?? null) ? trim($context->params['stopWhen']) : '';
+        if ($stopWhen !== '') {
+            if (!isset(self::STOP_GOALS[$stopWhen])) {
+                throw new Error("verifyContactChannel: unknown stopWhen '{$stopWhen}'.");
+            }
+            if ($pending === []) {
+                if ($this->contactSatisfiesGoal($tenantId, $contactId, $stopWhen)) {
+                    $this->decide($item, $payload, $key, 'skipped_already_valid', [
+                        'reason' => 'contact_already_' . $stopWhen,
+                    ]);
+
+                    return;
+                }
+                if ($this->hasEarlierChannelVerificationInFlight($tenantId, $contactId, $item, self::CHECKS[$check])) {
+                    throw ActionWaiting::inSeconds(self::SERIAL_WAIT_SECONDS, 'contact_verification_in_flight');
+                }
+            }
+        }
 
         try {
             $result = $this->actors->run(
@@ -205,5 +236,73 @@ class VerifyContactChannel implements Action
         if ($item->hasId() && !str_starts_with((string) $item->getId(), 'sim_')) {
             $this->entityManager->saveEntity($item, [SaveOption::SKIP_ALL => true]);
         }
+    }
+
+    private function contactSatisfiesGoal(string $tenantId, string $contactId, string $stopWhen): bool
+    {
+        [$kind, $outcome] = self::STOP_GOALS[$stopWhen];
+        $pdo = $this->entityManager->getPDO();
+        $stmt = $pdo->prepare(
+            'SELECT 1 FROM phone_verification_operation
+             WHERE tenant_id = ? AND contact_id = ? AND deleted = FALSE
+               AND verification_kind = ? AND state = ? AND outcome = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$tenantId, $contactId, $kind, 'completed', $outcome]);
+
+        return $stmt->fetchColumn() !== false;
+    }
+
+    /**
+     * Serializes enrichment-triggered checks for the same Contact and channel family (email vs phone)
+     * so earlier candidates finish (e.g. WhatsApp -> Twilio -> verified) before later candidates spend credits.
+     */
+    private function hasEarlierChannelVerificationInFlight(
+        string $tenantId,
+        string $contactId,
+        Entity $item,
+        string $product,
+    ): bool {
+        $pdo = $this->entityManager->getPDO();
+        $kinds = $product === 'email' ? [Kind::EMAIL] : [Kind::WHATSAPP, Kind::PHONE];
+        $placeholders = implode(',', array_fill(0, count($kinds), '?'));
+        $stmt = $pdo->prepare(
+            "SELECT 1 FROM phone_verification_operation
+             WHERE tenant_id = ? AND contact_id = ? AND deleted = FALSE
+               AND verification_kind IN ({$placeholders})
+               AND state IN ('admitted', 'claimed', 'awaiting')
+             LIMIT 1"
+        );
+        $stmt->execute([$tenantId, $contactId, ...$kinds]);
+        if ($stmt->fetchColumn() !== false) {
+            return true;
+        }
+
+        $automationId = $item->get('automationId');
+        $itemId = $item->hasId() ? (string) $item->getId() : '';
+        if (!is_string($automationId) || $automationId === '' || $itemId === '' || str_starts_with($itemId, 'sim_')) {
+            return false;
+        }
+        $createdAt = $item->get('createdAt');
+        $stmt = $pdo->prepare(
+            "SELECT id, payload FROM automation_run_item
+             WHERE automation_id = ? AND target_id = ? AND deleted = FALSE
+               AND status IN ('Pending', 'Running', 'Waiting') AND id != ?
+               AND (created_at < ? OR (created_at = ? AND id < ?))
+             LIMIT 25"
+        );
+        $at = is_string($createdAt) && $createdAt !== '' ? $createdAt : gmdate('Y-m-d H:i:s');
+        $stmt->execute([$automationId, $contactId, $itemId, $at, $at, $itemId]);
+        foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $sibling) {
+            $siblingPayload = is_string($sibling['payload'] ?? null) ? json_decode($sibling['payload'], true) : null;
+            $siblingProduct = is_array($siblingPayload)
+                ? ($siblingPayload['_trigger']['enrichment']['product'] ?? $siblingPayload['__trigger']['enrichment']['product'] ?? null)
+                : null;
+            if ($siblingProduct === $product) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

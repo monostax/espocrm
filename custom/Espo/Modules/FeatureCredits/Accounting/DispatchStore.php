@@ -292,7 +292,16 @@ final class DispatchStore
             }
             if (($receipt['billingState'] ?? null) === 'pending') $meteringPending = true;
         }
-        if ($snapshot['missing']) return ['state' => 'pending', 'reason' => 'request_recovery'];
+        if ($snapshot['missing']) {
+            $policy = $this->config->get('featureCreditsSdkCancellationRecovery');
+            if (is_array($policy) && (($policy['allEligibleTenants'] ?? false) === true ||
+                in_array($scope->tenantId, $policy['tenantIds'] ?? [], true))) {
+                $this->reconciliation->reviewAbandonedInFlight($scope->tenantId, $scope->usageId, $scope->executionId,
+                    new ReconciliationPolicy($policy['version'], $policy['operator'], $policy['deadlineSeconds'],
+                        $policy['retrySeconds'], $policy['minimumAttempts']), $this->outcomes);
+            }
+            return ['state' => 'pending', 'reason' => 'request_recovery'];
+        }
         if ($deliveryFailed) return ['state' => 'pending', 'reason' => 'outcome_delivery'];
         if ($meteringPending) {
             $policy = $this->config->get('featureCreditsSdkCancellationRecovery');

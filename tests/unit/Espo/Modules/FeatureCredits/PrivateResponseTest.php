@@ -25,7 +25,7 @@ class PrivateResponseTest extends TestCase
     public static function controllers(): array
     {
         return [['CreditBalance', 'status'], ['CreditHistory', 'list'], ['CreditGrants', 'list'], ['CreditReservations', 'list'],
-            ['CreditRequests', 'list'], ['CreditOperations', 'list'], ['CreditOperationSource', 'read'], ['Credits', 'context'],
+            ['CreditRequests', 'list'], ['CreditOperations', 'list'], ['CreditOperationSource', 'read'], ['CreditSummary', 'read'], ['Credits', 'context'],
             ['CreditWorkspace', 'read'], ['CreditWorkspace', 'conversation'], ['CreditWorkspace', 'models'],
             ['CreditExecution', 'execute'], ['CreditDispatch', 'execute'], ['CreditAsaasEvents', 'receive'], ['CreditReversals', 'reverse'],
             ['CreditBillingConfiguration', 'read'], ['CreditBillingConfiguration', 'publish'],

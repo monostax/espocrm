@@ -175,9 +175,48 @@ class VerifyContactChannelTest extends TestCase
         $this->action(['operation' => []])->run($this->context(['check' => 'whatsapp_registration'], 'Account'));
     }
 
-    private function action(array|\Throwable $result): VerifyContactChannel
+    public function testStopWhenSkipsWithoutSpendingCreditsWhenContactAlreadySatisfiesGoal(): void
+    {
+        $stmt = $this->createMock(\PDOStatement::class);
+        $stmt->method('fetchColumn')->willReturn(1);
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $this->action(['operation' => ['id' => 'never']], $pdo)
+            ->run($this->context(['check' => 'whatsapp_registration', 'stopWhen' => 'verified_phone']));
+
+        $this->assertSame('skipped_already_valid', $this->payload['verification']['whatsapp_registration']);
+        $this->assertSame('contact_already_verified_phone', $this->payload['verificationInfo']['whatsapp_registration']['reason']);
+        $this->assertSame([], $this->calls);
+    }
+
+    public function testStopWhenParksItemWhenAnotherVerificationIsInFlightForContact(): void
+    {
+        $goalStmt = $this->createMock(\PDOStatement::class);
+        $goalStmt->method('fetchColumn')->willReturn(false);
+        $inFlightStmt = $this->createMock(\PDOStatement::class);
+        $inFlightStmt->method('fetchColumn')->willReturn(1);
+
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->method('prepare')->willReturnOnConsecutiveCalls($goalStmt, $inFlightStmt);
+
+        try {
+            $this->action(['operation' => ['id' => 'never']], $pdo)
+                ->run($this->context(['check' => 'whatsapp_registration', 'stopWhen' => 'verified_phone']));
+            $this->fail('Expected item to wait while another verification is in flight.');
+        } catch (ActionWaiting $wait) {
+            $this->assertSame('contact_verification_in_flight', $wait->getMessage());
+        }
+
+        $this->assertSame([], $this->calls);
+    }
+
+    private function action(array|\Throwable $result, ?\PDO $pdo = null): VerifyContactChannel
     {
         $entityManager = $this->createMock(EntityManager::class);
+        if ($pdo !== null) {
+            $entityManager->method('getPDO')->willReturn($pdo);
+        }
         $entityManager->method('saveEntity')->willReturnCallback(function () {
             $this->saves++;
         });

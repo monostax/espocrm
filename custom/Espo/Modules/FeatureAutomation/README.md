@@ -448,9 +448,9 @@ Monostax automation:
           "type": "addChannelIdentity", "params": { "channel": "email" },
           "when": "object\\get(object\\get($payload, 'verification'), 'email_deliverability') == 'deliverable'"
         },
-        { "type": "verifyContactChannel", "params": { "check": "whatsapp_registration" } },
+        { "type": "verifyContactChannel", "params": { "check": "whatsapp_registration", "stopWhen": "verified_phone" } },
         {
-          "type": "verifyContactChannel", "params": { "check": "phone_identity" },
+          "type": "verifyContactChannel", "params": { "check": "phone_identity", "stopWhen": "verified_phone" },
           "when": "object\\get(object\\get($payload, 'verification'), 'whatsapp_registration') == 'registered'"
         },
         {

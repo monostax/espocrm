@@ -50,7 +50,7 @@ final class Reconciliation
                 $attempt = $attempts[0];
                 $intent = json_decode($attempt['intent'], false, 512, JSON_THROW_ON_ERROR);
                 DispatchInput::intent($intent);
-                if ($intent->kind !== 'stream' || $intent->scope->tenantId !== $tenantId || $intent->scope->usageId !== $usageId ||
+                if (!in_array($intent->kind, ['stream', 'generate'], true) || $intent->scope->tenantId !== $tenantId || $intent->scope->usageId !== $usageId ||
                     $intent->scope->executionId !== $executionId || $intent->scope->runId !== $route['run_id'] ||
                     $intent->scope->workflowRunId !== $route['workflow_run_id'] || $intent->requestKey !== $request['request_key']) continue;
                 $q = $pdo->prepare('SELECT * FROM credit_outcome_delivery WHERE attempt_id=? ORDER BY phase');
@@ -66,7 +66,7 @@ final class Reconciliation
                     $facts->inputTokens !== null || $facts->outputTokens !== null || $facts->cachedInputTokens !== null ||
                     ($facts->cacheWriteInputTokens ?? null) !== null ||
                     ($facts->providerRequestId ?? null) !== null || ($facts->evidence->source ?? null) !== 'vercel-ai-sdk-v4' ||
-                    ($facts->evidence->completion ?? null) !== 'stream-open-error' || ($facts->evidence->dispatched ?? null) !== true ||
+                    ($facts->evidence->completion ?? null) !== ($intent->kind === 'stream' ? 'stream-open-error' : 'generate-error') || ($facts->evidence->dispatched ?? null) !== true ||
                     ($facts->evidence->requestHash ?? null) !== $intent->requestHash) continue;
                 $number = count($history['attempts'] ?? []) + 1;
                 $evidence = (object) ['source' => 'crm-durable-sdk-outcome-review-v1',
@@ -75,6 +75,117 @@ final class Reconciliation
                     'deliveryId' => $deliveries[0]['id'], 'facts' => $facts, 'completionRequestedAt' => $route['completion_requested_at']];
                 $this->recordLocked($pdo, new ReconciliationInput($tenantId, $usageId, $executionId, $request['id'],
                     'sdk-review-' . $number, $policy->operator, $now, $policy, $evidence), $now);
+            }
+        });
+    }
+
+    /**
+     * Policy-authorized recovery of inFlight AI requests whose orchestrator workflow
+     * has already reached a durable terminal state (COMPLETED/FAILED/CANCELLED) and
+     * whose attempt has no delivery mailbox record. Records a terminal cancelled outcome
+     * first (with the route's terminal workflow evidence), then reconciles under policy.
+     */
+    public function reviewAbandonedInFlight(
+        string $tenantId,
+        string $usageId,
+        string $executionId,
+        ReconciliationPolicy $policy,
+        Outcomes $outcomes,
+    ): void {
+        $candidates = $this->walletLock->run($tenantId, function (PDO $pdo, array $wallet, string $now) use ($tenantId, $usageId, $executionId, $policy): array {
+            $q = $pdo->prepare('SELECT * FROM credit_execution_route WHERE tenant_id=? AND usage_id=? AND execution_id=? AND deleted=FALSE');
+            $q->execute([$tenantId, $usageId, $executionId]);
+            $route = $q->fetch(PDO::FETCH_ASSOC);
+            if (!$route || $route['completion_requested_at'] === null || $route['completion_finished_at'] !== null ||
+                $route['terminal_workflow_evidence'] === null) {
+                return [];
+            }
+            $terminal = json_decode($route['terminal_workflow_evidence'], true, 512, JSON_THROW_ON_ERROR);
+            if (!is_array($terminal) || !in_array($terminal['status'] ?? null, ['COMPLETED', 'FAILED', 'CANCELLED'], true)) {
+                return [];
+            }
+            if (self::after($route['completion_requested_at'], $policy->deadlineSeconds) > $now) {
+                return [];
+            }
+            $q = $pdo->prepare("SELECT * FROM credit_request WHERE tenant_id=? AND usage_id=? AND deleted=FALSE
+                AND outcome='inFlight' AND metering_state='unknown' AND billing_state='pending'
+                AND completed_at IS NULL AND provider_request_id IS NULL ORDER BY id");
+            $q->execute([$tenantId, $usageId]);
+            $out = [];
+            foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $request) {
+                $aq = $pdo->prepare('SELECT id FROM credit_execution_attempt WHERE tenant_id=? AND usage_id=? AND request_id=? AND deleted=FALSE');
+                $aq->execute([$tenantId, $usageId, $request['id']]);
+                $attempts = $aq->fetchAll(PDO::FETCH_ASSOC);
+                if (count($attempts) !== 1) continue;
+                $dq = $pdo->prepare('SELECT COUNT(*) FROM credit_outcome_delivery WHERE attempt_id=?');
+                $dq->execute([$attempts[0]['id']]);
+                if ((int) $dq->fetchColumn() !== 0) continue;
+                $snapshot = json_decode($request['pricing_snapshot'], true, 512, JSON_THROW_ON_ERROR);
+                $pricesCacheWrites = ($snapshot['formula'] ?? null) === \Espo\Modules\FeatureCredits\Pricing\AiRate::FORMULA_V2;
+                $out[] = [
+                    'requestId' => $request['id'],
+                    'runId' => $route['run_id'],
+                    'workflowRunId' => $route['workflow_run_id'],
+                    'completionRequestedAt' => $route['completion_requested_at'],
+                    'terminal' => $terminal,
+                    'pricesCacheWrites' => $pricesCacheWrites,
+                ];
+            }
+            return $out;
+        });
+
+        foreach ($candidates as $c) {
+            $identity = new ExecutionIdentity($c['runId'], $c['workflowRunId'], $executionId);
+            $evidence = (object) [
+                'source' => 'crm-terminal-workflow-abandonment-v1',
+                'completion' => 'worker-abandoned-inflight',
+                'dispatched' => true,
+                'terminalWorkflowStatus' => $c['terminal']['status'],
+                'workflowRunId' => $c['workflowRunId'],
+                'completionRequestedAt' => $c['completionRequestedAt'],
+            ];
+            $outcomes->record(new OutcomeInput(
+                $tenantId,
+                $usageId,
+                $executionId,
+                $c['requestId'],
+                'cancelled',
+                null,
+                null,
+                null,
+                $evidence,
+                null,
+                $c['pricesCacheWrites'] ? null : false,
+            ), $identity);
+        }
+
+        // Also advance reconciliation on any previously abandoned cancelled requests for this route.
+        $this->walletLock->run($tenantId, function (PDO $pdo, array $wallet, string $now) use ($tenantId, $usageId, $executionId, $policy): void {
+            $policySnapshot = get_object_vars($policy);
+            ksort($policySnapshot);
+            $q = $pdo->prepare('SELECT * FROM credit_execution_route WHERE tenant_id=? AND usage_id=? AND execution_id=? AND deleted=FALSE');
+            $q->execute([$tenantId, $usageId, $executionId]);
+            $route = $q->fetch(PDO::FETCH_ASSOC);
+            if (!$route || $route['completion_requested_at'] === null || $route['completion_finished_at'] !== null ||
+                $route['terminal_workflow_evidence'] === null) return;
+            $q = $pdo->prepare("SELECT * FROM credit_request WHERE tenant_id=? AND usage_id=? AND deleted=FALSE
+                AND provider_request_id IS NULL AND outcome='cancelled' AND metering_state='unknown' AND billing_state='pending' ORDER BY id");
+            $q->execute([$tenantId, $usageId]);
+            foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $request) {
+                if ($request['completed_at'] === null || $request['outcome_record'] === null) continue;
+                $outcome = json_decode($request['outcome_record'], true, 512, JSON_THROW_ON_ERROR);
+                if (($outcome['initial']['input']['evidence']['source'] ?? null) !== 'crm-terminal-workflow-abandonment-v1' || isset($outcome['resolution'])) continue;
+                $history = json_decode($request['reconciliation_record'] ?? 'null', true, 512, JSON_THROW_ON_ERROR);
+                if ($history && ($history['policy'] !== $policySnapshot || ($history['nextAttemptAt'] ?? $now) > $now)) continue;
+                $number = count($history['attempts'] ?? []) + 1;
+                $evidence = (object) [
+                    'source' => 'crm-terminal-workflow-abandonment-review-v1',
+                    'reference' => $request['id'] . ':abandoned-review:' . $number . ':' . $now,
+                    'reason' => 'Configured policy: orchestrator workflow reached terminal state while request remained inFlight with no delivery mailbox record.',
+                    'completionRequestedAt' => $route['completion_requested_at'],
+                ];
+                $this->recordLocked($pdo, new ReconciliationInput($tenantId, $usageId, $executionId, $request['id'],
+                    'abandoned-review-' . $number, $policy->operator, $now, $policy, $evidence), $now);
             }
         });
     }
