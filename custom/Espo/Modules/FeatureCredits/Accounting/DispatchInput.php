@@ -107,8 +107,10 @@ final readonly class DispatchInput
 
     public static function intent(mixed $intent, bool $binding = false): void
     {
-        self::fields($intent, $binding ? ['scope', 'requestKey', 'requestHash', 'policy', 'kind', 'requestId'] :
-            ['scope', 'requestKey', 'requestHash', 'policy', 'kind']);
+        // `hold`: the input size and output cap the adapter proved before dispatch (absent: hold the ceilings).
+        $measured = $intent instanceof stdClass && property_exists($intent, 'hold');
+        self::fields($intent, [...['scope', 'requestKey', 'requestHash', 'policy', 'kind'], ...($measured ? ['hold'] : []),
+            ...($binding ? ['requestId'] : [])]);
         self::scope($intent->scope); self::key($intent->requestKey);
         if ($binding) self::id($intent->requestId);
         if (!is_string($intent->requestHash) || !preg_match('/^[a-f0-9]{64}$/D', $intent->requestHash) ||
@@ -121,6 +123,13 @@ final readonly class DispatchInput
         }
         foreach ([$p->inputTokenBound, $p->outputTokenLimit] as $count) {
             if (!is_int($count) || $count <= 0 || $count > 9007199254740991) throw new InvalidArgumentException('Invalid token bound.');
+        }
+        if ($measured) {
+            self::fields($intent->hold, ['inputTokens', 'outputTokens']);
+            foreach (['inputTokens' => $p->inputTokenBound, 'outputTokens' => $p->outputTokenLimit] as $key => $bound) {
+                $count = $intent->hold->$key;
+                if (!is_int($count) || $count <= 0 || $count > $bound) throw new InvalidArgumentException('Invalid measured hold.');
+            }
         }
     }
 

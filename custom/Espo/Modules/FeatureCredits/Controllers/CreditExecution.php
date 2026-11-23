@@ -12,6 +12,8 @@ use Espo\Modules\FeatureCredits\Accounting\AgreementModels;
 use Espo\Modules\FeatureCredits\Accounting\ExecutionRouting;
 use Espo\Modules\FeatureCredits\Accounting\AuthorizationInput;
 use Espo\Modules\FeatureCredits\Accounting\AdmissionConfiguration;
+use Espo\Modules\FeatureCredits\Accounting\Amount;
+use Espo\Modules\FeatureCredits\Accounting\MeasuredHolds;
 use Espo\Modules\FeatureCredits\Accounting\ReservationInput;
 use Espo\Modules\FeatureCredits\Accounting\Requests;
 use Espo\Modules\FeatureCredits\Pricing\AiCatalog;
@@ -27,6 +29,9 @@ use stdClass;
 /** Signed execution bridge; browser sessions/API-user credentials grant no authority here. */
 final class CreditExecution
 {
+    /** What an AI operation holds when admitted, before its first request is measured. */
+    public const ADMISSION_FLOOR = '1.0000';
+
     public function __construct(private Outcomes $outcomes, private Settlements $settlements, private Reservations $reservations,
         private AiCatalog $catalog, private Requests $requests, private AdmissionConfiguration $configuration,
         private EntityManager $entityManager) {}
@@ -77,12 +82,17 @@ final class CreditExecution
                 if ($tenant?->get('plan') && $tenant->get('subscriptionStatus') === 'frozen') {
                     throw Conflict::createWithBody('Workspace is frozen.', '{"reason":"workspace_frozen"}');
                 }
-                $bound = $policy->request($input->tenantId, 'initial-bound', $execution->executionId, 'initial-bound')->credits;
+                // Admission opens the operation with a floor; each request then holds what it
+                // measured (Requests checks the wallet again). Holding a full ceiling here refused
+                // workspaces with credits for many real calls (2026-11-23: 12.90 asked of 12.52).
+                $ceiling = Amount::fromString($policy->request($input->tenantId, 'initial-bound', $execution->executionId, 'initial-bound')->credits);
+                $floor = Amount::fromString(self::ADMISSION_FLOOR);
+                $bound = (string) ($ceiling->compareTo($floor) < 0 ? $ceiling : $floor);
                 $receipt = $this->reservations->reserve(new ReservationInput($input->tenantId, 'ai', $execution->operationKey(),
                     $execution->executionId, $input->billingRateId, $bound, source: $input->source, execution: $execution, modelPolicyId: $input->modelRateId));
             } else {
                 $receipt = $this->requests->authorize($policy->request($input->tenantId, $input->usageId,
-                    $execution->executionId, $input->requestKey), $execution);
+                    $execution->executionId, $input->requestKey, MeasuredHolds::forRequest($pdo, $input, $policy->boundProfile)), $execution);
             }
             return (object) ['billingRegime' => ExecutionRouting::UNIFIED, 'operation' => $input->operation,
                 'receipt' => (object) $receipt, 'policy' => (object) $policy->receipt()];

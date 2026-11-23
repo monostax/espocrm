@@ -19,6 +19,9 @@ use PDO;
  */
 class AgreementModels
 {
+    /** The prompt size of a typical call, for the hold the model picker shows (prod p99 was 32–58k on 2026-11-23). */
+    public const TYPICAL_INPUT_TOKENS = 32768;
+
     public function __construct(private EntityManager $entityManager, private Clock $clock, private AiCatalog $catalog) {}
 
     /** Selectable rate record ids, in picker order, from the agreement row's immutable JSON list. */
@@ -129,7 +132,11 @@ class AgreementModels
             'model' => $policy->rate->model,
             'displayName' => is_string($row['display_name']) && $row['display_name'] !== '' ? $row['display_name'] : $policy->rate->model,
             'multiplier' => (string) $policy->rate->multiplier,
-            'holdCredits' => $policy->request('validation', 'validation', 'validation', 'validation')->credits,
+            // What a typical call holds now that requests hold what they measured (RequestInput): a
+            // 32,768-token prompt and the full output cap. The picker greys out a model below it.
+            'holdCredits' => $policy->request('validation', 'validation', 'validation', 'validation', [
+                'inputTokens' => min(self::TYPICAL_INPUT_TOKENS, $policy->inputTokenBound), 'outputTokens' => $policy->outputTokenLimit,
+            ])->credits,
             'imageInput' => (bool) $row['image_input'],
             'isDefault' => $isDefault,
         ];

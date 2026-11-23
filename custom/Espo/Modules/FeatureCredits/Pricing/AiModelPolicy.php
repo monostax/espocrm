@@ -57,10 +57,12 @@ final readonly class AiModelPolicy
         $this->request('validation', 'validation', 'validation', 'validation');
     }
 
-    public function request(string $tenantId, string $usageId, string $executionId, string $requestKey): RequestInput
+    /** @param array{inputTokens: int, outputTokens: int}|null $measured what the adapter proved before dispatch */
+    public function request(string $tenantId, string $usageId, string $executionId, string $requestKey, ?array $measured = null): RequestInput
     {
         return new RequestInput($tenantId, $usageId, $executionId, $requestKey, $this->rate,
-            $this->inputTokenBound, $this->outputTokenLimit, $this->boundProfile);
+            $this->inputTokenBound, $this->outputTokenLimit, $this->boundProfile,
+            $measured['inputTokens'] ?? null, $measured['outputTokens'] ?? null);
     }
 
     public function receipt(): array

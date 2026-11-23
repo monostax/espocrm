@@ -12,6 +12,7 @@ use Espo\Modules\FeatureCredits\Accounting\DispatchInput;
 use Espo\Modules\FeatureCredits\Accounting\DispatchStore;
 use Espo\Modules\FeatureCredits\Accounting\Funding;
 use Espo\Modules\FeatureCredits\Accounting\Outcomes;
+use Espo\Modules\FeatureCredits\Pricing\AiModelPolicy;
 use Espo\ORM\EntityManager;
 use PDO;
 use PDOException;
@@ -119,6 +120,59 @@ trait DispatchStoreCases
     private function delivery(PDO $pdo): string
     {
         return $this->dispatch($pdo, 'deliver', ['tenantId' => 'tenant', 'leaseMs' => 1000, 'retryMs' => 1000]);
+    }
+
+    #[DataProvider('dialects')]
+    public function testMeasuredHoldLetsASmallWalletRunWhatTheCeilingRefused(string $dialect): void
+    {
+        $this->executionDatabase($dialect, function (PDO $pdo): void {
+            // 2026-11-23: a small wallet and a 262,144/16,384 policy. The ceiling hold (12.9024) refused
+            // every call; a request that measured 24,000 input tokens holds 4.1520.
+            $policy = ['provider' => 'google', 'model' => 'gemini-3.8-flash', 'multiplier' => '1', 'inputTokenBound' => 262144,
+                'outputTokenLimit' => 16384, 'boundProfile' => 'gemini38-flash-medium-signature-bytes-v1'];
+            $this->reservations($pdo);
+            (new Funding($this->lock($pdo)))->grant($this->input());
+            $this->cutovers($pdo)->schedule(new CutoverInput('tenant', $this->now, (object) ['approved' => true]));
+            $command = ExecutionFixtures::admission();
+            $command->modelRateId = (new AiModelPolicy($policy))->rate->id;
+            $catalog = [$command->modelRateId => $policy];
+            $admitted = $this->terminalCommand($pdo, $command, $catalog);
+            $this->assertSame('1.0000', $admitted['receipt']['reservedCredits'], 'Admission holds the floor, not a ceiling.');
+            unset($command->billingRateId); $command->operation = 'authorize'; $command->usageId = $admitted['receipt']['usageId'];
+            $scope = clone $command; unset($scope->operation, $scope->modelRateId);
+            $intent = fn (string $key, ?array $hold) => (object) ['scope' => $scope, 'policy' => (object) (new AiModelPolicy($policy))->receipt(),
+                'requestKey' => $key, 'requestHash' => str_repeat('a', 64), 'kind' => 'generate', ...($hold ? ['hold' => (object) $hold] : [])];
+            $measured = $intent('measured', ['inputTokens' => 24000, 'outputTokens' => 16384]);
+            $this->assertTrue($this->dispatch($pdo, 'claimIntent', ['intent' => $measured]));
+            $command->requestKey = 'measured';
+            $authorized = $this->terminalCommand($pdo, $command, $catalog);
+            // 24,000 + 20% headroom = 28,800 input at 0.375 and 16,384 output at 1.875 per 10,000.
+            $this->assertSame('4.1520', $authorized['receipt']['authorizedCredits']);
+            $snapshot = json_decode((string) $pdo->query("SELECT pricing_snapshot FROM credit_request WHERE request_key='measured'")->fetchColumn(), true);
+            $this->assertSame([28800, 16384, 262144, 16384],
+                [$snapshot['holdInputTokens'], $snapshot['holdOutputTokens'], $snapshot['inputTokenBound'], $snapshot['outputTokenLimit']]);
+            $binding = clone $measured; $binding->requestId = $authorized['receipt']['requestId'];
+            $this->dispatch($pdo, 'bind', ['binding' => $binding]);
+            $this->assertEquals($measured, $this->dispatch($pdo, 'load', ['scope' => $scope, 'requestKey' => 'measured'])->intent);
+            // A recovery authorizing the same key again prices the same stored hold.
+            $this->assertSame($binding->requestId, $this->terminalCommand($pdo, $command, $catalog)['receipt']['requestId']);
+            // Without a measurement a request holds the ceilings, which this wallet cannot cover.
+            $this->assertTrue($this->dispatch($pdo, 'claimIntent', ['intent' => $intent('ceiling', null)]));
+            $command->requestKey = 'ceiling';
+            try {
+                $this->terminalCommand($pdo, $command, $catalog);
+                $this->fail('The ceiling hold must not fit this wallet.');
+            } catch (Conflict $e) {
+                $this->assertStringContainsString('insufficient_credits', (string) $e->getBody());
+            }
+            // A hold beyond the policy is refused before anything is stored.
+            try {
+                $this->dispatch($pdo, 'claimIntent', ['intent' => $intent('too-big', ['inputTokens' => 262145, 'outputTokens' => 1])]);
+                $this->fail('An over-bound hold must be refused.');
+            } catch (\Espo\Core\Exceptions\BadRequest) {
+                $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM credit_execution_attempt WHERE request_key='too-big'")->fetchColumn());
+            }
+        });
     }
 
     #[DataProvider('dialects')]
