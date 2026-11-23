@@ -8,6 +8,7 @@ use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\SystemUser;
 use Espo\Modules\Chatwoot\Jobs\SyncConversationsFromChatwoot;
+use Espo\Modules\Chatwoot\Services\OpportunityFollowupEvents;
 use Espo\Modules\Chatwoot\Services\OpportunityMessageEvents;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
 use Espo\ORM\Entity;
@@ -31,6 +32,8 @@ class OpportunityMessageEventsTest extends TestCase
     private bool $companyLinked = false;
     private bool $initiativeLinked = false;
     private OpportunityMessageEvents $service;
+    /** @var list<array{string, string}> Deal id and time of every reply reported to the follow-up events. */
+    private array $replies = [];
     private Entity $conversation;
 
     protected function setUp(): void
@@ -128,7 +131,11 @@ class OpportunityMessageEventsTest extends TestCase
             return new EntityDouble($data, 'Note');
         });
 
-        $this->service = new OpportunityMessageEvents($em, $config, new OpportunityStreamEvents($em, $system, $stream));
+        $followups = $this->createMock(OpportunityFollowupEvents::class);
+        $followups->method('customerReplied')->willReturnCallback(function (Entity $deal, string $at): void {
+            $this->replies[] = [$deal->getEntityType() . '/' . $deal->getId(), $at];
+        });
+        $this->service = new OpportunityMessageEvents($em, $config, new OpportunityStreamEvents($em, $system, $stream), $followups);
     }
 
     private function payload(int $id = 1, array $values = []): object
@@ -170,6 +177,20 @@ class OpportunityMessageEventsTest extends TestCase
             'chatwootCreatedAt' => '2026-09-06 14:32:00',
         ]), $this->conversation);
         self::assertCount(1, $this->notes);
+    }
+
+    public function testEachNewIncomingMessageReportsOneReplyOnTheTenantsDealsOnly(): void
+    {
+        $this->companyLinked = true;
+        $this->service->recordWebhook($this->payload(), 'crm-account');
+        $this->service->recordWebhook($this->payload(), 'crm-account');
+        $this->service->recordSyncedMessage(new EntityDouble([
+            'chatwootMessageId' => 1, 'messageType' => 'incoming', 'isPrivate' => false,
+            'chatwootCreatedAt' => '2026-09-06 14:32:00',
+        ]), $this->conversation);
+        $this->service->recordWebhook($this->payload(1, ['private' => true, 'id' => 2]), 'crm-account');
+        // Retries and the sync of the same message, the other tenant's deal, the company mural and private notes: none.
+        self::assertSame([['Opportunity/opp', '2026-09-06 14:32:00']], $this->replies);
     }
 
     public function testAccountAndInitiativeMessagesAreIndependentAndCorrectedEvenAfterUnlink(): void

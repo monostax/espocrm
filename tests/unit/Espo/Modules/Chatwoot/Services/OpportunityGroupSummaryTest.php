@@ -79,7 +79,7 @@ class OpportunityGroupSummaryTest extends TestCase
         $tables = [
             'Opportunity' => ['id', 'tenantId', 'opportunityStageId', 'funnelId', 'assignedUserId', 'status',
                 'amount', 'amountCurrency', 'name', 'probability', 'accountId', 'nextActionId', 'nextActionType', 'readable', 'unread', 'deleted',
-                'sourceChannel', 'followupLifetimeCount'],
+                'sourceChannel', 'followupLifetimeCount', 'followupTimer'],
             'Account' => ['id', 'name', 'deleted'],
             'Visibility' => ['id', 'opportunityId', 'deleted'],
             'Meeting' => ['id', 'parentId', 'parentType', 'dateEnd', 'dateEndDate', 'pending', 'readable', 'deleted'],

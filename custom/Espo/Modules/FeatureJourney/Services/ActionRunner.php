@@ -106,6 +106,8 @@ class ActionRunner
         $skipped = 0;
         /** @var list<string> $failed */
         $failed = [];
+        // A number added in reply review replays only the messages; the company already got the rest.
+        $catchingUp = $record->hasId() && JourneyCatchUp::active(AccountReplyReview::state($record));
 
         foreach ($actions as $actionEntity) {
             if (!$actionEntity->get('isActive')) {
@@ -117,6 +119,11 @@ class ActionRunner
             }
 
             $type = (string) $actionEntity->get('type');
+
+            if ($catchingUp && !in_array($type, JourneyCatchUp::PHONE_ACTIONS, true)) {
+                $skipped++;
+                continue;
+            }
             $meta = $this->metadata->get(['app', 'journeyActionTypes', 'types', $type]);
 
             if (!is_array($meta) || empty($meta['implementationClassName'])) {

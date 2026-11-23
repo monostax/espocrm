@@ -88,4 +88,22 @@ class JourneyRelationships
         [$tenant, $target] = $this->context($request);
         return $this->service->unlink($tenant, $target, (string) $request->getRouteParam('id'));
     }
+
+    public function getActionReplyReview(Request $request): object
+    {
+        [$tenant, $target] = $this->context($request);
+        return $this->service->replyReview($tenant, $target, (string) $request->getRouteParam('id'));
+    }
+
+    public function postActionReplyReview(Request $request): object
+    {
+        [$tenant, $target] = $this->context($request);
+        $body = $request->getParsedBody();
+        return $this->service->decideReplyReview(
+            $tenant,
+            $target,
+            (string) $request->getRouteParam('id'),
+            is_object($body) ? $body : (object) [],
+        );
+    }
 }

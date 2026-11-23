@@ -5,7 +5,9 @@
     },
     "iconClass": "ti ti-user-shield",
     "modelDefaultsPreparator": "chatwoot:handlers/chatwoot-account-user-membership/defaults-preparator",
-    "defaultSidePanelFieldList": ["teams"],
+    "defaultSidePanelFieldList": [
+        "teams"
+    ],
     "filterList": [
         {
             "name": "aiOnly",
@@ -52,18 +54,42 @@
             },
             "aiCrmOperations": {
                 "visible": {
-                    "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }]
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
                 }
             },
             "aiCanExecute": {
-                "visible": { "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }] }
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
             },
             "aiCanSend": {
-                "visible": { "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }] }
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
+                }
             },
             "aiMessageVisibility": {
                 "visible": {
-                    "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }]
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        }
+                    ]
                 }
             },
             "aiPrompt": {
@@ -78,33 +104,6 @@
             },
             "tasksEnabled": {
                 "visible": {
-                    "conditionGroup": [{ "type": "isTrue", "attribute": "isAI" }]
-                }
-            },
-            "taskManagementPrompt": {
-                "visible": {
-                    "conditionGroup": [
-                        { "type": "isTrue", "attribute": "isAI" },
-                        { "type": "isTrue", "attribute": "tasksEnabled" }
-                    ]
-                }
-            },
-            "taskAssignees": {
-                "visible": {
-                    "conditionGroup": [
-                        { "type": "isTrue", "attribute": "isAI" },
-                        { "type": "isTrue", "attribute": "tasksEnabled" }
-                    ]
-                },
-                "required": {
-                    "conditionGroup": [
-                        { "type": "isTrue", "attribute": "isAI" },
-                        { "type": "isTrue", "attribute": "tasksEnabled" }
-                    ]
-                }
-            },
-            "timeZone": {
-                "visible": {
                     "conditionGroup": [
                         {
                             "type": "isTrue",
@@ -113,7 +112,47 @@
                     ]
                 }
             },
-            "followupsEnabled": {
+            "taskManagementPrompt": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        },
+                        {
+                            "type": "isTrue",
+                            "attribute": "tasksEnabled"
+                        }
+                    ]
+                }
+            },
+            "taskAssignees": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        },
+                        {
+                            "type": "isTrue",
+                            "attribute": "tasksEnabled"
+                        }
+                    ]
+                },
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "isAI"
+                        },
+                        {
+                            "type": "isTrue",
+                            "attribute": "tasksEnabled"
+                        }
+                    ]
+                }
+            },
+            "timeZone": {
                 "visible": {
                     "conditionGroup": [
                         {

@@ -44,6 +44,17 @@ class ServiceFeed
     public const NOT_SYSTEM_CONTACT_SQL = "AND COALESCE(ct.identifier, '') <> 'whatsapp.integration' "
         . "AND REGEXP_REPLACE(COALESCE(ct.phone_number, ''), '[^0-9]', '') <> '" . self::SYSTEM_WHATSAPP_NUMBER . "' "
         . "AND COALESCE(ct.identifier, '') NOT IN ('" . self::SYSTEM_WHATSAPP_NUMBER . "@c.us', '" . self::SYSTEM_WHATSAPP_NUMBER . "@s.whatsapp.net') ";
+    /**
+     * Journey enrollments still messaging their conversations. Such a conversation is out of Em dia (decided 2026-11-23):
+     * the cadence is the follow-up, and a reply waits for the journey's own review. It comes back once the enrollment ends.
+     */
+    public const JOURNEY_LIVE = ['Active', 'Processing', 'Paused'];
+    /**
+     * Conversation `c` is not one a live enrollment is messaging. FeatureJourney stamps `journey_record_id` on every
+     * conversation an enrollment sends to, including ones the CRM copies in after the send.
+     */
+    public const NOT_IN_JOURNEY_SQL = 'AND NOT EXISTS (SELECT 1 FROM journey_record jr WHERE jr.id = c.journey_record_id AND jr.deleted = 0 '
+        . "AND jr.status IN ('" . self::JOURNEY_LIVE[0] . "', '" . self::JOURNEY_LIVE[1] . "', '" . self::JOURNEY_LIVE[2] . "')) ";
     private const WAITING = 'c.last_message_received_at IS NOT NULL AND (c.last_message_sent_at IS NULL OR c.last_message_received_at > c.last_message_sent_at)';
     /** Waiting on us for up to Feed::WAITING_FIRST_DAYS: these come first, longest wait first. */
     private const RECENT_WAIT = self::WAITING . ' AND c.last_message_received_at >= UTC_TIMESTAMP() - INTERVAL ' . Feed::WAITING_FIRST_DAYS . ' DAY';
@@ -176,7 +187,9 @@ class ServiceFeed
             $snapshot = $this->snapshot($id, $request);
             if (!hash_equals($snapshot['snapshot'], (string) ($body->snapshot ?? ''))) throw new Conflict('This conversation changed since the card was shown.');
         }
-        $this->verdicts->resolve('ChatwootConversation', $id, $body->revision ?? $snapshot['revision']);
+        $targetRevision = $body->revision ?? $snapshot['revision'];
+        $this->verdicts->resolve('ChatwootConversation', $id, $targetRevision);
+        $this->verdicts->resolveCreatedDeals($id, $targetRevision);
         if ($act = Feed::reviewAct($body)) $this->acts->record('ChatwootConversation', $id, $this->user->getId(), $act);
     }
 
@@ -252,10 +265,12 @@ class ServiceFeed
         $this->acts->record('ChatwootConversation', $id, $this->user->getId(), 'done');
         if ($actedOn !== $revision) {
             $this->verdicts->resolve('ChatwootConversation', $id, $actedOn);
+            $this->verdicts->resolveCreatedDeals($id, $actedOn);
             return;
         }
         $shown = $this->verdicts->cards('ChatwootConversation', $id, $revision);
         $this->verdicts->resolve('ChatwootConversation', $id);
+        $this->verdicts->resolveCreatedDeals($id, $revision);
         $kept = false;
         foreach ($shown as $card) {
             $loop = $card['card']['promise'] ?? null;
@@ -295,7 +310,7 @@ class ServiceFeed
 
     /**
      * Conversations of the deck's account without an open deal, settled and active in the window, not
-     * snoozed, not labeled personal, automated or team, in the reader's deck. Customers waiting on us come
+     * snoozed, not labeled personal, automated or team, not messaged by a running or paused journey, in the reader's deck. Customers waiting on us come
      * first (freshest first), then chats quiet for over two days, then the rest by latest activity.
      *
      * @return array<string, array{owner: ?string, grp: int, contact: ?string}> keyed by conversation id, in order
@@ -316,6 +331,7 @@ class ServiceFeed
             . self::NOT_SYSTEM_CONTACT_SQL
             . "AND (p.party_class IS NULL OR p.party_class IN ('customer', 'partner')) "
             . 'AND NOT EXISTS (' . self::OPEN_DEAL_SQL . ') '
+            . self::NOT_IN_JOURNEY_SQL
             . ConversationCycle::CURRENT_SQL
             . 'AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '
             . "AND z.target_type = 'ChatwootConversation' AND z.snoozed_until > UTC_TIMESTAMP())" . $owner . ' '

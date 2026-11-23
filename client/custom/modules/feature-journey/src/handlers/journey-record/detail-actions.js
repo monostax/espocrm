@@ -19,21 +19,6 @@ define("feature-journey:handlers/journey-record/detail-actions", [], function ()
             );
         }
 
-        canReview() {
-            return this.view.model.get("status") === "Paused" && !!this.view.model.get("replyPausedAt");
-        }
-
-        async replyReview() {
-            const model = this.view.model;
-            const url = "JourneyRecord/" + model.id + "/replyReview";
-            const state = await Espo.Ajax.getRequest(url);
-            const modal = await this.view.createView("replyReview", "feature-journey:views/journey-record/reply-review", {
-                state, url,
-            });
-            this.view.listenToOnce(modal, "done", () => model.fetch());
-            modal.render();
-        }
-
         exit() {
             const model = this.view.model;
 

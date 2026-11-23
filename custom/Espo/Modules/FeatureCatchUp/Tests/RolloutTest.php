@@ -52,6 +52,19 @@ class RolloutTest extends TestCase
         $policy = $this->check(['status' => 'active', 'catch_up' => [
             'enabled' => true, 'instance' => 'https://chat.example.test/', 'dailyLimit' => 9999,
         ]]);
-        self::assertSame(['enabled' => true, 'instance' => 'https://chat.example.test', 'accountId' => '9', 'dailyLimit' => 2000], $policy);
+        self::assertSame(['enabled' => true, 'instance' => 'https://chat.example.test', 'accountId' => '9', 'dailyLimit' => 2000, 'dealMode' => 'create'], $policy);
+    }
+
+    public function testDealModeHonoursSuggestionAndDefaultsToCreate(): void
+    {
+        $suggestion = $this->check(['status' => 'active', 'catch_up' => [
+            'enabled' => true, 'instance' => 'https://chat.example.test', 'dealMode' => 'suggestion',
+        ]]);
+        self::assertSame('suggestion', $suggestion['dealMode']);
+
+        $fallback = $this->check(['status' => 'active', 'catch_up' => [
+            'enabled' => true, 'instance' => 'https://chat.example.test', 'dealMode' => 'bogus',
+        ]]);
+        self::assertSame('create', $fallback['dealMode']);
     }
 }

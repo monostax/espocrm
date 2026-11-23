@@ -138,6 +138,7 @@ class VerdictsTest extends TestCase
         self::assertStringNotContainsString('INTERVAL 24 HOUR', $sql, 'a card counts until something moves it, not for a day');
         self::assertStringContainsString('c.last_message_received_at', $sql, 'a message overtakes a verdict, activity does not');
         self::assertStringContainsString(ServiceFeed::NOT_SYSTEM_CONTACT_SQL, $sql, 'no control chat or Avisos number in the counts');
+        self::assertStringContainsString(ServiceFeed::NOT_IN_JOURNEY_SQL, $sql, 'no conversation a live journey is messaging');
     }
 
     public function testAnAnalysisReplacesACardMarkedForANewDraft(): void

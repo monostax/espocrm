@@ -179,12 +179,20 @@ class ServiceFeedTest extends TestCase
             "p.party_class IN ('customer', 'partner')", 'NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ')',
             "REGEXP_REPLACE(COALESCE(ct.phone_number, ''), '[^0-9]', '') <> '559140403376'",
             "COALESCE(ct.identifier, '') NOT IN ('559140403376@c.us', '559140403376@s.whatsapp.net')",
-            "z.target_type = 'ChatwootConversation'", ' AND OWNER = :deckOwner',
+            "z.target_type = 'ChatwootConversation'", ' AND OWNER = :deckOwner', ServiceFeed::NOT_IN_JOURNEY_SQL,
         ] as $part) self::assertStringContainsString($part, $sql);
         self::assertStringContainsString('c.last_message_received_at >= UTC_TIMESTAMP() - INTERVAL 7 DAY THEN 0 WHEN c.last_message_received_at IS NOT NULL',
             $sql, 'conversations waiting up to 7 days come first, then older waits');
         self::assertStringContainsString('INTERVAL 7 DAY THEN c.last_message_received_at END ASC, CASE WHEN', $sql, 'longest recent wait first');
         self::assertSame(['crm-account', 'erivania', 'erivania'], [$bound['account'], $bound['user'], $bound['deckOwner']]);
+    }
+
+    public function testOnlyEnrollmentsStillMessagingKeepAConversationOut(): void
+    {
+        self::assertSame(\Espo\Modules\FeatureJourney\Services\JourneyConversations::LIVE, ServiceFeed::JOURNEY_LIVE,
+            'the statuses FeatureJourney stamps for are the ones Em dia leaves out');
+        self::assertStringContainsString("jr.id = c.journey_record_id AND jr.deleted = 0 AND jr.status IN ('Active', 'Processing', 'Paused')",
+            ServiceFeed::NOT_IN_JOURNEY_SQL);
     }
 
     public function testOnlyACurrentParticipantCanBeLabeled(): void

@@ -13,10 +13,13 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Record\CreateParams;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Utils\Config;
+use Espo\Core\Utils\Log;
 use Espo\Entities\User;
+use Espo\Modules\FeatureCatchUp\Classes\CardGone;
 use Espo\Modules\Global\Services\TeamTenantAccess;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Throwable;
 
 /**
  * "Criar oportunidade" on an Atendimento card (decided 2026-11-11): the deal the analysis found in a conversation still
@@ -44,6 +47,8 @@ class ProposedDeals
         private Config $config,
         private TeamTenantAccess $teams,
         private Acts $acts,
+        private DealStates $dealStates,
+        private Log $log,
     ) {}
 
     /**
@@ -120,6 +125,137 @@ class ProposedDeals
             'id' => (string) $deal->getId(), 'name' => (string) $deal->get('name'), 'status' => (string) $deal->get('status'),
             'funnelId' => $funnelId, 'opportunityStageId' => $stageId, 'assignedUserId' => $owner,
         ];
+    }
+
+    /**
+     * Auto-creates the opportunity Em dia found in a conversation when the account uses `create` mode (the default).
+     * Stamps `createdByAIAgent = true`, falls back to the funnel's first open stage if the proposed stage has required
+     * fields, and returns null (leaving the card as a suggestion) if the reader lacks permission, another open/closed
+     * deal already covers the conversation, or creation is refused.
+     *
+     * @param array<string, mixed> $card
+     * @param list<string> $closedDeals
+     * @return ?array{deal: array<string, mixed>, revision: ?string, closedKey: ?string}
+     */
+    public function autoCreate(string $conversationId, string $tenantId, array $card, array $closedDeals): ?array
+    {
+        if (!$this->acl->checkScope('Opportunity', 'create')) return null;
+        $proposal = $card['proposedDeal'] ?? null;
+        if (!is_array($proposal)) return null;
+        $name = trim((string) ($proposal['name'] ?? ''));
+        if ($name === '' || mb_strlen($name) > 150) return null;
+        $rawAmount = $proposal['amount'] ?? null;
+        if ($rawAmount !== null && $rawAmount !== '' && (!is_numeric($rawAmount) || (float) $rawAmount < 0)) {
+            $rawAmount = null;
+        }
+        $tenant = $this->em->getEntityById('Tenant', $tenantId);
+        if (!$tenant) return null;
+
+        try {
+            $created = $this->em->getTransactionManager()->run(function () use ($conversationId, $tenantId, $tenant, $card, $proposal, $name, $rawAmount): ?array {
+                $locked = $this->em->getRDBRepository('ChatwootConversation')->where(['id' => $conversationId])->forUpdate()->findOne();
+                if (!$locked) return null;
+                try {
+                    ConversationCycle::requireCurrent($locked);
+                } catch (CardGone) {
+                    return null;
+                }
+                if ($this->service->hasOpenDeal($conversationId)) return null;
+                if (Verdicts::missesClosedDeal($card, ServiceFeed::dealKeys($this->service->closedDeals($conversationId, $tenantId)))) {
+                    return null;
+                }
+                [$funnelId, $stageId] = $this->proposed($tenantId, $proposal);
+                $teamId = $this->team($tenant);
+                $owner = $this->owner($conversationId, $teamId);
+                $contactId = $this->contactId($locked);
+
+                $data = [
+                    'name' => $name,
+                    'amount' => is_numeric($rawAmount) ? (float) $rawAmount : 0.0,
+                    'amountCurrency' => (string) ($this->config->get('defaultCurrency') ?: 'BRL'),
+                    'funnelId' => $funnelId,
+                    'opportunityStageId' => $stageId,
+                    'tenantId' => $tenantId,
+                    'assignedUserId' => $owner,
+                    'teamsIds' => [$teamId],
+                    'chatwootConversationsIds' => [$conversationId],
+                    'createdByAIAgent' => true,
+                ];
+                if ($contactId !== null) $data['contactId'] = $contactId;
+
+                $deal = $this->createWithFallback($data, $funnelId, $stageId);
+                if (!$deal) return null;
+                return ['deal' => $deal, 'funnelId' => $funnelId, 'stageId' => (string) $deal->get('opportunityStageId')];
+            });
+        } catch (BadRequest|Conflict|Forbidden $e) {
+            $this->log->info("CatchUp auto-create skipped for conversation {$conversationId}: " . $e->getMessage());
+            return null;
+        } catch (Throwable $e) {
+            $this->log->warning("CatchUp auto-create failed for conversation {$conversationId}: " . $e->getMessage());
+            return null;
+        }
+
+        if (!$created) return null;
+        /** @var Entity $deal */
+        $deal = $created['deal'];
+        $dealId = (string) $deal->getId();
+        $funnelId = (string) $created['funnelId'];
+        $stageId = (string) $created['stageId'];
+        $status = (string) $deal->get('status');
+        $funnel = $this->em->getEntityById('Funnel', $funnelId);
+        $stage = $this->em->getEntityById('OpportunityStage', $stageId);
+
+        $revision = null;
+        $closedKey = null;
+        if (in_array($status, ['Won', 'Lost'], true)) {
+            $closedKey = ServiceFeed::dealKeys([$deal])[0] ?? null;
+        } else {
+            $this->dealStates->refresh([$dealId]);
+            $fresh = $this->em->getEntityById('Opportunity', $dealId) ?: $deal;
+            $state = $this->dealStates->load([$dealId])[$dealId] ?? null;
+            $revision = Revision::of($fresh, $state, null, null);
+        }
+
+        return [
+            'deal' => [
+                'id' => $dealId,
+                'name' => (string) $deal->get('name'),
+                'amount' => is_numeric($rawAmount) ? (float) $rawAmount : null,
+                'amountCurrency' => (string) ($deal->get('amountCurrency') ?: ($this->config->get('defaultCurrency') ?: 'BRL')),
+                'status' => $status,
+                'funnelId' => $funnelId,
+                'funnelName' => (string) ($funnel?->get('name') ?? ''),
+                'stageId' => $stageId,
+                'stageName' => (string) ($stage?->get('name') ?? ''),
+                'stageWon' => (int) ($stage?->get('probability') ?? 0) >= 100,
+                'createdByAi' => true,
+            ],
+            'revision' => $revision,
+            'closedKey' => $closedKey,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function createWithFallback(array $data, string $funnelId, string $stageId): ?Entity
+    {
+        try {
+            return $this->recordServices->get('Opportunity')->create((object) $data, CreateParams::create()->withSkipDuplicateCheck());
+        } catch (Conflict) {
+            $fallbackStageId = $this->targets->firstOpenStageId($funnelId);
+            if ($fallbackStageId === null || $fallbackStageId === $stageId) return null;
+            $data['opportunityStageId'] = $fallbackStageId;
+            return $this->recordServices->get('Opportunity')->create((object) $data, CreateParams::create()->withSkipDuplicateCheck());
+        }
+    }
+
+    private function contactId(Entity $conversation): ?string
+    {
+        $id = $conversation->get('contactId');
+        if (!is_string($id) || $id === '') return null;
+        $contact = $this->em->getEntityById('Contact', $id);
+        return $contact && $this->acl->checkEntityRead($contact) ? $id : null;
     }
 
     /**

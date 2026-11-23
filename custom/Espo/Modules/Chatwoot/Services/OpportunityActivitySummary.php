@@ -50,9 +50,13 @@ class OpportunityActivitySummary
             $scope->where(['tenantId' => $this->tenants->resolveTenantIds($this->user)]);
         }
 
+        $opportunitySelect = ['id', 'status', 'nextActionId', 'nextActionType'];
+        if ($this->acl->checkField('Opportunity', 'followupTimer')) {
+            $opportunitySelect[] = 'followupTimer';
+        }
         $opportunities = $this->entityManager->getQueryExecutor()->execute(
             SelectBuilder::create()->clone($scope->build())
-                ->select(['id', 'status', 'nextActionId', 'nextActionType'])->distinct()->build()
+                ->select($opportunitySelect)->distinct()->build()
         )->fetchAll(\PDO::FETCH_ASSOC);
         $rows = [];
         foreach (['Meeting' => 'planned', 'Call' => 'planned', 'Task' => 'actual'] as $type => $filter) {
@@ -120,6 +124,25 @@ class OpportunityActivitySummary
                 default => 'upcoming',
             };
             $groups[$key][$row['parentId']] = $row['parentId'];
+        }
+
+        // Open opportunities without a pending human step but with an active AI follow-up timer
+        // are classified by their follow-up schedule instead of noNextAction.
+        foreach (array_keys($groups['noNextAction']) as $oppId) {
+            $opportunity = $opportunitiesById[$oppId] ?? null;
+            if (empty($opportunity['followupTimer'])) {
+                continue;
+            }
+            unset($groups['noNextAction'][$oppId]);
+            $timestamp = new DateTimeImmutable($opportunity['followupTimer'], new DateTimeZone('UTC'));
+            $date = $timestamp->setTimezone($now->getTimezone())->format('Y-m-d');
+            $key = match (true) {
+                $timestamp < $now => 'overdue',
+                $date === $today => 'today',
+                $date <= $nextSevenDaysEnd => 'tomorrow',
+                default => 'upcoming',
+            };
+            $groups[$key][$oppId] = $oppId;
         }
 
         $summary = [];

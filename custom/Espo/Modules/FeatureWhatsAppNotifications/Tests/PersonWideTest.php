@@ -10,7 +10,10 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Utils\Log;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\Rollout;
+use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
+use Espo\Modules\FeatureCatchUp\Services\Summary;
 use Espo\Modules\FeatureCatchUp\Services\Workspace;
 use Espo\Modules\FeatureCredits\Enrichment\ActorScope;
 use Espo\Modules\FeatureWhatsAppNotifications\Tools\Avisos;
@@ -31,6 +34,8 @@ use Espo\ORM\EntityCollection;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\RDBRepository;
 use Espo\ORM\Repository\RDBSelectBuilder;
+use PDO;
+use PDOStatement;
 use PHPUnit\Framework\TestCase;
 
 /** The verified number is the person's, not the workspace's (2026-11-13). */
@@ -77,6 +82,16 @@ class PersonWideTest extends TestCase
             if ($hit === $not) return false;
         }
         return true;
+    }
+
+    /** A database whose one query answers these rows (Deck's waits). */
+    private function pdo(array $rows): PDO
+    {
+        $statement = $this->createMock(PDOStatement::class);
+        $statement->method('fetchAll')->willReturn($rows);
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('prepare')->willReturn($statement);
+        return $pdo;
     }
 
     private function em(?User $user = null): EntityManager
@@ -343,36 +358,148 @@ class PersonWideTest extends TestCase
         $this->pushes($em, $this->workspacesAt('2026-11-19 08:00'), $taps)->morning($newer);
     }
 
-    /** One card at each push time, never one the person already had today, and only once per push time. */
-    public function testEachPushTimeSendsOneCardThePersonHasNotHadToday(): void
+    /** One card at each push time, never one the person already had in the last 4 days, and only once per push time. */
+    public function testEachPushTimeSendsOneCardThePersonHasNotHadInFourDays(): void
     {
         $em = $this->em($this->user());
         $here = $this->row('WhatsAppNotificationSubscription', ['id' => 's1', 'userId' => 'u1', 'chatwootAccountId' => 'a1',
             'phone' => self::PHONE, 'status' => 'active', 'morningEnabled' => true, 'createdAt' => '2026-11-13 21:30:00']);
-        $this->store['WhatsAppNotificationSubscription'] = [$here];
+        $other = $this->row('WhatsAppNotificationSubscription', ['id' => 's2', 'userId' => 'u1', 'chatwootAccountId' => 'a2',
+            'phone' => self::PHONE, 'status' => 'active', 'createdAt' => '2026-11-15 10:00:00']);
+        $this->store['WhatsAppNotificationSubscription'] = [$here, $other];
         $this->store['WhatsAppDeckCard'] = [
             $this->row('WhatsAppDeckCard', ['id' => 'c1', 'lane' => 'service', 'subjectId' => 'conv1']),
             $this->row('WhatsAppDeckCard', ['id' => 'c2', 'lane' => 'deals', 'subjectId' => 'deal1']),
             $this->row('WhatsAppDeckCard', ['id' => 'c3', 'lane' => 'service', 'subjectId' => 'conv3']),
+            $this->row('WhatsAppDeckCard', ['id' => 'c4', 'lane' => 'deals', 'subjectId' => 'deal4']),
+            $this->row('WhatsAppDeckCard', ['id' => 'c5', 'lane' => 'service', 'subjectId' => 'conv5']),
         ];
+        // Now is 2026-11-19 11:05 America/Sao_Paulo = 2026-11-19 14:05:00 UTC; 4-day cutoff is 2026-11-15 14:05:00 UTC.
         $this->store['WhatsAppNotification'] = [
-            // 08:00 local today: counts.
+            // 08:00 local today: inside 4-day window.
             $this->row('WhatsAppNotification', ['id' => 'n1', 'subscriptionId' => 's1', 'direction' => 'out', 'cardId' => 'c1',
                 'createdAt' => '2026-11-19 11:00:05', 'status' => 'read']),
-            // Yesterday: may come again.
+            // 3 days ago: still inside 4-day window.
             $this->row('WhatsAppNotification', ['id' => 'n2', 'subscriptionId' => 's1', 'direction' => 'out', 'cardId' => 'c2',
-                'createdAt' => '2026-11-18 18:00:00', 'status' => 'read']),
+                'createdAt' => '2026-11-16 18:00:00', 'status' => 'read']),
             // Failed: may go again.
             $this->row('WhatsAppNotification', ['id' => 'n3', 'subscriptionId' => 's1', 'direction' => 'out', 'cardId' => 'c3',
                 'createdAt' => '2026-11-19 12:00:00', 'status' => 'failed']),
+            // Just over 4 days ago: outside the window, may come again.
+            $this->row('WhatsAppNotification', ['id' => 'n4', 'subscriptionId' => 's1', 'direction' => 'out', 'cardId' => 'c4',
+                'createdAt' => '2026-11-15 14:04:59', 'status' => 'read']),
+            // Another workspace of the same person, 2 days ago: inside 4-day window.
+            $this->row('WhatsAppNotification', ['id' => 'n5', 'subscriptionId' => 's2', 'direction' => 'out', 'cardId' => 'c5',
+                'createdAt' => '2026-11-17 12:00:00', 'status' => 'delivered']),
         ];
         $taps = $this->createMock(Taps::class);
         $taps->expects($this->once())->method('next')
-            ->with($here, 'card', 'push:s1:2026-11-19 11:00', false, null, ['service:conv1'])->willReturn(true);
+            ->with($here, 'card', 'push:s1:2026-11-19 11:00', false, null, ['service:conv1', 'deals:deal1', 'service:conv5'])->willReturn(true);
         $pushes = $this->pushes($em, $this->workspacesAt('2026-11-19 11:05'), $taps);
         $pushes->morning($here);
         $pushes->morning($here);
         $this->assertSame('2026-11-19 11:00', $here->get('lastPushSlot'));
+    }
+
+    /** Even without an explicit exclude list (e.g. "em dia" or "Enviar agora"), Deck::next enforces the 4-day window. */
+    public function testDeckNextSkipsCardsSentWithinFourDaysByDefault(): void
+    {
+        $em = $this->em($this->user());
+        $em->method('getPDO')->willReturn($this->pdo([]));
+        $here = $this->row('WhatsAppNotificationSubscription', ['id' => 's1', 'userId' => 'u1', 'chatwootAccountId' => 'a1',
+            'phone' => self::PHONE, 'status' => 'active']);
+        $this->store['WhatsAppNotificationSubscription'] = [$here];
+        $this->store['WhatsAppDeckCard'] = [
+            $this->row('WhatsAppDeckCard', ['id' => 'c1', 'lane' => 'service', 'subjectId' => 'conv1']),
+            $this->row('WhatsAppDeckCard', ['id' => 'c2', 'lane' => 'service', 'subjectId' => 'conv2']),
+        ];
+        $this->store['WhatsAppNotification'] = [
+            // Sent 3 days ago: skipped.
+            $this->row('WhatsAppNotification', ['id' => 'n1', 'subscriptionId' => 's1', 'direction' => 'out', 'cardId' => 'c1',
+                'createdAt' => '2026-11-16 14:05:00', 'status' => 'delivered']),
+            // Sent 5 days ago: allowed.
+            $this->row('WhatsAppNotification', ['id' => 'n2', 'subscriptionId' => 's1', 'direction' => 'out', 'cardId' => 'c2',
+                'createdAt' => '2026-11-14 14:05:00', 'status' => 'delivered']),
+        ];
+        $workspaces = $this->createMock(Workspaces::class);
+        $workspaces->method('of')->willReturn(['accountNumber' => 6, 'timeZone' => 'America/Sao_Paulo', 'language' => 'pt_BR', 'frozen' => false]);
+        $workspaces->method('now')->willReturn(new DateTimeImmutable('2026-11-19 11:05', new DateTimeZone('America/Sao_Paulo')));
+        $deals = $this->createMock(Feed::class);
+        $deals->method('list')->willReturn(['items' => [], 'cursor' => null]);
+        $service = $this->createMock(ServiceFeed::class);
+        $service->method('list')->willReturn([
+            'items' => [
+                ['id' => 'conv1', 'verdict' => 'customer_waiting', 'sort' => [0, 1]],
+                ['id' => 'conv2', 'verdict' => 'customer_waiting', 'sort' => [0, 2]],
+            ],
+            'cursor' => null,
+        ]);
+        $seen = [];
+        $service->method('snapshot')->willReturnCallback(function (string $id) use (&$seen): array {
+            $seen[] = $id;
+            return ['revision' => 'r1', 'snapshot' => 'tok', 'contactName' => 'Sara', 'conversation' => ['accountId' => 6, 'conversationId' => 42]];
+        });
+        $summary = $this->createMock(Summary::class);
+        $summary->method('analyse')->willReturn(['status' => 'pending']);
+        $actors = $this->createMock(ActorScope::class);
+        $actors->method('run')->willReturnCallback(fn (string $userId, callable $fn) => $fn(fn (string $class) => match ($class) {
+            Feed::class => $deals,
+            ServiceFeed::class => $service,
+            Summary::class => $summary,
+        }));
+        $deck = new Deck($em, $actors, $workspaces, $this->createMock(Log::class));
+        $deck->next($here);
+        $this->assertSame(['conv2'], $seen);
+    }
+
+    /**
+     * Cards waiting 24 hours or more go first, in Em dia's order (waiting on us, then follow-ups); the newer ones only
+     * after them, even though Em dia puts a customer waiting for a few hours ahead of one waiting for days.
+     */
+    public function testDeckNextPrefersCardsWaitingMoreThanADay(): void
+    {
+        $em = $this->em($this->user());
+        $here = $this->row('WhatsAppNotificationSubscription', ['id' => 's1', 'userId' => 'u1', 'chatwootAccountId' => 'a1',
+            'phone' => self::PHONE, 'status' => 'active']);
+        $this->store['WhatsAppNotificationSubscription'] = [$here];
+        $ago = fn (int $hours) => gmdate('Y-m-d H:i:s', time() - $hours * 3600);
+        $em->method('getPDO')->willReturn($this->pdo([
+            ['id' => 'recent', 'customer_at' => $ago(2), 'last_at' => $ago(2)],
+            ['id' => 'nine_days', 'customer_at' => $ago(9 * 24), 'last_at' => $ago(9 * 24)],
+            // A follow-up counts from the last message, not the customer's.
+            ['id' => 'follow_up', 'customer_at' => $ago(1), 'last_at' => $ago(3 * 24)],
+            ['id' => 'also_recent', 'customer_at' => $ago(20), 'last_at' => $ago(20)],
+        ]));
+        $workspaces = $this->createMock(Workspaces::class);
+        $workspaces->method('of')->willReturn(['accountNumber' => 6, 'timeZone' => 'America/Sao_Paulo', 'language' => 'pt_BR', 'frozen' => false]);
+        $workspaces->method('now')->willReturn(new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo')));
+        $deals = $this->createMock(Feed::class);
+        $deals->method('list')->willReturn(['items' => [], 'cursor' => null]);
+        $service = $this->createMock(ServiceFeed::class);
+        $service->method('list')->willReturn([
+            'items' => [
+                ['id' => 'also_recent', 'verdict' => 'customer_waiting', 'sort' => [0, 1]],
+                ['id' => 'recent', 'verdict' => 'customer_waiting', 'sort' => [0, 2]],
+                ['id' => 'nine_days', 'verdict' => 'customer_waiting', 'sort' => [1, -1]],
+                ['id' => 'follow_up', 'verdict' => 'follow_up_due', 'sort' => [2, -1]],
+            ],
+            'cursor' => null,
+        ]);
+        $seen = [];
+        $service->method('snapshot')->willReturnCallback(function (string $id) use (&$seen): array {
+            $seen[] = $id;
+            return ['revision' => 'r1', 'snapshot' => 'tok', 'contactName' => 'Sara', 'conversation' => ['accountId' => 6, 'conversationId' => 42]];
+        });
+        $summary = $this->createMock(Summary::class);
+        $summary->method('analyse')->willReturn(['status' => 'pending']);
+        $actors = $this->createMock(ActorScope::class);
+        $actors->method('run')->willReturnCallback(fn (string $userId, callable $fn) => $fn(fn (string $class) => match ($class) {
+            Feed::class => $deals,
+            ServiceFeed::class => $service,
+            Summary::class => $summary,
+        }));
+        (new Deck($em, $actors, $workspaces, $this->createMock(Log::class)))->next($here);
+        $this->assertSame(['nine_days', 'follow_up', 'also_recent', 'recent'], $seen);
     }
 
     public function testThePushTimeIsTheLatestReachedWithinTheHour(): void

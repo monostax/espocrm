@@ -38,9 +38,10 @@ class Taps
      * out, as the template. Returns whether a card went out.
      *
      * @param ?callable(array<string, mixed>): bool $accept an extra filter on the stored card (hot leads)
+     * @param ?list<string> $exclude "lane:id" subjects to pass over; null lets Deck load its 4-day window
      */
     public function next(Entity $subscription, string $kind = 'card', ?string $key = null, bool $sayDone = true, ?callable $accept = null,
-        array $exclude = []): bool
+        ?array $exclude = null): bool
     {
         $workspace = $this->workspaces->of($subscription);
         $language = $workspace['language'];

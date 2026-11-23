@@ -18,6 +18,7 @@
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillManagedAgentCrmUsers",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillAgentRunOutcome",
         "Espo\\Modules\\Chatwoot\\Rebuild\\BackfillFollowupRunOpportunity",
-        "Espo\\Modules\\Chatwoot\\Rebuild\\StartOpportunityWatcher"
+        "Espo\\Modules\\Chatwoot\\Rebuild\\StartOpportunityWatcher",
+        "Espo\\Modules\\Chatwoot\\Rebuild\\MigrateFunnelFollowupConfig"
     ]
 }

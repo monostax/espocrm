@@ -126,7 +126,7 @@ class ProvisioningTest extends TestCase
         self::assertSame('IA Clínica Teste', $agent->get('name'));
         self::assertSame([], $agent->getLinkMultipleIdList('chatwootInboxes'), 'A silent agent has no inbox, so it is never assigned.');
         self::assertSame([$funnel->getId()], $agent->getLinkMultipleIdList('funnelsToManage'));
-        self::assertFalse($agent->get('followupsEnabled'), 'The trial AI never schedules follow-ups on its own.');
+        self::assertFalse($funnel->get('followupsEnabled'), 'The trial funnel never schedules follow-ups on its own.');
         self::assertSame(1, $this->callCount('POST /platform/api/v1/accounts/:id/machine_identities'));
         $identity = $this->em->getRDBRepository('ChatwootMachineIdentity')->where(['membershipId' => $agent->getId()])->findOne();
         self::assertSame('active', $identity->get('status'));

@@ -190,6 +190,28 @@ class VerifyContactChannelTest extends TestCase
         $this->assertSame([], $this->calls);
     }
 
+    public function testValidWhatsAppGoalLooksForAWhatsAppNumberOnTheContact(): void
+    {
+        $sql = [];
+        $stmt = $this->createMock(\PDOStatement::class);
+        $stmt->method('fetchColumn')->willReturn(1);
+        $pdo = $this->createMock(\PDO::class);
+        $pdo->method('prepare')->willReturnCallback(function (string $query) use (&$sql, $stmt) {
+            $sql[] = $query;
+
+            return $stmt;
+        });
+
+        $this->action(['operation' => ['id' => 'never']], $pdo)
+            ->run($this->context(['check' => 'whatsapp_registration', 'stopWhen' => 'valid_whatsapp']));
+
+        $this->assertSame('skipped_already_valid', $this->payload['verification']['whatsapp_registration']);
+        $this->assertStringContainsString('contact_channel_identity', $sql[0]);
+        $this->assertStringContainsString("channel_type = 'whatsapp'", $sql[0]);
+        $this->assertStringNotContainsString('phone_verification_operation', $sql[0]);
+        $this->assertSame([], $this->calls);
+    }
+
     public function testStopWhenParksItemWhenAnotherVerificationIsInFlightForContact(): void
     {
         $goalStmt = $this->createMock(\PDOStatement::class);

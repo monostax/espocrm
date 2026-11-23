@@ -272,8 +272,8 @@
                 {
                     "name": "check",
                     "type": "enum",
-                    "label": "Check (WhatsApp 2 credits, Twilio 8, email 2)",
-                    "options": ["whatsapp_registration", "phone_identity", "email_deliverability"],
+                    "label": "Check (WhatsApp 2 credits, email 2)",
+                    "options": ["whatsapp_registration", "email_deliverability"],
                     "default": "whatsapp_registration",
                     "required": true
                 },

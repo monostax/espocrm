@@ -12,6 +12,7 @@ use Espo\ORM\EntityManager;
 use Espo\Modules\FeatureCatchUp\Services\DealTargets;
 use Espo\Modules\FeatureCatchUp\Services\Loops;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
+use Espo\Modules\FeatureCatchUp\Services\ProposedDeals;
 use Espo\Modules\FeatureCatchUp\Services\Records;
 use Espo\Modules\FeatureCatchUp\Services\Summary;
 use Espo\Modules\FeatureCatchUp\Services\Verdicts;
@@ -75,7 +76,7 @@ class RecordsTest extends TestCase
         $stored = null;
         $verdicts->method('store')->willReturnCallback(function (...$args) use (&$stored): void { $stored = $args; });
         $summary = $this->getMockBuilder(Summary::class)
-            ->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $records, $this->createMock(DealTargets::class)])
+            ->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $records, $this->createMock(DealTargets::class), $this->createMock(ProposedDeals::class)])
             ->onlyMethods(['request'])->getMock();
         $summary->method('request')->willReturn(['status' => 'completed', 'card' => [
             'verdict' => 'loops', 'reason' => 'Prometemos o contrato', 'headline' => 'H',

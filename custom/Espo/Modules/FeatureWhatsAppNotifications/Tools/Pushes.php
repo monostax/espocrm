@@ -27,8 +27,9 @@ use Throwable;
  *   inside their alert hours, at most `hotLeadDailyCap` a day for the person (one number) and once per customer message.
  *
  * The cards and hot leads come from one workspace per person (the user, 2026-11-19): the first they turned Avisos on in
- * and still belong to (`Subscriptions::primary`). A card already sent to the person today never goes out again that day (`sentToday`);
- * the next day it may. Reminders were asked for, so they come from any workspace.
+ * and still belong to (`Subscriptions::primary`). A card already sent to the person within the last 4 days never goes
+ * out again in that window (`sentRecently` / `Deck::REPEAT_WINDOW_DAYS`). Reminders were asked for, so they come from
+ * any workspace.
  *
  * Each has a send key, so a retried job never sends twice.
  */
@@ -52,7 +53,7 @@ class Pushes
         private Subscriptions $subscriptions,
     ) {}
 
-    /** The day's cards: at each push time, the next card the person hasn't had today, from their primary workspace. */
+    /** The day's cards: at each push time, the next card the person hasn't had in the last 4 days, from their primary workspace. */
     public function morning(Entity $subscription): void
     {
         if (!$subscription->get('morningEnabled') || !$this->workspaces->exists($subscription)) return;
@@ -72,7 +73,7 @@ class Pushes
             $this->digest($subscription, $key);
             return;
         }
-        $this->taps->next($subscription, 'card', $key, false, null, $this->sentToday($subscription));
+        $this->taps->next($subscription, 'card', $key, false, null, $this->sentRecently($subscription));
     }
 
     /** The push time due now: the latest one reached today, at most LATE_SECONDS ago. */
@@ -87,24 +88,14 @@ class Pushes
     }
 
     /**
-     * "lane:id" of every card sent to the person since midnight (workspace time zone), from any of their workspaces and
-     * any kind of message, failed sends aside: the pushes pass over them.
+     * "lane:id" of every card sent to the person within the last 4 days, from any of their workspaces and any kind of
+     * message, failed sends aside: never sent again inside that window.
      *
      * @return list<string>
      */
-    public function sentToday(Entity $subscription): array
+    public function sentRecently(Entity $subscription): array
     {
-        $midnight = $this->workspaces->now($subscription)->setTime(0, 0)->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
-        $rows = $this->em->getRDBRepository('WhatsAppNotificationSubscription')->select(['id'])
-            ->where(['userId' => $subscription->get('userId'), 'phone' => $subscription->get('phone')])->find();
-        $logs = $this->em->getRDBRepository('WhatsAppNotification')->select(['cardId'])->where([
-            'subscriptionId' => [$subscription->getId(), ...array_map(fn (Entity $row) => $row->getId(), iterator_to_array($rows))],
-            'direction' => 'out', 'cardId!=' => null, 'createdAt>=' => $midnight, 'status!=' => 'failed',
-        ])->find();
-        $cardIds = array_values(array_unique(array_map(fn (Entity $log) => (string) $log->get('cardId'), iterator_to_array($logs))));
-        if (!$cardIds) return [];
-        $cards = $this->em->getRDBRepository('WhatsAppDeckCard')->select(['lane', 'subjectId'])->where(['id' => $cardIds])->find();
-        return array_values(array_unique(array_map(fn (Entity $card) => $card->get('lane') . ':' . $card->get('subjectId'), iterator_to_array($cards))));
+        return Deck::sentWithin($this->em, $this->workspaces, $subscription);
     }
 
     /** The day's totals as the person sees them, with "Ver agora". Nothing when all are zero. */
@@ -166,10 +157,10 @@ class Pushes
             'kind' => 'hot_lead', 'createdAt>=' => $midnight, 'status!=' => 'failed',
         ])->count();
         if ($sent >= $cap || $this->online($subscription)) return;
-        // Never a card the person already had today; the send key below also keeps it to one per customer message.
-        // Waiting on us with buying intent: the reply card carries the deal Em dia found (prompt 15).
-        $card = $this->deck->next($subscription, ['customer_waiting'], fn (array $stored): bool => is_array($stored['proposedDeal'] ?? null),
-            $this->sentToday($subscription))['card'];
+        // Never a card the person already had in the last 4 days; the send key below also keeps it to one per customer message.
+        // Waiting on us with buying intent: the reply card carries the deal Em dia found or auto-created (prompt 15).
+        $card = $this->deck->next($subscription, ['customer_waiting'], fn (array $stored): bool => is_array($stored['proposedDeal'] ?? null) || is_array($stored['createdDeal'] ?? null),
+            $this->sentRecently($subscription))['card'];
         if (!$card) return;
         // The longest wait comes first in the deck, so a first card under the minimum means none is due yet.
         $waited = $card->get('waitSince') ? time() - (int) strtotime($card->get('waitSince') . ' UTC') : 0;

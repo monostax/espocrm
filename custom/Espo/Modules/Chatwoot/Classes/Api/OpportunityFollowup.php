@@ -39,18 +39,18 @@ final class OpportunityFollowup implements MiddlewareInterface
         foreach ($this->em->getRDBRepository('Opportunity')->where([
             'id' => array_map(fn ($row) => $row->id, $rows),
         ])->find() as $record) $records[$record->getId()] = $record;
-        $agentIds = [];
+        $funnelIds = [];
         foreach ($records as $record) {
-            if ($record->get('followupBreakoutLimit') === null && $record->get('followupAiAgentId')) {
-                $agentIds[$record->get('followupAiAgentId')] = true;
+            if ($record->get('followupBreakoutLimit') === null && $record->get('funnelId')) {
+                $funnelIds[$record->get('funnelId')] = true;
             }
         }
-        $agentLimits = [];
-        if ($agentIds) {
-            foreach ($this->em->getRDBRepository('ChatwootAccountUserMembership')->where([
-                'id' => array_keys($agentIds),
-            ])->find() as $agent) {
-                $agentLimits[$agent->getId()] = $agent->get('followupBreakoutLimit');
+        $funnelLimits = [];
+        if ($funnelIds) {
+            foreach ($this->em->getRDBRepository('Funnel')->where([
+                'id' => array_keys($funnelIds),
+            ])->find() as $funnel) {
+                $funnelLimits[$funnel->getId()] = $funnel->get('followupBreakoutLimit');
             }
         }
         $eligible = [];
@@ -69,9 +69,9 @@ final class OpportunityFollowup implements MiddlewareInterface
                 $row->followupTimer = $record->get('followupTimer');
             }
             if ($record && $this->acl->checkField('Opportunity', 'followupBreakoutLimit')) {
-                $agentId = $record->get('followupAiAgentId');
+                $funnelId = $record->get('funnelId');
                 $limit = $record->get('followupBreakoutLimit')
-                    ?? ($agentId ? ($agentLimits[$agentId] ?? null) : null)
+                    ?? ($funnelId ? ($funnelLimits[$funnelId] ?? null) : null)
                     ?? 1;
                 $row->followupEffectiveLimit = max(1, (int) $limit);
             }

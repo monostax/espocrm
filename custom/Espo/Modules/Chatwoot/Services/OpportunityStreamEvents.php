@@ -27,21 +27,22 @@ class OpportunityStreamEvents
         private StreamService $streamService,
     ) {}
 
-    public function write(string $type, Entity $target, Entity $related, array $data, string $key, array $teams): void
+    /** Whether the event was written now: false when it already existed or its parent is gone. */
+    public function write(string $type, Entity $target, Entity $related, array $data, string $key, array $teams): bool
     {
-        $this->entityManager->getTransactionManager()->run(function () use (
+        return $this->entityManager->getTransactionManager()->run(function () use (
             $type, $target, $related, $data, $key, $teams,
-        ): void {
+        ): bool {
             // Serialize first insertion, retries, and reconciliation on the same parent.
             $parent = $this->entityManager->getRDBRepository($target->getEntityType())
                 ->where(['id' => $target->getId()])->forUpdate()->findOne();
             if (!$parent || !$parent->get('tenantId') || $parent->get('tenantId') !== $target->get('tenantId')) {
-                return;
+                return false;
             }
             $existing = SelectBuilder::create()->from('Note')->withDeleted()
                 ->where(['opportunityStreamEventKey' => $key])->build();
             if ($this->entityManager->getRDBRepository('Note')->clone($existing)->findOne()) {
-                return;
+                return false;
             }
 
             // Native Espo streams also enforce the Note's users/teams projection
@@ -69,6 +70,7 @@ class OpportunityStreamEvents
                 'data' => (object) $data,
             ]);
             $this->streamService->updateStreamUpdatedAt($parent);
+            return true;
         });
     }
 }

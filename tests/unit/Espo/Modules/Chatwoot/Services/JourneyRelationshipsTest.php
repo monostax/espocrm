@@ -9,14 +9,19 @@ use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\InjectableFactory;
 use Espo\Core\Select\SelectBuilder as AccessSelectBuilder;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\JourneyRelationships;
 use Espo\Modules\Chatwoot\Controllers\JourneyRelationships as Controller;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\FeatureJourney\Services\AccountReplyReview;
 use Espo\Modules\FeatureJourney\Services\JourneyEnrollmentService;
+use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
+use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\Modules\FeatureJourney\Services\TransitionExecutor;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityCollection;
 use Espo\ORM\EntityManager;
@@ -33,6 +38,7 @@ class JourneyRelationshipsTest extends TestCase
     private Access $access;
     private TenantGuard $guard;
     private JourneyEnrollmentService $engine;
+    private InjectableFactory $injectableFactory;
     private Entity $tenant;
     private Entity $target;
     private array $denied = [];
@@ -111,7 +117,17 @@ class JourneyRelationshipsTest extends TestCase
             return $repo;
         });
         $this->engine = $this->createMock(JourneyEnrollmentService::class);
-        $this->service = new JourneyRelationships($this->em, $acl, $user, $this->access, $this->guard, $factory, $this->engine);
+        $this->injectableFactory = $this->createMock(InjectableFactory::class);
+        $this->service = new JourneyRelationships(
+            $this->em,
+            $acl,
+            $user,
+            $this->access,
+            $this->guard,
+            $factory,
+            $this->engine,
+            $this->injectableFactory,
+        );
     }
 
     private function flatten(array $where): array
@@ -444,5 +460,104 @@ class JourneyRelationshipsTest extends TestCase
         $this->denied = ['JourneyRecord:read'];
         $this->em->expects($this->never())->method('getRDBRepository');
         self::assertEquals((object) ['list' => [], 'hasMore' => false, 'canEnroll' => false], $this->service->list($this->tenant, $this->target, 0));
+    }
+
+    public function testCanReviewReplyOnlyForPausedAccountEnrollmentWithActiveJourney(): void
+    {
+        $account = $this->entity('Account', 'account-a', ['tenantId' => 'tenant-a', 'name' => 'Medclin']);
+        $this->fixtures['Account'] = [$account];
+        $this->journey(['targetEntityType' => 'Account', 'status' => 'Active']);
+        $this->enrollment([
+            'targetType' => 'Account',
+            'targetId' => 'account-a',
+            'status' => 'Paused',
+            'replyPausedAt' => '2026-11-23 12:27:58',
+        ]);
+
+        $presented = $this->service->read($this->tenant, $account, 'enrollment-a');
+        self::assertTrue($presented->canReviewReply);
+        self::assertSame('2026-11-23 12:27:58', $presented->replyPausedAt);
+
+        $this->denied = ['Contact:phoneNumber:read'];
+        self::assertFalse($this->service->read($this->tenant, $account, 'enrollment-a')->canReviewReply);
+    }
+
+    public function testReplyReviewRejectsNonAccountTarget(): void
+    {
+        $this->enrollment(['status' => 'Paused', 'replyPausedAt' => '2026-11-23 12:27:58']);
+        $this->expectException(Forbidden::class);
+        $this->service->replyReview($this->tenant, $this->target, 'enrollment-a');
+    }
+
+    public function testReplyReviewReturnsSummaryWithConversationIdAndContacts(): void
+    {
+        $account = $this->entity('Account', 'account-a', ['tenantId' => 'tenant-a', 'name' => 'Medclin']);
+        $this->fixtures['Account'] = [$account];
+        $this->journey(['targetEntityType' => 'Account', 'status' => 'Active']);
+        $record = $this->enrollment([
+            'targetType' => 'Account',
+            'targetId' => 'account-a',
+            'status' => 'Paused',
+            'replyPausedAt' => '2026-11-23 12:27:58',
+            'replyReviewState' => (object) [
+                'revision' => 'rev-1',
+                'pending' => ['acc6:2910' => ['phone' => '+5596981344253', 'message' => '1372011']],
+                'excluded' => ['+5596991068427'],
+            ],
+        ]);
+        $review = $this->createMock(AccountReplyReview::class);
+        $people = $this->createMock(JourneyTargetPeople::class);
+        $outbound = $this->createMock(JourneyWhatsAppOutbound::class);
+        $review->expects($this->once())->method('contacts')
+            ->with($record, $this->anything(), $people, $outbound)
+            ->willReturn(['contacts' => [['contactId' => 'c1', 'contactName' => 'Alex', 'wrongNumber' => true]],
+                'canAddNumber' => true]);
+        $this->injectableFactory->method('create')->willReturnMap([
+            [AccountReplyReview::class, $review],
+            [JourneyTargetPeople::class, $people],
+            [JourneyWhatsAppOutbound::class, $outbound],
+        ]);
+
+        $res = $this->service->replyReview($this->tenant, $account, 'enrollment-a');
+        self::assertSame('rev-1', $res->revision);
+        self::assertSame(2910, $res->pending['acc6:2910']['conversationId']);
+        self::assertSame('•••• 4253', $res->pending['acc6:2910']['phone']);
+        self::assertSame([['contactId' => 'c1', 'contactName' => 'Alex', 'wrongNumber' => true]], $res->contacts);
+        self::assertTrue($res->canAddNumber);
+        self::assertSame(['•••• 8427'], $res->excluded);
+        self::assertNull($res->catchUpStageName);
+        self::assertFalse(property_exists($res, 'catchUpUntilStageId'));
+    }
+
+    public function testDecideReplyReviewDelegatesToAccountReplyReviewAndReturnsUpdatedRecord(): void
+    {
+        $account = $this->entity('Account', 'account-a', ['tenantId' => 'tenant-a', 'name' => 'Medclin']);
+        $this->fixtures['Account'] = [$account];
+        $this->journey(['targetEntityType' => 'Account', 'status' => 'Active']);
+        $this->enrollment([
+            'targetType' => 'Account',
+            'targetId' => 'account-a',
+            'status' => 'Paused',
+            'replyPausedAt' => '2026-11-23 12:27:58',
+            'replyReviewState' => (object) ['revision' => 'rev-1', 'pending' => [], 'excluded' => ['+5596991068427']],
+        ]);
+        $review = $this->createMock(AccountReplyReview::class);
+        $people = $this->createMock(JourneyTargetPeople::class);
+        $outbound = $this->createMock(JourneyWhatsAppOutbound::class);
+        $executor = $this->createMock(TransitionExecutor::class);
+        $input = (object) ['decision' => 'resume', 'revision' => 'rev-1', 'contactId' => 'c1', 'phone' => '+5596981100084'];
+        $review->expects($this->once())->method('decide')
+            ->with('enrollment-a', $input, 'operator-a', $this->anything(), $people, $outbound, $executor)
+            ->willReturn(['status' => 'Active', 'replyPausedAt' => null, 'revision' => 'rev-1', 'pending' => []]);
+        $review->method('contacts')->willReturn(['contacts' => [], 'canAddNumber' => false]);
+        $this->injectableFactory->method('create')->willReturnMap([
+            [AccountReplyReview::class, $review],
+            [JourneyTargetPeople::class, $people],
+            [JourneyWhatsAppOutbound::class, $outbound],
+            [TransitionExecutor::class, $executor],
+        ]);
+
+        $res = $this->service->decideReplyReview($this->tenant, $account, 'enrollment-a', $input);
+        self::assertSame('enrollment-a', $res->record->id);
     }
 }

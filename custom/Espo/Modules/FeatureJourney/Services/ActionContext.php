@@ -30,18 +30,31 @@ class ActionContext
         public readonly ?User $actor = null,
     ) {}
 
-    /** After wrong-number review, only the confirmed person and destination may receive outreach. */
+    /** While a number added in reply review catches up, only its contact receives ({@see JourneyCatchUp}). */
     public function recipients(array $people): array
     {
-        $id = AccountReplyReview::state($this->record)['contactId'] ?? null;
-        return $id ? array_values(array_filter($people, static fn ($person) =>
-            $person->getEntityType() === 'Contact' && $person->getId() === $id)) : $people;
+        $lane = $this->lane(AccountReplyReview::state($this->record));
+        if ($lane === null) {
+            return $people;
+        }
+        $ids = array_flip(array_values($lane));
+
+        return array_values(array_filter($people, static fn ($person) =>
+            $person->getEntityType() === 'Contact' && isset($ids[$person->getId()])));
     }
 
+    /** Numbers marked wrong in reply review never receive; during catch-up only the added numbers do. */
     public function phones(array $phones): array
     {
         $s = AccountReplyReview::state($this->record);
-        $phones = array_diff($phones, $s['excluded'] ?? []);
-        return array_values(isset($s['phone']) ? array_intersect($phones, [$s['phone']]) : $phones);
+        $phones = array_values(array_diff($phones, $s['excluded'] ?? []));
+        $lane = $this->lane($s);
+
+        return $lane === null ? $phones : array_values(array_intersect($phones, array_map('strval', array_keys($lane))));
+    }
+
+    private function lane(array $state): ?array
+    {
+        return $this->stage->hasId() ? JourneyCatchUp::lane($state, $this->stage->getId(), $this->trigger) : null;
     }
 }

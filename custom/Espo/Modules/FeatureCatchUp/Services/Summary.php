@@ -20,6 +20,7 @@ class Summary
         private Parties $parties,
         private Records $records,
         private DealTargets $targets,
+        private ProposedDeals $proposedDeals,
     ) {}
 
     /**
@@ -48,7 +49,23 @@ class Summary
         if ($stored['resolved'] ?? false) return ['status' => 'completed', 'cached' => true, 'verdict' => 'none', 'reason' => $stored['reason'], 'card' => null];
         // The conversation's closed deals the reader may read (ServiceFeed::dealKeys); a found deal remembers them.
         $closedDeals = $conversation && is_array($snapshot['closedDeals'] ?? null) ? array_values($snapshot['closedDeals']) : [];
-        if ($stored && !Verdicts::outdated($stored, $closedDeals)) return ['status' => 'completed', 'cached' => true, ...$stored];
+        $dealMode = ($snapshot['catchUpPolicy']['dealMode'] ?? Rollout::DEFAULT_DEAL_MODE) === 'suggestion'
+            ? 'suggestion'
+            : Rollout::DEFAULT_DEAL_MODE;
+        if ($stored && !Verdicts::outdated($stored, $closedDeals)) {
+            if ($conversation && $dealMode === 'create' && is_array($stored['card']['proposedDeal'] ?? null) && empty($stored['card']['createdDeal'])) {
+                $now = new DateTimeImmutable('@' . time());
+                $facts = is_array($snapshot['facts'] ?? null) ? $snapshot['facts'] : [];
+                $record = is_array($snapshot['record'] ?? null) ? $snapshot['record'] : null;
+                $basis = $stored['verdict'] !== 'new_deal' && $stored['verdict'] !== 'none'
+                    ? Loops::basis(Loops::open($record), $facts, $snapshot['quietSince'] ?? null)
+                    : null;
+                $promoted = $this->autoCreateDeal($snapshot, $key, $locale, $stored['verdict'], $stored['reason'],
+                    $stored['card'], $record, $basis, $now, $closedDeals, true);
+                if ($promoted !== null) return ['status' => 'completed', 'cached' => true, ...$promoted];
+            }
+            return ['status' => 'completed', 'cached' => true, ...$stored];
+        }
         // An outdated found deal (from before funnels, or without a deal closed since) is read again in full (no record, the
         // newest messages), so its funnel and stage, or the deal it duplicates, have the whole conversation behind them.
         if ($stored && $conversation && empty($stored['card']['redraft'])) $snapshot['record'] = null;
@@ -80,10 +97,63 @@ class Summary
         }
         // Any card that offers a deal remembers the closed deals it was analysed with (Verdicts::missesClosedDeal).
         if (is_array($card['proposedDeal'] ?? null)) $card['closedDeals'] = $closedDeals;
+        if ($conversation && $dealMode === 'create' && is_array($card['proposedDeal'] ?? null)) {
+            $promoted = $this->autoCreateDeal($snapshot, $key, $locale, $verdict, $reason, $card, $record, $basis, $now, $closedDeals, false);
+            if ($promoted !== null) {
+                return ['status' => 'completed', 'requestId' => $result['requestId'] ?? null, 'cached' => false, ...$promoted];
+            }
+        }
         $this->verdicts->store((string) $snapshot['tenantId'], ...[...$key, $verdict, $reason, $card, $basis,
             $basis ? Loops::flipsAt($basis, $now) : null, $closedDeals]);
         return ['status' => 'completed', 'requestId' => $result['requestId'] ?? null, 'cached' => false,
             'verdict' => $verdict, 'reason' => $reason, 'card' => $card];
+    }
+
+    /**
+     * In `create` mode (the default), Em dia creates the found opportunity directly instead of leaving a proposal.
+     * When the opportunity opens, the verdict and running record are mirrored onto the new Opportunity so the deals
+     * lane shows the same card (with its AI-created deal summary) without paying for a second analysis, while the
+     * conversation's own verdict is marked resolved so it never double-counts. When the opportunity is created Won,
+     * the conversation stays in Atendimento with the new closed deal recorded so it is not analysed again.
+     *
+     * @param array<string, mixed> $snapshot
+     * @param array{string, string, string, string, string} $key
+     * @param array<string, mixed> $card
+     * @param ?array<string, mixed> $record
+     * @param ?array<string, mixed> $basis
+     * @param list<string> $closedDeals
+     * @return ?array{verdict: string, reason: ?string, card: array<string, mixed>}
+     */
+    private function autoCreateDeal(array $snapshot, array $key, string $locale, string $verdict, ?string $reason,
+        array $card, ?array $record, ?array $basis, DateTimeImmutable $now, array $closedDeals, bool $replace): ?array
+    {
+        $tenantId = (string) $snapshot['tenantId'];
+        $created = $this->proposedDeals->autoCreate((string) $snapshot['id'], $tenantId, $card, $closedDeals);
+        if ($created === null) return null;
+
+        $deal = $created['deal'];
+        $card['createdDeal'] = $deal;
+        unset($card['proposedDeal']);
+        $flipsAt = $basis ? Loops::flipsAt($basis, $now) : null;
+
+        if (!in_array($deal['status'], ['Won', 'Lost'], true) && is_string($created['revision']) && $created['revision'] !== '') {
+            if (is_array($record)) {
+                $this->records->store($tenantId, 'Opportunity', (string) $deal['id'],
+                    Records::scope([(string) $snapshot['id']]), $record, Records::edge($snapshot['evidence'] ?? []));
+            }
+            $this->verdicts->store($tenantId, 'Opportunity', (string) $deal['id'], $created['revision'], $locale, $key[4],
+                $verdict, $reason, $card, $basis, $flipsAt, [], true);
+            $this->verdicts->store($tenantId, ...[...$key, $verdict, $reason, $card, null, null, $closedDeals, $replace]);
+            $this->verdicts->resolve('ChatwootConversation', (string) $snapshot['id'], (string) $snapshot['revision']);
+        } else {
+            if (is_string($created['closedKey']) && $created['closedKey'] !== '') {
+                $closedDeals = array_values(array_unique([...$closedDeals, $created['closedKey']]));
+                $card['closedDeals'] = $closedDeals;
+            }
+            $this->verdicts->store($tenantId, ...[...$key, $verdict, $reason, $card, $basis, $flipsAt, $closedDeals, $replace]);
+        }
+
+        return ['verdict' => $verdict, 'reason' => $reason, 'card' => $card];
     }
 
     /**
@@ -155,7 +225,7 @@ class Summary
             // The account fields stay in the CRM; the backend gets who each participant is, nothing more.
             'participants' => array_map(fn ($participant) => array_intersect_key($participant, array_flip(['id', 'name', 'group', 'label', 'classify'])),
                 $snapshot['participants'] ?? []),
-            'policy' => $snapshot['catchUpPolicy'],
+            'policy' => array_intersect_key($snapshot['catchUpPolicy'], array_flip(['enabled', 'instance', 'accountId', 'dailyLimit'])),
         ];
         // A conversation may become a deal: the funnels and stages the reader may put it in (DealTargets).
         if (($snapshot['type'] ?? null) === 'conversation') $payload['funnels'] = $this->targets->forPrompt((string) $snapshot['tenantId']);

@@ -49,8 +49,13 @@ class RecordActivityBuckets
                 Expr::equal(Expr::alias($alias . '.parentId'), Expr::column('id')));
             $ranks[] = Expr::alias($alias . '.bucketRank');
         }
+        // For Opportunities without a pending human step, an active AI follow-up timer
+        // counts as the scheduled next step (matching OpportunityNextAction.vue).
+        if ($parentType === 'Opportunity' && $this->acl->checkField('Opportunity', 'followupTimer')) {
+            $ranks[] = $this->followupRank($now);
+        }
         // The ID/type reference selects at most one activity across all types.
-        // A missing or unreadable pending step belongs only to noNextAction.
+        // A missing or unreadable pending step (and no active AI follow-up) belongs only to noNextAction.
         $rank = $ranks ? Expr::coalesce(...[...$ranks, Expr::value(1)]) : Expr::value(1);
         // Closed opportunities do not need a next step, but selected pending steps still count.
         if ($parentType === 'Opportunity') {
@@ -89,6 +94,22 @@ class RecordActivityBuckets
             Expr::less($date, $now->format('Y-m-d')), 0,
             Expr::equal($date, $now->format('Y-m-d')), 2,
             Expr::less($date, $futureStart->format('Y-m-d')), 3,
+            4,
+        );
+    }
+
+    private function followupRank(DateTimeImmutable $now): Expr
+    {
+        $utc = new DateTimeZone('UTC');
+        $tomorrow = $now->setTime(0, 0)->modify('+1 day');
+        $futureStart = $tomorrow->modify('+7 days');
+        $timestamp = Expr::column('followupTimer');
+        return Expr::switch(
+            Expr::isNull($timestamp), null,
+            Expr::in(Expr::ifNull(Expr::column('status'), ''), ['Won', 'Lost']), null,
+            Expr::less($timestamp, $now->setTimezone($utc)->format('Y-m-d H:i:s')), 0,
+            Expr::less($timestamp, $tomorrow->setTimezone($utc)->format('Y-m-d H:i:s')), 2,
+            Expr::less($timestamp, $futureStart->setTimezone($utc)->format('Y-m-d H:i:s')), 3,
             4,
         );
     }

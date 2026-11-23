@@ -9,6 +9,7 @@ use Espo\Core\Hook\Hook\AfterSave;
 use Espo\Core\Hook\Hook\BeforeRemove;
 use Espo\Core\Job\QueueName;
 use Espo\Modules\Chatwoot\Jobs\BroadcastOpportunityUpdate;
+use Espo\Modules\Chatwoot\Services\OpportunityFollowupEvents;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
 use Espo\Modules\Chatwoot\Tools\Stream\BulkPostContext;
 use Espo\ORM\Entity;
@@ -102,7 +103,8 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
         } elseif (in_array($type, ['OpportunityReadState', 'OpportunityThreadReadState'], true)) {
             $opportunity = $this->entityManager->getEntityById('Opportunity', $entity->get('opportunityId'));
         } elseif ($type === 'Note' && $entity->get('parentType') === 'Opportunity' &&
-            in_array($entity->get('type'), OpportunityStreamEvents::TYPES, true)) {
+            // A sent follow-up also changed the deal's timer behind the ORM's back: its pill refreshes open clients.
+            in_array($entity->get('type'), [...OpportunityStreamEvents::TYPES, OpportunityFollowupEvents::TYPE], true)) {
             $opportunity = $this->entityManager->getEntityById('Opportunity', $entity->get('parentId'));
         } else {
             return;

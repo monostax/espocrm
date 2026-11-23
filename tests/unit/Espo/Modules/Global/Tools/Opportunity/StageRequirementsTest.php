@@ -100,6 +100,21 @@ class StageRequirementsTest extends TestCase
         }
     }
 
+    public function testBookkeepingSavesSkipOrdinaryRequirementsButNotStageEntry(): void
+    {
+        [$service, $opportunity] = $this->fixture([
+            'requiredWhen' => ['attribute' => 'opportunityStageId', 'operator' => 'equals', 'value' => 'proposal'],
+        ], []);
+        $opportunity->setAsFetched();
+        $opportunity->set('followupTimer', '2026-11-24 12:00:00');
+        $service->validate($opportunity, true); // The watcher's follow-up or next step: nothing to fill in.
+        [$service, $moving] = $this->fixture([
+            'appliesWhen' => ['attribute' => 'opportunityStageId', 'operator' => 'equals', 'value' => 'proposal'],
+        ]);
+        $this->expectException(ConflictSilent::class);
+        $service->validate($moving, true); // A stage entry is checked whoever saves it.
+    }
+
     public function testIncompatibleStageConfigurationFailsRatherThanSilentlySkipping(): void
     {
         [$service, $opportunity] = $this->fixture([

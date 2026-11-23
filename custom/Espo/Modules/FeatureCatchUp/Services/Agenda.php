@@ -123,7 +123,7 @@ class Agenda
             . 'JOIN chatwoot_account a ON a.id = c.chatwoot_account_id '
             . "WHERE r.deleted = 0 AND r.subject_type = 'ChatwootConversation' AND r.tenant_id = :tenant AND r.due_ts IS NOT NULL "
             . 'AND r.due_ts <= :until AND c.chatwoot_account_id = :account AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
-            . ConversationCycle::CURRENT_SQL . $owner,
+            . ServiceFeed::NOT_IN_JOURNEY_SQL . ConversationCycle::CURRENT_SQL . $owner,
             ['tenant' => $tenantId, 'until' => $until->getTimestamp(), 'account' => $account->getId(), ...$params]);
         $items = [];
         foreach ($this->access->filter($this->readable('ChatwootConversation', $ids)) as $id => $conversation) {

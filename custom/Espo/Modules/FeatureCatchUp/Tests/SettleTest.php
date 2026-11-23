@@ -40,14 +40,16 @@ class SettleTest extends TestCase
      * @param list<string> $deals open deals linked to the conversation
      * @param list<string> $admins Chatwoot administrators who are people
      * @param list<string> $refusing readers who may not open the subject
+     * @param ?string $journey status of the enrollment stamped on the conversation, null for none
      */
-    private function settle(array $deals = [], ?string $owner = null, array $admins = ['boss'], array $refusing = [], bool $synced = true): Settle
+    private function settle(array $deals = [], ?string $owner = null, array $admins = ['boss'], array $refusing = [], bool $synced = true,
+        ?string $journey = null): Settle
     {
         $accounts = $this->createMock(RDBSelectBuilder::class);
         $accounts->method('limit')->willReturnSelf();
         $accounts->method('find')->willReturn(new EntityCollection([$this->entity('crm-account', ['tenantId' => 'tenant'])]));
         $conversations = $this->createMock(RDBSelectBuilder::class);
-        $conversations->method('findOne')->willReturn($synced ? $this->entity('conv') : null);
+        $conversations->method('findOne')->willReturn($synced ? $this->entity('conv', $journey ? ['journeyRecordId' => 'run'] : []) : null);
         $repositories = [];
         foreach (['ChatwootAccount' => $accounts, 'ChatwootConversation' => $conversations] as $type => $builder) {
             $repositories[$type] = $this->createMock(RDBRepository::class);
@@ -68,8 +70,11 @@ class SettleTest extends TestCase
         });
         $em = $this->createMock(EntityManager::class);
         $em->method('getRDBRepository')->willReturnCallback(fn ($type) => $repositories[$type]);
-        $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => $type === 'Tenant'
-            ? $this->entity($id, ['language' => 'pt_BR', 'timeZone' => 'America/Manaus']) : null);
+        $em->method('getEntityById')->willReturnCallback(fn ($type, $id) => match ($type) {
+            'Tenant' => $this->entity($id, ['language' => 'pt_BR', 'timeZone' => 'America/Manaus']),
+            'JourneyRecord' => $journey && $id === 'run' ? $this->entity($id, ['status' => $journey]) : null,
+            default => null,
+        });
         $em->method('getPDO')->willReturn($pdo);
 
         $actors = $this->createMock(ActorScope::class);
@@ -145,6 +150,34 @@ class SettleTest extends TestCase
 
         self::assertSame(['subjects' => [], 'skipped' => 'conversation'], $result);
         self::assertSame([], $this->readers);
+    }
+
+    public function testAConversationAJourneyIsStillMessagingIsNotAnalysed(): void
+    {
+        foreach (['Active', 'Processing', 'Paused'] as $status) {
+            $this->analyses = [];
+            $result = $this->settle([], 'ana', ['boss'], [], true, $status)->start(12, 2775);
+
+            self::assertSame(['subjects' => [], 'skipped' => 'journey'], $result, "$status: the cadence is its follow-up");
+            self::assertSame([], $this->analyses, "$status: no credits spent");
+        }
+    }
+
+    public function testItIsAnalysedAgainOnceTheEnrollmentEnds(): void
+    {
+        foreach (['Completed', 'Exited', 'Failed'] as $status) {
+            $this->analyses = [];
+            $this->settle([], 'ana', ['boss'], [], true, $status)->start(12, 2775);
+
+            self::assertSame(['service:conv'], array_column($this->analyses, 0), $status);
+        }
+    }
+
+    public function testADealOnAConversationAJourneyIsMessagingIsStillAnalysed(): void
+    {
+        $this->settle(['d1'], null, ['boss'], [], true, 'Active')->start(12, 2775);
+
+        self::assertSame(['deals:d1'], array_column($this->analyses, 0), 'only Atendimento leaves journeys out');
     }
 
     public function testCompletionStoresTheVerdictAsTheSameReader(): void

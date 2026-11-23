@@ -19,6 +19,7 @@ class Rollout
      */
     public const DEFAULT_DAILY_LIMIT = 1000;
     public const MAX_DAILY_LIMIT = 2000;
+    public const DEFAULT_DEAL_MODE = 'create';
 
     /** @var array<string, array> Opt-ins already confirmed in this request: a deck batch reads one account up to ten times. */
     private array $policies = [];
@@ -38,9 +39,11 @@ class Rollout
         $settings = $remote['catch_up'] ?? [];
         if (($remote['status'] ?? '') !== 'active' || ($settings['enabled'] ?? false) !== true) throw new Forbidden('Catch Up is not enabled for this account.');
         $limit = $settings['dailyLimit'] ?? self::DEFAULT_DAILY_LIMIT;
+        $dealMode = ($settings['dealMode'] ?? null) === 'suggestion' ? 'suggestion' : self::DEFAULT_DEAL_MODE;
         if (empty($settings['instance'])) throw new Forbidden();
         return ['enabled' => true, 'instance' => rtrim($settings['instance'], '/'), 'accountId' => (string) $account->get('chatwootAccountId'),
-            'dailyLimit' => is_int($limit) ? min(self::MAX_DAILY_LIMIT, max(0, $limit)) : self::DEFAULT_DAILY_LIMIT];
+            'dailyLimit' => is_int($limit) ? min(self::MAX_DAILY_LIMIT, max(0, $limit)) : self::DEFAULT_DAILY_LIMIT,
+            'dealMode' => $dealMode];
     }
 
     public function forTenant(string $tenantId): array

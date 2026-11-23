@@ -9,6 +9,7 @@ use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Services\DealTargets;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
+use Espo\Modules\FeatureCatchUp\Services\ProposedDeals;
 use Espo\Modules\FeatureCatchUp\Services\Records;
 use Espo\Modules\FeatureCatchUp\Services\Summary;
 use Espo\Modules\FeatureCatchUp\Services\Verdicts;
@@ -133,8 +134,10 @@ class DealTargetsTest extends TestCase
         $targets->expects(self::once())->method('sanitize')
             ->with('tenant', ['name' => 'Ana - Consulta', 'amount' => 800, 'funnelId' => 'f1', 'stageId' => 'bogus'])
             ->willReturn(['name' => 'Ana - Consulta', 'amount' => 800, 'funnelId' => null, 'stageId' => null]);
+        $proposedDeals = $this->createMock(ProposedDeals::class);
+        $proposedDeals->method('autoCreate')->willReturn(null);
         $summary = $this->getMockBuilder(Summary::class)
-            ->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class), $targets])
+            ->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class), $targets, $proposedDeals])
             ->onlyMethods(['request'])->getMock();
         $summary->expects(self::once())->method('request')
             ->with(self::callback(fn (array $snapshot) => $snapshot['record'] === null))
@@ -152,9 +155,11 @@ class DealTargetsTest extends TestCase
         $card = ['headline' => 'H', 'proposedDeal' => ['name' => 'Ana', 'funnelId' => 'f1', 'stageId' => 's1']];
         $verdicts = $this->createMock(Verdicts::class);
         $verdicts->method('find')->willReturn(['verdict' => 'new_deal', 'reason' => 'r', 'card' => $card]);
+        $proposedDeals = $this->createMock(ProposedDeals::class);
+        $proposedDeals->method('autoCreate')->willReturn(null);
         $summary = $this->getMockBuilder(Summary::class)
             ->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class),
-                $this->createMock(DealTargets::class)])
+                $this->createMock(DealTargets::class), $proposedDeals])
             ->onlyMethods(['request'])->getMock();
         $summary->expects(self::never())->method('request');
         $result = $summary->analyse(['id' => 'c1', 'type' => 'conversation', 'tenantId' => 'tenant', 'revision' => 'rev', 'evidenceScope' => 'scope'], 'pt-BR');

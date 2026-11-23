@@ -8,11 +8,17 @@ use Espo\Core\Acl;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
+use Espo\Core\InjectableFactory;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\FeatureJourney\Services\AccountReplyReview;
+use Espo\Modules\FeatureJourney\Services\JourneyCatchUp;
 use Espo\Modules\FeatureJourney\Services\JourneyEnrollmentService;
+use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
+use Espo\Modules\FeatureJourney\Services\JourneyWhatsAppOutbound;
 use Espo\Modules\FeatureJourney\Services\TenantGuard;
+use Espo\Modules\FeatureJourney\Services\TransitionExecutor;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\SelectBuilder;
@@ -31,6 +37,7 @@ class JourneyRelationships
         private TenantGuard $guard,
         private SelectBuilderFactory $select,
         private JourneyEnrollmentService $enrollment,
+        private InjectableFactory $injectableFactory,
     ) {}
 
     public function context(int $accountId, string $type, string $id): array
@@ -189,6 +196,85 @@ class JourneyRelationships
         return $this->present($this->record($tenant, $target, $id), $tenant, $target);
     }
 
+    public function replyReview(Entity $tenant, Entity $target, string $id): object
+    {
+        $record = $this->reviewableRecord($tenant, $target, $id);
+        return $this->presentReplyReview($record);
+    }
+
+    public function decideReplyReview(Entity $tenant, Entity $target, string $id, object $input): object
+    {
+        $record = $this->reviewableRecord($tenant, $target, $id);
+        $review = $this->injectableFactory->create(AccountReplyReview::class);
+        $review->decide(
+            $record->getId(),
+            $input,
+            (string) $this->user->getId(),
+            $this->acl,
+            $this->injectableFactory->create(JourneyTargetPeople::class),
+            $this->injectableFactory->create(JourneyWhatsAppOutbound::class),
+            $this->injectableFactory->create(TransitionExecutor::class),
+        );
+        $updated = $this->em->getEntityById('JourneyRecord', $record->getId()) ?? $record;
+        $response = $this->presentReplyReview($updated);
+        $response->record = $this->present($updated, $tenant, $target);
+        return $response;
+    }
+
+    private function reviewableRecord(Entity $tenant, Entity $target, string $id): Entity
+    {
+        $record = $this->record($tenant, $target, $id);
+        if ($target->getEntityType() !== 'Account' ||
+            !$this->acl->check($record, 'edit') ||
+            !$this->acl->checkField('JourneyRecord', 'status', 'edit') ||
+            !$this->acl->check($target, 'read') ||
+            !$this->acl->checkScope('Contact', 'read') ||
+            !$this->acl->checkField('Contact', 'phoneNumber', 'read')) {
+            throw new Forbidden();
+        }
+        return $record;
+    }
+
+    private function presentReplyReview(Entity $record): object
+    {
+        $summary = AccountReplyReview::summary($record);
+        $review = $this->injectableFactory->create(AccountReplyReview::class);
+        $summary += $review->contacts(
+            $record,
+            $this->acl,
+            $this->injectableFactory->create(JourneyTargetPeople::class),
+            $this->injectableFactory->create(JourneyWhatsAppOutbound::class),
+        );
+        $summary['catchUpStageName'] = $this->catchUpStageName($record);
+        unset($summary['catchUpUntilStageId']);
+        return (object) $summary;
+    }
+
+    /** The stage the others wait at while a number added in reply review catches up. */
+    private function catchUpStageName(Entity $record): ?string
+    {
+        $state = AccountReplyReview::state($record);
+        if (!JourneyCatchUp::active($state) || empty($state['catchUp']['until'])) {
+            return null;
+        }
+        $stage = $this->em->getEntityById('JourneyStage', (string) $state['catchUp']['until']);
+        return $stage && $stage->get('journeyId') === $record->get('journeyId')
+            ? $this->value($stage, 'name') : null;
+    }
+
+    private function canReviewReply(Entity $record, Entity $target, ?Entity $journey): bool
+    {
+        return $record->get('status') === 'Paused' &&
+            (bool) $record->get('replyPausedAt') &&
+            $target->getEntityType() === 'Account' &&
+            $journey?->get('status') === 'Active' &&
+            $this->acl->check($record, 'edit') &&
+            $this->acl->checkField('JourneyRecord', 'status', 'edit') &&
+            $this->acl->check($target, 'read') &&
+            $this->acl->checkScope('Contact', 'read') &&
+            $this->acl->checkField('Contact', 'phoneNumber', 'read');
+    }
+
     public function unlink(Entity $tenant, Entity $target, string $id): object
     {
         $record = $this->record($tenant, $target, $id);
@@ -237,9 +323,12 @@ class JourneyRelationships
             'targetType' => $target->getEntityType(), 'targetId' => $target->getId(),
             'targetName' => $this->value($target, 'name'),
             'currentStageName' => $this->value($stage, 'name'),
+            'catchUpStageName' => $this->catchUpStageName($record),
             'status' => $this->value($record, 'status'), 'createdAt' => $this->value($record, 'createdAt'),
             'enteredStageAt' => $this->value($record, 'enteredStageAt'),
+            'replyPausedAt' => $this->value($record, 'replyPausedAt'),
             'cycleCount' => $this->value($record, 'cycleCount'), 'exitReason' => $this->value($record, 'exitReason'),
+            'canReviewReply' => $this->canReviewReply($record, $target, $journey),
             'canUnlink' => in_array($record->get('status'), self::LIVE, true) &&
                 $this->acl->check($record, 'edit') && $this->acl->check($target, 'edit') &&
                 $this->acl->checkField('JourneyRecord', 'status', 'edit'),

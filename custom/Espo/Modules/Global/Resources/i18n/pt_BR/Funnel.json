@@ -4,7 +4,8 @@
         "Active": "Ativo",
         "All": "Todos",
         "Only Active": "Apenas Ativos",
-        "Opportunity Stages": "Estágios da Oportunidade"
+        "Opportunity Stages": "Estágios da Oportunidade",
+        "Follow-up Configuration": "Configuração de Follow-up"
     },
     "links": {
         "opportunityStages": "Estágios da Oportunidade",
@@ -18,7 +19,13 @@
         "tenant": "Ambiente",
         "isActive": "Ativo",
         "isDefault": "É Padrão",
+        "followupsEnabled": "IA Agenda Follow-ups Automaticamente",
+        "followupBreakoutLimit": "Limite de Follow-up (padrão)",
         "opportunityStages": "Estágios da Oportunidade"
+    },
+    "tooltips": {
+        "followupsEnabled": "Quando ativado, a IA agenda follow-ups automaticamente nas oportunidades abertas deste funil quando estiver aguardando o cliente. Quando desativado, a IA cria uma tarefa para a equipe em vez de agendar sozinha, mas as pessoas ainda podem agendar follow-ups manualmente na oportunidade ou pedindo à IA via @menção em nota privada. Desativar também cancela os follow-ups atualmente agendados nas oportunidades deste funil.",
+        "followupBreakoutLimit": "Padrão do funil para o número máximo de follow-ups consecutivos da IA antes de parar e escalar para uma tarefa humana. Deixe vazio para usar o padrão 1, exceto quando a própria oportunidade tiver um Limite de Follow-up explícito."
     },
     "boolFilters": {
         "onlyMy": "Atribuído a Mim"

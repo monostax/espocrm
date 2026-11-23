@@ -30,7 +30,8 @@
             "utility": true
         },
         "type": {
-            "options": ["__APPEND__", "ChatwootMessageReceived", "ActivityOverdue", "OpportunityStageChanged"]
+            "options": ["__APPEND__", "ChatwootMessageReceived", "ActivityOverdue", "OpportunityStageChanged",
+                "OpportunityFollowupSent"]
         },
         "opportunityStreamEventKey": {
             "type": "varchar",

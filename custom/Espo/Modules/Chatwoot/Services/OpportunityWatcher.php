@@ -17,6 +17,7 @@ use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\Global\Hooks\Opportunity\ClearWatcherFollowupMark;
 use Espo\Modules\Global\Tools\NextAction\NextActionWriter;
+use Espo\Modules\Global\Tools\Opportunity\StageRequirements;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -44,6 +45,8 @@ class OpportunityWatcher
     /** Action outcomes the run's mural post lists. */
     private const SHOWN = ['moved', 'applied', 'blocked'];
     private const SAVE = [ClearWatcherFollowupMark::OPTION => true];
+    /** Saves of only the follow-up or the next step: a deal missing required fields still gets them (2026-11-23). */
+    private const BOOKKEEPING = [...self::SAVE, StageRequirements::BOOKKEEPING => true];
 
     public function __construct(
         private EntityManager $entityManager,
@@ -280,7 +283,7 @@ class OpportunityWatcher
         }
         if ($deal->get('nextActionType') === 'Task' && $deal->get('nextActionId') === $task->getId()) {
             // Activity hooks can advance the deal's version: save the step on a fresh copy.
-            $this->nextActions->save($this->lock($id), null, self::SAVE);
+            $this->nextActions->save($this->lock($id), null, self::BOOKKEEPING);
             $run->clearedSteps[] = $task->getId();
         }
         return ['outcome' => 'applied', ...$this->taskFacts($task)];
@@ -315,7 +318,7 @@ class OpportunityWatcher
         $deal = $this->lock($id);
         if ($deal->get('status') !== 'Open') return 'refused';
         if ($this->personStepPending($deal)) return 'blocked_by_person_step';
-        $this->nextActions->save($deal, $task, self::SAVE);
+        $this->nextActions->save($deal, $task, self::BOOKKEEPING);
         return 'applied';
     }
 
@@ -335,7 +338,7 @@ class OpportunityWatcher
         if ($at === null) {
             if ($timer === null) return ['outcome' => 'stale'];
             $deal->set(['followupTimer' => null, 'followupByWatcher' => false]);
-            $this->entityManager->saveEntity($deal, self::SAVE);
+            $this->entityManager->saveEntity($deal, self::BOOKKEEPING);
             return ['outcome' => 'applied', 'at' => null];
         }
         $when = strtotime($at . ' UTC');
@@ -345,11 +348,11 @@ class OpportunityWatcher
         if ($this->personStepPending($deal)) return ['outcome' => 'blocked_by_person_step'];
         if ($deal->get('nextActionId')) {
             // A finished step still on the deal: clear it, as the UI does before arming.
-            $this->nextActions->save($deal, null, self::SAVE);
+            $this->nextActions->save($deal, null, self::BOOKKEEPING);
             $deal = $this->lock($id);
         }
         $deal->set(['followupTimer' => $at, 'followupAiAgentId' => $sender->getId(), 'followupByWatcher' => true]);
-        $this->entityManager->saveEntity($deal, self::SAVE);
+        $this->entityManager->saveEntity($deal, self::BOOKKEEPING);
         if (!$deal->get('followupTimer')) return ['outcome' => 'blocked_by_person_step'];
         return ['outcome' => 'applied', 'at' => $at, 'senderMembershipId' => $sender->getId(), 'senderName' => $sender->get('name')];
     }

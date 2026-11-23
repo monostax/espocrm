@@ -2,6 +2,7 @@
     "actionClassNameList": [
         "Espo\\Modules\\FeatureJourney\\Rebuild\\BackfillTransitionScopes",
         "Espo\\Modules\\FeatureJourney\\Rebuild\\SeedScheduledJobs",
-        "Espo\\Modules\\FeatureJourney\\Rebuild\\ConfigureNavbar"
+        "Espo\\Modules\\FeatureJourney\\Rebuild\\ConfigureNavbar",
+        "Espo\\Modules\\FeatureJourney\\Rebuild\\StampJourneyConversations"
     ]
 }

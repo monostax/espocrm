@@ -14,6 +14,7 @@ use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\FeatureCatchUp\Services\DealTargets;
 use Espo\Modules\FeatureCatchUp\Services\Ownership;
 use Espo\Modules\FeatureCatchUp\Services\Parties;
+use Espo\Modules\FeatureCatchUp\Services\ProposedDeals;
 use Espo\Modules\FeatureCatchUp\Services\Records;
 use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
 use Espo\Modules\FeatureCatchUp\Services\Summary;
@@ -121,8 +122,10 @@ class ClosedDealsTest extends TestCase
         $verdicts->method('find')->willReturn($stored);
         $targets = $this->createMock(DealTargets::class);
         $targets->method('sanitize')->willReturnArgument(1);
+        $proposedDeals = $this->createMock(ProposedDeals::class);
+        $proposedDeals->method('autoCreate')->willReturn(null);
         $summary = $this->getMockBuilder(Summary::class)
-            ->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class), $targets])
+            ->setConstructorArgs([$this->createMock(User::class), $verdicts, $this->createMock(Parties::class), $this->createMock(Records::class), $targets, $proposedDeals])
             ->onlyMethods(['request'])->getMock();
         return [$summary, $verdicts];
     }

@@ -9,7 +9,7 @@
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-namespace Espo\Modules\Chatwoot\Hooks\ChatwootAccountUserMembership;
+namespace Espo\Modules\Global\Hooks\Funnel;
 
 use Espo\Core\ApplicationState;
 use Espo\Core\Hook\Hook\AfterSave;
@@ -19,22 +19,17 @@ use Espo\ORM\EntityManager;
 use Espo\ORM\Repository\Option\SaveOptions;
 
 /**
- * Bulk-resets active follow-up loops when an AI agent's "schedules
- * follow-ups on its own" toggle (`followupsEnabled`) is switched OFF. The
- * toggle only gates the AI's own scheduling, but switching it off still
- * cancels every follow-up this agent drives, manual ones included.
+ * Bulk-resets active follow-up loops when a Funnel's automatic AI follow-up
+ * toggle (`followupsEnabled`) is switched OFF.
  *
- * Every Opportunity currently in `followupStatus = 'FollowupActive'`
- * (or with a non-null timer) whose follow-up loop is DRIVEN by this
- * membership (`followupAiAgentId = this membership`) is stopped
- * (`followupStatus = 'FollowupInactive'`, `followupTimer = NULL`) while
- * preserving `followupCount`, `followupLifetimeCount`, and
- * `followupAiAgentId` provenance. `version_number` is bumped so the AI
- * tools' optimistic concurrency can never clobber the stop.
+ * Every Opportunity in this funnel currently in `followupStatus = 'FollowupActive'`
+ * (or with a non-null timer) is stopped (`followupStatus = 'FollowupInactive'`,
+ * `followupTimer = NULL`) while preserving `followupCount`,
+ * `followupLifetimeCount`, and `followupAiAgentId` provenance. `version_number`
+ * is bumped so the AI tools' optimistic concurrency can never clobber the stop.
  *
- * Re-enabling the toggle does NOT resurrect the stopped timers — a row
- * stays 'FollowupInactive' until a human or the AI explicitly schedules
- * a new timer.
+ * Re-enabling the toggle does NOT resurrect the stopped timers — a row stays
+ * 'FollowupInactive' until a human or the AI schedules a new timer.
  *
  * @implements AfterSave<Entity>
  */
@@ -59,7 +54,6 @@ class ResetFollowupsOnDisable implements AfterSave
         }
 
         if ($entity->get('followupsEnabled')) {
-            // Toggled ON (or unchanged-truthy) — nothing to reset.
             return;
         }
 
@@ -76,20 +70,20 @@ class ResetFollowupsOnDisable implements AfterSave
             . "    modified_at = NOW(), "
             . "    modified_by_id = :modifiedById, "
             . "    version_number = COALESCE(version_number, 0) + 1 "
-            . "WHERE followup_ai_agent_id = :membershipId "
+            . "WHERE funnel_id = :funnelId "
             . "  AND (followup_status = 'FollowupActive' OR followup_timer IS NOT NULL) "
             . "  AND deleted = false"
         );
 
         $stmt->execute([
             ':modifiedById' => $modifiedById,
-            ':membershipId' => $entity->getId(),
+            ':funnelId' => $entity->getId(),
         ]);
 
         $count = $stmt->rowCount();
 
         $this->log->info(
-            "Chatwoot Module: followupsEnabled disabled on membership {$entity->getId()} — "
+            "Global Module: followupsEnabled disabled on funnel {$entity->getId()} — "
             . "stopped {$count} active follow-up opportunity(ies) (set to FollowupInactive)."
         );
     }

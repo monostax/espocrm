@@ -180,11 +180,11 @@ class Feed
         if ($act = self::reviewAct($body)) $this->acts->record('Opportunity', $id, $this->user->getId(), $act);
     }
 
-    /** What the card's review settled (Acts): a reply sent from it or the next step scheduled. Older clients don't say. */
+    /** What the card's review settled (Acts): a reply sent from it, the next step scheduled, or an AI-created deal acknowledged. */
     public static function reviewAct(mixed $body): ?string
     {
         $act = $body->action ?? null;
-        return in_array($act, ['reply', 'next'], true) ? $act : null;
+        return in_array($act, ['reply', 'next', 'done', 'deal'], true) ? $act : null;
     }
 
     /**

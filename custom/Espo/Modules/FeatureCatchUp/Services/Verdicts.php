@@ -109,7 +109,7 @@ class Verdicts
      * @param list<string> $closedDeals the closed deals this analysis had, so a stored found deal without them is replaced
      */
     public function store(string $tenantId, string $type, string $id, string $revision, string $locale, string $evidenceScope,
-        string $verdict, ?string $reason, ?array $card, ?array $basis = null, ?int $flipsAt = null, array $closedDeals = []): void
+        string $verdict, ?string $reason, ?array $card, ?array $basis = null, ?int $flipsAt = null, array $closedDeals = [], bool $replace = false): void
     {
         $column = self::column($type);
         // Only the newest analysis of a subject for this locale and scope is ever read again.
@@ -117,7 +117,7 @@ class Verdicts
             "DELETE FROM catch_up_verdict WHERE $column = :id AND locale = :locale AND evidence_scope = :scope AND revision <> :revision"
         )->execute(['id' => $id, 'locale' => $locale, 'scope' => $evidenceScope, 'revision' => $revision]);
         $stored = $this->find($type, $id, $revision, $locale, $evidenceScope);
-        if ($stored && !self::outdated($stored, $closedDeals)) return;
+        if ($stored && !$replace && !self::outdated($stored, $closedDeals)) return;
         // A card the clock moved to another loop, or an outdated one, was analysed again: the new analysis replaces it.
         if ($stored) $this->em->getPDO()->prepare(
             "DELETE FROM catch_up_verdict WHERE $column = :id AND locale = :locale AND evidence_scope = :scope AND revision = :revision"
@@ -181,6 +181,7 @@ class Verdicts
     public static function outdated(array $stored, array $closedDeals = []): bool
     {
         if (!empty($stored['card']['redraft'])) return true;
+        if (!empty($stored['card']['createdDeal'])) return false;
         $deal = $stored['card']['proposedDeal'] ?? null;
         // Found deals, and since prompt 15 loops cards that offer a deal too.
         if (($stored['verdict'] ?? null) !== 'new_deal' && !is_array($deal)) return false;
@@ -208,6 +209,26 @@ class Verdicts
         $this->em->getPDO()->prepare("UPDATE catch_up_verdict SET resolved_at = UTC_TIMESTAMP(), flips_at = NULL WHERE $column = :id AND resolved_at IS NULL"
             . ($revision === null ? '' : ' AND revision = :revision'))
             ->execute(['id' => $id] + ($revision === null ? [] : ['revision' => $revision]));
+    }
+
+    /**
+     * When a live-batch conversation card auto-created an open Opportunity and the reader acts on that card before
+     * reloading, resolve the mirrored Opportunity verdict too so it does not come back in the deals lane.
+     */
+    public function resolveCreatedDeals(string $conversationId, ?string $revision = null): void
+    {
+        $query = $this->em->getPDO()->prepare(
+            'SELECT card FROM catch_up_verdict WHERE deleted = 0 AND conversation_id = :id'
+            . ($revision === null ? '' : ' AND revision = :revision')
+        );
+        $query->execute(['id' => $conversationId] + ($revision === null ? [] : ['revision' => $revision]));
+        $ids = [];
+        foreach ($query->fetchAll(\PDO::FETCH_COLUMN) as $raw) {
+            $card = is_string($raw) ? json_decode($raw, true) : null;
+            $dealId = is_array($card['createdDeal'] ?? null) ? ($card['createdDeal']['id'] ?? null) : null;
+            if (is_string($dealId) && $dealId !== '') $ids[$dealId] = true;
+        }
+        foreach (array_keys($ids) as $dealId) $this->resolve('Opportunity', $dealId);
     }
 
     /** Drop all copies, including scheduled flips. A reopened deal starts without the discarded verdict. */
@@ -415,6 +436,7 @@ class Verdicts
         . ConversationCycle::CURRENT_SQL
         . "AND (p.party_class IS NULL OR p.party_class IN ('customer', 'partner')) "
         . 'AND NOT EXISTS (' . ServiceFeed::OPEN_DEAL_SQL . ') '
+        . ServiceFeed::NOT_IN_JOURNEY_SQL
         . 'AND c.id NOT IN (SELECT z.target_id FROM catch_up_snooze z WHERE z.deleted = 0 AND z.user_id = :user '
         . "AND z.target_type = 'ChatwootConversation' AND z.snoozed_until > UTC_TIMESTAMP())";
     /** Deal `o` belongs in the reader's Negócios deck (Feed::candidateIds()), minus the settle wait, the window and the owner rule. */

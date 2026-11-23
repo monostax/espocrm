@@ -18,6 +18,6 @@ class ValidateStageRequirements implements BeforeSave
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
-        $this->requirements->validate($entity);
+        $this->requirements->validate($entity, (bool) $options->get(StageRequirements::BOOKKEEPING));
     }
 }

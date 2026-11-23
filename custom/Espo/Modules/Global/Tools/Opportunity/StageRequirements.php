@@ -17,6 +17,13 @@ use Espo\ORM\EntityManager;
 /** Entry-time requirements use the tenant field's immutable, flat valueKey. */
 class StageRequirements
 {
+    /**
+     * Save option for system writes that only touch the deal's follow-up or next step (the opportunity watcher, a
+     * customer reply): they skip the ordinary save requirements, which nobody but a person can fill in (2026-11-23).
+     * Stage, funnel and status changes are checked as always.
+     */
+    public const BOOKKEEPING = 'stageRequirementsBookkeeping';
+
     public function __construct(private EntityManager $entityManager, private MetaProvider $metaProvider, private Acl $acl) {}
 
     /** @return list<array<string, mixed>> */
@@ -59,12 +66,15 @@ class StageRequirements
         return $fields;
     }
 
-    public function validate(Entity $opportunity): void
+    public function validate(Entity $opportunity, bool $bookkeeping = false): void
     {
         $isTransition = $opportunity->isNew() ||
             $opportunity->isAttributeChanged('opportunityStageId') ||
             $opportunity->isAttributeChanged('funnelId') ||
             $opportunity->isAttributeChanged('status');
+        if ($bookkeeping && !$isTransition) {
+            return;
+        }
         $stageId = $opportunity->get('opportunityStageId');
         if (!$stageId) {
             return; // The existing required/stage-funnel validators handle this.

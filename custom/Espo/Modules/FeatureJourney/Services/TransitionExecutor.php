@@ -325,6 +325,98 @@ class TransitionExecutor
     }
 
     /**
+     * Send the run back to its Entry stage for a number added in reply review
+     * ({@see JourneyCatchUp}). The stage it leaves gets no OnExit: the others are still
+     * there, waiting.
+     */
+    public function restartForCatchUp(string $recordId, string $firedBy = 'user'): bool
+    {
+        $record = $this->entityManager->getEntityById(JourneyRecord::ENTITY_TYPE, $recordId);
+        if (!$record || !$this->claim($record)) {
+            return false;
+        }
+        $record = $this->entityManager->getEntityById(JourneyRecord::ENTITY_TYPE, $recordId);
+        if (!$record) {
+            return false;
+        }
+
+        try {
+            $journey = $this->entityManager->getEntityById(Journey::ENTITY_TYPE, (string) $record->get('journeyId'));
+            $target = $this->entityManager->getEntityById(
+                (string) $record->get('targetType'),
+                (string) $record->get('targetId'),
+            );
+            $entry = $journey ? $this->entityManager->getRDBRepository(JourneyStage::ENTITY_TYPE)->where([
+                'journeyId' => $journey->getId(),
+                'stageType' => JourneyStage::TYPE_ENTRY,
+                'isActive' => true,
+            ])->order('order', 'ASC')->findOne() : null;
+
+            if (!$journey || $journey->get('status') !== Journey::STATUS_ACTIVE || !$target || !$entry) {
+                $this->releaseClaim($record);
+
+                return false;
+            }
+
+            $this->tenantGuard->assertRecordMatchesJourney($record, $journey);
+            $this->tenantGuard->assertTargetBelongsToJourney($target, $journey);
+
+            $currentStageId = $record->get('currentStageId');
+            $fromStage = $currentStageId
+                ? $this->entityManager->getEntityById(JourneyStage::ENTITY_TYPE, (string) $currentStageId)
+                : null;
+
+            return $this->moveClaimedRecord(
+                $record,
+                $journey,
+                $target,
+                $fromStage,
+                $entry,
+                null,
+                ['payload' => ['catchUp' => true]],
+                $firedBy,
+                $this->identity->fromRecord($record, $journey),
+                false,
+                true,
+            );
+        } catch (Throwable $e) {
+            $this->log->error('TransitionExecutor catch-up: ' . $e->getMessage());
+            $this->handleActionFailure($record, $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Apply a catch-up step to the freshest review state under the row lock, so a reply
+     * recorded meanwhile isn't overwritten.
+     *
+     * @param callable(array): array $step
+     */
+    private function updateCatchUp(Entity $record, callable $step): void
+    {
+        if (!JourneyCatchUp::active(AccountReplyReview::state($record))) {
+            return;
+        }
+        $this->entityManager->getTransactionManager()->run(function () use ($record, $step) {
+            $fresh = $this->entityManager->getRDBRepository(JourneyRecord::ENTITY_TYPE)
+                ->where(['id' => $record->getId()])->forUpdate()->findOne();
+            if (!$fresh) {
+                return;
+            }
+            $state = AccountReplyReview::state($fresh);
+            $next = $step($state);
+            if ($next !== $state) {
+                $fresh->set('replyReviewState', (object) $next);
+                $this->entityManager->saveEntity($fresh, [SaveOption::SILENT => true, self::SKIP_OPT => true]);
+            }
+            // Keep the caller's copy current without making its next save write the state again.
+            $record->set('replyReviewState', (object) $next);
+            $record->setFetched('replyReviewState', $record->get('replyReviewState'));
+        });
+    }
+
+    /**
      * @param array{code?: string, payload?: array<string, mixed>, eventId?: string}|null $signal
      */
     private function moveClaimedRecord(
@@ -338,6 +430,7 @@ class TransitionExecutor
         string $firedBy,
         ?User $actor,
         bool $goalCompletion = false,
+        bool $skipExit = false,
     ): bool {
         try {
             $this->tenantGuard->assertStageInJourney($toStage, $journey);
@@ -350,7 +443,7 @@ class TransitionExecutor
             return false;
         }
 
-        if ($fromStage && $fromStage->getId() !== $toStage->getId()) {
+        if (!$skipExit && $fromStage && $fromStage->getId() !== $toStage->getId()) {
             $exitResult = $this->actionRunner->runForStage(
                 $fromStage,
                 JourneyStageAction::TRIGGER_ON_EXIT,
@@ -382,6 +475,10 @@ class TransitionExecutor
             : $signal;
         $this->writeLog($record, $journey, $fromStage, $toStage, $transition, $firedBy, $logSignal);
 
+        $this->updateCatchUp($record, static fn (array $s) => JourneyCatchUp::beforeEnter(
+            $s, $toStage->getId(), (string) $toStage->get('stageType'),
+        ));
+
         $enterResult = $this->actionRunner->runForStage(
             $toStage,
             JourneyStageAction::TRIGGER_ON_ENTER,
@@ -390,6 +487,9 @@ class TransitionExecutor
             $journey,
             $actor,
         );
+
+        // Marked even when an action failed: a failed OnEnter doesn't send the stage again either.
+        $this->updateCatchUp($record, static fn (array $s) => JourneyCatchUp::afterEnter($s, $toStage->getId()));
 
         if (!$enterResult['ok']) {
             return $this->handleActionFailure($record, $enterResult['error'] ?? 'on_enter_failed');

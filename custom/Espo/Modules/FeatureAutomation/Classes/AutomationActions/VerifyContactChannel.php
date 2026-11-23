@@ -22,12 +22,14 @@ use InvalidArgumentException;
  * Runs one paid contact check and waits for its answer.
  *
  * params:
- *  - check: whatsapp_registration (2 credits) · phone_identity (Twilio, 8) · email_deliverability (2)
+ *  - check: whatsapp_registration (2 credits) · email_deliverability (2). phone_identity (Twilio)
+ *    was retired on 2026-11-23; its capability is switched off, so it records unavailable.
  *  - source: enrichmentResult (default; the found value that started the run) · contactPrimary
  *  - as: result key (default = check)
  *  - stopWhen: optional short-circuit goal ('valid_email' | 'valid_whatsapp' | 'verified_phone').
  *    When set, candidates for the same Contact run one at a time in this channel family and skip
- *    without spending credits once the Contact already satisfies the goal.
+ *    without spending credits once the Contact already satisfies the goal. valid_whatsapp means
+ *    the Contact already has a WhatsApp number (not marked as someone else's).
  *
  * Writes `payload.verification.<as>` once decided, for later `when` formulas:
  *  - the check's own outcome (registered / not_registered, verified / not_verified /
@@ -240,8 +242,21 @@ class VerifyContactChannel implements Action
 
     private function contactSatisfiesGoal(string $tenantId, string $contactId, string $stopWhen): bool
     {
-        [$kind, $outcome] = self::STOP_GOALS[$stopWhen];
         $pdo = $this->entityManager->getPDO();
+        // A WhatsApp number counts once it is on the Contact. A registered check alone does not:
+        // the number may never have been added, and the next candidate should still get its turn.
+        if ($stopWhen === 'valid_whatsapp') {
+            $stmt = $pdo->prepare(
+                "SELECT 1 FROM contact_channel_identity
+                 WHERE tenant_id = ? AND contact_id = ? AND deleted = FALSE
+                   AND channel_type = 'whatsapp' AND COALESCE(ownership_status, '') <> 'rejected'
+                 LIMIT 1"
+            );
+            $stmt->execute([$tenantId, $contactId]);
+
+            return $stmt->fetchColumn() !== false;
+        }
+        [$kind, $outcome] = self::STOP_GOALS[$stopWhen];
         $stmt = $pdo->prepare(
             'SELECT 1 FROM phone_verification_operation
              WHERE tenant_id = ? AND contact_id = ? AND deleted = FALSE
@@ -255,7 +270,7 @@ class VerifyContactChannel implements Action
 
     /**
      * Serializes enrichment-triggered checks for the same Contact and channel family (email vs phone)
-     * so earlier candidates finish (e.g. WhatsApp -> Twilio -> verified) before later candidates spend credits.
+     * so earlier candidates finish (e.g. WhatsApp check -> number added) before later candidates spend credits.
      */
     private function hasEarlierChannelVerificationInFlight(
         string $tenantId,

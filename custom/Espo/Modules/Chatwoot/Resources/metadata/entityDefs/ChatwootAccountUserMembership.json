@@ -22,7 +22,10 @@
         },
         "role": {
             "type": "enum",
-            "options": ["agent", "administrator"],
+            "options": [
+                "agent",
+                "administrator"
+            ],
             "default": "agent",
             "required": true
         },
@@ -47,7 +50,11 @@
         },
         "availabilityStatus": {
             "type": "enum",
-            "options": ["available", "busy", "offline"],
+            "options": [
+                "available",
+                "busy",
+                "offline"
+            ],
             "default": "offline",
             "readOnly": true
         },
@@ -77,8 +84,18 @@
         },
         "aiCrmOperations": {
             "type": "multiEnum",
-            "options": ["read", "create", "update", "delete"],
-            "default": ["read", "create", "update", "delete"],
+            "options": [
+                "read",
+                "create",
+                "update",
+                "delete"
+            ],
+            "default": [
+                "read",
+                "create",
+                "update",
+                "delete"
+            ],
             "tooltip": true,
             "audited": true
         },
@@ -96,7 +113,11 @@
         },
         "aiMessageVisibility": {
             "type": "enum",
-            "options": ["publicAndPrivate", "publicDraftAndPrivate", "privateOnly"],
+            "options": [
+                "publicAndPrivate",
+                "publicDraftAndPrivate",
+                "privateOnly"
+            ],
             "default": "publicAndPrivate",
             "required": true,
             "notNull": true,
@@ -126,18 +147,6 @@
         "contextualTransferIsEnabled": {
             "type": "bool",
             "default": false
-        },
-        "followupsEnabled": {
-            "type": "bool",
-            "default": true,
-            "tooltip": true
-        },
-        "followupBreakoutLimit": {
-            "type": "int",
-            "min": 1,
-            "tooltip": true,
-            "audited": true,
-            "comment": "Agent-level default for the per-deal follow-up breakout limit. Empty = non-deterministic: each deal keeps its own value or falls back to the server constant (1); the AI may choose per opportunity."
         },
         "aiDebounceSeconds": {
             "type": "int",
@@ -170,7 +179,9 @@
                 "description": "calendarDescription",
                 "eventType": "calendarEventType"
             },
-            "additionalAttributeList": ["columns"]
+            "additionalAttributeList": [
+                "columns"
+            ]
         },
         "tasksEnabled": {
             "type": "bool",
@@ -187,8 +198,12 @@
             "type": "linkMultiple",
             "view": "chatwoot:views/account-user-membership/fields/task-assignees",
             "tooltip": true,
-            "columns": { "description": "taskAssignmentDescription" },
-            "additionalAttributeList": ["columns"]
+            "columns": {
+                "description": "taskAssignmentDescription"
+            },
+            "additionalAttributeList": [
+                "columns"
+            ]
         },
         "funnelsToManage": {
             "type": "linkMultiple",
@@ -197,14 +212,20 @@
             "columns": {
                 "description": "description"
             },
-            "additionalAttributeList": ["columns"]
+            "additionalAttributeList": [
+                "columns"
+            ]
         },
         "chatwootTeams": {
             "type": "linkMultiple"
         },
         "syncStatus": {
             "type": "enum",
-            "options": ["pending", "synced", "error"],
+            "options": [
+                "pending",
+                "synced",
+                "error"
+            ],
             "default": "pending"
         },
         "lastSyncedAt": {
@@ -248,7 +269,11 @@
         },
         "calendarEventType": {
             "type": "enum",
-            "options": ["Appointment", "Meeting", "Call"],
+            "options": [
+                "Appointment",
+                "Meeting",
+                "Call"
+            ],
             "default": "Appointment",
             "readOnly": true,
             "tooltip": true
@@ -317,9 +342,13 @@
             "relationName": "chatwootAccountUserMembershipTaskUser",
             "foreign": "accountUserMembershipsWithTaskAccess",
             "additionalColumns": {
-                "description": { "type": "text" }
+                "description": {
+                    "type": "text"
+                }
             },
-            "columnAttributeMap": { "description": "description" }
+            "columnAttributeMap": {
+                "description": "description"
+            }
         },
         "wahaSessionLabels": {
             "type": "hasMany",
@@ -354,30 +383,61 @@
     "indexes": {
         "uniqueMembership": {
             "unique": true,
-            "columns": ["chatwootAccountId", "chatwootUserId", "deleteId"]
+            "columns": [
+                "chatwootAccountId",
+                "chatwootUserId",
+                "deleteId"
+            ]
         },
         "chatwootAccountId": {
-            "columns": ["chatwootAccountId"]
+            "columns": [
+                "chatwootAccountId"
+            ]
         },
         "chatwootUserId": {
-            "columns": ["chatwootUserId"]
+            "columns": [
+                "chatwootUserId"
+            ]
         },
         "createdAt": {
-            "columns": ["createdAt"]
+            "columns": [
+                "createdAt"
+            ]
         },
         "createdAtId": {
             "unique": true,
-            "columns": ["createdAt", "id"]
+            "columns": [
+                "createdAt",
+                "id"
+            ]
         }
     },
     "cascadeDelete": {
         "junctionTables": [
-            {"table": "ChatwootAccountUserMembershipChatwootInbox", "column": "chatwootAccountUserMembershipId"},
-            {"table": "ChatwootAccountUserMembershipChatwootTeam", "column": "chatwootAccountUserMembershipId"},
-            {"table": "ChatwootAccountUserMembershipKnowledgeBaseCategory", "column": "chatwootAccountUserMembershipId"},
-            {"table": "ChatwootAccountUserMembershipCalendarUser", "column": "chatwootAccountUserMembershipId"},
-            {"table": "ChatwootAccountUserMembershipFunnel", "column": "chatwootAccountUserMembershipId"},
-            {"table": "ChatwootAccountUserMembershipTaskUser", "column": "chatwootAccountUserMembershipId"}
+            {
+                "table": "ChatwootAccountUserMembershipChatwootInbox",
+                "column": "chatwootAccountUserMembershipId"
+            },
+            {
+                "table": "ChatwootAccountUserMembershipChatwootTeam",
+                "column": "chatwootAccountUserMembershipId"
+            },
+            {
+                "table": "ChatwootAccountUserMembershipKnowledgeBaseCategory",
+                "column": "chatwootAccountUserMembershipId"
+            },
+            {
+                "table": "ChatwootAccountUserMembershipCalendarUser",
+                "column": "chatwootAccountUserMembershipId"
+            },
+            {
+                "table": "ChatwootAccountUserMembershipFunnel",
+                "column": "chatwootAccountUserMembershipId"
+            },
+            {
+                "table": "ChatwootAccountUserMembershipTaskUser",
+                "column": "chatwootAccountUserMembershipId"
+            }
         ]
     }
 }

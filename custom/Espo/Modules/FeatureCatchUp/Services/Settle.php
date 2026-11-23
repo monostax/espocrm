@@ -63,6 +63,8 @@ class Settle
         if (!$conversation) return ['subjects' => [], 'skipped' => 'conversation'];
 
         $deals = $this->openDeals($conversation->getId());
+        // A journey still messaging the conversation is its follow-up: no Atendimento card, so no analysis either.
+        if (!$deals && $this->inJourney($conversation)) return ['subjects' => [], 'skipped' => 'journey'];
         $subjects = $deals ? array_map(fn (string $id) => ['deals', $id], $deals) : [['service', $conversation->getId()]];
         $context = [
             'accountId' => (string) $chatwootAccountId,
@@ -170,6 +172,14 @@ class Settle
             . 'WHERE r.chatwoot_conversation_id = :id AND r.deleted = 0 ORDER BY o.created_at DESC, o.id LIMIT ' . self::MAX_DEALS);
         $query->execute(['id' => $conversationId]);
         return array_map('strval', $query->fetchAll(\PDO::FETCH_COLUMN));
+    }
+
+    /** The conversation's enrollment (stamped by FeatureJourney) is still running or paused: ServiceFeed::NOT_IN_JOURNEY_SQL. */
+    private function inJourney(Entity $conversation): bool
+    {
+        $recordId = (string) ($conversation->get('journeyRecordId') ?? '');
+        $record = $recordId !== '' ? $this->em->getEntityById('JourneyRecord', $recordId) : null;
+        return $record !== null && in_array($record->get('status'), ServiceFeed::JOURNEY_LIVE, true);
     }
 
     private function account(int $chatwootAccountId): ?Entity

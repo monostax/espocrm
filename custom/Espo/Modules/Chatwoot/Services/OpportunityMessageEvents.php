@@ -24,6 +24,7 @@ class OpportunityMessageEvents
         private EntityManager $entityManager,
         private Config $config,
         private OpportunityStreamEvents $events,
+        private OpportunityFollowupEvents $followups,
     ) {}
 
     public function recordWebhook(object $payload, string $accountId): void
@@ -117,12 +118,16 @@ class OpportunityMessageEvents
             }
 
             $key = $this->messageKey($parent, $conversation, $messageId);
-            $this->events->write(self::TYPE, $parent, $conversation, [
+            $written = $this->events->write(self::TYPE, $parent, $conversation, [
                 'chatwootAccountId' => (int) $account->get('chatwootAccountId'),
                 'chatwootConversationId' => (int) $conversation->get('chatwootConversationId'),
                 'chatwootMessageId' => (int) $messageId,
                 'occurredAt' => $occurredAt,
             ], $key, $account->getLinkMultipleIdList('teams'));
+            // Once per message: the customer answered, so a "no reply" step and the attempt count no longer hold.
+            if ($written && $parent->getEntityType() === 'Opportunity') {
+                $this->followups->customerReplied($parent, $occurredAt);
+            }
         }
     }
 

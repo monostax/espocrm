@@ -57,8 +57,9 @@ class OpportunityOverdueActivitiesTest extends TestCase
         $events = $this->createMock(OpportunityStreamEvents::class);
         $events->method('write')->willReturnCallback(function (
             string $type, Entity $opportunity, Entity $related, array $data, string $key, array $teams,
-        ): void {
+        ): bool {
             $this->writes[$key] = compact('type', 'opportunity', 'related', 'data', 'teams');
+            return true;
         });
         $transaction = $this->createMock(TransactionManager::class);
         $transaction->method('run')->willReturnCallback(fn ($fn) => $fn());

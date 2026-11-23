@@ -28,7 +28,7 @@ use InvalidArgumentException;
  * value is not of this kind) · invalid · rejected (the person marked it as not theirs) ·
  * conflict (it belongs to another contact) · unavailable (receipt erased or gone).
  * Guard it with `when` on the verification results, e.g. only add a phone when WhatsApp
- * says registered and Twilio says verified.
+ * says registered.
  */
 class AddChannelIdentity implements Action
 {

@@ -96,6 +96,13 @@ class DealTargets
         return [(string) $funnel->getId(), (string) $open->getId()];
     }
 
+    /** The funnel's first active open stage (1–99%), or null when none exists. */
+    public function firstOpenStageId(string $funnelId): ?string
+    {
+        $open = array_values(array_filter($this->stages($funnelId), fn (Entity $stage) => self::kind($stage) === 'open'))[0] ?? null;
+        return $open ? (string) $open->getId() : null;
+    }
+
     /** @return ?array{string, string} */
     private function pick(string $tenantId, string $funnelId, string $stageId): ?array
     {

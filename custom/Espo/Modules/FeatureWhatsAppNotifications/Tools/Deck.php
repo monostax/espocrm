@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Espo\Modules\FeatureWhatsAppNotifications\Tools;
 
+use DateTimeZone;
 use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureCatchUp\Classes\DeckRequest;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
@@ -13,6 +14,7 @@ use Espo\Modules\FeatureCatchUp\Services\Summary;
 use Espo\Modules\FeatureCredits\Enrichment\ActorScope;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use PDO;
 use Throwable;
 
 /**
@@ -32,7 +34,11 @@ class Deck
     /** The template says "{{1}} está esperando resposta": only true when the customer waits on us. */
     public const TEMPLATE_VERDICTS = ['customer_waiting', 'promise_due'];
     public const LANES = ['deals', 'service'];
-    private const PAGES = 2;
+    /** A card sent to the person is never sent again within this many days (the user, 2026-11-23). */
+    public const REPEAT_WINDOW_DAYS = 4;
+    /** Cards waiting at least this long go out first; the newer ones only when none is left (the user, 2026-11-23). */
+    public const PREFER_WAITING_HOURS = 24;
+    private const PAGES = 3;
     /** Snapshots built per call while looking for a card that is ready. */
     private const TRIES = 6;
 
@@ -44,37 +50,45 @@ class Deck
     ) {}
 
     /**
-     * The next card in Em dia's order (Esperando resposta, then Esperando follow-up; within each, the feeds' sort key),
-     * skipping the subjects in the session's skip list.
+     * The next card: first those waiting PREFER_WAITING_HOURS or more (`waitSince`), then the newer ones; within each, Em
+     * dia's order (Esperando resposta, then Esperando follow-up; within each, the feeds' sort key). Skips the subjects in
+     * the session's skip list and any card sent to the person in the last REPEAT_WINDOW_DAYS days.
      *
      * @param list<string> $verdicts the card verdicts that may be offered
      * @param ?callable(array<string, mixed>): bool $accept an extra filter on the stored card (hot leads)
-     * @param list<string> $exclude more "lane:id" subjects to pass over
+     * @param ?list<string> $exclude "lane:id" subjects to pass over; null loads `sentRecently`
      * @return array{card: ?Entity, left: int}
      */
-    public function next(Entity $subscription, array $verdicts = self::DRAFT_VERDICTS, ?callable $accept = null, array $exclude = []): array
+    public function next(Entity $subscription, array $verdicts = self::DRAFT_VERDICTS, ?callable $accept = null, ?array $exclude = null): array
     {
         $workspace = $this->workspaces->of($subscription);
-        $skip = array_flip([...Sessions::skipped($subscription), ...$exclude]);
+        $skip = array_flip([...Sessions::skipped($subscription), ...($exclude ?? $this->sentRecently($subscription))]);
         return $this->actors->run((string) $subscription->get('userId'), function (callable $make) use ($subscription, $workspace, $skip, $verdicts, $accept): array {
             $request = self::request($workspace);
             $feeds = ['deals' => $make(Feed::class), 'service' => $make(ServiceFeed::class)];
             $candidates = [];
+            $longWait = time() - self::PREFER_WAITING_HOURS * 3600;
             foreach ($feeds as $lane => $feed) {
+                $found = [];
                 $cursor = null;
                 for ($page = 0; $page < self::PAGES; $page++) {
                     $list = $feed->list($request->withQuery('cursor', $cursor));
                     foreach ($list['items'] as $item) {
                         $verdict = $item['verdict'] ?? null;
                         if (!in_array($verdict, $verdicts, true) || isset($skip["{$lane}:{$item['id']}"])) continue;
-                        $candidates[] = ['lane' => $lane, 'id' => (string) $item['id'], 'tab' => Loops::BUCKETS[$verdict] === 'us' ? 0 : 1,
-                            'sort' => is_array($item['sort'] ?? null) ? $item['sort'] : [9, 0]];
+                        $found[(string) $item['id']] = ['lane' => $lane, 'id' => (string) $item['id'], 'verdict' => $verdict,
+                            'tab' => Loops::BUCKETS[$verdict] === 'us' ? 0 : 1, 'sort' => is_array($item['sort'] ?? null) ? $item['sort'] : [9, 0]];
                     }
                     $cursor = $list['cursor'] ?? null;
                     if ($cursor === null) break;
                 }
+                $since = $this->waitsSince($lane, array_column($found, 'verdict', 'id'));
+                foreach ($found as $id => $candidate) {
+                    $at = $since[$id] ?? null;
+                    $candidates[] = [...$candidate, 'newer' => $at !== null && strtotime($at . ' UTC') <= $longWait ? 0 : 1];
+                }
             }
-            usort($candidates, fn (array $a, array $b) => [$a['tab'], $a['sort']] <=> [$b['tab'], $b['sort']]);
+            usort($candidates, fn (array $a, array $b) => [$a['newer'], $a['tab'], $a['sort']] <=> [$b['newer'], $b['tab'], $b['sort']]);
             $summary = $make(Summary::class);
             foreach (array_slice($candidates, 0, self::TRIES) as $index => $candidate) {
                 $card = $this->build($subscription, $workspace, $feeds[$candidate['lane']], $summary, $candidate['lane'], $candidate['id'], $verdicts, $accept);
@@ -82,6 +96,33 @@ class Deck
             }
             return ['card' => null, 'left' => 0];
         });
+    }
+
+    /**
+     * "lane:id" of every card sent to the person within the last $days days, from any of their workspaces and any kind
+     * of message, failed sends aside.
+     *
+     * @return list<string>
+     */
+    public static function sentWithin(EntityManager $em, Workspaces $workspaces, Entity $subscription, int $days = self::REPEAT_WINDOW_DAYS): array
+    {
+        $since = $workspaces->now($subscription)->modify("-{$days} days")->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+        $rows = $em->getRDBRepository('WhatsAppNotificationSubscription')->select(['id'])
+            ->where(['userId' => $subscription->get('userId'), 'phone' => $subscription->get('phone')])->find();
+        $logs = $em->getRDBRepository('WhatsAppNotification')->select(['cardId'])->where([
+            'subscriptionId' => [$subscription->getId(), ...array_map(fn (Entity $row) => $row->getId(), iterator_to_array($rows))],
+            'direction' => 'out', 'cardId!=' => null, 'createdAt>=' => $since, 'status!=' => 'failed',
+        ])->find();
+        $cardIds = array_values(array_unique(array_map(fn (Entity $log) => (string) $log->get('cardId'), iterator_to_array($logs))));
+        if (!$cardIds) return [];
+        $cards = $em->getRDBRepository('WhatsAppDeckCard')->select(['lane', 'subjectId'])->where(['id' => $cardIds])->find();
+        return array_values(array_unique(array_map(fn (Entity $card) => $card->get('lane') . ':' . $card->get('subjectId'), iterator_to_array($cards))));
+    }
+
+    /** @return list<string> "lane:id" of every card sent to the person in the last REPEAT_WINDOW_DAYS days */
+    public function sentRecently(Entity $subscription): array
+    {
+        return self::sentWithin($this->em, $this->workspaces, $subscription);
     }
 
     /** One subject again (a reminder, or a card whose conversation moved): its card now, when it still is one. */
@@ -183,13 +224,31 @@ class Deck
     /** Since when the customer has waited on us (or, for a follow-up or stalled deal, since the conversation went quiet). */
     private function waitSince(string $lane, string $id, string $verdict): ?string
     {
-        $waiting = in_array($verdict, self::TEMPLATE_VERDICTS, true);
+        return $this->waitsSince($lane, [$id => $verdict])[$id] ?? null;
+    }
+
+    /**
+     * `waitSince` for many subjects of one lane in one query.
+     *
+     * @param array<string, string> $verdicts subject id => verdict
+     * @return array<string, string> subject id => UTC datetime, for those with one
+     */
+    private function waitsSince(string $lane, array $verdicts): array
+    {
+        if (!$verdicts) return [];
+        $ids = array_map('strval', array_keys($verdicts));
+        $in = implode(',', array_fill(0, count($ids), '?'));
         $sql = $lane === 'deals'
-            ? 'SELECT ' . ($waiting ? 'COALESCE(last_customer_at, last_message_at)' : 'last_message_at') . ' FROM catch_up_deal_state WHERE id = ? AND deleted = 0'
-            : 'SELECT ' . ($waiting ? 'COALESCE(last_message_received_at, last_activity_at)' : 'last_activity_at') . ' FROM chatwoot_conversation WHERE id = ? AND deleted = 0';
+            ? "SELECT id, last_customer_at AS customer_at, last_message_at AS last_at FROM catch_up_deal_state WHERE id IN ({$in}) AND deleted = 0"
+            : "SELECT id, last_message_received_at AS customer_at, last_activity_at AS last_at FROM chatwoot_conversation WHERE id IN ({$in}) AND deleted = 0";
         $query = $this->em->getPDO()->prepare($sql);
-        $query->execute([$id]);
-        $at = $query->fetchColumn();
-        return is_string($at) && $at !== '' ? $at : null;
+        $query->execute($ids);
+        $since = [];
+        foreach ($query->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $waiting = in_array($verdicts[$row['id']] ?? null, self::TEMPLATE_VERDICTS, true);
+            $at = $waiting ? ($row['customer_at'] ?: $row['last_at']) : $row['last_at'];
+            if (is_string($at) && $at !== '') $since[(string) $row['id']] = $at;
+        }
+        return $since;
     }
 }

@@ -161,7 +161,7 @@ Time-in-step rules require a specific source stage and are not available on jour
 
 **WhatsApp reply (`whatsapp_replied`):** journey `sendWhatsAppMessage` / `sendWhatsAppTemplate` stamp the Chatwoot conversation id on the JourneyRecord (and ChatwootConversation when already synced). An inbound message on that conversation (DeliveryWebhook and/or ChatwootMessage afterSave) emits `whatsapp_replied` — same dual-path as `email_replied` (TrackingEvent → DispatchToJourneys, with dispatcher fallback).
 
-**Several conversations per enrollment:** every conversation a journey send opens (each contact, each phone, WhatsApp and SMS) is kept on `JourneyRecord.chatwootConversationTrail`, so a reply on any of them is matched even when the CRM conversation row did not exist at send time. An SMS reply to `sendSms` emits `whatsapp_replied` too; `channelType` in the payload tells the channel.
+**Several conversations per enrollment:** every conversation a journey send opens (each contact, each phone, WhatsApp and SMS) is kept on `JourneyRecord.chatwootConversationTrail`, so a reply on any of them is matched even when the CRM conversation row did not exist at send time. The conversation row gets the enrollment stamped (`journeyId`, `journeyRecordId`) at send time when it exists, else when the CRM copies it in (hook `ChatwootConversation/StampJourneyRecord`, newest live enrollment whose trail has it); the rebuild action `StampJourneyConversations` fills rows copied in before that hook. Em dia leaves out conversations whose enrollment is Active, Processing or Paused (FeatureCatchUp README, Atendimento). An SMS reply to `sendSms` emits `whatsapp_replied` too; `channelType` in the payload tells the channel.
 
 **Manual Opportunity follow-ups:** incoming public WhatsApp messages also emit a scoped
 `whatsapp_replied` for active enrollments of Opportunities explicitly linked through
@@ -189,14 +189,27 @@ tenant/run-as edit access, and preserves completed/canceled and unrelated tasks.
 ### 5.2 Account reply review
 
 For Account journeys, **Pause account enrollments for WhatsApp reply review** holds the
-current enrollment on a correlated inbound WhatsApp. On the paused journey record,
-choose **Review WhatsApp reply**. **End cadence** runs the configured reply Exit step
-and its cleanup. **Mark wrong number** excludes that number from this run and leaves
-the record paused. Once verified, enter another number belonging to one eligible linked
-contact and choose **Resume with this contact**. Subsequent WhatsApp/SMS sends use
-that number; email uses that contact. Resume keeps the step and remaining wait without
-replaying entry actions. Previous exits are terminal. Email and SMS replies retain their
-configured rules.
+current enrollment on a correlated inbound WhatsApp. Review it from the company's
+**Relationships → Journeys** card (**Retomar**). **End cadence** runs the configured reply
+Exit step and its cleanup. **Mark wrong number** excludes that number from this run and
+leaves the record paused. Once every reply is reviewed:
+
+- **Continue cadence**: everyone except the numbers marked wrong continues, keeping the
+  step and the wait that was left, without replaying entry actions.
+- **Add a number**: a new mobile number goes on one of the company's contacts (it must not
+  already be on any of them) and gets the cadence **from the Entry stage**, at the normal
+  pace. The run goes back to the Entry stage; the stages the company already got send only
+  to the new number, and only their WhatsApp/SMS actions (calls, tasks, notes and email
+  don't repeat). Everyone else waits. When the run reaches the stage where it stopped,
+  everyone continues together. A stage the company never got, or a terminal stage, also
+  ends the catch-up. The card shows "Número novo alcançando <stage>" meanwhile.
+- If the new number is wrong too and no added number is left, **Continue cadence** sends the
+  run back to the stage the others were waiting at, with its original entry time. Adding
+  another number during a catch-up restarts it; numbers already part-way wait at the stage
+  they reached.
+
+Previous exits are terminal. Email and SMS replies retain their configured rules. The
+catch-up lives in the enrollment's internal `replyReviewState` (`Services/JourneyCatchUp.php`).
 
 ### 5.3 Execution path
 

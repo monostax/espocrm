@@ -101,24 +101,56 @@ class SyncChatwootContactMerge
             return;
         }
 
-        // Group by chatwootAccountId
-        $groupedByAccount = [];
+        // Group by chatwootAccountId + canonical phone line.
+        // A single Contact legitimately owns multiple ChatwootContacts on one
+        // account (one per WhatsApp phone number — see SyncToChatwoot and
+        // multi-number journeys). Only true same-line duplicates (exact match
+        // or Brazilian 9th-digit variant) may ever be merged; never merge
+        // distinct phone numbers or phoneless channel contacts.
+        $groupedByLine = [];
         foreach ($contactList as $cwtContact) {
-            $accountId = $cwtContact->get('chatwootAccountId');
-            if (!isset($groupedByAccount[$accountId])) {
-                $groupedByAccount[$accountId] = [];
+            $accountId = (string) ($cwtContact->get('chatwootAccountId') ?? '');
+            $line = self::canonicalPhoneLine($cwtContact->get('phoneNumber'));
+            if ($accountId === '' || $line === null) {
+                continue;
             }
-            $groupedByAccount[$accountId][] = $cwtContact;
+            $groupKey = $accountId . ':' . $line;
+            if (!isset($groupedByLine[$groupKey])) {
+                $groupedByLine[$groupKey] = ['accountId' => $accountId, 'contacts' => []];
+            }
+            $groupedByLine[$groupKey]['contacts'][] = $cwtContact;
         }
 
-        // Process each account group
-        foreach ($groupedByAccount as $accountId => $contacts) {
-            if (count($contacts) <= 1) {
+        // Process each same-line duplicate group
+        foreach ($groupedByLine as $group) {
+            if (count($group['contacts']) <= 1) {
                 continue;
             }
 
-            $this->mergeChatwootContactsForAccount($accountId, $contacts);
+            $this->mergeChatwootContactsForAccount($group['accountId'], $group['contacts']);
         }
+    }
+
+    /**
+     * Canonical key for a phone line (digits only, normalizing Brazilian
+     * 13-digit mobile numbers with the 9th digit to their 12-digit equivalent
+     * to match DuplicateContactMerger::sameLine()). Returns null when no valid
+     * phone number is present so phoneless contacts are never merged across
+     * channels or numbers.
+     */
+    public static function canonicalPhoneLine(?string $phone): ?string
+    {
+        if ($phone === null) {
+            return null;
+        }
+        $digits = preg_replace('/\D/', '', $phone) ?? '';
+        if (strlen($digits) < 10) {
+            return null;
+        }
+        if (str_starts_with($digits, '55') && strlen($digits) === 13 && $digits[4] === '9') {
+            return substr($digits, 0, 4) . substr($digits, 5);
+        }
+        return $digits;
     }
 
     /**
@@ -262,13 +294,32 @@ class SyncChatwootContactMerge
                 ->findOne();
 
             if ($existing) {
-                // Already exists, delete the duplicate
+                // Re-home any conversations before deleting the duplicate contactInbox,
+                // because ChatwootContactInbox has cascadeDelete on `conversations`.
+                $this->repointContactInboxConversations($contactInbox, $existing);
                 $this->entityManager->removeEntity($contactInbox);
             } else {
                 // Move to base contact
                 $contactInbox->set('chatwootContactId', $baseContact->getId());
                 $this->entityManager->saveEntity($contactInbox, ['silent' => true]);
             }
+        }
+    }
+
+    /**
+     * Move ChatwootConversation.contactInboxId from a duplicate ChatwootContactInbox
+     * to the surviving one so cascadeDelete cannot soft-delete live conversations.
+     */
+    private function repointContactInboxConversations(Entity $fromInbox, Entity $toInbox): void
+    {
+        $conversations = $this->entityManager
+            ->getRDBRepository('ChatwootConversation')
+            ->where(['contactInboxId' => $fromInbox->getId()])
+            ->find();
+
+        foreach ($conversations as $conversation) {
+            $conversation->set('contactInboxId', $toInbox->getId());
+            $this->entityManager->saveEntity($conversation, ['silent' => true]);
         }
     }
 }

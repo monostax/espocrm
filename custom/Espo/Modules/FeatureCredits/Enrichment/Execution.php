@@ -48,9 +48,7 @@ class Execution
                 $result = $claim['action'] === 'poll' ?
                     $provider->poll($claim['requestId'], $claim['subjectId'], $timeout) :
                     $provider->lookup($claim['type'], $claim['product'], $claim['identity'], $timeout);
-                // Mobile checks share the attempt's lease, keeping a margin to record the result in time.
-                $result = $this->mobiles->apply($result, $claim['type'], $claim['product'],
-                    $timeout - intdiv(hrtime(true) - $started, 1_000_000) - 2000);
+                $result = $this->mobiles->apply($result, $claim['type'], $claim['product']);
                 // Contact emails must be the contact's own; the check shares the same lease.
                 $result = $this->owners->apply($result, $claim['type'], $claim['product'], $claim['provider'],
                     fn (): array => $this->subject($tenantId, $claim), $timeout - intdiv(hrtime(true) - $started, 1_000_000) - 2000);

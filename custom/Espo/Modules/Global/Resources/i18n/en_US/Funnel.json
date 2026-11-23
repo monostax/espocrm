@@ -6,6 +6,8 @@
         "tenant": "Tenant",
         "isActive": "Is Active",
         "isDefault": "Is Default",
+        "followupsEnabled": "AI Schedules Follow-ups Automatically",
+        "followupBreakoutLimit": "Follow-up Breakout Limit (default)",
         "createdAt": "Created At",
         "modifiedAt": "Modified At",
         "createdBy": "Created By",
@@ -22,10 +24,13 @@
         "modifiedBy": "Modified By"
     },
     "labels": {
-        "Create Funnel": "Create Funnel"
+        "Create Funnel": "Create Funnel",
+        "Follow-up Configuration": "Follow-up Configuration"
     },
     "tooltips": {
-        "isDefault": "If checked, this funnel will be automatically selected for new opportunities within the team"
+        "isDefault": "If checked, this funnel will be automatically selected for new opportunities within the team",
+        "followupsEnabled": "When on, the AI schedules follow-ups automatically on open opportunities in this funnel when waiting on the customer. When off, the AI escalates to a human task instead, while still allowing people to schedule a follow-up manually on a deal card or by @mentioning the AI in a private note. Turning it off cancels currently scheduled follow-ups on opportunities in this funnel.",
+        "followupBreakoutLimit": "Funnel-level default for the maximum number of consecutive AI follow-ups in a cycle before automated follow-up stops and escalates to a human task. Leave empty to default to 1 unless an opportunity has its own explicit Follow-up Breakout Limit."
     },
     "boolFilters": {
         "onlyMy": "Only My",

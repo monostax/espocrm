@@ -68,8 +68,12 @@
                 }
             ],
             [
-                { "name": "aiCanExecute" },
-                { "name": "aiCanSend" }
+                {
+                    "name": "aiCanExecute"
+                },
+                {
+                    "name": "aiCanSend"
+                }
             ],
             [
                 {
@@ -152,28 +156,6 @@
                 },
                 {
                     "name": "ignoreStatusBroadcast"
-                }
-            ]
-        ]
-    },
-    {
-        "label": "Follow-up Configuration",
-        "name": "followupConfiguration",
-        "dynamicLogicVisible": {
-            "conditionGroup": [
-                {
-                    "type": "isTrue",
-                    "attribute": "isAI"
-                }
-            ]
-        },
-        "rows": [
-            [
-                {
-                    "name": "followupsEnabled"
-                },
-                {
-                    "name": "followupBreakoutLimit"
                 }
             ]
         ]

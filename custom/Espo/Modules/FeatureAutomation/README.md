@@ -416,14 +416,14 @@ actions are re-entrant: what they started and decided lives in the item payload.
 
 | Action | Does | Writes |
 |--------|------|--------|
-| `verifyContactChannel` | One paid check as the run-as user: `whatsapp_registration` (2 credits), `phone_identity` (Twilio, 8), `email_deliverability` (2). `source`: `enrichmentResult` (default) or `contactPrimary`. Parks while the check runs (~20 s polls, gives up after 15 min) and on workspace rate limits. No credits → item fails. | `verification.<as>` = the outcome, or `not_applicable` / `unavailable` / `failed`; `verificationInfo.<as>` |
+| `verifyContactChannel` | One paid check as the run-as user: `whatsapp_registration` (2 credits), `email_deliverability` (2). `phone_identity` (Twilio) was retired on 2026-11-23: its capability is off, so it records `unavailable`. `source`: `enrichmentResult` (default) or `contactPrimary`. Parks while the check runs (~20 s polls, gives up after 15 min) and on workspace rate limits. No credits → item fails. | `verification.<as>` = the outcome, or `not_applicable` / `unavailable` / `failed`; `verificationInfo.<as>` |
 | `addChannelIdentity` | Adds the found value to the Contact through the record service (edit + field ACL, channel-identity hook). `phone` = phone list + WhatsApp identity, `email` = email list + email identity, `whatsapp` = identity only. Never adds a value the person rejected. | `channelIdentity.<as>` = `added` / `already_present` / `not_applicable` / `invalid` / `rejected` / `conflict` / `unavailable` |
 
 Checks reuse fresh evidence for free and join a check already running for the same value, like
 the inbox. The run-as user needs the enrichment-credits permission and Contact edit access.
 
-Example: verify every found value, add emails that are deliverable and phones that are on
-WhatsApp and pass Twilio (Batch kind, trigger `signal`, codes `["enrichment.found"]`, subject
+Example: verify every found value, add emails that are deliverable and the contact's first phone
+that is on WhatsApp (Batch kind, trigger `signal`, codes `["enrichment.found"]`, subject
 `Contact`; a Machine with the same actions in one state's `onEnter` works too). This is the live
 Monostax automation:
 
@@ -448,14 +448,10 @@ Monostax automation:
           "type": "addChannelIdentity", "params": { "channel": "email" },
           "when": "object\\get(object\\get($payload, 'verification'), 'email_deliverability') == 'deliverable'"
         },
-        { "type": "verifyContactChannel", "params": { "check": "whatsapp_registration", "stopWhen": "verified_phone" } },
-        {
-          "type": "verifyContactChannel", "params": { "check": "phone_identity", "stopWhen": "verified_phone" },
-          "when": "object\\get(object\\get($payload, 'verification'), 'whatsapp_registration') == 'registered'"
-        },
+        { "type": "verifyContactChannel", "params": { "check": "whatsapp_registration", "stopWhen": "valid_whatsapp" } },
         {
           "type": "addChannelIdentity", "params": { "channel": "phone" },
-          "when": "object\\get(object\\get($payload, 'verification'), 'whatsapp_registration') == 'registered' && object\\get(object\\get($payload, 'verification'), 'phone_identity') == 'verified'"
+          "when": "object\\get(object\\get($payload, 'verification'), 'whatsapp_registration') == 'registered'"
         }
       ],
       "onFailure": [],

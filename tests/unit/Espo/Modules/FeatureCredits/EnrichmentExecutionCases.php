@@ -49,7 +49,7 @@ trait EnrichmentExecutionCases
         $config = $this->createStub(Config::class); $config->method('get')->willReturn('enrichment-test-encryption-key');
         return new Execution($manager,$lock,$actors,$registry,new FixedSettlement(new Funding($lock)),new Crypt($config),$clock,
             // No Twilio credentials in tests: the Brazilian numbering plan decides, with no network I/O.
-            new \Espo\Modules\FeatureCredits\Enrichment\MobilePhones(new \Espo\Modules\FeatureCredits\Verification\TwilioCredentials(),new \Espo\Modules\FeatureCredits\Verification\TwilioTransport()),
+            new \Espo\Modules\FeatureCredits\Enrichment\MobilePhones(),
         new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners($this->decisions ?? new \Espo\Modules\FeatureCredits\Enrichment\Decisions()),
         $this->createStub(\Espo\Modules\FeatureCredits\Enrichment\FoundResults::class));
     }
