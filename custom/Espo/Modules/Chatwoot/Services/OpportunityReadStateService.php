@@ -10,6 +10,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Record\SearchParamsFetcher;
+use Espo\Core\Select\SearchParams;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\Note;
 use Espo\Entities\User;
@@ -171,6 +172,40 @@ class OpportunityReadStateService
     }
 
     /** @return array<string, mixed> */
+    /**
+     * A saved filter's sidebar badge: its opportunities and the unread ones among them, on the base of the other
+     * sidebar counts (workspace, access, assignee pill). $where is the filter's conditions as the list sends them.
+     *
+     * @param array<int, mixed> $where
+     * @return array{all: int, unread: int}
+     */
+    public function filterCounts(Entity $workspace, array $where, string $assignee): array
+    {
+        if ((!$this->user->isRegular() && !$this->user->isAdmin()) || !$this->acl->checkScope('Opportunity', 'read')) {
+            throw new Forbidden();
+        }
+        $query = $this->selectBuilderFactory->create()->from('Opportunity')
+            ->withSearchParams(SearchParams::fromRaw(['where' => $where]))
+            ->withStrictAccessControl()->withWherePermissionCheck()->withComplexExpressionsForbidden()->buildQueryBuilder()
+            ->where(['opportunity.tenantId' => $workspace->get('tenantId')]);
+        if (!$this->user->isAdmin()) {
+            $query->where(['opportunity.tenantId' => $this->tenantResolver->resolveTenantIds($this->user)]);
+        }
+        if ($assignee === 'me') {
+            $query->where(['opportunity.assignedUserId' => $this->user->getId()]);
+        } elseif ($assignee === 'unassigned') {
+            $query->where(['opportunity.assignedUserId' => null]);
+        }
+        $opportunities = $this->entityManager->getRDBRepository('Opportunity');
+        $all = $opportunities->clone($query->build())->count();
+        if (!$this->acl->checkScope('Opportunity', 'stream')) {
+            return ['all' => $all, 'unread' => 0];
+        }
+        $unread = SelectBuilder::create()->clone($query->build());
+        $this->applyListFilter($unread, onlyUnread: true);
+        return ['all' => $all, 'unread' => $opportunities->clone($unread->build())->count()];
+    }
+
     public function getNavigationCounts(Request $request): array
     {
         if ((!$this->user->isRegular() && !$this->user->isAdmin()) ||

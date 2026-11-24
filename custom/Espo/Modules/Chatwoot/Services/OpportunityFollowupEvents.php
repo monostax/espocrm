@@ -26,6 +26,9 @@ use Throwable;
 class OpportunityFollowupEvents
 {
     public const TYPE = 'OpportunityFollowupSent';
+    /** A due AI follow-up that could not reach the customer and was stopped instead (2026-11-24). */
+    public const NOT_SENT_TYPE = 'OpportunityFollowupStop';
+    public const NOT_SENT_REASONS = ['whatsappWindowClosed'];
     /** aiTaskKey prefix of the person's task made when the last follow-up went out (watcher run id `followup-no-reply:…`). */
     public const NO_REPLY_TASK_PREFIX = 'watcher:followup-no-reply:';
     /** An older message is history being synced, not the customer answering now. */
@@ -77,6 +80,45 @@ class OpportunityFollowupEvents
             'data' => (object) $data,
         ]);
         return (object) ['id' => $note->getId(), 'last' => $last];
+    }
+
+    /**
+     * Records a due AI follow-up the backend stopped because it could not reach the customer (official WhatsApp number,
+     * 24h window closed, no approved template), as the AI's own CRM user, once per follow-up run. Its "Follow-up não
+     * enviado" pill tells the team why the follow-up the mural announced never went out.
+     */
+    public function notSent(string $id, string $reason, ?string $windowClosedAt, string $key, int $accountId, int $conversationId): object
+    {
+        $deal = $this->entityManager->getEntityById('Opportunity', $id);
+        if (!$deal) throw new NotFound();
+        if (!$this->acl->checkEntityRead($deal) || !$this->acl->checkEntityStream($deal)) {
+            throw new Forbidden('No access to this opportunity.');
+        }
+        $eventKey = 'fns:' . $id . ':' . substr(hash('sha256', $key), 0, 32);
+        $existing = $this->entityManager->getRDBRepository('Note')->where(['opportunityStreamEventKey' => $eventKey])->findOne();
+        if ($existing) return (object) ['id' => $existing->getId()];
+
+        $agentId = $deal->get('followupAiAgentId');
+        $agent = $agentId ? $this->entityManager->getEntityById('ChatwootAccountUserMembership', $agentId) : null;
+        $data = [
+            'aiAgentId' => $agent?->getId(),
+            'aiAgentName' => $agent?->get('name'),
+            'reason' => $reason,
+            'windowClosedAt' => $windowClosedAt,
+        ];
+        if ($this->linkedConversation($deal, $accountId, $conversationId)) {
+            $data += ['chatwootAccountId' => $accountId, 'chatwootConversationId' => $conversationId];
+        }
+        $note = $this->entityManager->createEntity('Note', [
+            'type' => self::NOT_SENT_TYPE,
+            'parentType' => 'Opportunity',
+            'parentId' => $id,
+            'isInternal' => true,
+            'createdById' => $this->user->getId(),
+            'opportunityStreamEventKey' => $eventKey,
+            'data' => (object) $data,
+        ]);
+        return (object) ['id' => $note->getId()];
     }
 
     /**

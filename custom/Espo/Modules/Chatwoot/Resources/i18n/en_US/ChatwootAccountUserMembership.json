@@ -98,6 +98,7 @@
         "whatsappTemplatesLinkedInboxesSummary": "Currently linked: {list}",
         "whatsappTemplatesNoApproved": "No APPROVED templates.",
         "whatsappTemplatesNoApprovedForInbox": "No APPROVED templates for this inbox.",
+        "whatsappTemplatesWindowWarning": "No approved template for {list}: on these official WhatsApp numbers this AI's follow-ups only go out until 24 hours after the customer's last message. After that the follow-up is not sent and the deal goes to a person. Choose a follow-up template for each inbox.",
         "whatsappTemplatesNoMetaCredentials": "Inbox has no Meta Cloud API credentials.",
         "whatsappTemplatesLoadInboxesFailed": "Failed to load inboxes for this membership.",
         "whatsappTemplatesLoadTemplatesFailed": "Failed to load templates."

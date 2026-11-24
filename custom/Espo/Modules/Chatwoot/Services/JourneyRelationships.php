@@ -12,6 +12,7 @@ use Espo\Core\InjectableFactory;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\FeatureCredits\Enrichment\ContactPhones;
 use Espo\Modules\FeatureJourney\Services\AccountReplyReview;
 use Espo\Modules\FeatureJourney\Services\JourneyCatchUp;
 use Espo\Modules\FeatureJourney\Services\JourneyEnrollmentService;
@@ -244,6 +245,7 @@ class JourneyRelationships
             $this->acl,
             $this->injectableFactory->create(JourneyTargetPeople::class),
             $this->injectableFactory->create(JourneyWhatsAppOutbound::class),
+            $this->injectableFactory->create(ContactPhones::class),
         );
         $summary['catchUpStageName'] = $this->catchUpStageName($record);
         unset($summary['catchUpUntilStageId']);

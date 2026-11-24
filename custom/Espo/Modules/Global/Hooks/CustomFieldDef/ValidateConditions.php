@@ -21,6 +21,11 @@ class ValidateConditions implements BeforeSave
 
     public function beforeSave(Entity $entity, SaveOptions $options): void
     {
+        // Required wins over Required When (Conditions::required), so the pair silently
+        // makes a stage-only field required in every stage (2026-11-24 Nowle). Pick one.
+        if ($entity->get('isRequired') && $entity->get('requiredWhen') !== null) {
+            throw new BadRequest('Choose Required (always) or Required When (only when its conditions match), not both.');
+        }
         $attributes = $this->schema->getAttributes((string) $entity->get('entityType'));
         foreach (['appliesWhen', 'requiredWhen'] as $attribute) {
             $condition = $entity->get($attribute);

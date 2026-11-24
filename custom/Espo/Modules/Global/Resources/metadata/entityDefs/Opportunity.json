@@ -13,6 +13,18 @@
             "layoutMassUpdateDisabled": true,
             "layoutFiltersDisabled": true
         },
+        "requiredFieldsLeftEmpty": {
+            "type": "jsonObject",
+            "notStorable": true,
+            "readOnly": true,
+            "utility": true,
+            "importDisabled": true,
+            "exportDisabled": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        },
         "stageTrackingStartedAt": {
             "type": "datetime",
             "readOnly": true,

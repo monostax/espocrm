@@ -84,20 +84,42 @@ class Inbox
             SelectBuilder::create()->from('Initiative')->select('id')->where(['id' => null])->build();
     }
 
-    public function scope(Request $request): Select
+    /** Workspace, access, conditions and the assignee pill: where every page and count of this list starts. */
+    private function listScope(Entity $workspace, SearchParams $params, mixed $assignee): SelectBuilder
     {
-        $workspace = $this->workspace($request);
         if (!$this->acl->checkScope('Initiative', 'read')) {
             throw new Forbidden();
         }
-        $params = $this->searchParams->fetch($request)
-            ->withSelect(['id'])->withOrderBy(null)->withOffset(null)->withMaxSize(null);
+        $params = $params->withSelect(['id'])->withOrderBy(null)->withOffset(null)->withMaxSize(null);
         $query = $this->select->create()->from('Initiative')->withSearchParams($params)
             ->withStrictAccessControl()->withWherePermissionCheck()->withComplexExpressionsForbidden()->buildQueryBuilder()
             ->where(['tenantId' => $workspace->get('tenantId')])->select(['id'])->distinct()->order([])->limit(null, null);
-        $assignee = $request->getQueryParam('assignee_tab');
         if ($assignee === 'me') $query->where(['assignedUserId' => $this->user->getId()]);
         elseif ($assignee === 'unassigned') $query->where(['assignedUserId' => null]);
+        return $query;
+    }
+
+    /**
+     * A saved filter's sidebar badge: its initiatives and the unread ones among them, scoped like the list it opens.
+     * $where is the filter's conditions as the list sends them.
+     *
+     * @param array<int, mixed> $where
+     * @return array{all: int, unread: int}
+     */
+    public function filterCounts(Entity $workspace, array $where, string $assignee): array
+    {
+        $scope = $this->listScope($workspace, SearchParams::fromRaw(['where' => $where]), $assignee)->build();
+        $all = $this->em->getRDBRepository('Initiative')->clone($scope)->count();
+        if (!$this->acl->checkScope('Note', 'read') || !$this->acl->checkScope('Initiative', 'stream')) return ['all' => $all, 'unread' => 0];
+        $unread = SelectBuilder::create()->clone($scope)->where(['id=s' => $this->readableStreamScope()]);
+        $this->discussion->applyFilter($unread, 'Initiative', true);
+        return ['all' => $all, 'unread' => $this->em->getRDBRepository('Initiative')->clone($unread->build())->count()];
+    }
+
+    public function scope(Request $request): Select
+    {
+        $workspace = $this->workspace($request);
+        $query = $this->listScope($workspace, $this->searchParams->fetch($request), $request->getQueryParam('assignee_tab'));
         if ($tagId = $request->getQueryParam('tag')) {
             if (!$this->acl->checkField('Initiative', 'tags') || !$this->acl->checkScope('CrmTag', 'read')) {
                 $query->where(['id' => null]);

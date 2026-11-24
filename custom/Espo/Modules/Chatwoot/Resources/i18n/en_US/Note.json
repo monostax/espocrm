@@ -4,14 +4,16 @@
         "activityBecameOverdue": "Activity became overdue: {name}",
         "opportunityStageChanged": "{name} moved to {stage}",
         "opportunityFollowupSent": "Follow-up sent by {name}",
-        "opportunityFollowupSentLast": "Follow-up sent by {name} (last attempt)"
+        "opportunityFollowupSentLast": "Follow-up sent by {name} (last attempt)",
+        "opportunityFollowupNotSent": "Follow-up by {name} not sent: official WhatsApp 24h window closed and no approved template"
     },
     "options": {
         "type": {
             "ChatwootMessageReceived": "Conversation message received",
             "ActivityOverdue": "Activity became overdue",
             "OpportunityStageChanged": "Stage changed",
-            "OpportunityFollowupSent": "Follow-up sent"
+            "OpportunityFollowupSent": "Follow-up sent",
+            "OpportunityFollowupStop": "Follow-up not sent"
         }
     }
 }

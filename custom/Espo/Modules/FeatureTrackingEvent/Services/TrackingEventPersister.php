@@ -38,6 +38,13 @@ use Throwable;
  *   - atomic `SET total = total + 1` counter bumps (no read-modify-write
  *     lost updates under load),
  *   - source status bookkeeping (lastEventStatus / lastEventError).
+ *
+ * Counter and status writes run after the surrounding transaction commits.
+ * A tenant has one CRM source row, and every internal event (each deal stage
+ * change, each new deal) bumps it. Inside the record's save transaction,
+ * concurrent saves in one tenant collided on that row: under InnoDB snapshot
+ * isolation all but the first to commit failed with error 1020, which rolled
+ * back the whole save (5 parallel bulk stage moves saved only 1).
  */
 class TrackingEventPersister
 {
@@ -279,22 +286,10 @@ class TrackingEventPersister
 
     public function bumpTypeCounters(TrackingEventType $type, DateTimeImmutable $now): void
     {
-        try {
-            $query = $this->entityManager
-                ->getQueryBuilder()
-                ->update()
-                ->in(TrackingEventType::ENTITY_TYPE)
-                ->set([
-                    'totalEventsReceived' => Expression::add(Expression::column('totalEventsReceived'), 1),
-                    'lastEventAt' => $now->format('Y-m-d H:i:s'),
-                ])
-                ->where(Condition::equal(Expression::column('id'), $type->getId()))
-                ->build();
-
-            $this->entityManager->getQueryExecutor()->execute($query);
-        } catch (Throwable $e) {
-            $this->log->warning('TrackingEventPersister: type counter bump failed — ' . $e->getMessage());
-        }
+        $this->updateAfterCommit(TrackingEventType::ENTITY_TYPE, $type->getId(), [
+            'totalEventsReceived' => Expression::add(Expression::column('totalEventsReceived'), 1),
+            'lastEventAt' => $now->format('Y-m-d H:i:s'),
+        ], 'type counter bump failed');
     }
 
     /**
@@ -302,18 +297,31 @@ class TrackingEventPersister
      */
     private function updateSource(TrackingSource $source, array $set): void
     {
-        try {
-            $query = $this->entityManager
-                ->getQueryBuilder()
-                ->update()
-                ->in(TrackingSource::ENTITY_TYPE)
-                ->set($set)
-                ->where(Condition::equal(Expression::column('id'), $source->getId()))
-                ->build();
+        $this->updateAfterCommit(TrackingSource::ENTITY_TYPE, $source->getId(), $set, 'source status update failed');
+    }
 
-            $this->entityManager->getQueryExecutor()->execute($query);
-        } catch (Throwable $e) {
-            $this->log->warning('TrackingEventPersister: source status update failed — ' . $e->getMessage());
-        }
+    /**
+     * Direct UPDATE (no hooks/streams) once the surrounding transaction commits;
+     * see the class docblock.
+     *
+     * @param array<string, mixed> $set
+     */
+    private function updateAfterCommit(string $entityType, string $id, array $set, string $failure): void
+    {
+        $query = $this->entityManager
+            ->getQueryBuilder()
+            ->update()
+            ->in($entityType)
+            ->set($set)
+            ->where(Condition::equal(Expression::column('id'), $id))
+            ->build();
+
+        $this->entityManager->getTransactionManager()->afterCommit(function () use ($query, $failure): void {
+            try {
+                $this->entityManager->getQueryExecutor()->execute($query);
+            } catch (Throwable $e) {
+                $this->log->warning("TrackingEventPersister: {$failure} — " . $e->getMessage());
+            }
+        });
     }
 }

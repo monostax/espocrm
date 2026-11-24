@@ -107,6 +107,29 @@ class OpportunityFollowupEventsTest extends OpportunityWatcherTestCase
         return $task;
     }
 
+    public function testAStoppedFollowUpLeavesOneNotSentPillWithTheReason(): void
+    {
+        $deal = $this->deal('proposal');
+        $conversation = $this->create('ChatwootConversation', [
+            'name' => '#77', 'chatwootAccountId' => $this->account->getId(), 'chatwootConversationId' => 77,
+        ]);
+        $this->em->getRDBRepository('ChatwootConversation')->getRelation($conversation, 'opportunities')->relate($deal);
+        $platformId = (int) $this->account->get('chatwootAccountId');
+        $this->setFollowup($deal, null, 0);
+
+        $first = $this->events($this->ai)->notSent($deal->getId(), 'whatsappWindowClosed', '2026-10-27 23:32:00', 'run-1', $platformId, 77);
+        self::assertSame($first->id, $this->events($this->ai)->notSent($deal->getId(), 'whatsappWindowClosed', null, 'run-1', $platformId, 77)->id,
+            'once per follow-up run');
+        $pills = $this->notes($deal->getId(), OpportunityFollowupEvents::NOT_SENT_TYPE);
+        self::assertCount(1, $pills);
+        $data = $pills[0]->get('data');
+        self::assertSame(['whatsappWindowClosed', '2026-10-27 23:32:00', '✦ IA (Assistente Erivania)'], [$data->reason, $data->windowClosedAt, $data->aiAgentName]);
+        self::assertSame([$platformId, 77], [$data->chatwootAccountId, $data->chatwootConversationId]);
+        self::assertSame($this->ai->getId(), $pills[0]->get('createdById'));
+        self::assertTrue($pills[0]->get('isInternal'));
+        self::assertCount(0, $this->notes($deal->getId(), OpportunityFollowupEvents::TYPE), 'never counted as a sent follow-up');
+    }
+
     public function testEachSentFollowUpLeavesOnePillThatSaysWhenItWasTheLast(): void
     {
         $deal = $this->deal('proposal');

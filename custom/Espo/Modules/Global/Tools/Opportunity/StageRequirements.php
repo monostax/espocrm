@@ -24,7 +24,53 @@ class StageRequirements
      */
     public const BOOKKEEPING = 'stageRequirementsBookkeeping';
 
+    /**
+     * Not stored: what an AI writer's save left empty, set instead of refusing the save (2026-11-24):
+     * `{mode: stageEntry|save, stageName, fields: [{valueKey, label, type, options, reason}]}`.
+     */
+    public const LEFT_EMPTY = 'requiredFieldsLeftEmpty';
+
     public function __construct(private EntityManager $entityManager, private MetaProvider $metaProvider, private Acl $acl) {}
+
+    /**
+     * An AI writer's save goes through without the fields named in a refusal (`opportunityStageRequirements` body).
+     * A value this same save brought in that the field doesn't accept is undone, never stored. Returns what stays
+     * empty, for the caller and the stage pill to name.
+     *
+     * @param array<string, mixed> $refusal
+     * @return array{mode: string, stageName: ?string, fields: list<array<string, mixed>>}
+     */
+    public static function leaveForPeople(Entity $opportunity, array $refusal): array
+    {
+        $bag = (array) $opportunity->get('customFields');
+        $before = $opportunity->isNew() ? [] : (array) $opportunity->getFetched('customFields');
+        $changed = $opportunity->isNew() || $opportunity->isAttributeChanged('customFields');
+        $undone = false;
+        $fields = [];
+        foreach ($refusal['fields'] ?? [] as $field) {
+            if (!is_array($field) || !isset($field['valueKey'])) continue;
+            $key = $field['valueKey'];
+            $reason = $field['reason'] ?? 'required';
+            if ($reason !== 'required' && $changed && ($bag[$key] ?? null) !== ($before[$key] ?? null)) {
+                if (array_key_exists($key, $before)) $bag[$key] = $before[$key]; else unset($bag[$key]);
+                $undone = true;
+                $reason = self::invalidReason($field, $bag[$key] ?? null) ?? $reason;
+            }
+            $fields[] = [
+                'valueKey' => $key,
+                'label' => $field['label'] ?? $key,
+                'type' => $field['type'] ?? null,
+                'options' => $field['options'] ?? [],
+                'reason' => $reason,
+            ];
+        }
+        if ($undone) $opportunity->set('customFields', (object) $bag);
+        return [
+            'mode' => (string) ($refusal['requirementMode'] ?? 'save'),
+            'stageName' => $refusal['stageName'] ?? null,
+            'fields' => $fields,
+        ];
+    }
 
     /** @return list<array<string, mixed>> */
     public function getFields(Entity $stage): array

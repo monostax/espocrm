@@ -42,10 +42,34 @@ class TransactionManager
 {
     private int $level = 0;
 
+    /** @var list<array{int, Closure}> Callbacks with the scope level that registered them. */
+    private array $afterCommit = [];
+
     private const int MAX_ATTEMPT_COUNT = 4;
 
     public function __construct(private PDO $pdo, private QueryComposer $queryComposer)
     {}
+
+    /**
+     * Run a function once the outermost transaction commits, or now when none is open.
+     * Rolling back the scope that registered it discards it.
+     *
+     * For best-effort writes to a row many transactions share, such as a counter: the row
+     * is locked for one statement instead of the whole transaction. Under InnoDB snapshot
+     * isolation, concurrent transactions updating the same row abort all but the first
+     * to commit (error 1020). The callback handles its own errors: by the time it runs
+     * the transaction is committed, so a failure must not be reported as a failed one.
+     */
+    public function afterCommit(Closure $callback): void
+    {
+        if ($this->level === 0) {
+            $callback();
+
+            return;
+        }
+
+        $this->afterCommit[] = [$this->level, $callback];
+    }
 
     /**
      * Whether a transaction is started.
@@ -109,6 +133,7 @@ class TransactionManager
             // The entire transaction is aborted, including save points.
 
             $this->level --;
+            $this->discardAfterCommit();
 
             if (!$isOutermost) {
                 throw $e;
@@ -167,6 +192,27 @@ class TransactionManager
         }
 
         $this->level--;
+
+        if ($this->level > 0) {
+            // A released savepoint hands its callbacks to the enclosing scope.
+            $this->afterCommit = array_map(
+                fn (array $entry) => [min($entry[0], $this->level), $entry[1]],
+                $this->afterCommit
+            );
+
+            return;
+        }
+
+        $callbacks = $this->afterCommit;
+        $this->afterCommit = [];
+
+        foreach ($callbacks as [, $callback]) {
+            try {
+                $callback();
+            } catch (Throwable) {
+                // Already committed; see afterCommit().
+            }
+        }
     }
 
     /**
@@ -179,6 +225,7 @@ class TransactionManager
         }
 
         $this->level--;
+        $this->discardAfterCommit();
 
         // InnoDB deadlocks already roll back every savepoint. Unwind one
         // application scope at a time; outer scopes must remain poisoned.
@@ -193,6 +240,14 @@ class TransactionManager
         }
 
         $this->pdo->rollBack();
+    }
+
+    /** Drop callbacks registered by scopes that are no longer open. */
+    private function discardAfterCommit(): void
+    {
+        $this->afterCommit = array_values(
+            array_filter($this->afterCommit, fn (array $entry) => $entry[0] <= $this->level)
+        );
     }
 
     private function getCurrentSavepoint(): string

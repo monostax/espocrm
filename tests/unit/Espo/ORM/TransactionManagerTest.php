@@ -610,4 +610,134 @@ class TransactionManagerTest extends TestCase
         $this->assertSame(1, $calls);
         $this->assertSame(0, $this->manager->getLevel());
     }
+
+    public function testAfterCommitRunsAtOnceOutsideATransaction(): void
+    {
+        $ran = false;
+
+        $this->manager->afterCommit(function () use (&$ran) {
+            $ran = true;
+        });
+
+        $this->assertTrue($ran);
+    }
+
+    public function testAfterCommitWaitsForTheOutermostCommit(): void
+    {
+        $this->pdo->expects($this->once())->method('commit');
+
+        $log = [];
+
+        $this->manager->run(function () use (&$log) {
+            $this->manager->run(function () use (&$log) {
+                $this->manager->afterCommit(function () use (&$log) {
+                    $log[] = 'counter';
+                });
+            });
+
+            $log[] = 'inner committed';
+        });
+
+        $this->assertSame(['inner committed', 'counter'], $log);
+        $this->assertSame(0, $this->manager->getLevel());
+    }
+
+    public function testRollingBackAScopeDropsOnlyItsCallbacks(): void
+    {
+        $ran = [];
+
+        $this->manager->run(function () use (&$ran) {
+            $this->manager->afterCommit(function () use (&$ran) {
+                $ran[] = 'outer';
+            });
+
+            try {
+                $this->manager->run(function () use (&$ran) {
+                    $this->manager->afterCommit(function () use (&$ran) {
+                        $ran[] = 'inner';
+                    });
+
+                    throw new RuntimeException('inner failed');
+                });
+            } catch (RuntimeException) {}
+        });
+
+        $this->assertSame(['outer'], $ran);
+    }
+
+    public function testRollingBackTheTransactionDropsEveryCallback(): void
+    {
+        $ran = false;
+
+        try {
+            $this->manager->run(function () use (&$ran) {
+                $this->manager->run(function () use (&$ran) {
+                    $this->manager->afterCommit(function () use (&$ran) {
+                        $ran = true;
+                    });
+                });
+
+                throw new RuntimeException('outer failed');
+            });
+        } catch (RuntimeException) {}
+
+        $this->assertFalse($ran);
+
+        $this->manager->run(fn () => null);
+
+        $this->assertFalse($ran);
+    }
+
+    public function testADeadlockRerunRegistersTheCallbackOnce(): void
+    {
+        $this->transactionActive = false;
+
+        $this->pdo
+            ->method('beginTransaction')
+            ->willReturnCallback(function () {
+                $this->transactionActive = true;
+
+                return true;
+            });
+
+        $runs = 0;
+        $calls = 0;
+
+        $this->manager->run(function () use (&$calls, &$runs) {
+            $this->manager->afterCommit(function () use (&$runs) {
+                $runs++;
+            });
+
+            if (++$calls === 1) {
+                $this->transactionActive = false;
+
+                throw self::pdoError('HY000', 1020);
+            }
+        });
+
+        $this->assertSame(2, $calls);
+        $this->assertSame(1, $runs);
+    }
+
+    public function testAFailingCallbackDoesNotFailTheCommittedTransaction(): void
+    {
+        $this->pdo->expects($this->never())->method('rollBack');
+
+        $ran = false;
+
+        $result = $this->manager->run(function () use (&$ran) {
+            $this->manager->afterCommit(function () {
+                throw new RuntimeException('counter row locked');
+            });
+            $this->manager->afterCommit(function () use (&$ran) {
+                $ran = true;
+            });
+
+            return 'saved';
+        });
+
+        $this->assertSame('saved', $result);
+        $this->assertTrue($ran);
+        $this->assertSame(0, $this->manager->getLevel());
+    }
 }

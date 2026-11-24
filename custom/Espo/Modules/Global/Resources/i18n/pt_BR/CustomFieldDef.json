@@ -58,8 +58,8 @@
     },
     "tooltips": {
         "appliesWhen": "Vazio significa todos os registros deste tipo no tenant. Selecione campos diretos do registro: listas, etiquetas, caixas de seleção, vínculos ou valores vazios/preenchidos. Campos não aplicáveis ficam ocultos e não são exigidos; os valores são preservados.",
-        "requiredWhen": "Exige um valor válido em cada salvamento quando as condições forem atendidas e o campo for aplicável. Requisitos de entrada são configurados separadamente em cada estágio.",
-        "isRequired": "Sempre exige um valor válido ao salvar quando o campo for aplicável. Tem prioridade sobre Obrigatório quando.",
+        "requiredWhen": "Exige um valor válido em cada salvamento quando as condições forem atendidas e o campo for aplicável. Não combine com Obrigatório, que exige sempre. Requisitos de entrada são configurados separadamente em cada estágio.",
+        "isRequired": "Sempre exige um valor válido ao salvar quando o campo for aplicável. Para exigir só em alguns estágios ou condições, deixe desmarcado e use Obrigatório quando.",
         "name": "Nome técnico (sem pontos). Combinado com o grupo na criação para formar o valueKey (ex.: city → address.city).",
         "valueKey": "Chave imutável de armazenamento/template. E-mail/WhatsApp usam {{customFields.<valueKey>}}. Não pode ser alterada após a criação.",
         "isTemplateEnabled": "Quando ativo, aparece nos seletores de Email Template e campanhas WhatsApp.",
@@ -94,5 +94,8 @@
             "enum": "Lista",
             "multiEnum": "Múltipla escolha"
         }
+    },
+    "messages": {
+        "requiredWhenWithRequired": "Escolha Obrigatório (sempre) ou Obrigatório quando (só quando as condições forem atendidas), não os dois. Com os dois, o campo fica obrigatório em todos os estágios."
     }
 }

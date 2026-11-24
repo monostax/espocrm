@@ -74,7 +74,24 @@ class OpportunityWatcher
             'nextAction' => $this->optional($action->expectedNextActionId ?? null, 24) && $this->optional($action->taskId ?? null, 24),
             'followup' => $this->moment($action->expectedFollowupTimer ?? null) && $this->moment($action->at ?? null) &&
                 (($action->at ?? null) === null || $this->text($action->senderMembershipId ?? null, 24)),
+            'fields' => $this->validValues($action->values ?? null),
         };
+    }
+
+    /** Custom field values by valueKey: 1–50 of them, each a scalar or a list of short texts. */
+    private function validValues(mixed $values): bool
+    {
+        if (!is_object($values)) return false;
+        $values = get_object_vars($values);
+        if ($values === [] || count($values) > 50) return false;
+        foreach ($values as $key => $value) {
+            if (!is_string($key) || !preg_match('/^[a-zA-Z0-9_]{1,128}$/D', $key)) return false;
+            $ok = is_bool($value) || is_int($value) || is_float($value) || (is_string($value) && mb_strlen($value) <= 8000) ||
+                (is_array($value) && array_is_list($value) && count($value) <= 100 &&
+                    count(array_filter($value, fn ($item) => is_string($item) && mb_strlen($item) <= 255)) === count($value));
+            if (!$ok) return false;
+        }
+        return true;
     }
 
     /** A date-only deadline or an ISO moment, never both. */

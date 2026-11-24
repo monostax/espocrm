@@ -36,16 +36,23 @@ class RecordFilters
     public function list(int $accountId): object
     {
         $workspace = $this->workspaces->workspace($accountId);
-        $types = array_values(array_filter(self::TYPES, fn (string $type) => $this->acl->checkScope($type, Acl\Table::ACTION_READ)));
-        if (!$types) return (object) ['list' => []];
-        $filters = $this->em->getRDBRepository('RecordFilter')->where([
-            'accountId' => $workspace->getId(), 'tenantId' => $workspace->get('tenantId'), 'entityType' => $types,
-            'OR' => [['userId' => $this->user->getId()], ['shared' => true]],
-        ])->order('name')->find();
+        $filters = $this->visible($workspace);
+        if (!$filters) return (object) ['list' => []];
         $admin = $this->administers($workspace);
         $list = [];
         foreach ($filters as $filter) $list[] = $this->present($filter, $admin);
         return (object) ['list' => $list];
+    }
+
+    /** @return Entity[] This person's filters in the workspace plus the shared ones, on lists they can read. */
+    public function visible(Entity $workspace): array
+    {
+        $types = array_values(array_filter(self::TYPES, fn (string $type) => $this->acl->checkScope($type, Acl\Table::ACTION_READ)));
+        if (!$types) return [];
+        return [...$this->em->getRDBRepository('RecordFilter')->where([
+            'accountId' => $workspace->getId(), 'tenantId' => $workspace->get('tenantId'), 'entityType' => $types,
+            'OR' => [['userId' => $this->user->getId()], ['shared' => true]],
+        ])->order('name')->find()];
     }
 
     public function create(int $accountId, object $data): object

@@ -3,6 +3,7 @@
         "ChatwootMessageReceived": "chatwoot:views/stream/notes/message-received",
         "ActivityOverdue": "chatwoot:views/stream/notes/activity-overdue",
         "OpportunityStageChanged": "chatwoot:views/stream/notes/stage-changed",
-        "OpportunityFollowupSent": "chatwoot:views/stream/notes/followup-sent"
+        "OpportunityFollowupSent": "chatwoot:views/stream/notes/followup-sent",
+        "OpportunityFollowupStop": "chatwoot:views/stream/notes/followup-not-sent"
     }
 }

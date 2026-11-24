@@ -30,8 +30,8 @@ $second = $make('Contact', $t + ['lastName' => 'Second']);
 $good = '+5511987654321';
 $bad = '+5511991234567';
 $new = '+5511976543210';
-$new2 = '+5511965432109';
-$person->set('phoneNumberData', [(object) ['phoneNumber' => $good, 'primary' => true]]);
+$extra = '+5511954321098';
+$person->set('phoneNumberData', [(object) ['phoneNumber' => $good, 'primary' => true], (object) ['phoneNumber' => $extra]]);
 $em->saveEntity($person);
 $second->set('phoneNumberData', [(object) ['phoneNumber' => $bad, 'primary' => true]]);
 $em->saveEntity($second);
@@ -85,22 +85,34 @@ $decide = fn ($decision, $more = []) => $review->decide($r->getId(), (object) ($
     ['revision' => AccountReplyReview::summary($get())['revision'], 'decision' => $decision]), $actor->getId(),
     $acl, $f->create(JourneyTargetPeople::class), $f->create(JourneyWhatsAppOutbound::class), $exec);
 $decide('wrongNumber', ['conversation' => $cw->getId() . ':777']);
-$listed = $review->contacts($get(), $acl, $f->create(JourneyTargetPeople::class), $f->create(JourneyWhatsAppOutbound::class));
-$check($listed['canAddNumber'] && $listed['contacts'][0]['contactId'] === $second->getId() &&
-    $listed['contacts'][0]['wrongNumber'], 'The wrong number\'s contact is not offered first.');
-foreach ([$good => 'a number another contact has', '+551140041234' => 'a landline', $bad => 'the wrong number'] as $phone => $why) {
+$numbers = function () use ($review, $get, $acl, $f): array {
+    $listed = $review->contacts($get(), $acl, $f->create(JourneyTargetPeople::class), $f->create(JourneyWhatsAppOutbound::class));
+    return array_column($listed['contacts'], 'numbers', 'contactId') + ['listed' => $listed];
+};
+$listed = $numbers();
+$check($listed['listed']['canAddNumber'] && $listed['listed']['contacts'][0]['contactId'] === $second->getId() &&
+    $listed['listed']['contacts'][0]['wrongNumber'], 'The wrong number\'s contact is not offered first.');
+$check($listed[$second->getId()] === [] && array_column($listed[$person->getId()], 'phone') === [$good, $extra] &&
+    array_unique(array_column($listed[$person->getId()], 'source')) === ['record'], 'The contacts\' own numbers are not listed.');
+foreach ([[$good, 'manual', 'a number another contact has'], ['+551140041234', 'manual', 'a landline'], [$bad, 'manual', 'the wrong number'],
+    [$good, 'enrichment', 'an enrichment number another contact has'], [$new, 'record', 'a number the contact does not have'],
+    [$good, 'record', 'another contact\'s number']] as [$phone, $source, $why]) {
     try {
-        $decide('resume', ['phone' => $phone, 'contactId' => $second->getId()]);
+        $decide('resume', ['phone' => $phone, 'contactId' => $second->getId(), 'source' => $source]);
         throw new RuntimeException("Started a catch-up for {$why}.");
     } catch (BadRequest) {}
 }
 $check($get()->get('status') === 'Paused', 'A rejected number did not stay paused.');
 
-// New number: back to D0 for it alone; the others wait at D2.
-$decide('resume', ['phone' => $new, 'contactId' => $second->getId()]);
+// New number from enrichment: saved as a WhatsApp identity, back to D0 for it alone; the others wait at D2.
+$decide('resume', ['phone' => $new, 'contactId' => $second->getId(), 'source' => 'enrichment']);
 $check($get()->get('status') === 'Active' && $get()->get('currentStageId') === $d0->getId(), 'The new number did not start from D0.');
 $check(in_array($new, $f->create(JourneyWhatsAppOutbound::class)->resolvePhones($em->getEntityById('Contact', $second->getId())), true),
     'The new number was not added to the contact.');
+$check($em->getRDBRepository('ContactChannelIdentity')->where(['contactId' => $second->getId(), 'channelType' => 'whatsapp',
+    'sourceId' => $new])->count() === 1, 'The enrichment number is not a WhatsApp channel identity.');
+$check($numbers()[$second->getId()] === [['phone' => $new, 'source' => 'record', 'catchingUp' => true]],
+    'The catching-up number is not marked.');
 $check(($state()['catchUp']['until'] ?? null) === $d2->getId() && ($state()['catchUp']['untilEnteredAt'] ?? null) === $atD2,
     'The catch-up does not remember where the others wait.');
 // D0 already went to the new number; D2 is next, for it alone.
@@ -120,11 +132,15 @@ $decide('resume');
 $check($get()->get('status') === 'Active' && $get()->get('currentStageId') === $d2->getId() &&
     $get()->get('enteredStageAt') === $atD2 && !isset($state()['catchUp']), 'The others did not return to D2.');
 
-// Another wrong number and a second new one: it walks D0 → D2, D2's task stays skipped, then everyone continues.
+// Another wrong number, then a number the contact already has replays from D0: it walks D0 → D2,
+// D2's task stays skipped, then everyone continues.
 $reply('780', $good);
 $decide('wrongNumber', ['conversation' => $cw->getId() . ':780']);
-$decide('resume', ['phone' => $new2, 'contactId' => $person->getId()]);
-$check($get()->get('currentStageId') === $d0->getId() && JourneyCatchUp::active($state()), 'The second number did not start from D0.');
+$decide('resume', ['phone' => $extra, 'contactId' => $person->getId(), 'source' => 'record']);
+$check($get()->get('currentStageId') === $d0->getId() && array_keys($state()['catchUp']['phones'] ?? []) === [$extra],
+    'The contact\'s own number did not start from D0.');
+$check(count($em->getRepository('PhoneNumber')->getPhoneNumberData($em->getEntityById('Contact', $person->getId()))) === 2,
+    'Replaying a number the contact has changed its phones.');
 $check($exec->execute($r->getId(), $step->getId()), 'The catch-up could not move to D2.');
 $check($get()->get('currentStageId') === $d2->getId() && !isset($state()['catchUp']), 'Reaching D2 did not end the catch-up.');
 $check($tasks() === 0, 'The catch-up created a task the company already had.');
@@ -148,7 +164,7 @@ $check(!$parser->isStageDue($clock, '2 business days', 'UTC', strtotime('2026-11
     $parser->isStageDue($clock, '2 business days', 'UTC', strtotime('2026-11-24 12:00 UTC')), 'Remaining wait changed.');
 $reply('781', $bad);
 $check($get()->get('status') === 'Active', 'Rejected number re-paused the enrollment.');
-$reply('782', $new2);
+$reply('782', $extra);
 $check($get()->get('status') === 'Paused', 'New valid reply did not pause again.');
 $decide('end');
 $check($get()->get('status') === 'Exited' && $get()->get('currentStageId') === $exit->getId(), 'Configured exit did not run.');
@@ -158,4 +174,4 @@ $check(PeriodParser::weekdaySeconds(strtotime('2026-11-20 12:00 UTC'), strtotime
 $plain = $make('JourneyRecord', $base + ['targetType' => 'Account', 'targetId' => $make('Account', $t + ['name' => 'Plain'])->getId(),
     'status' => 'Active', 'currentStageId' => $d0->getId(), 'enteredStageAt' => gmdate('Y-m-d H:i:s')]);
 $check($exec->execute($plain->getId(), $step->getId()) && $tasks() === 1, 'D2 did not create its task outside a catch-up.');
-echo "Passed: pause, wrong number, number validation, catch-up from D0, wrong new number back to D2, second number catch-up, history, second reply and end.\n";
+echo "Passed: pause, wrong number, numbers listed, number validation, enrichment number catch-up from D0, wrong new number back to D2, own number replay, history, second reply and end.\n";

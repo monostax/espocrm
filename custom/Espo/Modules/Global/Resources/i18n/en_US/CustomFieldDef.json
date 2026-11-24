@@ -58,8 +58,8 @@
     },
     "tooltips": {
         "appliesWhen": "Empty means all records of this entity type in the tenant. Select direct record fields: dropdowns, tags, checkboxes, links, or empty/filled values. Nonmatching fields are hidden and not required; stored values are preserved.",
-        "requiredWhen": "Require a valid value on every save when these conditions match, within the field's applicability scope. Stage-entry requirements are configured separately on each stage.",
-        "isRequired": "Always require a valid value on save when this field applies. Takes precedence over Required When.",
+        "requiredWhen": "Require a valid value on every save when these conditions match, within the field's applicability scope. Not combined with Required, which always requires. Stage-entry requirements are configured separately on each stage.",
+        "isRequired": "Always require a valid value on save when this field applies. To require it only in some stages or conditions, leave this off and use Required When.",
         "name": "Machine name (no dots). Combined with the group name on create to form valueKey (e.g. city → address.city).",
         "valueKey": "Immutable storage/template key. Email/WhatsApp use {{customFields.<valueKey>}} with dots nested for handlebars (address.city → customFields.address.city). Changing this after create is forbidden.",
         "isTemplateEnabled": "When enabled, this field appears in Email Template and WhatsApp Campaign parameter pickers.",
@@ -94,5 +94,8 @@
             "enum": "Dropdown",
             "multiEnum": "Multi-select"
         }
+    },
+    "messages": {
+        "requiredWhenWithRequired": "Choose Required (always) or Required When (only when its conditions match), not both. With both, the field is required in every stage."
     }
 }

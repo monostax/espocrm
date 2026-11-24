@@ -16,6 +16,7 @@ use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\JourneyRelationships;
 use Espo\Modules\Chatwoot\Controllers\JourneyRelationships as Controller;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
+use Espo\Modules\FeatureCredits\Enrichment\ContactPhones;
 use Espo\Modules\FeatureJourney\Services\AccountReplyReview;
 use Espo\Modules\FeatureJourney\Services\JourneyEnrollmentService;
 use Espo\Modules\FeatureJourney\Services\JourneyTargetPeople;
@@ -508,14 +509,16 @@ class JourneyRelationshipsTest extends TestCase
         $review = $this->createMock(AccountReplyReview::class);
         $people = $this->createMock(JourneyTargetPeople::class);
         $outbound = $this->createMock(JourneyWhatsAppOutbound::class);
+        $phones = $this->createMock(ContactPhones::class);
         $review->expects($this->once())->method('contacts')
-            ->with($record, $this->anything(), $people, $outbound)
+            ->with($record, $this->anything(), $people, $outbound, $phones)
             ->willReturn(['contacts' => [['contactId' => 'c1', 'contactName' => 'Alex', 'wrongNumber' => true]],
                 'canAddNumber' => true]);
         $this->injectableFactory->method('create')->willReturnMap([
             [AccountReplyReview::class, $review],
             [JourneyTargetPeople::class, $people],
             [JourneyWhatsAppOutbound::class, $outbound],
+            [ContactPhones::class, $phones],
         ]);
 
         $res = $this->service->replyReview($this->tenant, $account, 'enrollment-a');
@@ -555,6 +558,7 @@ class JourneyRelationshipsTest extends TestCase
             [JourneyTargetPeople::class, $people],
             [JourneyWhatsAppOutbound::class, $outbound],
             [TransitionExecutor::class, $executor],
+            [ContactPhones::class, $this->createMock(ContactPhones::class)],
         ]);
 
         $res = $this->service->decideReplyReview($this->tenant, $account, 'enrollment-a', $input);

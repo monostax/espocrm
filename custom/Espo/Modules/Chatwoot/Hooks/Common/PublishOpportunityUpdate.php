@@ -103,8 +103,8 @@ class PublishOpportunityUpdate implements AfterSave, AfterRemove, BeforeRemove
         } elseif (in_array($type, ['OpportunityReadState', 'OpportunityThreadReadState'], true)) {
             $opportunity = $this->entityManager->getEntityById('Opportunity', $entity->get('opportunityId'));
         } elseif ($type === 'Note' && $entity->get('parentType') === 'Opportunity' &&
-            // A sent follow-up also changed the deal's timer behind the ORM's back: its pill refreshes open clients.
-            in_array($entity->get('type'), [...OpportunityStreamEvents::TYPES, OpportunityFollowupEvents::TYPE], true)) {
+            // A sent or stopped follow-up also changed the deal's timer behind the ORM's back: its pill refreshes open clients.
+            in_array($entity->get('type'), [...OpportunityStreamEvents::TYPES, OpportunityFollowupEvents::TYPE, OpportunityFollowupEvents::NOT_SENT_TYPE], true)) {
             $opportunity = $this->entityManager->getEntityById('Opportunity', $entity->get('parentId'));
         } else {
             return;

@@ -6,12 +6,13 @@ namespace Espo\Modules\Chatwoot\Controllers;
 
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Modules\Chatwoot\Services\RecordFilterCounts;
 use Espo\Modules\Chatwoot\Services\RecordFilters;
 
 // Workspace-scoped API only, never inherit the generic record controller.
 class RecordFilter
 {
-    public function __construct(private RecordFilters $filters) {}
+    public function __construct(private RecordFilters $filters, private RecordFilterCounts $counts) {}
 
     public function getActionList(Request $request): object
     {
@@ -26,6 +27,12 @@ class RecordFilter
     public function putActionUpdate(Request $request): object
     {
         return $this->filters->update($this->accountId($request), (string) $request->getRouteParam('id'), $this->body($request));
+    }
+
+    /** Sidebar badges: a read, posted only because each filter's where clause is too long for a URL. */
+    public function postActionCounts(Request $request): object
+    {
+        return $this->counts->counts($this->accountId($request), $this->body($request));
     }
 
     public function deleteActionDelete(Request $request): bool

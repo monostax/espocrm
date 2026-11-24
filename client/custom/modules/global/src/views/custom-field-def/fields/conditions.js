@@ -1,6 +1,15 @@
 define('global:views/custom-field-def/fields/conditions', ['views/fields/base', 'global:helpers/custom-field-conditions'], (Dep, Conditions) => Dep.extend({
     detailTemplateContent: '<div class="condition-editor"></div>',
     editTemplateContent: '<div class="condition-editor"></div>',
+    validations: ['required', 'notWithIsRequired'],
+
+    // Required wins over Required When, so both together make a stage-only field
+    // required in every stage (2026-11-24). The server rejects the pair too.
+    validateNotWithIsRequired() {
+        if (this.name !== 'requiredWhen' || !this.condition || !this.model.get('isRequired')) return false;
+        this.showValidationMessage(this.translate('requiredWhenWithRequired', 'messages', 'CustomFieldDef'));
+        return true;
+    },
 
     setup() {
         Dep.prototype.setup.call(this);

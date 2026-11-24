@@ -48,6 +48,9 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
     return Dep.extend({
 
         detailTemplateContent:
+            '<div class="whatsapp-window-warning text-warning small" style="margin-bottom:8px;{{#unless windowWarning}}display:none;{{/unless}}">' +
+                '<span class="fas fa-exclamation-triangle"></span> <span class="whatsapp-window-warning-text">{{windowWarning}}</span>' +
+            '</div>' +
             '{{#if isEmpty}}' +
             '<span class="text-muted">—</span>' +
             '{{else}}' +
@@ -59,6 +62,9 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
             '{{/if}}',
 
         editTemplateContent:
+            '<div class="whatsapp-window-warning text-warning small" style="margin-bottom:8px;{{#unless windowWarning}}display:none;{{/unless}}">' +
+                '<span class="fas fa-exclamation-triangle"></span> <span class="whatsapp-window-warning-text">{{windowWarning}}</span>' +
+            '</div>' +
             '{{#if catalogUnavailable}}<ul class="list-unstyled">{{#each selectedLabels}}<li><code>{{this}}</code></li>{{/each}}</ul>{{/if}}' +
             '{{#if isLoading}}' +
             '<span class="text-muted small">' +
@@ -102,6 +108,9 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
             '{{/if}}',
 
         inboxGroups: null,
+        // Official WhatsApp inboxes of this AI ({name, platformId}), for the 24h window warning.
+        cloudInboxes: null,
+        cloudInboxesLoading: false,
         linkedInboxSummary: null,
         isLoading: false,
         loadError: null,
@@ -152,8 +161,66 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
                 (e.category ? ' [' + e.category + ']' : '')
             );
             data.isEmpty = selected.length === 0;
+            data.windowWarning = this.windowWarning();
 
             return data;
+        },
+
+        /**
+         * The official WhatsApp inboxes where this AI has no template selected: its follow-ups there go out only until
+         * 24h after the customer's last message (the backend stops later ones and hands the deal to a person).
+         */
+        windowWarning: function () {
+            if (!this.model.get('isAI') || !Array.isArray(this.cloudInboxes)) {
+                return null;
+            }
+            const covered = {};
+            this.getSelectedEntries().forEach(entry => {
+                covered[String(entry.inboxPlatformId)] = true;
+            });
+            const names = this.cloudInboxes
+                .filter(inbox => !covered[String(inbox.platformId)])
+                .map(inbox => inbox.name);
+            if (!names.length) {
+                return null;
+            }
+            return this.translate('whatsappTemplatesWindowWarning', 'messages', 'ChatwootAccountUserMembership')
+                .replace('{list}', names.join(', '));
+        },
+
+        updateWindowWarning: function () {
+            const text = this.windowWarning();
+            this.$el.find('.whatsapp-window-warning-text').text(text || '');
+            this.$el.find('.whatsapp-window-warning').toggle(!!text);
+        },
+
+        setCloudInboxes: function (list) {
+            this.cloudInboxes = list.filter(isCloudOrCoexistenceInbox).map(inbox => ({
+                name: inbox.name || ('#' + inbox.chatwootInboxId),
+                platformId: inbox.chatwootInboxId,
+            }));
+        },
+
+        /** Detail view: only the inbox list (no Meta catalog), for the window warning. */
+        loadCloudInboxes: function () {
+            if (!this.model.id || !this.model.get('isAI')) {
+                return;
+            }
+            this.cloudInboxesLoading = true;
+            Espo.Ajax.getRequest('ChatwootAccountUserMembership/' + this.model.id + '/chatwootInboxes', {
+                maxSize: 200,
+                select: 'id,name,chatwootInboxId,channelType,provider',
+            })
+                .then(response => {
+                    this.cloudInboxesLoading = false;
+                    this.setCloudInboxes((response && response.list) || []);
+                    if (this.isRendered()) {
+                        this.reRender();
+                    }
+                })
+                .catch(() => {
+                    this.cloudInboxesLoading = false;
+                });
         },
 
         setup: function () {
@@ -184,6 +251,9 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
                 }
             } else if (this.isDetailMode() && this.inboxGroups === null && !this.isLoading) {
                 // Detail mode does not need remote load for display; labels from stored value.
+                if (this.cloudInboxes === null && !this.cloudInboxesLoading) {
+                    this.loadCloudInboxes();
+                }
             }
         },
 
@@ -217,6 +287,7 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
             });
 
             this.model.set(this.name, selected.length ? selected : null);
+            this.updateWindowWarning();
         },
 
         buildLinkedInboxSummary: function (list) {
@@ -281,6 +352,7 @@ define('chatwoot:views/account-user-membership/fields/whatsapp-message-templates
 
                     const list = (response && response.list) || [];
                     const cloudInboxes = list.filter(isCloudOrCoexistenceInbox);
+                    this.setCloudInboxes(list);
 
                     if (cloudInboxes.length === 0) {
                         this.isLoading = false;

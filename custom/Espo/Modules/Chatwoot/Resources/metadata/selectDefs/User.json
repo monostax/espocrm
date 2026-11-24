@@ -1,0 +1,8 @@
+{
+    "accessControlFilterClassNameMap": {
+        "mandatory": "Espo\\Modules\\Chatwoot\\Classes\\Select\\User\\AccessControlFilters\\Mandatory"
+    },
+    "primaryFilterClassNameMap": {
+        "assignable": "Espo\\Modules\\Chatwoot\\Classes\\Select\\User\\PrimaryFilters\\Assignable"
+    }
+}

@@ -9,6 +9,8 @@ use Espo\Core\Acl;
 use Espo\Core\Utils\Metadata;
 use Espo\Modules\Global\Hooks\Common\ValidateCustomFieldRequirements;
 use Espo\Modules\Global\Hooks\CustomFieldDef\ValidateConditions;
+use Espo\Entities\User;
+use Espo\Modules\Global\Tools\CustomField\AiWriters;
 use Espo\Modules\Global\Tools\CustomField\MetaProvider;
 use Espo\Modules\Global\Tools\CustomField\ConditionSchema;
 use Espo\ORM\BaseEntity;
@@ -63,7 +65,7 @@ class ConditionHooksTest extends TestCase
             'valueKey' => 'confirmed', 'label' => 'Confirmed', 'type' => 'bool',
             'requiredWhen' => ['attribute' => 'status', 'operator' => 'equals', 'value' => 'Qualified'],
         ]]]]]);
-        $hook = new ValidateCustomFieldRequirements($meta);
+        $hook = $this->requirementsHook($meta);
         $lead = $this->entity('Lead', ['tenantId' => 'tenant', 'status' => 'New']);
         $hook->beforeSave($lead, SaveOptions::fromAssoc([]));
         $lead->set(['status' => 'Qualified', 'customFields' => (object) ['confirmed' => false]]);
@@ -71,6 +73,30 @@ class ConditionHooksTest extends TestCase
         $lead->set('customFields', (object) []);
         $this->expectException(BadRequest::class);
         $hook->beforeSave($lead, SaveOptions::fromAssoc([]));
+    }
+
+    public function testAiWritersSaveWithoutAnEmptyRequiredFieldButNotWithAValueItRejects(): void
+    {
+        $meta = $this->createMock(MetaProvider::class);
+        $meta->method('isEntityEnabled')->willReturn(true);
+        $meta->method('getGroupedMeta')->willReturn(['groups' => [['fields' => [[
+            'valueKey' => 'segment', 'label' => 'Segment', 'type' => 'enum', 'options' => ['B2B', 'B2C'], 'isRequired' => true,
+        ]]]]]);
+        $hook = $this->requirementsHook($meta, true);
+        $contact = $this->entity('Contact', ['tenantId' => 'tenant']);
+        $hook->beforeSave($contact, SaveOptions::fromAssoc([]));
+        $contact->set('customFields', (object) ['segment' => 'Other']);
+        $this->expectException(BadRequest::class);
+        $hook->beforeSave($contact, SaveOptions::fromAssoc([]));
+    }
+
+    private function requirementsHook(MetaProvider $meta, bool $ai = false): ValidateCustomFieldRequirements
+    {
+        $writers = $this->createMock(AiWriters::class);
+        $writers->method('isAi')->willReturn($ai);
+        $user = $this->createMock(User::class);
+        $user->method('getId')->willReturn('user');
+        return new ValidateCustomFieldRequirements($meta, $writers, $user);
     }
 
     private function entity(string $type, array $data): BaseEntity
@@ -104,7 +130,7 @@ class ConditionHooksTest extends TestCase
             ]]]]]);
             $entity = $this->entity($type, ['tenantId' => 'tenant']);
             $entity->setAsFetched();
-            $hook = new ValidateCustomFieldRequirements($meta);
+            $hook = $this->requirementsHook($meta);
             $hook->beforeSave($entity, SaveOptions::fromAssoc([]));
             $entity->set($changes);
             try {

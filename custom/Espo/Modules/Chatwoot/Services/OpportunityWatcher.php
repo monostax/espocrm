@@ -16,6 +16,9 @@ use Espo\Core\Record\ServiceContainer;
 use Espo\Entities\User;
 use Espo\Modules\FeatureCatchUp\Services\ChatwootAccess;
 use Espo\Modules\Global\Hooks\Opportunity\ClearWatcherFollowupMark;
+use Espo\Modules\Global\Tools\CustomField\AiWriters;
+use Espo\Modules\Global\Tools\CustomField\Conditions;
+use Espo\Modules\Global\Tools\CustomField\MetaProvider;
 use Espo\Modules\Global\Tools\NextAction\NextActionWriter;
 use Espo\Modules\Global\Tools\Opportunity\StageRequirements;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
@@ -39,7 +42,7 @@ class OpportunityWatcher
     public const MOVE = 'move';
     public const ACT = 'act';
     public const OUTCOMES = ['none', 'vetoed', 'noCredits', self::MOVE, self::ACT];
-    public const ACTION_KINDS = ['stage', 'assign', 'taskCreate', 'taskUpdate', 'taskComplete', 'taskCancel', 'nextAction', 'followup'];
+    public const ACTION_KINDS = ['fields', 'stage', 'assign', 'taskCreate', 'taskUpdate', 'taskComplete', 'taskCancel', 'nextAction', 'followup'];
     /** A stage or assignee a person took back from the watcher is left alone for this long. */
     private const REVERT_DAYS = 7;
     /** Action outcomes the run's mural post lists. */
@@ -57,6 +60,7 @@ class OpportunityWatcher
         private NextActionWriter $nextActions,
         private UserTenantResolver $tenants,
         private ChatwootAccess $chatwootAccess,
+        private MetaProvider $customFields,
     ) {}
 
     public function decide(string $id, object $body): object
@@ -130,6 +134,7 @@ class OpportunityWatcher
                 'taskComplete', 'taskCancel' => $this->taskClose($id, $action, $run),
                 'nextAction' => $this->nextAction($id, $action, $run),
                 'followup' => $this->followup($id, $action),
+                'fields' => $this->fields($id, $action),
             });
         } catch (ConflictSilent $e) {
             $blocked = json_decode($e->getBody() ?? '', true);
@@ -202,6 +207,9 @@ class OpportunityWatcher
         $fromStatus = (string) $current->get('status');
         $current->set('opportunityStageId', $toStageId);
         $this->entityManager->saveEntity($current, self::SAVE);
+        // The AI's own user moves the deal even with required fields empty; the stage pill names them (2026-11-24).
+        $left = (array) ($current->get(StageRequirements::LEFT_EMPTY) ?? []);
+        $missing = array_values(array_filter(array_map(fn ($field) => ((array) $field)['label'] ?? null, $left['fields'] ?? [])));
         return [
             'fromStageId' => $from->getId(),
             'fromStageName' => $from->get('name'),
@@ -209,7 +217,37 @@ class OpportunityWatcher
             'toStageName' => $target->get('name'),
             'fromStatus' => $fromStatus,
             'toStatus' => (string) $current->get('status'),
+            ...($missing ? ['missingFields' => $missing] : []),
         ];
+    }
+
+    /**
+     * Custom fields of the deal the conversation answers (2026-11-24): only empty ones, never a value a person set,
+     * only fields of the deal's tenant that apply to it, and only values the field accepts. The rest is left out.
+     */
+    private function fields(string $id, object $action): array
+    {
+        $deal = $this->lock($id);
+        if (!$deal) return ['outcome' => 'stale'];
+        $defs = [];
+        foreach ($this->customFields->getGroupedMeta('Opportunity', $deal->get('tenantId'))['groups'] as $group) {
+            foreach ($group['fields'] as $field) $defs[$field['valueKey']] = $field;
+        }
+        $bag = (array) $deal->get('customFields');
+        $filled = [];
+        foreach ((array) $action->values as $key => $value) {
+            $field = $defs[$key] ?? null;
+            if (!$field || !AiWriters::isEmpty($bag[$key] ?? null) || StageRequirements::invalidReason($field, $value) !== null ||
+                Conditions::evaluate($field['appliesWhen'] ?? null, Conditions::context($deal, [$field])) === false) {
+                continue;
+            }
+            $bag[$key] = $value;
+            $filled[] = ['label' => $field['label'], 'value' => $value];
+        }
+        if ($filled === []) return ['outcome' => 'stale'];
+        $deal->set('customFields', (object) $bag);
+        $this->entityManager->saveEntity($deal, self::BOOKKEEPING);
+        return ['outcome' => 'applied', 'fields' => $filled];
     }
 
     /**

@@ -10,6 +10,8 @@ use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\ORM\Repository\Option\SaveOption;
 use Espo\Modules\Chatwoot\Tools\PhoneNormalizer;
+use Espo\Modules\Chatwoot\Tools\WhatsAppRemovals;
+use Espo\Modules\FeatureCredits\Enrichment\ContactPhones;
 use Espo\Modules\FeatureJourney\Entities\JourneyTransition;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -103,16 +105,19 @@ class AccountReplyReview
     }
 
     /**
-     * The company's contacts a new number can be added to when resuming. `wrongNumber`
-     * marks the contacts whose number was marked wrong, the usual place for the new one.
+     * The company's contacts a number can be picked for when resuming. `wrongNumber` marks the
+     * contacts whose number was marked wrong, the usual place for the new one. With edit access,
+     * `numbers` lists what can replay the cadence on each contact: its own numbers (`record`)
+     * and the numbers enrichment found that no contact of the company has (`enrichment`).
      *
-     * @return array{contacts: list<array{contactId: string, contactName: string, wrongNumber: bool}>, canAddNumber: bool}
+     * @return array{contacts: list<array{contactId: string, contactName: string, wrongNumber: bool, numbers?: list<array<string, mixed>>}>, canAddNumber: bool}
      */
     public function contacts(
         Entity $record,
         Acl $acl,
         JourneyTargetPeople $people,
         JourneyWhatsAppOutbound $outbound,
+        ?ContactPhones $enriched = null,
     ): array {
         $tenant = (string) ($record->get('tenantId') ?? '');
         $target = $record->get('targetType') === 'Account' && $record->get('targetId')
@@ -123,27 +128,73 @@ class AccountReplyReview
             !$acl->checkScope('Contact', 'read') || !$acl->checkField('Contact', 'phoneNumber', 'read')) {
             return ['contacts' => [], 'canAddNumber' => false];
         }
-        $excluded = self::state($record)['excluded'] ?? [];
+        $state = self::state($record);
+        $excluded = $state['excluded'] ?? [];
+        $catchingUp = JourneyCatchUp::active($state) ? ($state['catchUp']['phones'] ?? []) : [];
         $canReadName = $acl->checkField('Contact', 'name', 'read');
-        $list = [];
+        $canReadIdentities = $acl->checkScope('ContactChannelIdentity', 'read');
+        $company = [];
+        $readable = [];
         foreach ($people->forTarget($target, $tenant) as $person) {
-            if ($person->getEntityType() !== 'Contact' || !$acl->check($person, 'read') ||
-                $outbound->isOptedOut($person)) {
-                continue;
+            $phones = $outbound->resolvePhones($person);
+            array_push($company, ...$phones);
+            if ($person->getEntityType() === 'Contact' && $acl->check($person, 'read') && !$outbound->isOptedOut($person)) {
+                $readable[] = [$person, $phones];
             }
+        }
+        $list = [];
+        foreach ($readable as [$person, $phones]) {
             $name = $canReadName ? trim((string) ($person->get('name') ?? '')) : '';
             if ($name === '' && $canReadName) {
                 $name = trim(((string) ($person->get('firstName') ?? '')) . ' ' . ((string) ($person->get('lastName') ?? '')));
             }
-            $list[] = [
+            $item = [
                 'contactId' => (string) $person->getId(),
                 'contactName' => $name,
-                'wrongNumber' => array_intersect($outbound->resolvePhones($person), $excluded) !== [],
+                'wrongNumber' => array_intersect($phones, $excluded) !== [],
             ];
+            if ($canAdd) {
+                $item['numbers'] = $this->numbers($person, $phones, $company, $excluded, $catchingUp,
+                    $canReadIdentities, $tenant, $outbound, $enriched);
+            }
+            $list[] = $item;
         }
         usort($list, static fn ($a, $b) => (int) $b['wrongNumber'] <=> (int) $a['wrongNumber']);
 
         return ['contacts' => $list, 'canAddNumber' => $canAdd && $list !== []];
+    }
+
+    /**
+     * @param list<string> $phones the contact's sendable numbers
+     * @param list<string> $company every sendable number of the company's contacts
+     * @return list<array<string, mixed>> record numbers first, then enrichment numbers with WhatsApp first
+     */
+    private function numbers(Entity $person, array $phones, array $company, array $excluded, array $catchingUp,
+        bool $canReadIdentities, string $tenant, JourneyWhatsAppOutbound $outbound, ?ContactPhones $enriched): array
+    {
+        // Without channel identity access, only the contact's phone fields are shown.
+        $visible = $canReadIdentities ? $phones : array_intersect($phones, $outbound->resolvePhones($person, null, false));
+        $numbers = [];
+        foreach (array_diff($visible, $excluded) as $phone) {
+            $numbers[$phone] = ['phone' => $phone, 'source' => 'record', 'catchingUp' => isset($catchingUp[$phone])];
+        }
+        $found = [];
+        foreach ($enriched?->list($tenant, (string) $person->getId()) ?? [] as $item) {
+            $phone = PhoneNormalizer::normalize($item['value']);
+            // A number on another contact already gets the cadence; one marked wrong never does.
+            if ($phone && !isset($numbers[$phone]) && !isset($found[$phone]) &&
+                !in_array($phone, $company, true) && !in_array($phone, $excluded, true)) {
+                $found[$phone] = ['phone' => $phone, 'source' => 'enrichment',
+                    'ownership' => $item['ownership'], 'whatsapp' => $item['whatsapp']];
+            }
+        }
+        $rank = static fn (array $n): array => [
+            ['registered' => 0, 'not_registered' => 2][$n['whatsapp'] ?? ''] ?? 1,
+            ['verified' => 0, 'not_verified' => 2, 'rejected' => 3][$n['ownership'] ?? ''] ?? 1,
+        ];
+        usort($found, static fn ($a, $b) => $rank($a) <=> $rank($b));
+
+        return [...array_values($numbers), ...$found];
     }
 
     public function decide(string $id, object $input, string $actor, Acl $acl, JourneyTargetPeople $people,
@@ -187,9 +238,9 @@ class AccountReplyReview
                     throw new BadRequest('Review every reply before resuming.');
                 }
                 if (trim((string) ($input->phone ?? '')) !== '') {
-                    // A new number starts from the Entry stage; the others wait where they are.
-                    [$phone, $contact] = $this->addNumber($r, $s, (string) $input->phone,
-                        (string) ($input->contactId ?? ''), $tenant, $acl, $people, $outbound);
+                    // The picked number starts from the Entry stage; the others wait where they are.
+                    [$phone, $contact] = $this->catchUpNumber($r, $s, (string) $input->phone,
+                        (string) ($input->contactId ?? ''), (string) ($input->source ?? 'manual'), $tenant, $acl, $people, $outbound);
                     $s = JourneyCatchUp::start($s, (string) $r->get('currentStageId'), $r->get('enteredStageAt'),
                         $this->visitedStages($r), $phone, $contact->getId());
                     unset($s['heldSeconds'], $s['heldWeekdaySeconds'], $s['heldStage'], $s['heldEntered']);
@@ -259,51 +310,76 @@ class AccountReplyReview
     }
 
     /**
-     * Put a new mobile number on one of the company's contacts. It must be new to the
-     * company: a number already on a contact already gets the cadence.
+     * The number that replays the cadence from the Entry stage, on one of the company's contacts.
+     * - `record`: a number already on that contact. Nothing is saved; a number that already got
+     *   the earlier stages gets them again.
+     * - `enrichment`: a number enrichment found, saved as a WhatsApp channel identity.
+     * - `manual`: a typed mobile number, saved as a phone number.
+     * Enrichment and manual numbers must be new to the company: one already on a contact gets the cadence.
      *
      * @return array{0: string, 1: Entity}
      */
-    private function addNumber(Entity $r, array $s, string $raw, string $contactId, string $tenant, Acl $acl,
-        JourneyTargetPeople $people, JourneyWhatsAppOutbound $outbound): array
+    private function catchUpNumber(Entity $r, array $s, string $raw, string $contactId, string $source, string $tenant,
+        Acl $acl, JourneyTargetPeople $people, JourneyWhatsAppOutbound $outbound): array
     {
+        if (!in_array($source, ['record', 'enrichment', 'manual'], true)) {
+            throw new BadRequest('Unknown number source.');
+        }
         $phone = PhoneNormalizer::normalize(trim($raw));
-        if (!$phone || !$outbound->isMobile($phone)) {
+        if (!$phone || ($source === 'manual' && !$outbound->isMobile($phone))) {
             throw new BadRequest('Enter a mobile number with area code.');
         }
         if (in_array($phone, $s['excluded'] ?? [], true)) {
             throw new BadRequest('This number was marked wrong for this company.');
+        }
+        if (JourneyCatchUp::active($s) && isset($s['catchUp']['phones'][$phone])) {
+            throw new BadRequest('This number is already getting the cadence from the start.');
         }
         $target = $this->em->getEntityById('Account', (string) $r->get('targetId'));
         if (!$target || !$acl->check($target, 'read')) {
             throw new Forbidden();
         }
         $contact = null;
+        $onContact = false;
         // Every contact of the company counts, readable or not: the cadence reaches them all.
         foreach ($people->forTarget($target, $tenant) as $person) {
-            if (in_array($phone, $outbound->resolvePhones($person), true)) {
+            $own = in_array($phone, $outbound->resolvePhones($person), true);
+            if ($own && $source !== 'record') {
                 throw new BadRequest('This number is already on one of the company\'s contacts, so it already gets the cadence.');
             }
             if ($person->getEntityType() === 'Contact' && $person->getId() === $contactId) {
                 $contact = $person;
+                $onContact = $own;
             }
         }
         if (!$contact || !$acl->check($contact, 'read')) {
             throw new BadRequest('Pick one of the company\'s contacts for the new number.');
         }
-        if (!$acl->check($contact, 'edit') || !$acl->checkField('Contact', 'phoneNumber', 'edit')) {
-            throw new Forbidden('You can\'t edit this contact\'s phone numbers.');
-        }
         if ($outbound->isOptedOut($contact)) {
             throw new BadRequest('This contact opted out of WhatsApp.');
         }
+        if ($source === 'record') {
+            if (!$onContact) {
+                throw new BadRequest('This number is not on this contact, or it is blocked for WhatsApp.');
+            }
+            return [$phone, $contact];
+        }
+        if (!$acl->check($contact, 'edit') || !$acl->checkField('Contact', 'phoneNumber', 'edit')) {
+            throw new Forbidden('You can\'t edit this contact\'s phone numbers.');
+        }
         $contact = $this->em->getEntityById('Contact', $contact->getId()) ?? $contact;
-        /** @var \Espo\Repositories\PhoneNumber $repo */
-        $repo = $this->em->getRepository(\Espo\Entities\PhoneNumber::ENTITY_TYPE);
-        $data = $repo->getPhoneNumberData($contact);
-        $data[] = (object) ['phoneNumber' => $phone, 'type' => 'Mobile', 'primary' => $data === [],
-            'optOut' => false, 'invalid' => false];
-        $contact->set('phoneNumberData', $data);
+        if ($source === 'enrichment') {
+            // Picking it is an explicit addition, so a WhatsApp number removed from the contact before comes back.
+            (new WhatsAppRemovals($this->em))->allowReadded($tenant, $contact->getId(), $phone);
+            $contact->set('whatsappNumber', $phone);
+        } else {
+            /** @var \Espo\Repositories\PhoneNumber $repo */
+            $repo = $this->em->getRepository(\Espo\Entities\PhoneNumber::ENTITY_TYPE);
+            $data = $repo->getPhoneNumberData($contact);
+            $data[] = (object) ['phoneNumber' => $phone, 'type' => 'Mobile', 'primary' => $data === [],
+                'optOut' => false, 'invalid' => false];
+            $contact->set('phoneNumberData', $data);
+        }
         $this->em->saveEntity($contact);
         if (!in_array($phone, $outbound->resolvePhones($contact), true)) {
             throw new BadRequest('This number is blocked for WhatsApp (opted out, invalid or removed).');

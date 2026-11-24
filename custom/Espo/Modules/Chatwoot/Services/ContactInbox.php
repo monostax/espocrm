@@ -89,18 +89,39 @@ class ContactInbox
         return $query->build();
     }
 
-    private function scope(Request $request): Select
+    /** Workspace, access, conditions and the assignee pill: where every page and count of this list starts. */
+    private function listScope(Entity $workspace, SearchParams $params, mixed $assignee): SelectBuilder
     {
-        $workspace = $this->workspace($request);
-        $params = $this->searchParams->fetch($request)->withSelect(['id'])->withOrderBy(null)->withOffset(null)->withMaxSize(null);
+        $params = $params->withSelect(['id'])->withOrderBy(null)->withOffset(null)->withMaxSize(null);
         $query = $this->select->create()->from(static::ENTITY_TYPE)->withSearchParams($params)
             ->withStrictAccessControl()->withWherePermissionCheck()->withComplexExpressionsForbidden()->buildQueryBuilder()
             ->where(['tenantId' => $workspace->get('tenantId')])->select(['id'])->distinct()->order([])->limit(null, null);
-        $assignee = $request->getQueryParam('assignee_tab');
         if (in_array($assignee, ['me', 'unassigned'], true)) {
             if (!$this->acl->checkField(static::ENTITY_TYPE, 'assignedUser')) throw new Forbidden();
             $query->where(['assignedUserId' => $assignee === 'me' ? $this->user->getId() : null]);
         }
+        return $query;
+    }
+
+    /**
+     * A saved filter's sidebar badge: its records and the unread ones among them, scoped like the list it opens.
+     * $where is the filter's conditions as the list sends them.
+     *
+     * @param array<int, mixed> $where
+     * @return array{all: int, unread: int}
+     */
+    public function filterCounts(Entity $workspace, array $where, string $assignee): array
+    {
+        if (!$this->acl->checkScope(static::ENTITY_TYPE, 'read')) throw new Forbidden();
+        $scope = $this->listScope($workspace, SearchParams::fromRaw(['where' => $where]), $assignee)->build();
+        $records = $this->em->getRDBRepository(static::ENTITY_TYPE);
+        return ['all' => $records->clone($scope)->count(), 'unread' => $records->clone($this->unreadScope($scope))->count()];
+    }
+
+    private function scope(Request $request): Select
+    {
+        $workspace = $this->workspace($request);
+        $query = $this->listScope($workspace, $this->searchParams->fetch($request), $request->getQueryParam('assignee_tab'));
         $scope = $query->build();
         if ($tag = $request->getQueryParam('tag')) {
             if (!$this->acl->checkField(static::ENTITY_TYPE, CrmTags::FIELD) || !$this->acl->checkScope('CrmTag', 'read')) throw new Forbidden();
