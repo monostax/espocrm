@@ -16,8 +16,9 @@ use Espo\ORM\EntityManager;
  * Saved filters of the record lists (contacts, companies, initiatives, opportunities), per workspace.
  *
  * A saved filter is only a definition. Whoever opens it gets the list evaluated under their own access, so sharing
- * one with the workspace shares the question, never the answer. Owners manage their filters; a workspace administrator
- * may also remove another person's shared filter.
+ * one with the workspace shares the question, never the answer. A private filter belongs to its owner alone. A shared
+ * one may be renamed and edited by anyone in the workspace; only its owner or a workspace administrator removes it, and
+ * only the owner shares or unshares it (2026-11-24).
  */
 class RecordFilters
 {
@@ -63,11 +64,13 @@ class RecordFilters
     public function update(int $accountId, string $id, object $data): object
     {
         $workspace = $this->workspaces->workspace($accountId);
+        // Found means this person's own filter or a shared one, and both may be edited.
         $filter = $this->find($workspace, $id);
-        if ($filter->get('userId') !== $this->user->getId()) throw new Forbidden();
-        $filter->set($this->values($data, false));
+        $values = $this->values($data, false);
+        if (array_key_exists('shared', $values) && $filter->get('userId') !== $this->user->getId()) throw new Forbidden();
+        $filter->set($values);
         $this->em->saveEntity($filter);
-        return $this->present($filter, false);
+        return $this->present($filter, $this->administers($workspace));
     }
 
     public function delete(int $accountId, string $id): void
@@ -139,7 +142,7 @@ class RecordFilters
         return (object) [
             'id' => $filter->getId(), 'name' => $filter->get('name'), 'entityType' => $filter->get('entityType'),
             'definition' => $filter->get('definition'), 'shared' => (bool) $filter->get('shared'),
-            'mine' => $mine, 'canEdit' => $mine, 'canDelete' => $mine || $admin,
+            'mine' => $mine, 'canEdit' => $mine || (bool) $filter->get('shared'), 'canDelete' => $mine || $admin,
         ];
     }
 }
