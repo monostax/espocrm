@@ -12,6 +12,7 @@ use Espo\ORM\EntityManager;
 use Espo\Modules\FeatureRecordKnowledge\Services\Access;
 use Espo\Modules\FeatureRecordKnowledge\Services\Tenancy;
 use Espo\Modules\FeatureRecordKnowledge\Services\PredicateRegistry;
+use Espo\Modules\FeatureRecordKnowledge\Services\Relations;
 use Espo\Modules\FeatureRecordKnowledge\Tools\Evidence;
 
 /** The same evidence/registry boundary also covers direct ORM/import integrations. */
@@ -22,10 +23,14 @@ class Validate
     {
         if (!$entity->isNew()) {
             foreach (['tenantId', 'subjectType', 'subjectId', 'objectType', 'objectId', 'predicate', 'qualifiers', 'sourceDocumentId',
-                'sourceRevisionId', 'evidenceQuote', 'evidenceStart', 'evidenceEnd', 'origin', 'submissionKey', 'submissionHash'] as $field) {
+                'sourceRevisionId', 'evidenceQuote', 'evidenceStart', 'evidenceEnd', 'origin', 'via', 'submissionKey', 'submissionHash'] as $field) {
                 if ($entity->isAttributeChanged($field)) throw new Conflict('Claim identity, evidence and predicate semantics are immutable.');
             }
             return;
+        }
+        // Provenance is written by the service that created the link (enrichment), never by a client.
+        if ($entity->get('via') !== null && ($entity->get('via') !== Relations::VIA_ENRICHMENT || empty($options[Relations::VIA_OPTION]))) {
+            throw new BadRequest('Invalid claim provenance.');
         }
         $manual = $entity->get('origin') === 'manual';
         if (!in_array($entity->get('origin'), ['manual', 'assistant'], true) ||

@@ -17,11 +17,18 @@ use Espo\Modules\FeatureRecordKnowledge\Tools\Predicates;
 
 class Relations
 {
+    /** Provenance a service may give a link it creates; `origin` stays who confirmed it. */
+    public const VIA_ENRICHMENT = 'enrichment';
+    /** Save option that lets the creating service set `via`. */
+    public const VIA_OPTION = 'recordRelationVia';
+
     public function __construct(private EntityManager $em, private Access $access, private User $user, private NativeRelations $native,
         private Tenancy $tenancy, private PredicateRegistry $registry) {}
 
-    public function submit(object $input, bool $manual = false): array
+    /** @param ?string $via provenance from the calling service (enrichment), never from client input */
+    public function submit(object $input, bool $manual = false, ?string $via = null): array
     {
+        if ($via !== null && ($via !== self::VIA_ENRICHMENT || !$manual)) throw new BadRequest('Invalid provenance.');
         if ($manual && $this->user->isApi()) throw new Forbidden('API assistants submit proposals for human confirmation.');
         $allowed = ['subjectType', 'subjectId', 'objectType', 'objectId', 'predicate', 'sourceRevisionId', 'idempotencyKey',
             'qualifiers', 'evidenceQuote', 'evidenceStart', 'evidenceEnd', 'tenantId'];
@@ -49,7 +56,7 @@ class Relations
             'origin' => $manual ? 'manual' : 'assistant',
         ];
         $key = hash('sha256', $this->user->getId() . ':' . $input->idempotencyKey);
-        return $this->em->getTransactionManager()->run(function () use ($values, $key, $manual, $input, $tenantId, $hasEvidence) {
+        return $this->em->getTransactionManager()->run(function () use ($values, $key, $manual, $input, $tenantId, $hasEvidence, $via) {
             // Actor-scoped keys can be retried against different documents concurrently.
             $this->em->getRDBRepository('User')->select(['id'])->where(['id' => $this->user->getId()])->forUpdate()->findOne();
             $this->registry->lock($tenantId);
@@ -79,12 +86,13 @@ class Relations
             // even when that quote occurs more than once.
             if ($current && $current->getId() === $values['sourceRevisionId']) $anchor = [$values['evidenceStart'], $values['evidenceEnd']];
             if ($hasEvidence && $manual && !$anchor) throw new Conflict('Evidence is no longer supported by the current document.');
-            $claim = $this->em->createEntity('RecordRelation', [...$values,
+            // `via` stays out of the submission hash, so a replay from before provenance existed still matches.
+            $claim = $this->em->createEntity('RecordRelation', [...$values, 'via' => $via,
                 'submissionKey' => $key, 'submissionHash' => $hash,
                 'status' => !$hasEvidence || $anchor ? ($manual ? 'confirmed' : 'suggested') : 'stale',
                 'anchorRevisionId' => $anchor ? $current?->getId() : null, 'anchorStart' => $anchor[0] ?? null, 'anchorEnd' => $anchor[1] ?? null,
                 'decidedById' => $manual ? $this->user->getId() : null, 'decidedAt' => $manual ? gmdate('Y-m-d H:i:s') : null,
-            ]);
+            ], $via !== null ? [self::VIA_OPTION => true] : []);
             return $this->data($claim);
         });
     }

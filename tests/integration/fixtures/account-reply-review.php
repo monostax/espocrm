@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Espo\Core\Application;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Conflict;
 use Espo\Modules\FeatureJourney\Services\{AccountReplyReview, ActionContext, JourneyCatchUp, JourneyTargetPeople,
     JourneyWhatsAppOutbound, JourneyWhatsAppReplyTracker, PeriodParser, TransitionEvaluator, TransitionExecutor};
 
@@ -31,6 +32,7 @@ $good = '+5511987654321';
 $bad = '+5511991234567';
 $new = '+5511976543210';
 $extra = '+5511954321098';
+$new2 = '+5511965432109';
 $person->set('phoneNumberData', [(object) ['phoneNumber' => $good, 'primary' => true], (object) ['phoneNumber' => $extra]]);
 $em->saveEntity($person);
 $second->set('phoneNumberData', [(object) ['phoneNumber' => $bad, 'primary' => true]]);
@@ -132,15 +134,24 @@ $decide('resume');
 $check($get()->get('status') === 'Active' && $get()->get('currentStageId') === $d2->getId() &&
     $get()->get('enteredStageAt') === $atD2 && !isset($state()['catchUp']), 'The others did not return to D2.');
 
-// Another wrong number, then a number the contact already has replays from D0: it walks D0 → D2,
-// D2's task stays skipped, then everyone continues.
+// Another wrong number, then two numbers of two contacts in one resume: one the contact already has
+// (replayed, not saved again) and a typed one. They walk D0 → D2 together, D2's task stays skipped,
+// then everyone continues.
 $reply('780', $good);
 $decide('wrongNumber', ['conversation' => $cw->getId() . ':780']);
-$decide('resume', ['phone' => $extra, 'contactId' => $person->getId(), 'source' => 'record']);
-$check($get()->get('currentStageId') === $d0->getId() && array_keys($state()['catchUp']['phones'] ?? []) === [$extra],
-    'The contact\'s own number did not start from D0.');
+$decide('resume', ['numbers' => [
+    (object) ['phone' => $extra, 'contactId' => $person->getId(), 'source' => 'record'],
+    (object) ['phone' => $new2, 'contactId' => $second->getId(), 'source' => 'manual'],
+    (object) ['phone' => ' ' . $new2, 'contactId' => $person->getId(), 'source' => 'manual'],
+]]);
+$check($get()->get('currentStageId') === $d0->getId() && ($state()['catchUp']['phones'][$extra]['contactId'] ?? null) === $person->getId() &&
+    ($state()['catchUp']['phones'][$new2]['contactId'] ?? null) === $second->getId() && count($state()['catchUp']['phones']) === 2,
+    'The two numbers did not start from D0 together.');
 $check(count($em->getRepository('PhoneNumber')->getPhoneNumberData($em->getEntityById('Contact', $person->getId()))) === 2,
     'Replaying a number the contact has changed its phones.');
+$ctx = new ActionContext($a, $get(), $d2, $j, 'OnEnter', [], $tenant);
+$check($ctx->recipients([$person, $second]) === [$person, $second] && $ctx->phones([$good, $extra, $new2]) === [$extra, $new2],
+    'Both numbers do not get the catch-up.');
 $check($exec->execute($r->getId(), $step->getId()), 'The catch-up could not move to D2.');
 $check($get()->get('currentStageId') === $d2->getId() && !isset($state()['catchUp']), 'Reaching D2 did not end the catch-up.');
 $check($tasks() === 0, 'The catch-up created a task the company already had.');
@@ -174,4 +185,77 @@ $check(PeriodParser::weekdaySeconds(strtotime('2026-11-20 12:00 UTC'), strtotime
 $plain = $make('JourneyRecord', $base + ['targetType' => 'Account', 'targetId' => $make('Account', $t + ['name' => 'Plain'])->getId(),
     'status' => 'Active', 'currentStageId' => $d0->getId(), 'enteredStageAt' => gmdate('Y-m-d H:i:s')]);
 $check($exec->execute($plain->getId(), $step->getId()) && $tasks() === 1, 'D2 did not create its task outside a catch-up.');
-echo "Passed: pause, wrong number, numbers listed, number validation, enrichment number catch-up from D0, wrong new number back to D2, own number replay, history, second reply and end.\n";
+// Remove a contact at any time. Three contacts of another company, running at D2.
+$co = $make('Account', $t + ['name' => 'Removal']);
+[$ana, $bruno, $carla] = array_map(function ($name, $phone) use ($make, $t, $em, $co) {
+    $c = $make('Contact', $t + ['lastName' => $name]);
+    $c->set('phoneNumberData', [(object) ['phoneNumber' => $phone, 'primary' => true]]);
+    $em->saveEntity($c);
+    $em->getRelation($co, 'contacts')->relate($c);
+    return $em->getEntityById('Contact', $c->getId());
+}, ['Ana', 'Bruno', 'Carla'], ['+5511943210987', '+5511932109876', '+5511921098765']);
+$rr = $make('JourneyRecord', $base + ['targetType' => 'Account', 'targetId' => $co->getId(), 'status' => 'Active',
+    'currentStageId' => $d2->getId(), 'enteredStageAt' => $atD2, 'createdAt' => '2026-11-18 12:00:00',
+    'whatsAppChatwootAccountId' => $cw->getId()]);
+foreach ([[null, $d0], [$d0, $d2]] as [$from, $to]) {
+    $make('JourneyRecordLog', $t + ['recordId' => $rr->getId(), 'journeyId' => $j->getId(),
+        'fromStageId' => $from?->getId(), 'toStageId' => $to->getId(), 'firedBy' => 'system']);
+}
+$getR = fn () => $em->getEntityById('JourneyRecord', $rr->getId());
+$decideR = fn ($decision, $more = []) => $review->decide($rr->getId(), (object) ($more +
+    ['revision' => AccountReplyReview::summary($getR())['revision'], 'decision' => $decision]), $actor->getId(),
+    $acl, $f->create(JourneyTargetPeople::class), $f->create(JourneyWhatsAppOutbound::class), $exec);
+$replyR = function (string $conversation, string $phone) use ($em, $getR, $tracker, $cw, &$message) {
+    $record = $getR();
+    $record->set('whatsAppChatwootConversationId', $conversation);
+    $em->saveEntity($record, ['skipHooks' => true]);
+    $tracker->handleWebhookIncoming(['espoAccountId' => $cw->getId(), 'inboxExternalId' => 17,
+        'chatwootConversationId' => $conversation, 'chatwootMessageId' => ++$message, 'createdAt' => time(),
+        'replyPhone' => $phone]);
+};
+$listR = fn () => $review->contacts($getR(), $acl, $f->create(JourneyTargetPeople::class), $f->create(JourneyWhatsAppOutbound::class));
+
+// While running: Bruno gets nothing more and his replies don't pause the company.
+$decideR('removeContact', ['contactId' => $bruno->getId()]);
+$check($getR()->get('status') === 'Active', 'Removing a contact paused or stopped the cadence.');
+$check((new ActionContext($co, $getR(), $d2, $j, 'OnEnter', [], $tenant))->recipients([$ana, $bruno, $carla]) === [$ana, $carla],
+    'A removed contact still receives.');
+$replyR('790', '+5511932109876');
+$check($getR()->get('status') === 'Active', 'A removed contact\'s reply paused the cadence.');
+$sorted = static function (array $ids): array {
+    sort($ids);
+    return $ids;
+};
+$check($sorted(array_column($listR()['contacts'], 'contactId')) === $sorted([$ana->getId(), $carla->getId()]) &&
+    array_column($listR()['removedContacts'], 'contactId') === [$bruno->getId()], 'The removed contact is still listed.');
+
+// Ana's reply waits for review; removing her drops it, and she can't get a new number.
+$replyR('791', '+5511943210987');
+$check($getR()->get('status') === 'Paused' &&
+    ($listR()['pendingContacts'][$cw->getId() . ':791']['contactId'] ?? null) === $ana->getId(), 'The reply is not tied to Ana.');
+$decideR('removeContact', ['contactId' => $ana->getId()]);
+$check(AccountReplyReview::summary($getR())['pending'] === [] && $getR()->get('status') === 'Paused',
+    'Removing the replying contact did not drop her reply.');
+try {
+    $decideR('resume', ['phone' => '+5511910987654', 'contactId' => $ana->getId(), 'source' => 'manual']);
+    throw new RuntimeException('A removed contact got a new number.');
+} catch (BadRequest) {}
+
+// Carla gets a new number from D0; removing her while it catches up sends the run back to D2.
+$decideR('resume', ['phone' => '+5511910987654', 'contactId' => $carla->getId(), 'source' => 'manual']);
+$check($getR()->get('status') === 'Active' && $getR()->get('currentStageId') === $d0->getId(), 'Carla\'s number did not start from D0.');
+$decideR('removeContact', ['contactId' => $carla->getId()]);
+$check($getR()->get('status') === 'Active' && $getR()->get('currentStageId') === $d2->getId() &&
+    $getR()->get('enteredStageAt') === $atD2 && !isset(AccountReplyReview::state($getR())['catchUp']),
+    'Removing the only contact catching up did not return the run to D2.');
+
+// An ended cadence can't be changed.
+$ended = $getR();
+$ended->set('status', 'Exited');
+$em->saveEntity($ended, ['skipHooks' => true]);
+try {
+    $decideR('removeContact', ['contactId' => $ana->getId()]);
+    throw new RuntimeException('Removed a contact from an ended cadence.');
+} catch (Conflict) {}
+
+echo "Passed: pause, wrong number, numbers listed, number validation, enrichment number catch-up from D0, wrong new number back to D2, two numbers from two contacts in one resume, history, second reply and end, remove a contact at any time.\n";

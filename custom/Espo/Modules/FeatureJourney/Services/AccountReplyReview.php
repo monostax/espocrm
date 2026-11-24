@@ -57,7 +57,9 @@ class AccountReplyReview
             $key = $accountId . ':' . $p['chatwootConversationId'];
             $id = (string) ($p['chatwootMessageId'] ?? $p['messageId'] ?? '');
             $phone = PhoneNormalizer::normalize($p['replyPhone'] ?? null);
-            if (isset($state['excludedConversations'][$key]) || in_array($phone, $state['excluded'] ?? [], true)) {
+            // A number marked wrong, or a removed contact's number, no longer pauses the company.
+            if (isset($state['excludedConversations'][$key]) || in_array($phone, $state['excluded'] ?? [], true) ||
+                ($phone && in_array($phone, array_merge(...array_values($state['removedContacts'] ?? [])), true))) {
                 return true;
             }
             if ($id !== '' && isset($state['seen'][$key . ':' . $id])) {
@@ -85,6 +87,26 @@ class AccountReplyReview
         });
     }
 
+    /**
+     * Credits the time since $since (UTC) to the wait at the record's current stage, so a resumed
+     * run keeps the wait that was left ({@see PeriodParser::isStageDue}).
+     */
+    public static function hold(Entity $r, array $s, ?string $since, string $zone): array
+    {
+        if (($s['heldStage'] ?? null) !== $r->get('currentStageId') ||
+            ($s['heldEntered'] ?? null) !== $r->get('enteredStageAt')) {
+            $s['heldSeconds'] = $s['heldWeekdaySeconds'] = 0;
+        }
+        $now = time();
+        $start = $since ? strtotime($since . ' UTC') : $now;
+        $s['heldSeconds'] = ($s['heldSeconds'] ?? 0) + max(0, $now - $start);
+        $s['heldWeekdaySeconds'] = ($s['heldWeekdaySeconds'] ?? 0) + PeriodParser::weekdaySeconds($start, $now, $zone);
+        $s['heldStage'] = $r->get('currentStageId');
+        $s['heldEntered'] = $r->get('enteredStageAt');
+
+        return $s;
+    }
+
     /** Only return the data necessary to review this enrollment. */
     public static function summary(Entity $record): array
     {
@@ -105,12 +127,15 @@ class AccountReplyReview
     }
 
     /**
-     * The company's contacts a number can be picked for when resuming. `wrongNumber` marks the
-     * contacts whose number was marked wrong, the usual place for the new one. With edit access,
-     * `numbers` lists what can replay the cadence on each contact: its own numbers (`record`)
-     * and the numbers enrichment found that no contact of the company has (`enrichment`).
+     * The company's contacts that still get the cadence: the ones a number can be picked for
+     * when resuming, and the ones that can be removed. `wrongNumber` marks the contacts whose
+     * number was marked wrong, the usual place for the new one. With edit access, `numbers`
+     * lists what can replay the cadence on each contact: its own numbers (`record`) and the
+     * numbers enrichment found that no contact of the company has (`enrichment`).
+     * `removedContacts` are the readable contacts taken out of this cadence; `pendingContacts`
+     * names the contact behind each reply waiting for review.
      *
-     * @return array{contacts: list<array{contactId: string, contactName: string, wrongNumber: bool, numbers?: list<array<string, mixed>>}>, canAddNumber: bool}
+     * @return array{contacts: list<array{contactId: string, contactName: string, wrongNumber: bool, numbers?: list<array<string, mixed>>}>, removedContacts: list<array{contactId: string, contactName: string}>, pendingContacts: array<string, array{contactId: string, contactName: string}>, canAddNumber: bool}
      */
     public function contacts(
         Entity $record,
@@ -126,10 +151,11 @@ class AccountReplyReview
         $canAdd = $acl->checkScope('Contact', 'edit') && $acl->checkField('Contact', 'phoneNumber', 'edit');
         if (!$tenant || !$target || !$acl->check($target, 'read') ||
             !$acl->checkScope('Contact', 'read') || !$acl->checkField('Contact', 'phoneNumber', 'read')) {
-            return ['contacts' => [], 'canAddNumber' => false];
+            return ['contacts' => [], 'removedContacts' => [], 'pendingContacts' => [], 'canAddNumber' => false];
         }
         $state = self::state($record);
         $excluded = $state['excluded'] ?? [];
+        $removed = $state['removedContacts'] ?? [];
         $catchingUp = JourneyCatchUp::active($state) ? ($state['catchUp']['phones'] ?? []) : [];
         $canReadName = $acl->checkField('Contact', 'name', 'read');
         $canReadIdentities = $acl->checkScope('ContactChannelIdentity', 'read');
@@ -143,13 +169,25 @@ class AccountReplyReview
             }
         }
         $list = [];
+        $gone = [];
+        $repliers = [];
         foreach ($readable as [$person, $phones]) {
             $name = $canReadName ? trim((string) ($person->get('name') ?? '')) : '';
             if ($name === '' && $canReadName) {
                 $name = trim(((string) ($person->get('firstName') ?? '')) . ' ' . ((string) ($person->get('lastName') ?? '')));
             }
+            $id = (string) $person->getId();
+            if (isset($removed[$id])) {
+                $gone[] = ['contactId' => $id, 'contactName' => $name];
+                continue;
+            }
+            foreach ($state['pending'] ?? [] as $conversation => $reply) {
+                if ($reply['phone'] && in_array($reply['phone'], $phones, true)) {
+                    $repliers[$conversation] ??= ['contactId' => $id, 'contactName' => $name];
+                }
+            }
             $item = [
-                'contactId' => (string) $person->getId(),
+                'contactId' => $id,
                 'contactName' => $name,
                 'wrongNumber' => array_intersect($phones, $excluded) !== [],
             ];
@@ -161,7 +199,8 @@ class AccountReplyReview
         }
         usort($list, static fn ($a, $b) => (int) $b['wrongNumber'] <=> (int) $a['wrongNumber']);
 
-        return ['contacts' => $list, 'canAddNumber' => $canAdd && $list !== []];
+        return ['contacts' => $list, 'removedContacts' => $gone, 'pendingContacts' => $repliers,
+            'canAddNumber' => $canAdd && $list !== []];
     }
 
     /**
@@ -206,6 +245,15 @@ class AccountReplyReview
                 throw new Forbidden();
             }
             $s = self::state($r);
+            $decision = $input->decision ?? '';
+            if ($decision === 'removeContact') {
+                // Any time while the cadence runs, not only during a review.
+                if (!in_array($r->get('status'), ['Active', 'Processing', 'Paused'], true)) {
+                    throw new Conflict('This cadence is no longer running.');
+                }
+                $this->removeContact($r, $s, (string) ($input->contactId ?? ''), $actor, $acl, $people, $outbound);
+                return self::summary($r);
+            }
             if ($r->get('status') !== 'Paused' || !$r->get('replyPausedAt') || empty($s['revision']) ||
                 $s['revision'] !== ($input->revision ?? null)) {
                 throw new Conflict('This review changed. Reopen it before continuing.');
@@ -215,7 +263,6 @@ class AccountReplyReview
             if (!$tenant || !$j || $j->get('tenantId') !== $tenant || $j->get('status') !== 'Active') {
                 throw new BadRequest('The parent journey must be active.');
             }
-            $decision = $input->decision ?? '';
             if ($decision === 'wrongNumber') {
                 $key = (string) ($input->conversation ?? '');
                 $phone = $s['pending'][$key]['phone'] ?? null;
@@ -234,48 +281,54 @@ class AccountReplyReview
                 $this->saveState($r, $s);
                 $this->log($r, $decision, $actor, ['conversation' => $key]);
             } elseif ($decision === 'resume') {
-                if (!empty($s['pending']) || empty($s['excluded'])) {
+                if (!empty($s['pending'])) {
                     throw new BadRequest('Review every reply before resuming.');
                 }
-                if (trim((string) ($input->phone ?? '')) !== '') {
-                    // The picked number starts from the Entry stage; the others wait where they are.
-                    [$phone, $contact] = $this->catchUpNumber($r, $s, (string) $input->phone,
-                        (string) ($input->contactId ?? ''), (string) ($input->source ?? 'manual'), $tenant, $acl, $people, $outbound);
+                // `numbers`: [{contactId, phone, source}]. A single `phone`/`contactId` is one number.
+                $picks = is_array($input->numbers ?? null) ? $input->numbers : (trim((string) ($input->phone ?? '')) !== ''
+                    ? [(object) ['phone' => $input->phone, 'contactId' => $input->contactId ?? '', 'source' => $input->source ?? 'manual']] : []);
+                if (count($picks) > 20) {
+                    throw new BadRequest('Pick at most 20 numbers at a time.');
+                }
+                if ($picks !== []) {
+                    // The picked numbers start from the Entry stage together; the others wait where they are.
+                    $added = [];
+                    foreach ($picks as $pick) {
+                        $pick = (object) $pick;
+                        $raw = trim((string) ($pick->phone ?? ''));
+                        if (isset($added[PhoneNormalizer::normalize($raw) ?? ''])) {
+                            continue;
+                        }
+                        [$phone, $contact] = $this->catchUpNumber($r, $s, $raw, (string) ($pick->contactId ?? ''),
+                            (string) ($pick->source ?? 'manual'), $tenant, $acl, $people, $outbound);
+                        $added[$phone] = (string) $contact->getId();
+                    }
                     $s = JourneyCatchUp::start($s, (string) $r->get('currentStageId'), $r->get('enteredStageAt'),
-                        $this->visitedStages($r), $phone, $contact->getId());
+                        $this->visitedStages($r), $added);
                     unset($s['heldSeconds'], $s['heldWeekdaySeconds'], $s['heldStage'], $s['heldEntered']);
                     $r->set(['status' => 'Active', 'replyPausedAt' => null]);
                     $this->saveState($r, $s);
-                    $this->log($r, $decision, $actor, ['contactId' => $contact->getId(), 'catchUp' => true]);
+                    $this->log($r, $decision, $actor, ['contactIds' => array_values(array_unique($added)),
+                        'numbers' => count($added), 'catchUp' => true]);
                     if (!$executor->restartForCatchUp($id)) {
-                        throw new Conflict('The cadence could not restart for the new number. Try again.');
+                        throw new Conflict('The cadence could not restart for the new numbers. Try again.');
                     }
                     return self::summary($this->em->getEntityById('JourneyRecord', $id));
                 }
                 if (JourneyCatchUp::abandoned($s)) {
                     // Every added number was wrong: the others continue from the stage they waited at.
                     $from = $r->get('currentStageId');
-                    $until = (string) $s['catchUp']['until'];
-                    $entered = $s['catchUp']['untilEnteredAt'] ?? null;
-                    unset($s['catchUp'], $s['heldSeconds'], $s['heldWeekdaySeconds'], $s['heldStage'], $s['heldEntered']);
-                    $r->set(['status' => 'Active', 'replyPausedAt' => null, 'currentStageId' => $until,
-                        'enteredStageAt' => $entered ?: gmdate('Y-m-d H:i:s')]);
+                    $s = $this->endCatchUp($r, $s);
+                    $r->set(['status' => 'Active', 'replyPausedAt' => null]);
                     $this->saveState($r, $s);
                     $this->log($r, $decision, $actor, ['catchUpEnded' => true], $from);
                     return self::summary($r);
                 }
-                // Everyone except the numbers marked wrong continues, with the wait that was left.
-                $now = time();
-                $start = strtotime($r->get('replyPausedAt') . ' UTC');
-                if (($s['heldStage'] ?? null) !== $r->get('currentStageId') ||
-                    ($s['heldEntered'] ?? null) !== $r->get('enteredStageAt')) {
-                    $s['heldSeconds'] = $s['heldWeekdaySeconds'] = 0;
-                }
-                $s['heldSeconds'] = ($s['heldSeconds'] ?? 0) + max(0, $now - $start);
-                $s['heldWeekdaySeconds'] = ($s['heldWeekdaySeconds'] ?? 0) +
-                    PeriodParser::weekdaySeconds($start, $now, $j->get('timeZone') ?: 'UTC');
-                $s['heldStage'] = $r->get('currentStageId');
-                $s['heldEntered'] = $r->get('enteredStageAt');
+                // Everyone except the numbers marked wrong continues, with the wait that was left;
+                // a pause made by hand before the reply counts as held too.
+                $since = min(array_filter([$r->get('replyPausedAt'), $s['pausedAt'] ?? null]));
+                $s = self::hold($r, $s, $since, $j->get('timeZone') ?: 'UTC');
+                unset($s['pausedAt']);
                 $r->set(['status' => 'Active', 'replyPausedAt' => null]);
                 $this->saveState($r, $s);
                 $this->log($r, $decision, $actor);
@@ -307,6 +360,67 @@ class AccountReplyReview
             }
             return self::summary($r);
         });
+    }
+
+    /**
+     * Takes one of the company's contacts out of this cadence: no more messages to them on any
+     * channel ({@see ActionContext::recipients}), their replies no longer pause it, and replies of
+     * theirs waiting for review are dropped. The others continue. Kept as
+     * `removedContacts: {contactId: [phone]}`, with the phones they had when removed.
+     */
+    private function removeContact(Entity $r, array $s, string $contactId, string $actor, Acl $acl,
+        JourneyTargetPeople $people, JourneyWhatsAppOutbound $outbound): void
+    {
+        $target = $r->get('targetType') === 'Account' && $r->get('targetId')
+            ? $this->em->getEntityById('Account', (string) $r->get('targetId')) : null;
+        if (!$target || !$acl->check($target, 'read')) {
+            throw new Forbidden();
+        }
+        $contact = null;
+        foreach ($people->forTarget($target, (string) $r->get('tenantId')) as $person) {
+            if ($person->getEntityType() === 'Contact' && $person->getId() === $contactId) {
+                $contact = $person;
+            }
+        }
+        if (!$contact || !$acl->check($contact, 'read')) {
+            throw new BadRequest('Pick one of the company\'s contacts.');
+        }
+        if (isset($s['removedContacts'][$contactId])) {
+            return;
+        }
+        $phones = $outbound->resolvePhones($contact);
+        $s['removedContacts'][$contactId] = $phones;
+        foreach ($s['pending'] ?? [] as $conversation => $item) {
+            if ($item['phone'] && in_array($item['phone'], $phones, true)) {
+                $s['excludedConversations'][$conversation] = true;
+                unset($s['pending'][$conversation]);
+            }
+        }
+        foreach (JourneyCatchUp::active($s) ? $s['catchUp']['phones'] ?? [] : [] as $phone => $item) {
+            if (($item['contactId'] ?? '') === $contactId) {
+                $s = JourneyCatchUp::drop($s, (string) $phone);
+            }
+        }
+        // Their numbers were the only ones catching up: the others stop waiting. A paused run does this on resume.
+        $from = null;
+        if (JourneyCatchUp::abandoned($s) && $r->get('status') === 'Active') {
+            $from = $r->get('currentStageId');
+            $s = $this->endCatchUp($r, $s);
+        }
+        $s['revision'] = bin2hex(random_bytes(12));
+        $this->saveState($r, $s);
+        $this->log($r, 'removeContact', $actor, ['contactId' => $contactId] + ($from ? ['catchUpEnded' => true] : []), $from);
+    }
+
+    /** Nobody is left to catch up: back to the stage the others waited at, with its original entry time. */
+    private function endCatchUp(Entity $r, array $s): array
+    {
+        $until = (string) $s['catchUp']['until'];
+        $entered = $s['catchUp']['untilEnteredAt'] ?? null;
+        unset($s['catchUp'], $s['heldSeconds'], $s['heldWeekdaySeconds'], $s['heldStage'], $s['heldEntered']);
+        $r->set(['currentStageId' => $until, 'enteredStageAt' => $entered ?: gmdate('Y-m-d H:i:s')]);
+
+        return $s;
     }
 
     /**
@@ -354,6 +468,9 @@ class AccountReplyReview
         }
         if (!$contact || !$acl->check($contact, 'read')) {
             throw new BadRequest('Pick one of the company\'s contacts for the new number.');
+        }
+        if (isset($s['removedContacts'][$contact->getId()])) {
+            throw new BadRequest('This contact was removed from this cadence.');
         }
         if ($outbound->isOptedOut($contact)) {
             throw new BadRequest('This contact opted out of WhatsApp.');

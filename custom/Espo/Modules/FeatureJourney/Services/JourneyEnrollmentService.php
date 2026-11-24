@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Espo\Modules\FeatureJourney\Services;
 
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Utils\Log;
 use Espo\Entities\User;
@@ -626,5 +627,94 @@ class JourneyEnrollmentService
         $fresh = $this->entityManager->getEntityById(JourneyRecord::ENTITY_TYPE, $recordId);
 
         return $fresh ?? $record;
+    }
+
+    /**
+     * Operator pause (status → Paused): timers, signals and the SLA only pick up Active records,
+     * so nothing runs until resumeRecord(). Pausing a paused record does nothing.
+     *
+     * @throws NotFound
+     * @throws Conflict while the record runs a step, waits for reply review, or no longer runs
+     */
+    public function pauseRecord(string $recordId, ?string $actorUserId = null): Entity
+    {
+        return $this->entityManager->getTransactionManager()->run(function () use ($recordId, $actorUserId) {
+            $record = $this->lockRecord($recordId);
+            if ($record->get('status') === JourneyRecord::STATUS_PAUSED) {
+                return $record;
+            }
+            // A claimed record is running a step and would put its own status back on release.
+            if ($record->get('status') !== JourneyRecord::STATUS_ACTIVE || $record->get('claimedAt') ||
+                $record->get('replyPausedAt')) {
+                throw new Conflict('This cadence can\'t be paused right now.');
+            }
+            $state = AccountReplyReview::state($record);
+            $state['pausedAt'] = gmdate('Y-m-d H:i:s');
+            $record->set(['status' => JourneyRecord::STATUS_PAUSED, 'replyReviewState' => (object) $state]);
+            $this->entityManager->saveEntity($record, [SaveOption::SILENT => true, self::SKIP_OPT => true]);
+            $this->logStatusChange($record, 'pause', $actorUserId);
+
+            return $record;
+        });
+    }
+
+    /**
+     * Resumes a pauseRecord() pause with the wait that was left at its stage. A record paused
+     * for reply review resumes from that review instead. Resuming a running record does nothing.
+     *
+     * @throws NotFound
+     * @throws Conflict
+     * @throws BadRequest when the journey is not active
+     */
+    public function resumeRecord(string $recordId, ?string $actorUserId = null): Entity
+    {
+        return $this->entityManager->getTransactionManager()->run(function () use ($recordId, $actorUserId) {
+            $record = $this->lockRecord($recordId);
+            if (in_array($record->get('status'), [JourneyRecord::STATUS_ACTIVE, JourneyRecord::STATUS_PROCESSING], true)) {
+                return $record;
+            }
+            if ($record->get('status') !== JourneyRecord::STATUS_PAUSED || $record->get('replyPausedAt')) {
+                throw new Conflict('This cadence can\'t be resumed here.');
+            }
+            $journey = $this->entityManager->getEntityById(Journey::ENTITY_TYPE, (string) $record->get('journeyId'));
+            if (!$journey || $journey->get('status') !== Journey::STATUS_ACTIVE) {
+                throw new BadRequest('The parent journey must be active.');
+            }
+            $state = AccountReplyReview::state($record);
+            $state = AccountReplyReview::hold($record, $state, $state['pausedAt'] ?? null,
+                (string) ($journey->get('timeZone') ?: 'UTC'));
+            unset($state['pausedAt']);
+            $record->set(['status' => JourneyRecord::STATUS_ACTIVE, 'replyReviewState' => (object) $state]);
+            $this->entityManager->saveEntity($record, [SaveOption::SILENT => true, self::SKIP_OPT => true]);
+            $this->logStatusChange($record, 'resume', $actorUserId);
+
+            return $record;
+        });
+    }
+
+    private function lockRecord(string $recordId): Entity
+    {
+        $record = $this->entityManager->getRDBRepository(JourneyRecord::ENTITY_TYPE)
+            ->where(['id' => $recordId])->forUpdate()->findOne();
+        if (!$record) {
+            throw new NotFound("JourneyRecord {$recordId} not found.");
+        }
+
+        return $record;
+    }
+
+    private function logStatusChange(Entity $record, string $action, ?string $actorUserId): void
+    {
+        $this->entityManager->createEntity(JourneyRecordLog::ENTITY_TYPE, [
+            'recordId' => $record->getId(),
+            'journeyId' => $record->get('journeyId'),
+            'tenantId' => $record->get('tenantId'),
+            'fromStageId' => $record->get('currentStageId'),
+            'toStageId' => null,
+            'firedBy' => JourneyRecordLog::FIRED_BY_USER,
+            'actorId' => $actorUserId ?: null,
+            'eventPayload' => ['action' => $action],
+            'teamsIds' => $record->getLinkMultipleIdList('teams'),
+        ], [SaveOption::SILENT => true, self::SKIP_OPT => true]);
     }
 }

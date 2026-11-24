@@ -20,7 +20,7 @@ class JourneyCatchUpTest extends TestCase
     private function startedAtD3(): array
     {
         return JourneyCatchUp::start(['excluded' => [self::WRONG]], 'd3', '2026-11-20 12:00:00',
-            ['d0', 'd2'], self::NEW, 'joao');
+            ['d0', 'd2'], [self::NEW => 'joao']);
     }
 
     /** Walk one stage the way TransitionExecutor does. */
@@ -67,7 +67,7 @@ class JourneyCatchUpTest extends TestCase
 
     public function testCaughtUpAtTheEntryStageEndsRightAway(): void
     {
-        $s = JourneyCatchUp::start([], 'd0', '2026-11-23 16:45:47', ['d0'], self::NEW, 'joao');
+        $s = JourneyCatchUp::start([], 'd0', '2026-11-23 16:45:47', ['d0'], [self::NEW => 'joao']);
         self::assertSame([self::NEW => 'joao'], JourneyCatchUp::lane($s, 'd0', 'OnEnter'));
         self::assertFalse(JourneyCatchUp::active($this->enter($s, 'd0')));
     }
@@ -75,13 +75,23 @@ class JourneyCatchUpTest extends TestCase
     public function testSecondNumberRestartsAndTheFirstWaitsAtTheStageItReached(): void
     {
         $s = $this->enter($this->startedAtD3(), 'd0');
-        $s = JourneyCatchUp::start($s, 'd2', '2026-11-25 12:00:00', ['d0'], self::SECOND, 'maria');
+        $s = JourneyCatchUp::start($s, 'd2', '2026-11-25 12:00:00', ['d0'], [self::SECOND => 'maria']);
 
         self::assertSame('d3', $s['catchUp']['until'], 'the others still wait at the first stop');
         self::assertSame('2026-11-20 12:00:00', $s['catchUp']['untilEnteredAt']);
         self::assertSame([self::SECOND => 'maria'], JourneyCatchUp::lane($s, 'd0', 'OnEnter'));
         $s = $this->enter($s, 'd0');
         self::assertSame([self::SECOND => 'maria'], JourneyCatchUp::lane($s, 'd0', 'OnExit'), 'only who entered in this pass leaves it');
+        self::assertSame([self::NEW => 'joao', self::SECOND => 'maria'], JourneyCatchUp::lane($s, 'd2', 'OnEnter'));
+    }
+
+    public function testNumbersAddedTogetherWalkTheStagesTogether(): void
+    {
+        $s = JourneyCatchUp::start([], 'd3', '2026-11-20 12:00:00', ['d0', 'd2'], [self::NEW => 'joao', self::SECOND => 'maria']);
+        self::assertSame(1, $s['catchUp']['pass']);
+        self::assertSame([self::NEW => 'joao', self::SECOND => 'maria'], JourneyCatchUp::lane($s, 'd0', 'OnEnter'));
+        $s = $this->enter($s, 'd0');
+        self::assertSame([self::NEW => 'joao', self::SECOND => 'maria'], JourneyCatchUp::lane($s, 'd0', 'OnExit'));
         self::assertSame([self::NEW => 'joao', self::SECOND => 'maria'], JourneyCatchUp::lane($s, 'd2', 'OnEnter'));
     }
 
@@ -105,6 +115,21 @@ class JourneyCatchUpTest extends TestCase
         $after = $this->context(['excluded' => [self::WRONG]], 'd4');
         self::assertSame([$joao, $maria], $after->recipients([$joao, $maria]));
         self::assertSame([self::OLD, self::NEW], $after->phones([self::OLD, self::WRONG, self::NEW]));
+    }
+
+    public function testRemovedContactsNeverReceive(): void
+    {
+        $joao = $this->entity('Contact', 'joao');
+        $maria = $this->entity('Contact', 'maria');
+        $account = $this->entity('Account', 'account');
+
+        $ctx = $this->context(['removedContacts' => ['maria' => [self::OLD]]], 'd4');
+        self::assertSame([$joao], $ctx->recipients([$joao, $maria]));
+        // A phone override sends once against the company itself.
+        self::assertSame([$account], $ctx->recipients([$account]));
+
+        $catchingUp = $this->context(['removedContacts' => ['joao' => []]] + $this->startedAtD3(), 'd0');
+        self::assertSame([], $catchingUp->recipients([$joao, $maria]));
     }
 
     private function context(array $state, string $stageId): ActionContext

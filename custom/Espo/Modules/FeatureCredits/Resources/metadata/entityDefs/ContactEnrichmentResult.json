@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "tenant": {"type": "link", "readOnly": true},
+        "contact": {"type": "link", "readOnly": true},
+        "type": {"type": "enum", "options": ["email", "phone"], "readOnly": true},
+        "valueHash": {"type": "varchar", "maxLength": 64, "readOnly": true},
+        "valid": {"type": "bool", "readOnly": true},
+        "added": {"type": "bool", "readOnly": true},
+        "foundAt": {"type": "datetime", "readOnly": true}
+    },
+    "links": {
+        "tenant": {"type": "belongsTo", "entity": "Tenant"},
+        "contact": {"type": "belongsTo", "entity": "Contact"}
+    },
+    "indexes": {
+        "contactValue": {"unique": true, "columns": ["contactId", "type", "valueHash"]},
+        "tenantContact": {"columns": ["tenantId", "contactId"]}
+    },
+    "collection": {"orderBy": "foundAt", "order": "desc"}
+}

@@ -17,6 +17,12 @@
         "anchorEnd": {"type": "int"},
         "status": {"type": "enum", "options": ["suggested", "confirmed", "rejected", "stale"], "default": "suggested"},
         "origin": {"type": "enum", "options": ["manual", "assistant"]},
+        "via": {
+            "type": "varchar",
+            "maxLength": 32,
+            "readOnly": true,
+            "tooltip": false
+        },
         "submissionKey": {"type": "varchar", "maxLength": 64, "required": true},
         "submissionHash": {"type": "varchar", "maxLength": 64, "required": true},
         "createdAt": {"type": "datetime", "readOnly": true},

@@ -39,4 +39,18 @@ class LockOwnerTest extends TestCase
 
         $this->addToAssertionCount(1);
     }
+
+    /**
+     * Relating a key from the User side (POST /User/{id}/userApiKeys, mass
+     * link, or userApiKeysIds on update) writes userId with a plain UPDATE,
+     * so LockOwner never runs. A read-only link is refused for edit for
+     * everyone, admins included (AclManager::getGlobalRestrictionTypeList).
+     */
+    public function testKeysCannotBeRelatedToAUserFromTheUserSide(): void
+    {
+        $path = dirname(__DIR__, 7) . '/custom/Espo/Modules/Global/Resources/metadata/entityDefs/User.json';
+        $defs = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertTrue($defs['links']['userApiKeys']['readOnly'] ?? false);
+    }
 }

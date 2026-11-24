@@ -17,7 +17,8 @@ use Throwable;
  * purchased, and announces them only after that transaction commits: one `enrichment.found`
  * signal per found value, subject = the Contact. The signal carries the receipt id, product
  * and value index, never the value; actions resolve it from the encrypted receipt as their
- * run-as user. Announcing never breaks enrichment: failures are logged and dropped.
+ * run-as user. Announcing never breaks enrichment: failures are logged and dropped. The same Contacts get their
+ * enrichmentResults rows recomputed (ContactEnrichmentResults).
  */
 class FoundResults
 {
@@ -35,6 +36,7 @@ class FoundResults
         private Crypt $crypt,
         private InjectableFactory $injectableFactory,
         private Log $log,
+        private ?ContactEnrichmentResults $results = null,
     ) {}
 
     public function reset(): void
@@ -75,6 +77,9 @@ class FoundResults
         if ($pending === []) {
             return;
         }
+
+        // Record queries read found values as enrichmentResults rows; never breaks enrichment either.
+        $this->results?->refreshQuietly(array_column($pending, 'contactId'));
 
         try {
             // Built only when there is something to announce: the automation runtime is heavy.

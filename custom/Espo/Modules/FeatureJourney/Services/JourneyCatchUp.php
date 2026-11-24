@@ -68,13 +68,14 @@ final class JourneyCatchUp
     }
 
     /**
-     * Add a number that starts from the Entry stage. A run already catching up keeps its
-     * `until` and `visited`, so the others still wait for the same stage.
+     * Add numbers that start from the Entry stage, together in one pass. A run already
+     * catching up keeps its `until` and `visited`, so the others still wait for the same stage.
      *
      * @param list<string> $visited stages the company already got
+     * @param array<string, string> $phones phone => contactId
      */
     public static function start(array $state, string $untilStageId, ?string $untilEnteredAt, array $visited,
-        string $phone, string $contactId): array
+        array $phones): array
     {
         $catchUp = self::active($state) ? $state['catchUp'] : [
             'until' => $untilStageId,
@@ -84,7 +85,9 @@ final class JourneyCatchUp
             'phones' => [],
         ];
         $catchUp['pass'] = (int) ($catchUp['pass'] ?? 0) + 1;
-        $catchUp['phones'][$phone] = ['contactId' => $contactId, 'received' => []];
+        foreach ($phones as $phone => $contactId) {
+            $catchUp['phones'][(string) $phone] = ['contactId' => $contactId, 'received' => []];
+        }
         $state['catchUp'] = $catchUp;
 
         return $state;

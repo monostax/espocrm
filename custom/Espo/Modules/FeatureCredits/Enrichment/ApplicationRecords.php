@@ -219,7 +219,7 @@ class ApplicationRecords
             } else {
                 $ids[] = $this->relations->submit((object) ['tenantId' => $tenant,'subjectType' => 'Contact','subjectId' => $contact,
                     'objectType' => 'Account','objectId' => $account,'predicate' => $item['predicate'],
-                    'qualifiers' => (object) $item['qualifiers'],'idempotencyKey' => 'enrichment:' . $key . ':' . $index],true)['id'];
+                    'qualifiers' => (object) $item['qualifiers'],'idempotencyKey' => 'enrichment:' . $key . ':' . $index],true,Relations::VIA_ENRICHMENT)['id'];
             }
         }
         return $ids;

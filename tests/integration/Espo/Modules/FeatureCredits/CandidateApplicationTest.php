@@ -180,6 +180,10 @@ class CandidateApplicationTest extends TestCase
         $service = $this->service(CandidateApplication::class); $input = $this->input($purchase);
         $receipt = $service->apply($input);
         $this->assertCount(2,$receipt['relationIds']);
+        // Record queries read this as the link's origin: contacts.where(origin = "enrichment").
+        foreach ($receipt['relationIds'] as $relationId) {
+            $this->assertSame('enrichment',$this->em->getEntityById('RecordRelation',$relationId)->get('via'));
+        }
         $this->assertSame($receipt,$service->apply($input));
         $retry = new ApplicationInput((object) ['tenantId' => $this->tenant,'purchaseId' => $purchase['id'],
             'createIfUnmatched' => false,'contactData' => (object) ['lastName' => 'Changed retry form']]);

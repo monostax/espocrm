@@ -193,7 +193,24 @@ class ActivityInbox
             }
             foreach ($records as $row) if (!empty($row->recurrenceSeriesId)) $row->recurrenceBadge = $badges[$row->recurrenceSeriesId] ?? null;
         }
-        return (object) ['list' => array_values(array_filter(array_map(fn ($row) => $records[$row['type'] . ':' . $row['id']] ?? null, $page))), 'total' => $total, 'hasMore' => $offset + $limit < $total];
+        $list = array_values(array_filter(array_map(fn ($row) => $records[$row['type'] . ':' . $row['id']] ?? null, $page)));
+        $this->accountFavicons($tenant, $list);
+        return (object) ['list' => $list, 'total' => $total, 'hasMore' => $offset + $limit < $total];
+    }
+
+    /** Company favicons for cards: one query, limited to accounts the viewer can read in this workspace. */
+    public function accountFavicons(Entity $tenant, array $rows): void
+    {
+        foreach ($rows as $row) $row->accountFaviconWebsite = null;
+        $ids = array_values(array_unique(array_filter(array_map(fn ($row) => $row->accountId ?? null, $rows))));
+        if (!$ids || !$this->acl->checkScope('Account', 'read') || !$this->acl->checkField('Account', 'website')) return;
+        $websites = [];
+        foreach ($this->em->getRDBRepository('Account')->clone(
+            $this->access->referenceQuery('Account', $tenant)->select(['id', 'website'])->where(['id' => $ids])->build()
+        )->find() as $account) {
+            $websites[$account->getId()] = trim((string) $account->get('website')) ?: null;
+        }
+        foreach ($rows as $row) $row->accountFaviconWebsite = $websites[$row->accountId ?? ''] ?? null;
     }
 
     public function counts(Entity $tenant, array $filters, array $allowedTypes = ['Task']): object

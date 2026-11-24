@@ -38,7 +38,8 @@
         "userApiKeys": {
             "type": "hasMany",
             "entity": "UserApiKey",
-            "foreign": "user"
+            "foreign": "user",
+            "readOnly": true
         },
         "appointmentsLocation": {
             "type": "hasMany",

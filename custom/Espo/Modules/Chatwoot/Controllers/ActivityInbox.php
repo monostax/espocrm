@@ -67,6 +67,7 @@ class ActivityInbox
             $data->calendarEventUrl = $this->meetingCalendarLink->resolve($detail);
         }
         $data->conversations = $this->inbox->conversations($record);
+        $this->inbox->accountFavicons($this->tenant($request), [$data]);
         return $data;
     }
 
@@ -76,7 +77,9 @@ class ActivityInbox
         $data = clone $request->getParsedBody();
         if ($type === 'Appointment') $this->access->validateAppointment($data, $this->tenant($request));
         $this->access->validateTeams($data, $this->tenant($request), true);
-        return $this->inbox->present($this->services->get($type)->create($data)->getEntity());
+        $result = $this->inbox->present($this->services->get($type)->create($data)->getEntity());
+        $this->inbox->accountFavicons($this->tenant($request), [$result]);
+        return $result;
     }
 
     public function putActionUpdate(Request $request): object
@@ -86,7 +89,9 @@ class ActivityInbox
         if ($record->getEntityType() === 'Appointment') $this->access->validateAppointment($data, $this->tenant($request));
         $this->access->validateTeams($data, $this->tenant($request), false);
         $params = (new \Espo\Core\Record\UpdateParamsFetcher())->fetch($request);
-        return $this->inbox->present($this->services->get($record->getEntityType())->update($record->getId(), $data, $params)->getEntity());
+        $result = $this->inbox->present($this->services->get($record->getEntityType())->update($record->getId(), $data, $params)->getEntity());
+        $this->inbox->accountFavicons($this->tenant($request), [$result]);
+        return $result;
     }
 
     public function deleteActionDelete(Request $request): bool

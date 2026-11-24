@@ -197,13 +197,14 @@ class JourneyRelationships
         return $this->present($this->record($tenant, $target, $id), $tenant, $target);
     }
 
-    public function replyReview(Entity $tenant, Entity $target, string $id): object
+    /** $enrichment false skips the enrichment numbers, for listing the contacts only. */
+    public function replyReview(Entity $tenant, Entity $target, string $id, bool $enrichment = true): object
     {
         $record = $this->reviewableRecord($tenant, $target, $id);
-        return $this->presentReplyReview($record);
+        return $this->presentReplyReview($record, $enrichment);
     }
 
-    public function decideReplyReview(Entity $tenant, Entity $target, string $id, object $input): object
+    public function decideReplyReview(Entity $tenant, Entity $target, string $id, object $input, bool $enrichment = true): object
     {
         $record = $this->reviewableRecord($tenant, $target, $id);
         $review = $this->injectableFactory->create(AccountReplyReview::class);
@@ -217,7 +218,7 @@ class JourneyRelationships
             $this->injectableFactory->create(TransitionExecutor::class),
         );
         $updated = $this->em->getEntityById('JourneyRecord', $record->getId()) ?? $record;
-        $response = $this->presentReplyReview($updated);
+        $response = $this->presentReplyReview($updated, $enrichment);
         $response->record = $this->present($updated, $tenant, $target);
         return $response;
     }
@@ -225,18 +226,24 @@ class JourneyRelationships
     private function reviewableRecord(Entity $tenant, Entity $target, string $id): Entity
     {
         $record = $this->record($tenant, $target, $id);
-        if ($target->getEntityType() !== 'Account' ||
-            !$this->acl->check($record, 'edit') ||
-            !$this->acl->checkField('JourneyRecord', 'status', 'edit') ||
-            !$this->acl->check($target, 'read') ||
-            !$this->acl->checkScope('Contact', 'read') ||
-            !$this->acl->checkField('Contact', 'phoneNumber', 'read')) {
+        if (!$this->canReview($record, $target)) {
             throw new Forbidden();
         }
         return $record;
     }
 
-    private function presentReplyReview(Entity $record): object
+    /** Reviewing replies and removing contacts: the cadence of a company the user can read. */
+    private function canReview(Entity $record, Entity $target): bool
+    {
+        return $target->getEntityType() === 'Account' &&
+            $this->acl->check($record, 'edit') &&
+            $this->acl->checkField('JourneyRecord', 'status', 'edit') &&
+            $this->acl->check($target, 'read') &&
+            $this->acl->checkScope('Contact', 'read') &&
+            $this->acl->checkField('Contact', 'phoneNumber', 'read');
+    }
+
+    private function presentReplyReview(Entity $record, bool $enrichment = true): object
     {
         $summary = AccountReplyReview::summary($record);
         $review = $this->injectableFactory->create(AccountReplyReview::class);
@@ -245,10 +252,17 @@ class JourneyRelationships
             $this->acl,
             $this->injectableFactory->create(JourneyTargetPeople::class),
             $this->injectableFactory->create(JourneyWhatsAppOutbound::class),
-            $this->injectableFactory->create(ContactPhones::class),
+            $enrichment ? $this->injectableFactory->create(ContactPhones::class) : null,
         );
+        // Who sent each reply waiting for review, when that contact is readable.
+        foreach ($summary['pendingContacts'] ?? [] as $conversation => $contact) {
+            if (isset($summary['pending'][$conversation])) {
+                $summary['pending'][$conversation] += $contact;
+            }
+        }
+        $summary['canRemoveContact'] = in_array($record->get('status'), self::LIVE, true);
         $summary['catchUpStageName'] = $this->catchUpStageName($record);
-        unset($summary['catchUpUntilStageId']);
+        unset($summary['catchUpUntilStageId'], $summary['pendingContacts']);
         return (object) $summary;
     }
 
@@ -268,20 +282,35 @@ class JourneyRelationships
     {
         return $record->get('status') === 'Paused' &&
             (bool) $record->get('replyPausedAt') &&
-            $target->getEntityType() === 'Account' &&
             $journey?->get('status') === 'Active' &&
-            $this->acl->check($record, 'edit') &&
-            $this->acl->checkField('JourneyRecord', 'status', 'edit') &&
-            $this->acl->check($target, 'read') &&
-            $this->acl->checkScope('Contact', 'read') &&
-            $this->acl->checkField('Contact', 'phoneNumber', 'read');
+            $this->canReview($record, $target);
+    }
+
+    /** Ending, pausing and resuming an enrollment of a record the user can edit. */
+    private function canChangeStatus(Entity $record, Entity $target): bool
+    {
+        return $this->acl->check($record, 'edit') && $this->acl->check($target, 'edit') &&
+            $this->acl->checkField('JourneyRecord', 'status', 'edit');
+    }
+
+    public function pause(Entity $tenant, Entity $target, string $id): object
+    {
+        $record = $this->record($tenant, $target, $id);
+        if (!$this->canChangeStatus($record, $target)) throw new Forbidden();
+        return $this->present($this->enrollment->pauseRecord($id, $this->user->getId()), $tenant, $target);
+    }
+
+    public function resume(Entity $tenant, Entity $target, string $id): object
+    {
+        $record = $this->record($tenant, $target, $id);
+        if (!$this->canChangeStatus($record, $target)) throw new Forbidden();
+        return $this->present($this->enrollment->resumeRecord($id, $this->user->getId()), $tenant, $target);
     }
 
     public function unlink(Entity $tenant, Entity $target, string $id): object
     {
         $record = $this->record($tenant, $target, $id);
-        if (!$this->acl->check($target, 'edit') || !$this->acl->check($record, 'edit') ||
-            !$this->acl->checkField('JourneyRecord', 'status', 'edit')) throw new Forbidden();
+        if (!$this->canChangeStatus($record, $target)) throw new Forbidden();
         // Retrying an exit is harmless; never delete the cycle or its history.
         if ($record->get('status') !== 'Exited') {
             $record = $this->enrollment->exitRecord($id, $this->user->getId(), 'manual');
@@ -331,9 +360,13 @@ class JourneyRelationships
             'replyPausedAt' => $this->value($record, 'replyPausedAt'),
             'cycleCount' => $this->value($record, 'cycleCount'), 'exitReason' => $this->value($record, 'exitReason'),
             'canReviewReply' => $this->canReviewReply($record, $target, $journey),
-            'canUnlink' => in_array($record->get('status'), self::LIVE, true) &&
-                $this->acl->check($record, 'edit') && $this->acl->check($target, 'edit') &&
-                $this->acl->checkField('JourneyRecord', 'status', 'edit'),
+            'canRemoveContact' => in_array($record->get('status'), self::LIVE, true) && $this->canReview($record, $target),
+            'canPause' => $record->get('status') === 'Active' && !$record->get('replyPausedAt') &&
+                $this->canChangeStatus($record, $target),
+            // Paused by hand; a pause for reply review resumes from the review (canReviewReply).
+            'canResume' => $record->get('status') === 'Paused' && !$record->get('replyPausedAt') &&
+                $journey?->get('status') === 'Active' && $this->canChangeStatus($record, $target),
+            'canUnlink' => in_array($record->get('status'), self::LIVE, true) && $this->canChangeStatus($record, $target),
             'canStream' => false, 'canDelete' => false,
         ];
     }

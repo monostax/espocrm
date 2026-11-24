@@ -83,6 +83,18 @@ class JourneyRelationships
         return $this->service->read($tenant, $target, (string) $request->getRouteParam('id'));
     }
 
+    public function postActionPause(Request $request): object
+    {
+        [$tenant, $target] = $this->context($request);
+        return $this->service->pause($tenant, $target, (string) $request->getRouteParam('id'));
+    }
+
+    public function postActionResume(Request $request): object
+    {
+        [$tenant, $target] = $this->context($request);
+        return $this->service->resume($tenant, $target, (string) $request->getRouteParam('id'));
+    }
+
     public function deleteActionUnlink(Request $request): object
     {
         [$tenant, $target] = $this->context($request);
@@ -92,7 +104,8 @@ class JourneyRelationships
     public function getActionReplyReview(Request $request): object
     {
         [$tenant, $target] = $this->context($request);
-        return $this->service->replyReview($tenant, $target, (string) $request->getRouteParam('id'));
+        return $this->service->replyReview($tenant, $target, (string) $request->getRouteParam('id'),
+            $request->getQueryParam('view') !== 'contacts');
     }
 
     public function postActionReplyReview(Request $request): object
@@ -104,6 +117,7 @@ class JourneyRelationships
             $target,
             (string) $request->getRouteParam('id'),
             is_object($body) ? $body : (object) [],
+            $request->getQueryParam('view') !== 'contacts',
         );
     }
 }

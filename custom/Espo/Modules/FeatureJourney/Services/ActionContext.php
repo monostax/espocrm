@@ -30,10 +30,17 @@ class ActionContext
         public readonly ?User $actor = null,
     ) {}
 
-    /** While a number added in reply review catches up, only its contact receives ({@see JourneyCatchUp}). */
+    /**
+     * Contacts removed from this cadence never receive. While a number added in reply review
+     * catches up, only its contact receives ({@see JourneyCatchUp}).
+     */
     public function recipients(array $people): array
     {
-        $lane = $this->lane(AccountReplyReview::state($this->record));
+        $state = AccountReplyReview::state($this->record);
+        $removed = $state['removedContacts'] ?? [];
+        $people = array_values(array_filter($people, static fn ($person) =>
+            !($person->getEntityType() === 'Contact' && isset($removed[$person->getId()]))));
+        $lane = $this->lane($state);
         if ($lane === null) {
             return $people;
         }

@@ -16,6 +16,7 @@ use Espo\Modules\FeatureCredits\Accounting\Clock;
 use Espo\Modules\FeatureCredits\Accounting\FixedSettlement;
 use Espo\Modules\FeatureCredits\Accounting\GrantInput;
 use Espo\Modules\FeatureCredits\Accounting\WalletLock;
+use Espo\Modules\FeatureCredits\Enrichment\ContactEnrichmentResults;
 use Espo\ORM\EntityManager;
 use PDO;
 
@@ -38,6 +39,7 @@ class Execution
         private ?Log $log = null,
         private ?BounceBanLookup $emailProvider = null,
         private ?WahaLookup $whatsAppProvider = null,
+        private ?ContactEnrichmentResults $results = null,
     ) {}
 
     /**
@@ -214,10 +216,12 @@ class Execution
         GrantInput::identity($tenantId);
         GrantInput::identity($operationId);
 
+        $contactId = null;
         $this->walletLock->run(
             $tenantId,
-            function (PDO $pdo, array $wallet, string $now) use ($tenantId, $operationId, $token, $result): void {
+            function (PDO $pdo, array $wallet, string $now) use ($tenantId, $operationId, $token, $result, &$contactId): void {
                 [$op, $usage, $hold] = $this->loadLocked($pdo, $tenantId, $operationId);
+                $contactId = $op['contact_id'];
                 if ($op['state'] !== 'claimed' || $usage['state'] !== 'admitted' ||
                     !is_string($op['claim_token']) || !hash_equals($op['claim_token'], $token)) {
                     return;
@@ -318,6 +322,8 @@ class Execution
                 );
             },
         );
+        // After commit: the Contact's enrichmentResults say whether each found value passed its latest check.
+        if (is_string($contactId)) $this->results?->refreshQuietly([$contactId]);
     }
 
     /**
@@ -354,12 +360,20 @@ class Execution
     public function expireEvidence(): void
     {
         $now = $this->clock->now();
+        // A check past its retention no longer makes a found value valid.
+        $expiring = $this->entityManager->getPDO()->prepare(
+            'SELECT DISTINCT contact_id FROM phone_verification_operation WHERE retention_expires_at <= ?
+             AND (identity_ciphertext IS NOT NULL OR evidence_ciphertext IS NOT NULL OR supplier_task_ciphertext IS NOT NULL)'
+        );
+        $expiring->execute([$now]);
+        $contactIds = $expiring->fetchAll(PDO::FETCH_COLUMN);
         $this->entityManager->getPDO()->prepare(
             'UPDATE phone_verification_operation
              SET identity_ciphertext = NULL, evidence_ciphertext = NULL, supplier_task_ciphertext = NULL, erased_at = COALESCE(erased_at, ?)
              WHERE retention_expires_at <= ?
              AND (identity_ciphertext IS NOT NULL OR evidence_ciphertext IS NOT NULL OR supplier_task_ciphertext IS NOT NULL)'
         )->execute([$now, $now]);
+        $this->results?->refreshQuietly($contactIds);
     }
 
     /**

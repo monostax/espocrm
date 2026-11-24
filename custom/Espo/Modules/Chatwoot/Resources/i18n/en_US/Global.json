@@ -24,7 +24,8 @@
         "WhatsAppCampaignDistributionEntry": "Campaign Distribution Entry",
         "ChatwootAccountUserMembership": "Chat / Account User",
         "CallCampaign": "Call Campaign",
-        "CallCampaignContact": "Call Campaign Contact"
+        "CallCampaignContact": "Call Campaign Contact",
+        "ContactEnrichmentResult": "Enrichment result"
     },
     "scopeNamesPlural": {
         "ChatwootAiAgentRun": "AI / Runs",
@@ -51,7 +52,8 @@
         "WhatsAppCampaignDistributionEntry": "Campaign Distribution Entries",
         "ChatwootAccountUserMembership": "Chat / Account Users",
         "CallCampaign": "Call Campaigns",
-        "CallCampaignContact": "Call Campaign Contacts"
+        "CallCampaignContact": "Call Campaign Contacts",
+        "ContactEnrichmentResult": "Enrichment results"
     },
     "navbarTabs": {
         "Conversations": "Conversations",
@@ -73,5 +75,23 @@
         "chatwootUnavailableMessage": "Your user isn't linked to an active workspace, or signing in to it failed. Try again, or ask an administrator of your workspace to add you.",
         "chatwootUnavailableRetry": "Try again",
         "chatwootUnavailableLogout": "Sign out"
+    },
+    "recordQuery": {
+        "enrichmentResults": "Enrichment results",
+        "origin": "Origin of the link"
+    },
+    "recordQueryOrigins": {
+        "manual": "Manual",
+        "assistant": "AI",
+        "enrichment": "Enrichment"
+    },
+    "recordQueryResultFields": {
+        "type": "Type",
+        "valid": "Verified valid",
+        "added": "Added to the contact's channels"
+    },
+    "recordQueryResultTypes": {
+        "email": "Email",
+        "phone": "Phone"
     }
 }

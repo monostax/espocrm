@@ -8,18 +8,26 @@ namespace Espo\Modules\Chatwoot\Tools\RecordQuery;
  * Record query text to a tree. No metadata here: names are resolved by the Compiler.
  *
  *   source = "Indicação" AND (account.industry IN ("SaaS", "Fintech") OR tags HAS "vip")
- *   AND opportunities(stage = "Won" AND amount > 1000) AND createdAt > -30d AND NOT assignedUser IS EMPTY
+ *   AND opportunities.any(stage = "Won" AND amount > 1000) AND createdAt > -30d AND NOT assignedUser IS EMPTY
+ *   AND contacts.where(origin = "enrichment").all(enrichmentResults.any(type = "email" AND valid = true))
+ *
+ * A relationship to one record reads like an object (`account.industry`); a relationship to many reads like a list and
+ * says how many must match: `.any(…)`, `.all(…)` (at least one, and every one), `.none(…)`, `.count(…) >= 2`, with
+ * `.where(…)` narrowing the list first. `contacts(…)` is short for `contacts.any(…)`.
  *
  * Nodes:
  *   ['and'|'or', list<node>]
  *   ['not', node]
- *   ['rel', path, ?node, position]             link(...) - has a related record matching all of it
+ *   ['list', path, 'any'|'all'|'none', list<node> where, ?node test, position]
+ *   ['count', path, list<node> where, ?node test, operator, int, position]
  *   ['cmp', path, operator, value, position]   operator: = != > >= < <= ~ !~ in notIn empty notEmpty
  * Values: ['str', string] ['num', string] ['bool', bool] ['kw', 'today'|'me'] ['ago', int, 'd'|'w'|'m'|'y'].
  */
 final class Parser
 {
     private const OPERATORS = ['!=', '>=', '<=', '!~', '=', '>', '<', '~', '(', ')', ',', '.'];
+    private const METHODS = ['any', 'all', 'none', 'where', 'count'];
+    private const COUNT_OPERATORS = ['=', '!=', '>', '>=', '<', '<='];
 
     /** @var list<array{string, mixed, int}> */
     private array $tokens = [];
@@ -108,6 +116,15 @@ final class Parser
         return $type === 'op' && $value === $operator;
     }
 
+    /** A list method name followed by its opening bracket, at token $at. */
+    private function isMethodAt(int $at): bool
+    {
+        [$type, $value] = $this->tokens[$at];
+        if ($type !== 'word' || !in_array(strtolower($value), self::METHODS, true)) return false;
+        [$type, $value] = $this->tokens[$at + 1];
+        return $type === 'op' && $value === '(';
+    }
+
     private function takeWord(string $keyword): bool
     {
         if (!$this->isWord($keyword)) return false;
@@ -164,7 +181,9 @@ final class Parser
         if ($type !== 'word') $this->unexpected('expected_field');
         $this->at++;
         $path = [$name];
-        while ($this->takeOp('.')) {
+        while ($this->isOp('.')) {
+            $this->at++;
+            if ($this->isMethodAt($this->at)) return $this->methods($path, $position);
             [$type, $name] = $this->peek();
             if ($type !== 'word') $this->unexpected('expected_field');
             $this->at++;
@@ -173,7 +192,7 @@ final class Parser
         if ($this->takeOp('(')) {
             $inner = $this->isOp(')') ? null : $this->either();
             if (!$this->takeOp(')')) $this->unexpected('expected_close');
-            return ['rel', $path, $inner, $position];
+            return ['list', $path, 'any', [], $inner, $position];
         }
         if ($this->takeWord('IS')) {
             $negated = $this->takeWord('NOT');
@@ -190,6 +209,39 @@ final class Parser
         if ($type !== 'op' || in_array($operator, ['(', ')', ',', '.'], true)) $this->unexpected('expected_operator');
         $this->at++;
         return ['cmp', $path, $operator, $this->value(), $position];
+    }
+
+    /**
+     * `path.where(…).where(…).all(…)`, entered on the first method name.
+     *
+     * @param list<string> $path
+     * @return array<int, mixed>
+     */
+    private function methods(array $path, int $position): array
+    {
+        $where = [];
+        while (true) {
+            [, $name, $at] = $this->peek();
+            $method = strtolower($name);
+            $this->at += 2;
+            $inner = $this->isOp(')') ? null : $this->either();
+            if (!$this->takeOp(')')) $this->unexpected('expected_close');
+            if ($method === 'count') {
+                [$type, $operator] = $this->peek();
+                if ($type !== 'op' || !in_array($operator, self::COUNT_OPERATORS, true)) $this->unexpected('expected_operator');
+                $this->at++;
+                [$type, $number] = $this->peek();
+                if ($type !== 'num' || !preg_match('/^\d{1,9}$/D', $number)) $this->unexpected('expected_count');
+                $this->at++;
+                return ['count', $path, $where, $inner, $operator, (int) $number, $position];
+            }
+            if ($method !== 'where') return ['list', $path, $method, $where, $inner, $position];
+            if ($inner === null) throw QueryError::at('expected_condition', $at, $name);
+            $where[] = $inner;
+            if (!$this->isOp('.')) return ['list', $path, 'any', $where, null, $position];
+            $this->at++;
+            if (!$this->isMethodAt($this->at)) $this->unexpected('expected_method');
+        }
     }
 
     /** @return list<array<int, mixed>> */

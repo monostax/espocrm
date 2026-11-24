@@ -10,6 +10,8 @@
     { "route": "/JourneyRelationships/:type/:targetId", "method": "delete", "params": { "controller": "JourneyRelationships", "action": "exitJourney", "type": ":type", "targetId": ":targetId" } },
     { "route": "/JourneyRelationships/:type/:targetId/:id/replyReview", "method": "get", "params": { "controller": "JourneyRelationships", "action": "replyReview", "type": ":type", "targetId": ":targetId", "id": ":id" } },
     { "route": "/JourneyRelationships/:type/:targetId/:id/replyReview", "method": "post", "params": { "controller": "JourneyRelationships", "action": "replyReview", "type": ":type", "targetId": ":targetId", "id": ":id" } },
+    { "route": "/JourneyRelationships/:type/:targetId/:id/pause", "method": "post", "params": { "controller": "JourneyRelationships", "action": "pause", "type": ":type", "targetId": ":targetId", "id": ":id" } },
+    { "route": "/JourneyRelationships/:type/:targetId/:id/resume", "method": "post", "params": { "controller": "JourneyRelationships", "action": "resume", "type": ":type", "targetId": ":targetId", "id": ":id" } },
     { "route": "/JourneyRelationships/:type/:targetId/:id", "method": "get", "params": { "controller": "JourneyRelationships", "action": "read", "type": ":type", "targetId": ":targetId", "id": ":id" } },
     { "route": "/JourneyRelationships/:type/:targetId/:id", "method": "delete", "params": { "controller": "JourneyRelationships", "action": "unlink", "type": ":type", "targetId": ":targetId", "id": ":id" } },
     { "route": "/Note/:id/streamAiStatus/:membershipId", "method": "post", "params": { "controller": "StreamAgent", "action": "status", "id": ":id", "membershipId": ":membershipId" } },

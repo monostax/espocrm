@@ -1,4 +1,6 @@
 {
     "actionClassNameList": ["__APPEND__", "Espo\\Modules\\FeatureCredits\\Classes\\RebuildActions\\BackfillEnrichmentStatus",
-        "Espo\\Modules\\FeatureCredits\\Classes\\RebuildActions\\SeedExternalSubscriptionJob"]
+        "Espo\\Modules\\FeatureCredits\\Classes\\RebuildActions\\SeedExternalSubscriptionJob",
+        "Espo\\Modules\\FeatureCredits\\Classes\\RebuildActions\\MarkEnrichmentRelations",
+        "Espo\\Modules\\FeatureCredits\\Classes\\RebuildActions\\BackfillContactEnrichmentResults"]
 }
