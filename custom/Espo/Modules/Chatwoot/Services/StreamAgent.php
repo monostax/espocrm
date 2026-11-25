@@ -33,6 +33,8 @@ class StreamAgent
         private \Espo\Modules\FeatureAiSession\Services\Execution $sessions,
         private \Espo\Core\FileStorage\Manager $files,
         private StreamAgentLive $live,
+        private \Espo\Core\InjectableFactory $injectableFactory,
+        private \Espo\Core\Utils\Log $log,
     ) {}
 
     /** Runtime-only media transport: never embed bytes/URLs in workflow context. */
@@ -169,8 +171,25 @@ class StreamAgent
             $this->entityManager->saveEntity($pending, [SaveOption::SKIP_MODIFIED_BY => true, SaveOption::SKIP_HOOKS => true]);
             return (object) ['published' => true, 'noteId' => $pending->getId(), 'replayed' => false];
         });
-        if ($result->published) $this->live->publish($this->existingReply($noteId, $membershipId));
+        if (!$result->published) return $result;
+        $reply = $this->existingReply($noteId, $membershipId);
+        $this->live->publish($reply);
+        if (!$result->replayed && $reply?->getParentType() === 'AiSession') $this->mirrorProgress($reply, hash('sha256', $post));
         return $result;
+    }
+
+    /**
+     * An AI Session turn that came from WhatsApp gets each progress message there at once (FeatureWhatsAppNotifications
+     * Assistant::progress), not after the whole turn. The message is already saved: a failed send is logged, never
+     * returned to the agent.
+     */
+    private function mirrorProgress(Note $reply, string $messageId): void
+    {
+        try {
+            $this->injectableFactory->create(\Espo\Modules\FeatureWhatsAppNotifications\Tools\Assistant::class)->progress($reply, $messageId);
+        } catch (\Throwable $e) {
+            $this->log->warning("Stream agent: WhatsApp progress for reply {$reply->getId()} failed: " . $e->getMessage());
+        }
     }
 
     public function reply(string $noteId, string $membershipId, string $postHash, string $post, string $runId): object

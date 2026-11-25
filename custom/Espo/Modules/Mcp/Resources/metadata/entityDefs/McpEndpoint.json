@@ -29,6 +29,12 @@
             },
             "audited": true
         },
+        "allUsers": {
+            "type": "bool",
+            "default": false,
+            "audited": true,
+            "tooltip": true
+        },
         "description": {
             "type": "text"
         },

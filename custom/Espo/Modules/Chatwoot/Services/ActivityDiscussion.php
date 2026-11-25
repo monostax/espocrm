@@ -31,9 +31,18 @@ class ActivityDiscussion
         private OpportunityEventAccess $eventAccess,
     ) {}
 
+    /** Parents whose Mural shows their own overdue event (2026-11-25). */
+    public const SELF_OVERDUE_TYPES = ['Task'];
+
     /** Apply before ordering, pagination, counts and cursor selection. Threads contain posts only. */
     public function entryWhere(string $type, ?string $root = null, string $alias = 'note'): array
     {
+        if ($root === null && in_array($type, self::SELF_OVERDUE_TYPES, true)) {
+            // Its own event only: reading the parent already grants reading the related record.
+            return ['OR' => [['type' => 'Post'], [
+                'type' => OpportunityStreamEvents::ACTIVITY_OVERDUE, 'relatedType' => $type, 'relatedId:' => "$alias.parentId",
+            ]]];
+        }
         if (!isset(OpportunityStreamEvents::DISCUSSION_ROLLOUT[$type]) || $root !== null) return ['type' => 'Post'];
         return [
             'type' => OpportunityStreamEvents::TYPES,
@@ -84,7 +93,8 @@ class ActivityDiscussion
 
     /**
      * Incoming mural messages and posts or replies that @mention the viewer make a record unread; plain posts
-     * never do. AI sessions are the viewer's own chat with an agent, so every reply counts.
+     * never do. A task's own overdue event is addressed to its assignee, creator and collaborators through the
+     * same mention ids. AI sessions are the viewer's own chat with an agent, so every reply counts.
      * Per-thread summaries still count every unread reply.
      */
     private function countsAsUnreadWhere(string $type): array

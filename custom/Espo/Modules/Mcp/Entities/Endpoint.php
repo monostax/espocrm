@@ -42,6 +42,7 @@ class Endpoint extends Entity
     public const string FIELD_SLUG = 'slug';
     public const string FIELD_URL = 'url';
     public const string FIELD_PUBLIC_DESCRIPTION = 'publicDescription';
+    public const string FIELD_ALL_USERS = 'allUsers';
 
     public const string LINK_USERS = 'users';
     private const string LINK_FEATURES = 'features';
@@ -51,6 +52,19 @@ class Endpoint extends Entity
     public function isActive(): bool
     {
         return $this->get(self::FIELD_STATUS) === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * Monostax: any user whose role has the `Mcp` scope may use the endpoint, not only linked users.
+     */
+    public function isForAllUsers(): bool
+    {
+        return (bool) $this->get(self::FIELD_ALL_USERS);
+    }
+
+    public function setForAllUsers(bool $forAllUsers): self
+    {
+        return $this->set(self::FIELD_ALL_USERS, $forAllUsers);
     }
 
     public function getSlug(): string

@@ -47,6 +47,7 @@ class OpportunityStreamAgentTest extends TestCase
     private bool $attachmentFields = true;
     private array $attachments = [];
     private \Espo\Core\FileStorage\Manager $files;
+    private \Espo\Core\InjectableFactory $factory;
 
     private function note(array $values = []): Note
     {
@@ -152,7 +153,8 @@ class OpportunityStreamAgentTest extends TestCase
         $this->service = new OpportunityStreamAgent($em, $user, $acl, $access, $this->createMock(NoteUtil::class), $activities,
             $this->createMock(StreamAgentProgress::class), $aclManager, $tenants, $this->createMock(\Espo\Modules\FeatureAiSession\Services\Execution::class),
             $this->files = $this->createMock(\Espo\Core\FileStorage\Manager::class),
-            $this->createMock(\Espo\Modules\Chatwoot\Services\StreamAgentLive::class));
+            $this->createMock(\Espo\Modules\Chatwoot\Services\StreamAgentLive::class),
+            $this->factory = $this->createMock(\Espo\Core\InjectableFactory::class), $this->createMock(\Espo\Core\Utils\Log::class));
     }
 
     private function mediaAttachment(string $postId = 'source'): void
@@ -424,8 +426,34 @@ class OpportunityStreamAgentTest extends TestCase
         self::assertSame('Final answer', $reply->getPost());
     }
 
+    public function testAnAiSessionProgressMessageGoesToWhatsAppOnceAndAFailedSendNeverReachesTheAgent(): void
+    {
+        $human = $this->createMock(User::class);
+        $human->method('isActive')->willReturn(true);
+        $this->records['User/human'] = $human;
+        $data = $this->source->getData();
+        $data->opportunityAiInitiatorUserId = 'human';
+        $this->source->setData($data);
+        $pending = $this->queuedReply();
+        $this->service->claim('source', 'ai', $this->postHash, 'run');
+        $pending->set('parentType', 'AiSession');
+        $assistant = $this->createMock(\Espo\Modules\FeatureWhatsAppNotifications\Tools\Assistant::class);
+        $assistant->expects(self::once())->method('progress')
+            ->with(self::callback(fn (Note $reply) => $reply->getId() === 'pending-reply'), hash('sha256', 'Vou verificar.'))
+            ->willThrowException(new \RuntimeException('Chatwoot is down'));
+        $this->factory->expects(self::once())->method('create')
+            ->with(\Espo\Modules\FeatureWhatsAppNotifications\Tools\Assistant::class)->willReturn($assistant);
+        $first = $this->service->message('source', 'ai', $this->postHash, 'Vou verificar.', 'run');
+        $again = $this->service->message('source', 'ai', $this->postHash, 'Vou verificar.', 'run');
+        self::assertTrue($first->published);
+        self::assertFalse($first->replayed);
+        self::assertTrue($again->replayed);
+    }
+
     public function testIntermediateMessageIsDeduplicatedAndDoesNotCompleteTheRun(): void
     {
+        // A mural reply: nothing goes to WhatsApp.
+        $this->factory->expects(self::never())->method('create');
         $human = $this->createMock(User::class);
         $human->method('isActive')->willReturn(true);
         $this->records['User/human'] = $human;

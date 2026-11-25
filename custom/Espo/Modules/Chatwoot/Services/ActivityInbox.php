@@ -8,6 +8,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Espo\Core\Acl;
 use Espo\Core\Exceptions\BadRequest;
+use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\Exceptions\NotFound;
 use Espo\Core\Record\ServiceContainer;
 use Espo\Core\Select\SearchParams;
 use Espo\Core\Select\SelectBuilderFactory;
@@ -16,6 +18,9 @@ use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Tools\Activities\Access;
 use Espo\Modules\Global\Tools\CrmTags;
 use Espo\Modules\FeatureTaskRecurrence\Tools\Schedule;
+use Espo\Modules\FeatureRecordKnowledge\Services\Access as KnowledgeAccess;
+use Espo\Modules\FeatureRecordKnowledge\Services\PredicateRegistry;
+use Espo\Modules\FeatureRecordKnowledge\Services\Tenancy;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Espo\ORM\Query\Part\Expression as Expr;
@@ -36,6 +41,9 @@ class ActivityInbox
         private ServiceContainer $services,
         private SelectBuilderFactory $select,
         private CrmTags $tags,
+        private KnowledgeAccess $knowledge,
+        private Tenancy $tenancy,
+        private PredicateRegistry $predicates,
     ) {}
 
     private function types(array $filters, array $allowedTypes): array
@@ -194,15 +202,17 @@ class ActivityInbox
             foreach ($records as $row) if (!empty($row->recurrenceSeriesId)) $row->recurrenceBadge = $badges[$row->recurrenceSeriesId] ?? null;
         }
         $list = array_values(array_filter(array_map(fn ($row) => $records[$row['type'] . ':' . $row['id']] ?? null, $page)));
-        $this->accountFavicons($tenant, $list);
+        $this->decorateAccounts($tenant, $list);
         return (object) ['list' => $list, 'total' => $total, 'hasMore' => $offset + $limit < $total];
     }
 
-    /** Company favicons for cards: one query, limited to accounts the viewer can read in this workspace. */
-    public function accountFavicons(Entity $tenant, array $rows): void
+    /** Company label and favicon for cards, limited to accounts the viewer can read in this workspace. */
+    public function decorateAccounts(Entity $tenant, array $rows): void
     {
         foreach ($rows as $row) $row->accountFaviconWebsite = null;
-        $ids = array_values(array_unique(array_filter(array_map(fn ($row) => $row->accountId ?? null, $rows))));
+        $this->relatedAccounts($tenant, $rows);
+        $accountId = fn ($row) => ($row->accountId ?? null) ?: ($row->relatedAccountId ?? null);
+        $ids = array_values(array_unique(array_filter(array_map($accountId, $rows))));
         if (!$ids || !$this->acl->checkScope('Account', 'read') || !$this->acl->checkField('Account', 'website')) return;
         $websites = [];
         foreach ($this->em->getRDBRepository('Account')->clone(
@@ -210,7 +220,59 @@ class ActivityInbox
         )->find() as $account) {
             $websites[$account->getId()] = trim((string) $account->get('website')) ?: null;
         }
-        foreach ($rows as $row) $row->accountFaviconWebsite = $websites[$row->accountId ?? ''] ?? null;
+        foreach ($rows as $row) $row->accountFaviconWebsite = $websites[$accountId($row) ?? ''] ?? null;
+    }
+
+    /**
+     * Without a native account link (or deal parent), the first confirmed relation to an account labels the card.
+     * Native fields stay untouched. The relationships panel's claim rules run once per response, not per card.
+     */
+    private function relatedAccounts(Entity $tenant, array $rows): void
+    {
+        $unresolved = [];
+        foreach ($rows as $row) {
+            $row->relatedAccountId = null;
+            $row->relatedAccountName = null;
+            if (empty($row->accountId) && ($row->parentType ?? null) !== 'Opportunity') $unresolved[$row->entityType . ':' . $row->id] = $row;
+        }
+        if (!$unresolved || !$this->acl->checkScope('Account', 'read') || !$this->acl->checkField('Account', 'name')) return;
+        $where = [];
+        foreach (array_unique(array_column($unresolved, 'entityType')) as $type) {
+            $ids = array_column(array_filter($unresolved, fn ($row) => $row->entityType === $type), 'id');
+            $where[] = ['subjectType' => $type, 'subjectId' => $ids, 'objectType' => 'Account'];
+            $where[] = ['objectType' => $type, 'objectId' => $ids, 'subjectType' => 'Account'];
+        }
+        $relations = [...$this->em->getRDBRepository('RecordRelation')
+            ->where(['status' => 'confirmed', 'tenantId' => $tenant->getId(), 'OR' => $where])->order('id')->find()];
+        if (!$relations) return;
+        try { $this->tenancy->assert($tenant->getId()); } catch (Forbidden) { return; }
+        $accountId = fn (Entity $relation) => $relation->get($relation->get('subjectType') === 'Account' ? 'subjectId' : 'objectId');
+        // Cards are already readable in this workspace; their accounts must be too.
+        $names = [];
+        foreach ($this->em->getRDBRepository('Account')->clone($this->access->referenceQuery('Account', $tenant)
+            ->select(['id', 'name'])->where(['id' => array_values(array_unique(array_map($accountId, $relations)))])->build())->find() as $account) {
+            $names[$account->getId()] = $account->get('name');
+        }
+        $predicates = [];
+        foreach ($relations as $relation) {
+            $outgoing = $relation->get('subjectType') !== 'Account';
+            $key = $relation->get($outgoing ? 'subjectType' : 'objectType') . ':' . $relation->get($outgoing ? 'subjectId' : 'objectId');
+            $id = $accountId($relation);
+            if (!isset($unresolved[$key], $names[$id])) continue;
+            $plain = $relation->get('origin') === 'manual' && !$relation->get('sourceDocumentId') && !$relation->get('sourceRevisionId') &&
+                $relation->get('evidenceQuote') === null && $relation->get('evidenceStart') === null && $relation->get('evidenceEnd') === null;
+            try {
+                // Evidence-backed claims also need their source document readable.
+                if (!$plain) $this->knowledge->claim($relation);
+                else $predicates[$relation->get('predicate')] ??= $this->predicates->resolve($relation->get('predicate'), $tenant->getId(), false);
+            } catch (Forbidden|NotFound|BadRequest) {
+                continue;
+            }
+            $unresolved[$key]->relatedAccountId = $id;
+            $unresolved[$key]->relatedAccountName = $names[$id];
+            unset($unresolved[$key]);
+            if (!$unresolved) break;
+        }
     }
 
     public function counts(Entity $tenant, array $filters, array $allowedTypes = ['Task']): object

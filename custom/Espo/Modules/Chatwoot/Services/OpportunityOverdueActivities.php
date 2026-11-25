@@ -12,11 +12,16 @@ use Espo\Core\Utils\Log;
 use Espo\Core\Utils\Metadata;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
+use Espo\ORM\Query\Part\Condition as Cond;
+use Espo\ORM\Query\Select;
+use Espo\ORM\Query\SelectBuilder;
 use Throwable;
 
 class OpportunityOverdueActivities
 {
     public const STARTED_AT = 'opportunityOverdueEventsStartedAt';
+    /** A task's own Mural, separately: its rollout must not replay the backlog of every open overdue task. */
+    public const TASK_STARTED_AT = 'taskOverdueEventsStartedAt';
     private array $timeZones = [];
 
     public function __construct(
@@ -29,11 +34,17 @@ class OpportunityOverdueActivities
 
     public function process(?DateTimeImmutable $now = null): void
     {
+        $now = ($now ?? new DateTimeImmutable())->setTimezone(new DateTimeZone('UTC'));
+        $this->processParentMurals($now);
+        $this->processTaskMurals($now);
+    }
+
+    private function processParentMurals(DateTimeImmutable $now): void
+    {
         $startedAt = $this->config->get(self::STARTED_AT);
         if (!$startedAt) {
             return;
         }
-        $now = ($now ?? new DateTimeImmutable())->setTimezone(new DateTimeZone('UTC'));
         $starts = ['Opportunity' => $startedAt] + array_filter(array_map(
             fn ($setting) => $this->config->get($setting), OpportunityStreamEvents::DISCUSSION_ROLLOUT,
         ));
@@ -56,6 +67,46 @@ class OpportunityOverdueActivities
                 }
             } while (count($activities) === 200);
         }
+    }
+
+    /**
+     * The task's own Mural says it became overdue, unread for its assignee, creator and collaborators
+     * (2026-11-25). Same deadline as the parent event: the due time, or the end of a date-only due day.
+     */
+    private function processTaskMurals(DateTimeImmutable $now): void
+    {
+        $startedAt = $this->config->get(self::TASK_STARTED_AT);
+        if (!$startedAt) {
+            return;
+        }
+        $afterId = '';
+        do {
+            $tasks = $this->entityManager->getRDBRepository('Task')
+                ->clone($this->taskMuralCandidates($now, $startedAt, $afterId))->find();
+            foreach ($tasks as $task) {
+                $afterId = $task->getId();
+                try {
+                    $this->recordOnTask($task, $now, $startedAt);
+                } catch (Throwable $e) {
+                    $this->log->error("Overdue event failed on Task/{$afterId}: {$e->getMessage()}");
+                }
+            }
+        } while (count($tasks) === 200);
+    }
+
+    private function taskMuralCandidates(DateTimeImmutable $now, string $startedAt, string $afterId): Select
+    {
+        // An event at or after the task's last change belongs to its current deadline, so the
+        // scan stays small as open overdue tasks pile up. Edited tasks fall through to the key check.
+        $posted = SelectBuilder::create()->from('Note', 'taskOverdueNote')->select('id')->where([
+            'parentType' => 'Task',
+            'parentId:' => 'task.id',
+            'type' => OpportunityStreamEvents::ACTIVITY_OVERDUE,
+            'createdAt>=:' => 'task.modifiedAt',
+        ])->build();
+        return SelectBuilder::create()->from('Task', 'task')->where(['tenantId!=' => null, 'id>' => $afterId])
+            ->where($this->dueWhere('Task', $now, $startedAt))->where($this->pendingWhere('Task'))
+            ->where(Cond::not(Cond::exists($posted)))->order('id')->limit(0, 200)->build();
     }
 
     /** Include newly created, already-overdue activities without replaying the pre-rollout backlog. */
@@ -133,11 +184,7 @@ class OpportunityOverdueActivities
             if (!$tenantId || ($activity->get('tenantId') && $activity->get('tenantId') !== $tenantId)) {
                 return;
             }
-            if (!isset($this->timeZones[$tenantId])) {
-                $tenant = $this->entityManager->getEntityById('Tenant', $tenantId);
-                $this->timeZones[$tenantId] = $tenant?->get('timeZone') ?: ($this->config->get('timeZone') ?: 'UTC');
-            }
-            $timeZone = $this->timeZones[$tenantId];
+            $timeZone = $this->timeZone($tenantId);
             $dueAt = $this->deadline($activity, $timeZone);
             if (!$dueAt || $dueAt >= $now->format('Y-m-d H:i:s')) {
                 return;
@@ -161,5 +208,47 @@ class OpportunityOverdueActivities
                 'occurredAt' => $occurredAt,
             ], $key, $activity->getLinkMultipleIdList('teams'));
         });
+    }
+
+    private function recordOnTask(Entity $candidate, DateTimeImmutable $now, string $startedAt): void
+    {
+        $this->entityManager->getTransactionManager()->run(function () use ($candidate, $now, $startedAt): void {
+            // A completion or reschedule can race the scan. Recheck under the task lock.
+            $task = $this->entityManager->getRDBRepository('Task')->where(['id' => $candidate->getId()])
+                ->where($this->pendingWhere('Task'))->forUpdate()->findOne();
+            $tenantId = $task?->get('tenantId');
+            if (!$tenantId) {
+                return;
+            }
+            $timeZone = $this->timeZone($tenantId);
+            $dueAt = $this->deadline($task, $timeZone);
+            if (!$dueAt || $dueAt >= $now->format('Y-m-d H:i:s')) {
+                return;
+            }
+            $occurredAt = max($dueAt, $task->get('createdAt') ?? $dueAt);
+            if ($occurredAt < $startedAt) {
+                return;
+            }
+            $key = hash('sha256', implode(':', [
+                OpportunityStreamEvents::ACTIVITY_OVERDUE, 'self', 'Task', $task->getId(), $dueAt,
+            ]));
+            $this->events->write(OpportunityStreamEvents::ACTIVITY_OVERDUE, $task, $task, [
+                'activityName' => $task->get('name'),
+                'dueAt' => $dueAt,
+                'dueDate' => $task->get('dateEndDate'),
+                'timeZone' => $timeZone,
+                'occurredAt' => $occurredAt,
+            ], $key, $task->getLinkMultipleIdList('teams'), addressed: true);
+        });
+    }
+
+    /** A shared event needs a shared calendar: tenant timezone, then instance timezone. */
+    private function timeZone(string $tenantId): string
+    {
+        if (!isset($this->timeZones[$tenantId])) {
+            $tenant = $this->entityManager->getEntityById('Tenant', $tenantId);
+            $this->timeZones[$tenantId] = $tenant?->get('timeZone') ?: ($this->config->get('timeZone') ?: 'UTC');
+        }
+        return $this->timeZones[$tenantId];
     }
 }

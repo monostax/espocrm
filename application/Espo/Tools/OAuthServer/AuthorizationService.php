@@ -57,6 +57,7 @@ class AuthorizationService
         private ScopeSorter $scopeSorter,
         private ClientRepositoryInternal $clientRepository,
         private UserValidation $userValidation,
+        private DefaultScopeApplier $defaultScopeApplier,
     ) {}
 
     /**
@@ -65,6 +66,8 @@ class AuthorizationService
     public function authorizeStart(ServerRequestInterface $request, ResponseInterface $response): ?ResponseInterface
     {
         $server = $this->authorizationServerFactory->create();
+
+        $request = $this->defaultScopeApplier->apply($request);
 
         try {
             $authRequest = $server->validateAuthorizationRequest($request);

@@ -5,6 +5,11 @@
         "actionClassName": "Espo\\Modules\\Global\\Tools\\Activities\\Api\\GetList"
     },
     {
+        "route": "/Mcp/action/setup",
+        "method": "get",
+        "actionClassName": "Espo\\Modules\\Global\\Tools\\Mcp\\Api\\GetSetup"
+    },
+    {
         "route": "/FeaturePack/action/forAccount",
         "method": "get",
         "actionClassName": "Espo\\Modules\\Global\\Tools\\FeaturePack\\Api\\GetForAccount"

@@ -71,6 +71,12 @@ class EndpointProvider
             throw new Forbidden("MCP endpoint '$slug' is not active.");
         }
 
+        // Monostax: an all-users endpoint is gated by the `Mcp` scope above; tenant and team
+        // isolation of what its tools return comes from the user's ACL.
+        if ($endpoint->isForAllUsers()) {
+            return $endpoint;
+        }
+
         $related = $this->entityManager
             ->getRelation($endpoint, Endpoint::LINK_USERS)
             ->isRelated($this->user);

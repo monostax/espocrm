@@ -18,7 +18,10 @@ class EnableOpportunityMessageEvents implements RebuildAction
     public function process(): void
     {
         $changed = false;
-        foreach ([OpportunityMessageEvents::STARTED_AT, OpportunityOverdueActivities::STARTED_AT, ...array_values(OpportunityStreamEvents::DISCUSSION_ROLLOUT)] as $key) {
+        foreach ([
+            OpportunityMessageEvents::STARTED_AT, OpportunityOverdueActivities::STARTED_AT, OpportunityOverdueActivities::TASK_STARTED_AT,
+            ...array_values(OpportunityStreamEvents::DISCUSSION_ROLLOUT),
+        ] as $key) {
             if (!$this->config->get($key)) {
                 $this->configWriter->set($key, gmdate('Y-m-d H:i:s'));
                 $changed = true;

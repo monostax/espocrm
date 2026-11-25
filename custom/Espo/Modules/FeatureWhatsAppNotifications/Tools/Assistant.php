@@ -19,9 +19,9 @@ use Throwable;
 /**
  * The AI in WhatsApp. A subscriber's text becomes their own post in their main AI chat of that workspace
  * (FeatureAiSession Primary), submitted as them (ActorScope): their CRM ACL, Chatwoot access, agents, model and credits,
- * exactly as if they typed it in the app. The agent's answer comes back here (`reply`, from the Note hook
- * MirrorAssistantReply), only to the verified number of the active subscription that sent the turn, and only when the
- * session still belongs to that person.
+ * exactly as if they typed it in the app. The agent's progress messages (`progress`, from StreamAgent::message as each is
+ * saved) and its finished answer (`reply`, from the Note hook MirrorAssistantReply) come back here, only to the verified
+ * number of the active subscription that sent the turn, and only when the session still belongs to that person.
  */
 class Assistant
 {
@@ -85,32 +85,38 @@ class Assistant
         return ['subscription' => $subscription, 'text' => (string) $note->getPost(), 'messageId' => (int) ($origin->whatsAppMessageId ?? 0)];
     }
 
+    /**
+     * A progress message the agent posted while still working (`post_progress`: the acknowledgement of what it is about to
+     * do, then any discovery, delay or blocker), sent the moment it is saved (StreamAgent::message) so the person isn't
+     * left with only "digitando…" through a long turn (the user, 2026-11-25). Plain text without the signature: the
+     * finished answer still follows with it. "digitando…" is shown again, since sending a message clears it.
+     */
+    public function progress(Note $reply, string $messageId): void
+    {
+        $data = $reply->getData()->opportunityStreamAgent ?? null;
+        if (!in_array($data->status ?? null, ['queued', 'running'], true)) return;
+        $message = null;
+        foreach ((array) ($data->messages ?? []) as $candidate) {
+            if (($candidate->id ?? null) === $messageId) $message = $candidate;
+        }
+        $text = trim(WhatsAppText::fromMarkdown((string) ($message->text ?? '')));
+        if ($text === '') return;
+        $to = $this->recipient($reply, 'progress');
+        if (!$to) return;
+        $this->avisos->text($to['subscription'], 'assistant', WhatsAppText::chunks($text)[0], null,
+            "ai:{$reply->getId()}:p:" . substr($messageId, 0, 32));
+        $this->avisos->typing($to['subscription']);
+    }
+
     /** The agent's finished answer to a WhatsApp turn, back to the number that asked. */
     public function reply(Note $reply): void
     {
-        $progress = $reply->getData()->opportunityStreamAgent ?? null;
-        $status = (string) ($progress->status ?? '');
-        if ($reply->getParentType() !== 'AiSession' || !in_array($status, self::ANSWERED, true)) return;
-        $source = $this->em->getEntityById('Note', (string) ($progress->sourceNoteId ?? ''));
-        $session = $this->em->getEntityById('AiSession', (string) $reply->getParentId());
-        $origin = $source instanceof Note ? $source->getData() : null;
-        if (!$source instanceof Note || !$session || ($origin->aiSessionChannel ?? null) !== self::CHANNEL ||
-            $source->getParentId() !== $session->getId()) return;
-        $subscription = $this->em->getEntityById('WhatsAppNotificationSubscription', (string) ($origin->whatsAppSubscriptionId ?? ''));
-        // The person who asked still owns the chat and still holds this number, in this workspace.
-        if (!$subscription || $subscription->get('status') !== 'active' ||
-            $subscription->get('userId') !== $source->getCreatedById() || $session->get('assignedUserId') !== $source->getCreatedById() ||
-            $subscription->get('chatwootAccountId') !== $session->get('chatwootAccountId')) return;
-        try {
-            $workspace = $this->workspaces->of($subscription);
-            $language = $workspace['language'];
-        } catch (Error) {
-            return; // the workspace is gone
-        }
-        if (!Avisos::windowOpen($subscription)) {
-            $this->log->info("WhatsApp notifications: AI answer {$reply->getId()} not sent, the 24h window closed.");
-            return;
-        }
+        $status = (string) ($reply->getData()->opportunityStreamAgent->status ?? '');
+        if (!in_array($status, self::ANSWERED, true)) return;
+        $to = $this->recipient($reply, 'answer');
+        if (!$to) return;
+        ['subscription' => $subscription, 'session' => $session, 'workspace' => $workspace] = $to;
+        $language = $workspace['language'];
         $link = $this->workspaces->sessionLink($subscription, $session->getId());
         $chunks = match ($status) {
             'completed' => WhatsAppText::chunks(WhatsAppText::fromMarkdown((string) $reply->getPost())),
@@ -129,6 +135,36 @@ class Assistant
             $this->avisos->text($subscription, 'assistant', $signature !== null ? "{$chunk}\n\n*{$signature}*" : $chunk, null,
                 "ai:{$reply->getId()}:{$index}");
         }
+    }
+
+    /**
+     * Where a reply to a WhatsApp turn goes: the active subscription that sent the turn, while the person who asked still
+     * owns the chat and still holds that number in this workspace, and the 24h window is open. Null otherwise.
+     *
+     * @return ?array{subscription: Entity, session: Entity, workspace: array<string, mixed>}
+     */
+    private function recipient(Note $reply, string $what): ?array
+    {
+        if ($reply->getParentType() !== 'AiSession') return null;
+        $source = $this->em->getEntityById('Note', (string) ($reply->getData()->opportunityStreamAgent->sourceNoteId ?? ''));
+        $session = $this->em->getEntityById('AiSession', (string) $reply->getParentId());
+        $origin = $source instanceof Note ? $source->getData() : null;
+        if (!$source instanceof Note || !$session || ($origin->aiSessionChannel ?? null) !== self::CHANNEL ||
+            $source->getParentId() !== $session->getId()) return null;
+        $subscription = $this->em->getEntityById('WhatsAppNotificationSubscription', (string) ($origin->whatsAppSubscriptionId ?? ''));
+        if (!$subscription || $subscription->get('status') !== 'active' ||
+            $subscription->get('userId') !== $source->getCreatedById() || $session->get('assignedUserId') !== $source->getCreatedById() ||
+            $subscription->get('chatwootAccountId') !== $session->get('chatwootAccountId')) return null;
+        try {
+            $workspace = $this->workspaces->of($subscription);
+        } catch (Error) {
+            return null; // the workspace is gone
+        }
+        if (!Avisos::windowOpen($subscription)) {
+            $this->log->info("WhatsApp notifications: AI {$what} {$reply->getId()} not sent, the 24h window closed.");
+            return null;
+        }
+        return ['subscription' => $subscription, 'session' => $session, 'workspace' => $workspace];
     }
 
     /** "Agent / Workspace" as WhatsApp can bold it: the agent's membership name (else its CRM user's) and the workspace. */

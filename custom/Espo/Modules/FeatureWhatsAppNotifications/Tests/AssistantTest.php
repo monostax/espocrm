@@ -19,6 +19,8 @@ class AssistantTest extends TestCase
 {
     /** @var list<array{string, ?string}> text and send key of each message sent */
     private array $sent = [];
+    /** "digitando…" shown again */
+    private int $typing = 0;
 
     public function testMarkdownReadsAsWhatsAppFormatting(): void
     {
@@ -99,6 +101,28 @@ class AssistantTest extends TestCase
         $this->assertNull($this->assistant($this->world(['lastInboundAt' => gmdate('Y-m-d H:i:s', time() - 90000)]))->turn('user1', 'source1'));
     }
 
+    public function testAProgressMessageGoesOutAtOnceWithoutTheSignatureAndTypingShowsAgain(): void
+    {
+        $id = hash('sha256', 'Vou **verificar** o histórico recente.');
+        $reply = $this->reply('running', '', [(object) ['id' => $id, 'text' => 'Vou **verificar** o histórico recente.']]);
+        $this->assistant($this->world())->progress($reply, $id);
+        $this->assertSame([['Vou *verificar* o histórico recente.', 'ai:reply1:p:' . substr($id, 0, 32)]], $this->sent);
+        $this->assertSame(1, $this->typing);
+    }
+
+    public function testProgressOnlyForARunningWhatsAppTurnStillTheAskersAndInsideTheWindow(): void
+    {
+        $messages = [(object) ['id' => 'm1', 'text' => 'Vou verificar.']];
+        $this->assistant($this->world())->progress($this->reply('completed', 'Pronto', $messages), 'm1');
+        $this->assistant($this->world())->progress($this->reply('running', '', $messages), 'unknown');
+        $this->assistant($this->world())->progress($this->reply('running', '', [(object) ['id' => 'm1', 'text' => '  ']]), 'm1');
+        $this->assistant($this->world(['source' => (object) []]))->progress($this->reply('running', '', $messages), 'm1');
+        $this->assistant($this->world(['subscriptionUser' => 'someoneElse']))->progress($this->reply('running', '', $messages), 'm1');
+        $this->assistant($this->world(['lastInboundAt' => gmdate('Y-m-d H:i:s', time() - 90000)]))->progress($this->reply('running', '', $messages), 'm1');
+        $this->assertSame([], $this->sent);
+        $this->assertSame(0, $this->typing);
+    }
+
     public function testAVeryLongAnswerEndsWithALinkToTheChat(): void
     {
         $long = implode("\n\n", array_fill(0, 5, str_repeat('a', 3000)));
@@ -132,10 +156,11 @@ class AssistantTest extends TestCase
         return $note;
     }
 
-    private function reply(string $status, string $post): Note
+    /** @param list<object> $messages progress messages posted so far */
+    private function reply(string $status, string $post, array $messages = []): Note
     {
         return $this->note('reply1', 'session1', (object) ['opportunityStreamAgent' => (object) [
-            'status' => $status, 'sourceNoteId' => 'source1', 'aiAgentMembershipId' => 'kibu',
+            'status' => $status, 'sourceNoteId' => 'source1', 'aiAgentMembershipId' => 'kibu', 'messages' => $messages,
         ]], $post, 'aiUser');
     }
 
@@ -168,6 +193,9 @@ class AssistantTest extends TestCase
         $avisos->method('text')->willReturnCallback(function ($subscription, string $kind, string $text, $card = null, ?string $key = null) {
             $this->sent[] = [$text, $key];
             return null;
+        });
+        $avisos->method('typing')->willReturnCallback(function () {
+            $this->typing++;
         });
         $workspaces = $this->createMock(Workspaces::class);
         $workspaces->method('of')->willReturn(['language' => 'pt_BR', 'frozen' => false, 'name' => 'Clínica']);

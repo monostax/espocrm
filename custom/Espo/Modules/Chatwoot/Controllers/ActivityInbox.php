@@ -67,7 +67,7 @@ class ActivityInbox
             $data->calendarEventUrl = $this->meetingCalendarLink->resolve($detail);
         }
         $data->conversations = $this->inbox->conversations($record);
-        $this->inbox->accountFavicons($this->tenant($request), [$data]);
+        $this->inbox->decorateAccounts($this->tenant($request), [$data]);
         return $data;
     }
 
@@ -78,7 +78,7 @@ class ActivityInbox
         if ($type === 'Appointment') $this->access->validateAppointment($data, $this->tenant($request));
         $this->access->validateTeams($data, $this->tenant($request), true);
         $result = $this->inbox->present($this->services->get($type)->create($data)->getEntity());
-        $this->inbox->accountFavicons($this->tenant($request), [$result]);
+        $this->inbox->decorateAccounts($this->tenant($request), [$result]);
         return $result;
     }
 
@@ -90,7 +90,7 @@ class ActivityInbox
         $this->access->validateTeams($data, $this->tenant($request), false);
         $params = (new \Espo\Core\Record\UpdateParamsFetcher())->fetch($request);
         $result = $this->inbox->present($this->services->get($record->getEntityType())->update($record->getId(), $data, $params)->getEntity());
-        $this->inbox->accountFavicons($this->tenant($request), [$result]);
+        $this->inbox->decorateAccounts($this->tenant($request), [$result]);
         return $result;
     }
 

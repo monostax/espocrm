@@ -27,11 +27,14 @@ class OpportunityStreamEvents
         private StreamService $streamService,
     ) {}
 
-    /** Whether the event was written now: false when it already existed or its parent is gone. */
-    public function write(string $type, Entity $target, Entity $related, array $data, string $key, array $teams): bool
+    /**
+     * Whether the event was written now: false when it already existed or its parent is gone.
+     * An addressed event is unread for the related record's people, the way an @mention is.
+     */
+    public function write(string $type, Entity $target, Entity $related, array $data, string $key, array $teams, bool $addressed = false): bool
     {
         return $this->entityManager->getTransactionManager()->run(function () use (
-            $type, $target, $related, $data, $key, $teams,
+            $type, $target, $related, $data, $key, $teams, $addressed,
         ): bool {
             // Serialize first insertion, retries, and reconciliation on the same parent.
             $parent = $this->entityManager->getRDBRepository($target->getEntityType())
@@ -56,6 +59,9 @@ class OpportunityStreamEvents
                     }
                 }
             }
+            $users = array_values(array_unique($users));
+            // Only Post mentions are resolved from text, so the hooks leave these ids alone.
+            $recipients = $addressed ? array_values(array_diff($users, [$this->systemUser->getId()])) : [];
             $this->entityManager->createEntity('Note', [
                 'type' => $type,
                 'parentType' => $parent->getEntityType(),
@@ -65,8 +71,9 @@ class OpportunityStreamEvents
                 'createdById' => $this->systemUser->getId(),
                 'isInternal' => true,
                 'teamsIds' => $teams,
-                'usersIds' => array_values(array_unique($users)),
+                'usersIds' => $users,
                 'opportunityStreamEventKey' => $key,
+                'opportunityMentionUserIds' => $recipients ?: null,
                 'data' => (object) $data,
             ]);
             $this->streamService->updateStreamUpdatedAt($parent);

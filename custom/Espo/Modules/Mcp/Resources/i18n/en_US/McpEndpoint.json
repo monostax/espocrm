@@ -6,7 +6,8 @@
         "status": "Status",
         "slug": "Slug",
         "url": "Endpoint URL",
-        "publicDescription": "Public Description"
+        "publicDescription": "Public Description",
+        "allUsers": "All Users"
     },
     "links": {
         "features": "Features",
@@ -20,6 +21,7 @@
     },
     "tooltips": {
         "publicDescription": "Description exposed to MCP clients.",
+        "allUsers": "Any user whose role has MCP access can connect. When off, only the users linked below can.",
         "actions": "Actions available for this endpoint.",
         "slug": "Defines the endpoint URL path. Should start with a lower case latter and contain only letters and digits. Examples: `sales`, `support`."
     }

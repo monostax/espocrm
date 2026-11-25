@@ -56,9 +56,9 @@ class OpportunityOverdueActivitiesTest extends TestCase
         $metadata->method('get')->willReturn(['Completed', 'Canceled', 'Deferred']);
         $events = $this->createMock(OpportunityStreamEvents::class);
         $events->method('write')->willReturnCallback(function (
-            string $type, Entity $opportunity, Entity $related, array $data, string $key, array $teams,
+            string $type, Entity $opportunity, Entity $related, array $data, string $key, array $teams, bool $addressed = false,
         ): bool {
-            $this->writes[$key] = compact('type', 'opportunity', 'related', 'data', 'teams');
+            $this->writes[$key] = compact('type', 'opportunity', 'related', 'data', 'teams', 'addressed');
             return true;
         });
         $transaction = $this->createMock(TransactionManager::class);
@@ -74,7 +74,10 @@ class OpportunityOverdueActivitiesTest extends TestCase
         $select->method('forUpdate')->willReturnSelf();
         $select->method('findOne')->willReturnCallback(fn () => $this->stillPending ? $activity : null);
         $repo = $this->createMock(RDBRepository::class);
-        $repo->method('where')->with(self::callback(fn ($where) => $where === ['id' => 'task', 'parentType' => $activity->get('parentType')]))->willReturn($select);
+        // The task's own Mural locks the task alone; parent Murals also pin the parent type.
+        $repo->method('where')->with(self::callback(fn ($where) => in_array($where, [
+            ['id' => 'task', 'parentType' => $activity->get('parentType')], ['id' => 'task'],
+        ], true)))->willReturn($select);
         $em->method('getRDBRepository')->with('Task')->willReturn($repo);
         $em->method('getEntityById')->willReturnMap([
             ['Opportunity', 'opp', new EntityDouble(['id' => 'opp', 'tenantId' => 'tenant'], 'Opportunity')],
@@ -91,6 +94,112 @@ class OpportunityOverdueActivitiesTest extends TestCase
         (new ReflectionMethod($this->service, 'record'))->invoke(
             $this->service, $this->activity, new DateTimeImmutable($now), '2026-09-06 00:00:00',
         );
+    }
+
+    private function tickTask(string $now, string $startedAt = '2026-09-06 00:00:00'): void
+    {
+        $this->activity->set($this->attributes);
+        (new ReflectionMethod($this->service, 'recordOnTask'))->invoke(
+            $this->service, $this->activity, new DateTimeImmutable($now), $startedAt,
+        );
+    }
+
+    public function testTaskMuralPostsOncePerDeadlineAddressedToTheTaskPeople(): void
+    {
+        $this->attributes['parentType'] = null;
+        $this->attributes['parentId'] = null;
+        $this->tickTask('2026-09-06T13:59:59Z');
+        self::assertCount(0, $this->writes);
+        $this->tickTask('2026-09-06T14:01:00Z');
+        $this->tickTask('2026-09-06T14:02:00Z');
+        self::assertCount(1, $this->writes);
+        $event = array_values($this->writes)[0];
+        self::assertSame(OpportunityStreamEvents::ACTIVITY_OVERDUE, $event['type']);
+        self::assertSame($this->activity, $event['opportunity']);
+        self::assertSame($this->activity, $event['related']);
+        self::assertTrue($event['addressed']);
+        self::assertSame(['team'], $event['teams']);
+        self::assertSame('2026-09-06 14:00:00', $event['data']['dueAt']);
+        // Its own key: the same task may also post on its deal's Mural.
+        self::assertSame(hash('sha256', implode(':', [
+            OpportunityStreamEvents::ACTIVITY_OVERDUE, 'self', 'Task', 'task', '2026-09-06 14:00:00',
+        ])), array_key_first($this->writes));
+        $this->attributes['dateEnd'] = '2026-09-06 15:00:00';
+        $this->tickTask('2026-09-06T15:01:00Z');
+        self::assertCount(2, $this->writes);
+    }
+
+    public function testTaskMuralDateOnlyWaitsForTheTenantDayToEnd(): void
+    {
+        $this->attributes['dateEndDate'] = '2026-09-06';
+        $this->tickTask('2026-09-07T02:59:59Z');
+        self::assertCount(0, $this->writes);
+        $this->tickTask('2026-09-07T03:01:00Z');
+        self::assertSame('2026-09-07 03:00:00', array_values($this->writes)[0]['data']['dueAt']);
+    }
+
+    public function testTaskMuralSkipsFinishedTasksAndTheBacklogBeforeItsRollout(): void
+    {
+        $this->stillPending = false;
+        $this->tickTask('2026-09-06T14:01:00Z');
+        $this->stillPending = true;
+        $this->tickTask('2026-09-06T14:01:00Z', '2026-09-06 14:30:00');
+        self::assertCount(0, $this->writes);
+    }
+
+    public function testTaskMuralScanSkipsTasksWhoseCurrentDeadlineAlreadyPosted(): void
+    {
+        if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
+            self::markTestSkipped('PDO SQLite is required for the disposable query dataset.');
+        }
+        $pdo = new PDO('sqlite::memory:', options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $defs = [];
+        foreach ([
+            'Task' => ['id', 'tenantId', 'status', 'dateEnd', 'dateEndDate', 'createdAt', 'modifiedAt', 'deleted'],
+            'Note' => ['id', 'parentType', 'parentId', 'type', 'createdAt', 'deleted'],
+        ] as $type => $fields) {
+            $columns = [];
+            foreach ($fields as $field) {
+                $defs[$type]['attributes'][$field] = ['type' => $field === 'deleted' ? 'bool' : 'varchar'];
+                $column = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $field));
+                $columns[] = $column . ($field === 'deleted' ? ' INTEGER DEFAULT 0' : ' TEXT');
+            }
+            $pdo->exec('CREATE TABLE ' . strtolower($type) . ' (' . implode(', ', $columns) . ')');
+        }
+        $provider = $this->createMock(MetadataDataProvider::class);
+        $provider->method('get')->willReturn($defs);
+        $metadata = new OrmMetadata($provider);
+        $entityFactory = $this->createMock(EntityFactory::class);
+        $entityFactory->method('create')->willReturnCallback(fn ($type) => new BaseEntity($type, $defs[$type]));
+        $due = '2026-09-07 11:00:00';
+        $tasks = [
+            ['due', 'tenant', 'Not Started', $due, null, '2026-09-01 00:00:00', '2026-09-01 00:00:00'],
+            ['posted', 'tenant', 'Started', $due, null, '2026-09-01 00:00:00', '2026-09-01 00:00:00'],
+            ['edited-after-post', 'tenant', 'Started', $due, null, '2026-09-01 00:00:00', '2026-09-07 11:30:00'],
+            ['only-a-post', 'tenant', 'Started', $due, null, '2026-09-01 00:00:00', '2026-09-01 00:00:00'],
+            ['completed', 'tenant', 'Completed', $due, null, '2026-09-01 00:00:00', '2026-09-01 00:00:00'],
+            ['future', 'tenant', 'Started', '2026-09-08 11:00:00', null, '2026-09-01 00:00:00', '2026-09-01 00:00:00'],
+            ['no-tenant', null, 'Started', $due, null, '2026-09-01 00:00:00', '2026-09-01 00:00:00'],
+            ['backlog', 'tenant', 'Started', '2026-09-03 11:00:00', null, '2026-09-01 00:00:00', '2026-09-01 00:00:00'],
+        ];
+        foreach ($tasks as $row) {
+            $pdo->prepare('INSERT INTO task (id, tenant_id, status, date_end, date_end_date, created_at, modified_at) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute($row);
+        }
+        foreach ([
+            ['n1', 'Task', 'posted', OpportunityStreamEvents::ACTIVITY_OVERDUE, '2026-09-07 11:01:00'],
+            ['n2', 'Task', 'edited-after-post', OpportunityStreamEvents::ACTIVITY_OVERDUE, '2026-09-07 11:01:00'],
+            ['n3', 'Task', 'only-a-post', 'Post', '2026-09-07 11:01:00'],
+            ['n4', 'Opportunity', 'due', OpportunityStreamEvents::ACTIVITY_OVERDUE, '2026-09-07 11:01:00'],
+        ] as $row) {
+            $pdo->prepare('INSERT INTO note (id, parent_type, parent_id, type, created_at) VALUES (?, ?, ?, ?, ?)')->execute($row);
+        }
+        $query = (new ReflectionMethod($this->service, 'taskMuralCandidates'))->invoke(
+            $this->service, new DateTimeImmutable('2026-09-07T12:00:00Z'), '2026-09-06 19:50:51', '',
+        );
+        foreach ([MysqlQueryComposer::class, PostgresqlQueryComposer::class] as $class) {
+            $sql = (new $class($pdo, $entityFactory, $metadata))->composeSelect($query);
+            self::assertSame(['due', 'edited-after-post', 'only-a-post'], $pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN), $sql);
+        }
     }
 
     public function testPostsOncePerDeadlineAndAllowsARescheduledDeadline(): void
