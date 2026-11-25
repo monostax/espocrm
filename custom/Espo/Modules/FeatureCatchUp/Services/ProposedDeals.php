@@ -107,7 +107,7 @@ class ProposedDeals
         $teamId = $this->team($tenant);
         $owner = $this->owner($id, $teamId);
 
-        $deal = $this->recordServices->get('Opportunity')->create((object) [
+        $deal = $this->createDeal([
             'name' => $name,
             'amount' => is_numeric($amount) ? (float) $amount : 0.0,
             'amountCurrency' => (string) ($this->config->get('defaultCurrency') ?: 'BRL'),
@@ -117,7 +117,7 @@ class ProposedDeals
             'assignedUserId' => $owner,
             'teamsIds' => [$teamId],
             'chatwootConversationsIds' => [$id],
-        ], CreateParams::create()->withSkipDuplicateCheck());
+        ]);
         $this->verdicts->resolve('ChatwootConversation', $id);
         $this->acts->record('ChatwootConversation', $id, $this->user->getId(), 'deal');
 
@@ -241,13 +241,24 @@ class ProposedDeals
     private function createWithFallback(array $data, string $funnelId, string $stageId): ?Entity
     {
         try {
-            return $this->recordServices->get('Opportunity')->create((object) $data, CreateParams::create()->withSkipDuplicateCheck());
+            return $this->createDeal($data);
         } catch (Conflict) {
             $fallbackStageId = $this->targets->firstOpenStageId($funnelId);
             if ($fallbackStageId === null || $fallbackStageId === $stageId) return null;
             $data['opportunityStageId'] = $fallbackStageId;
-            return $this->recordServices->get('Opportunity')->create((object) $data, CreateParams::create()->withSkipDuplicateCheck());
+            return $this->createDeal($data);
         }
+    }
+
+    /**
+     * Through the Opportunity record service as the reader. Espo 10's create() answers a CreateResult, not the entity
+     * (until 2026-11-25 every auto-created deal failed on that and rolled back).
+     *
+     * @param array<string, mixed> $data
+     */
+    private function createDeal(array $data): Entity
+    {
+        return $this->recordServices->get('Opportunity')->create((object) $data, CreateParams::create()->withSkipDuplicateCheck())->getEntity();
     }
 
     private function contactId(Entity $conversation): ?string
