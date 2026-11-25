@@ -1,0 +1,7 @@
+[
+    {
+        "route": "/Mcp/action/setup",
+        "method": "get",
+        "actionClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Setup\\Api\\GetSetup"
+    }
+]

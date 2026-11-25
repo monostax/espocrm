@@ -1,0 +1,178 @@
+{
+    "QueryRecords": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Query\\QueryRecordsToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Query\\QueryRecordsToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\QueryRecordsData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\QueryableTypesTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    },
+    "QueryLanguage": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Language\\QueryLanguageToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Language\\QueryLanguageToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\QueryLanguageData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\QueryableTypesTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    },
+    "SavedFilters": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\SavedFilters\\SavedFiltersToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\SavedFilters\\SavedFiltersToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\SavedFiltersData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\QueryableTypesTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    },
+    "KnowledgeBase": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Knowledge\\KnowledgeBaseToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Knowledge\\KnowledgeBaseToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\KnowledgeBaseData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\TargetTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    },
+    "KnowledgeBaseEdit": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Knowledge\\KnowledgeBaseEditToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Knowledge\\KnowledgeBaseEditToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\KnowledgeBaseEditData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\TargetTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    },
+    "AiAgents": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Agents\\AiAgentsToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Agents\\AiAgentsToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\AiAgentsData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\TargetTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    },
+    "AiAgentsEdit": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Agents\\AiAgentsEditToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Agents\\AiAgentsEditToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\AiAgentsEditData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\TargetTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    },
+    "Conversations": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Chat\\ConversationsToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Chat\\ConversationsToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\ConversationsData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\TargetTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    },
+    "ConversationNotes": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Chat\\ConversationNotesToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Chat\\ConversationNotesToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\ConversationNotesData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\TargetTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    },
+    "ConversationReplies": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Chat\\ConversationRepliesToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Chat\\ConversationRepliesToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\ConversationRepliesData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\TargetTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    },
+    "ConversationActions": {
+        "tool": {
+            "definitionProviderClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Chat\\ConversationActionsToolDefinitionProvider",
+            "processorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Chat\\ConversationActionsToolProcessor"
+        },
+        "record": {
+            "dataClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\ConversationActionsData",
+            "textComposerClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\TargetTextComposer",
+            "dataValidatorClassName": "Espo\\Modules\\FeatureMcp\\Tools\\Feature\\NoConfigDataValidator",
+            "fields": {},
+            "defaults": {
+                "version": 1
+            },
+            "layout": []
+        }
+    }
+}

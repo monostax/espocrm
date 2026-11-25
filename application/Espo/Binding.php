@@ -62,6 +62,12 @@ class Binding implements BindingProcessor
 
     private function bindServices(Binder $binder): void
     {
+        // Monostax: the request's OAuth client, shared by OAuthLogin and whoever records what the client did.
+        $binder->bindService(
+            'Espo\\Tools\\OAuthServer\\CurrentClient',
+            'oAuthCurrentClient'
+        );
+
         $binder->bindService(
             'Espo\\Core\\Application\\ApplicationParams',
             'applicationParams'

@@ -78,7 +78,7 @@ the CRM consent page and approves. Access tokens last 1 hour and come with a ref
   The validator ignores the port only for `127.0.0.1` / `[::1]`, so `localhost` URIs match exactly.
 - Users get the server URL, client IDs and steps on Chatwoot **Configurações › Conectar IA**
   (`settings_ai_connections`), which reads `GET /Mcp/action/setup`
-  (`Global\Tools\Mcp\ConnectionSetupService`: the endpoints the user may use and the active public
+  (`FeatureMcp\Tools\Setup\ConnectionSetupService`: the endpoints the user may use and the active public
   clients with the `Mcp` scope) and lists/disconnects their apps through
   `GET|DELETE /User/:id/connectedApps`. An app shows as not enabled until a client lists its redirect.
 - A client that sends no `scope` (Claude does, because the metadata lists none) is asked for the
@@ -89,6 +89,34 @@ the CRM consent page and approves. Access tokens last 1 hour and come with a ref
 
 **Personal API key.** A user can create a `UserApiKey` and set the header `X-Api-Key: <key>`
 in the client. It authenticates as that user (same three gates). Legacy API users work too.
+
+## Advanced filter tools (FeatureMcp)
+
+`custom/Espo/Modules/FeatureMcp` (order 55, after `Mcp`) adds three feature types with nothing to configure; add
+each once to an endpoint:
+
+- **Advanced Filter** → tool `QueryRecords`: records of any type with `id_recordQuery` (Contact, Account,
+  Opportunity, Initiative) by record query, saved filter, text search, `select` (default: the list layout), sorting
+  and paging. Same compiler and where item as "Consulta avançada", so the same results, RecordRelation links
+  included (`accounts.any(origin = "enrichment")`).
+- **Advanced Filter Docs** → tool `QueryLanguage`: on demand, the syntax, a type's fields/related records/lists
+  (`path` walks into them) and a query check with the filter box's own error texts. Keeps docs out of the tool
+  list (about 330 characters per definition instead of about 4,000 per record type).
+- **Saved Filters** → tool `SavedFilters`: the user's saved filters (own, and shared in workspaces they may act in);
+  `QueryRecords` applies one by id through `ConditionWhere`, a port of Chatwoot's `createCrmWhereBuilder` tested
+  against fixtures the browser code generates (`tests/unit/Espo/Modules/FeatureMcp/fixtures`).
+
+Also, with the same rules as the AI Session (apply at once, revisions, undo): **Knowledge Base** / **Knowledge Base
+Edit** (read, passage edits, create, restore articles) and **AI Agents** / **AI Agents Edit** (read and change an
+agent's instructions; tenant admins only, the edit tool is hidden from others). Task is in the advanced filter too
+(`Chatwoot/Resources/metadata/selectDefs/Task.json`).
+
+**Conversations**, **Conversation Notes**, **Conversation Replies** and **Conversation Actions** read and change Chat
+as the person (their Chat token; Chat's own access rules; WhatsApp templates outside the 24-hour window; notes and
+replies tagged with the AI app's name, shown as "via Claude" in Chatwoot). See the FeatureMcp README.
+
+ext-mcp finds a tool's feature type by the part of its name before the first `_`, so these tools are named after
+their type. Every statement of a query call is capped at 10 s (MariaDB `max_statement_time`). See the module README.
 
 ## Creates through MCP and the API
 

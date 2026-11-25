@@ -12,12 +12,12 @@ declare(strict_types=1);
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-namespace tests\unit\Espo\Modules\Global\Tools\Mcp;
+namespace tests\unit\Espo\Modules\FeatureMcp;
 
 use Espo\Core\Acl;
 use Espo\Core\Utils\Config\ApplicationConfig;
 use Espo\Entities\User;
-use Espo\Modules\Global\Tools\Mcp\ConnectionSetupService;
+use Espo\Modules\FeatureMcp\Tools\Setup\ConnectionSetupService;
 use Espo\Modules\Mcp\Entities\Endpoint;
 use Espo\ORM\EntityCollection;
 use Espo\ORM\EntityManager;

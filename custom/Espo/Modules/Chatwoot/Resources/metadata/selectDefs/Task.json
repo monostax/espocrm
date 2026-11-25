@@ -1,0 +1,5 @@
+{
+    "whereItemConverterClassNameMap": {
+        "id_recordQuery": "Espo\\Modules\\Chatwoot\\Classes\\Select\\RecordQuery\\Where"
+    }
+}

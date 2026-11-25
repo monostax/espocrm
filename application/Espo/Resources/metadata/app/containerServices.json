@@ -103,5 +103,8 @@
     },
     "pipelineDataProvider": {
         "className": "Espo\\Tools\\Pipeline\\PipelineDataProvider"
+    },
+    "oAuthCurrentClient": {
+        "className": "Espo\\Tools\\OAuthServer\\CurrentClient"
     }
 }

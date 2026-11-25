@@ -12,13 +12,13 @@ declare(strict_types=1);
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-namespace Espo\Modules\Global\Tools\Mcp\Api;
+namespace Espo\Modules\FeatureMcp\Tools\Setup\Api;
 
 use Espo\Core\Api\Action;
 use Espo\Core\Api\Request;
 use Espo\Core\Api\Response;
 use Espo\Core\Api\ResponseComposer;
-use Espo\Modules\Global\Tools\Mcp\ConnectionSetupService;
+use Espo\Modules\FeatureMcp\Tools\Setup\ConnectionSetupService;
 
 /**
  * GET /Mcp/action/setup

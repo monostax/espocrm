@@ -37,6 +37,7 @@ use Espo\Core\Authentication\Result;
 use Espo\Core\Field\DateTime;
 use Espo\Core\Utils\DateTime\Clock;
 use Espo\Tools\OAuthServer\Repository\AccessTokenRepository;
+use Espo\Tools\OAuthServer\CurrentClient;
 use Espo\Tools\OAuthServer\Utils\ErrorResponseComposer;
 
 /**
@@ -51,6 +52,7 @@ class OAuthLogin implements Login
         private AccessTokenRepository $repository,
         private Clock $clock,
         private UserRepository $userRepository,
+        private CurrentClient $currentClient,
     ) {}
 
     public function login(Data $data, Request $request): Result
@@ -110,6 +112,7 @@ class OAuthLogin implements Login
         }
 
         $user->setScopes($accessToken->getScopes());
+        $this->currentClient->set($accessToken->getClient()->getName());
 
         return Result::success($user);
     }

@@ -1,0 +1,17 @@
+{
+    "options": {
+        "type": {
+            "QueryRecords": "Advanced Filter",
+            "QueryLanguage": "Advanced Filter Docs",
+            "SavedFilters": "Saved Filters",
+            "KnowledgeBase": "Knowledge Base",
+            "KnowledgeBaseEdit": "Knowledge Base Edit",
+            "AiAgents": "AI Agents",
+            "AiAgentsEdit": "AI Agents Edit",
+            "Conversations": "Conversations",
+            "ConversationNotes": "Conversation Notes",
+            "ConversationReplies": "Conversation Replies",
+            "ConversationActions": "Conversation Actions"
+        }
+    }
+}

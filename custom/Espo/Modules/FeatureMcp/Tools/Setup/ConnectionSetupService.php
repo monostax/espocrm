@@ -12,7 +12,7 @@ declare(strict_types=1);
  * PROPRIETARY AND CONFIDENTIAL
  ************************************************************************/
 
-namespace Espo\Modules\Global\Tools\Mcp;
+namespace Espo\Modules\FeatureMcp\Tools\Setup;
 
 use Espo\Core\Acl;
 use Espo\Core\Utils\Config\ApplicationConfig;

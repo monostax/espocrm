@@ -1,0 +1,7 @@
+{
+    "name": "FeatureMcp",
+    "description": "Monostax additions to the MCP server: connection setup for the Chatwoot settings page, the advanced filter (record query) tools and saved filters",
+    "version": "1.0.0",
+    "order": 55,
+    "jsTranspiled": true
+}

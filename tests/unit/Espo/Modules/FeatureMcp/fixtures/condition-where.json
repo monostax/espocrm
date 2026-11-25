@@ -1,0 +1,855 @@
+[
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "source",
+        "filterOperator": "equal_to",
+        "values": [
+          {
+            "id": "Partner",
+            "name": "Parceiro"
+          }
+        ],
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "in",
+        "attribute": "source",
+        "value": [
+          "Partner"
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "source",
+        "filterOperator": "not_equal_to",
+        "values": [
+          {
+            "id": "Partner",
+            "name": "Parceiro"
+          },
+          {
+            "id": "Web Site",
+            "name": "Site"
+          }
+        ],
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "notIn",
+        "attribute": "source",
+        "value": [
+          "Partner",
+          "Web Site"
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "account",
+        "filterOperator": "equal_to",
+        "values": {
+          "id": "acc1",
+          "name": "Acme"
+        },
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "equals",
+        "attribute": "accountId",
+        "value": "acc1"
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "account",
+        "filterOperator": "not_equal_to",
+        "values": {
+          "id": "acc1",
+          "name": "Acme"
+        },
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "notEquals",
+        "attribute": "accountId",
+        "value": "acc1"
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "tags",
+        "filterOperator": "equal_to",
+        "values": {
+          "id": "tag1",
+          "name": "vip"
+        },
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "linkedWith",
+        "attribute": "tags",
+        "value": [
+          "tag1"
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "tags",
+        "filterOperator": "not_equal_to",
+        "values": {
+          "id": "tag1",
+          "name": "vip"
+        },
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "notLinkedWith",
+        "attribute": "tags",
+        "value": [
+          "tag1"
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "tags",
+        "filterOperator": "is_present",
+        "values": null,
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "teams",
+        "filterOperator": "is_not_present",
+        "values": null,
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "isLinked",
+        "attribute": "tags",
+        "value": null
+      },
+      {
+        "type": "isNotLinked",
+        "attribute": "teams",
+        "value": null
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "name",
+        "filterOperator": "is_present",
+        "values": null,
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "description",
+        "filterOperator": "is_not_present",
+        "values": null,
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "and",
+        "value": [
+          {
+            "type": "isNotNull",
+            "attribute": "name"
+          },
+          {
+            "type": "notEquals",
+            "attribute": "name",
+            "value": ""
+          }
+        ]
+      },
+      {
+        "type": "or",
+        "value": [
+          {
+            "type": "isNull",
+            "attribute": "description"
+          },
+          {
+            "type": "equals",
+            "attribute": "description",
+            "value": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "account",
+        "filterOperator": "is_present",
+        "values": null,
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "createdBy",
+        "filterOperator": "is_not_present",
+        "values": null,
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "isNotNull",
+        "attribute": "accountId",
+        "value": null
+      },
+      {
+        "type": "isNull",
+        "attribute": "createdById",
+        "value": null
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "name",
+        "filterOperator": "contains",
+        "values": "silva",
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "cpf",
+        "filterOperator": "does_not_contain",
+        "values": "000",
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "like",
+        "attribute": "name",
+        "value": "%silva%"
+      },
+      {
+        "type": "notLike",
+        "attribute": "cpf",
+        "value": "%000%"
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "hasLinkedin",
+        "filterOperator": "equal_to",
+        "values": {
+          "id": true,
+          "name": "Sim"
+        },
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "isTrue",
+        "attribute": "hasLinkedin"
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "hasLinkedin",
+        "filterOperator": "not_equal_to",
+        "values": {
+          "id": true,
+          "name": "Sim"
+        },
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "isFalse",
+        "attribute": "hasLinkedin"
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "createdAt",
+        "filterOperator": "equal_to",
+        "values": "2026-11-01",
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "createdAt",
+        "filterOperator": "is_greater_than",
+        "values": "2026-10-01",
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "on",
+        "attribute": "createdAt",
+        "value": "2026-11-01",
+        "dateTime": true,
+        "timeZone": "America/Sao_Paulo"
+      },
+      {
+        "type": "after",
+        "attribute": "createdAt",
+        "value": "2026-10-01",
+        "dateTime": true,
+        "timeZone": "America/Sao_Paulo"
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "modifiedAt",
+        "filterOperator": "is_less_than",
+        "values": "2026-11-20",
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "createdAt",
+        "filterOperator": "not_equal_to",
+        "values": "2026-11-01",
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "before",
+        "attribute": "modifiedAt",
+        "value": "2026-11-20",
+        "dateTime": true,
+        "timeZone": "America/Sao_Paulo"
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "emailEnrichedAt",
+        "filterOperator": "days_before",
+        "values": 30,
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "olderThanXDays",
+        "attribute": "emailEnrichedAt",
+        "value": 30,
+        "dateTime": true,
+        "timeZone": "America/Sao_Paulo"
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "emailEnrichmentResult",
+        "filterOperator": "equal_to",
+        "values": [
+          {
+            "id": "found",
+            "name": "Encontrado"
+          }
+        ],
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "in",
+        "attribute": "emailEnrichmentResult",
+        "value": [
+          "found"
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "recordQuery",
+        "filterOperator": "query",
+        "values": "account.industry ~ \"saas\"",
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "recordQuery",
+        "attribute": "id",
+        "value": {
+          "query": "account.industry ~ \"saas\"",
+          "timeZone": "America/Sao_Paulo"
+        }
+      }
+    ]
+  },
+  {
+    "entityType": "Contact",
+    "conditions": [
+      {
+        "attributeKey": "unknownField",
+        "filterOperator": "equal_to",
+        "values": "x",
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "name",
+        "filterOperator": "equal_to",
+        "values": null,
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "name",
+        "filterOperator": "equal_to",
+        "values": "",
+        "queryOperator": "and"
+      }
+    ],
+    "where": []
+  },
+  {
+    "entityType": "Account",
+    "conditions": [
+      {
+        "attributeKey": "type",
+        "filterOperator": "equal_to",
+        "values": [
+          {
+            "id": "Prospect",
+            "name": "Prospecto"
+          }
+        ],
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "recordQuery",
+        "filterOperator": "query",
+        "values": "journeyRecords.any(status=\"Completed\")",
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "in",
+        "attribute": "type",
+        "value": [
+          "Prospect"
+        ]
+      },
+      {
+        "type": "recordQuery",
+        "attribute": "id",
+        "value": {
+          "query": "journeyRecords.any(status=\"Completed\")",
+          "timeZone": "America/Sao_Paulo"
+        }
+      }
+    ]
+  },
+  {
+    "entityType": "Account",
+    "conditions": [
+      {
+        "attributeKey": "industry",
+        "filterOperator": "equal_to",
+        "values": "SaaS",
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "industry",
+        "filterOperator": "contains",
+        "values": "tech",
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "equals",
+        "attribute": "industry",
+        "value": "SaaS"
+      },
+      {
+        "type": "like",
+        "attribute": "industry",
+        "value": "%tech%"
+      }
+    ]
+  },
+  {
+    "entityType": "Account",
+    "conditions": [
+      {
+        "attributeKey": "teams",
+        "filterOperator": "equal_to",
+        "values": {
+          "id": "team1",
+          "name": "Vendas"
+        },
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "linkedWith",
+        "attribute": "teams",
+        "value": [
+          "team1"
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Account",
+    "conditions": [
+      {
+        "attributeKey": "sociosEnrichedAt",
+        "filterOperator": "is_greater_than",
+        "values": "2026-11-01",
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "sociosEnrichmentResult",
+        "filterOperator": "not_equal_to",
+        "values": [
+          {
+            "id": "none",
+            "name": "Nada"
+          }
+        ],
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "after",
+        "attribute": "sociosEnrichedAt",
+        "value": "2026-11-01",
+        "dateTime": true,
+        "timeZone": "America/Sao_Paulo"
+      },
+      {
+        "type": "notIn",
+        "attribute": "sociosEnrichmentResult",
+        "value": [
+          "none"
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Opportunity",
+    "conditions": [
+      {
+        "attributeKey": "funnel",
+        "filterOperator": "equal_to",
+        "values": {
+          "id": "f1",
+          "name": "Vendas"
+        },
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "contacts",
+        "filterOperator": "equal_to",
+        "values": {
+          "id": "c1",
+          "name": "Ana"
+        },
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "equals",
+        "attribute": "funnelId",
+        "value": "f1"
+      },
+      {
+        "type": "linkedWith",
+        "attribute": "contacts",
+        "value": [
+          "c1"
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Opportunity",
+    "conditions": [
+      {
+        "attributeKey": "amountConverted",
+        "filterOperator": "is_greater_than",
+        "values": 1000,
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "probability",
+        "filterOperator": "is_less_than",
+        "values": 50,
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "greaterThan",
+        "attribute": "amountConverted",
+        "value": 1000
+      },
+      {
+        "type": "lessThan",
+        "attribute": "probability",
+        "value": 50
+      }
+    ]
+  },
+  {
+    "entityType": "Opportunity",
+    "conditions": [
+      {
+        "attributeKey": "closeDate",
+        "filterOperator": "is_greater_than",
+        "values": "2026-12-01",
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "closeDate",
+        "filterOperator": "equal_to",
+        "values": "2026-12-24",
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "after",
+        "attribute": "closeDate",
+        "value": "2026-12-01"
+      },
+      {
+        "type": "equals",
+        "attribute": "closeDate",
+        "value": "2026-12-24"
+      }
+    ]
+  },
+  {
+    "entityType": "Opportunity",
+    "conditions": [
+      {
+        "attributeKey": "followupStatus",
+        "filterOperator": "equal_to",
+        "values": [
+          {
+            "id": "active",
+            "name": "Ativo"
+          }
+        ],
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "followupCount",
+        "filterOperator": "equal_to",
+        "values": 2,
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "in",
+        "attribute": "followupStatus",
+        "value": [
+          "active"
+        ]
+      },
+      {
+        "type": "equals",
+        "attribute": "followupCount",
+        "value": 2
+      }
+    ]
+  },
+  {
+    "entityType": "Opportunity",
+    "conditions": [
+      {
+        "attributeKey": "chatwootInbox",
+        "filterOperator": "equal_to",
+        "values": [
+          12,
+          15
+        ],
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "inChatwootInbox",
+        "attribute": "id",
+        "value": [
+          12,
+          15
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Opportunity",
+    "conditions": [
+      {
+        "attributeKey": "streamUpdatedAt",
+        "filterOperator": "days_before",
+        "values": 7,
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "description",
+        "filterOperator": "is_present",
+        "values": null,
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "olderThanXDays",
+        "attribute": "streamUpdatedAt",
+        "value": 7,
+        "dateTime": true,
+        "timeZone": "America/Sao_Paulo"
+      },
+      {
+        "type": "and",
+        "value": [
+          {
+            "type": "isNotNull",
+            "attribute": "description"
+          },
+          {
+            "type": "notEquals",
+            "attribute": "description",
+            "value": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "entityType": "Initiative",
+    "conditions": [
+      {
+        "attributeKey": "initiativeType",
+        "filterOperator": "equal_to",
+        "values": {
+          "id": "it1",
+          "name": "Onboarding"
+        },
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "name",
+        "filterOperator": "contains",
+        "values": "Q4",
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "equals",
+        "attribute": "initiativeTypeId",
+        "value": "it1"
+      },
+      {
+        "type": "like",
+        "attribute": "name",
+        "value": "%Q4%"
+      }
+    ]
+  },
+  {
+    "entityType": "Initiative",
+    "conditions": [
+      {
+        "attributeKey": "assignedUser",
+        "filterOperator": "is_not_present",
+        "values": null,
+        "queryOperator": "and"
+      },
+      {
+        "attributeKey": "createdAt",
+        "filterOperator": "is_less_than",
+        "values": "2026-11-01",
+        "queryOperator": "and"
+      }
+    ],
+    "where": [
+      {
+        "type": "isNull",
+        "attribute": "assignedUserId",
+        "value": null
+      },
+      {
+        "type": "before",
+        "attribute": "createdAt",
+        "value": "2026-11-01",
+        "dateTime": true,
+        "timeZone": "America/Sao_Paulo"
+      }
+    ]
+  }
+]
