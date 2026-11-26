@@ -2,6 +2,9 @@
     "fields": {
         "linkedinUrl": "LinkedIn URL",
         "cnpj": "CNPJ",
+        "numberOfEmployees": "Employees",
+        "annualRevenue": "Annual revenue (US$)",
+        "foundedYear": "Founded year",
         "tenant": "Tenant",
         "customFields": "Custom Fields"
     },
@@ -15,6 +18,8 @@
         "Documents": "Files & Documents"
     },
     "tooltips": {
+        "numberOfEmployees": "Estimate",
+        "annualRevenue": "Estimate in US dollars",
         "customFields": "Tenant-defined custom attributes. Values follow this record's ACL."
     },
     "options": {

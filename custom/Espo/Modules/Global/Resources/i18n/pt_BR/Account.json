@@ -2,6 +2,9 @@
     "fields": {
         "linkedinUrl": "URL do LinkedIn",
         "cnpj": "CNPJ",
+        "numberOfEmployees": "Nº de funcionários",
+        "annualRevenue": "Faturamento anual (US$)",
+        "foundedYear": "Ano de fundação",
         "tenant": "Ambiente",
         "customFields": "Campos Personalizados"
     },
@@ -15,6 +18,8 @@
         "Documents": "Arquivos & Documentos"
     },
     "tooltips": {
+        "numberOfEmployees": "Estimativa",
+        "annualRevenue": "Estimativa em dólares americanos",
         "customFields": "Atributos personalizados do tenant. Os valores seguem o ACL do registro."
     },
     "options": {

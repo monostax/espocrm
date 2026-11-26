@@ -69,6 +69,12 @@ final class Apollo extends Supplier
             'country' => 'billingAddressCountry', 'postal_code' => 'billingAddressPostalCode'] as $source => $field) {
             if (is_string($data[$source] ?? null) && trim($data[$source]) !== '') $values[$field] = trim($data[$source]);
         }
+        // Firmographics are Apollo estimates (revenue in USD). Purchased values stay strings; FieldApplication casts them.
+        foreach (['estimated_num_employees' => 'numberOfEmployees', 'annual_revenue' => 'annualRevenue', 'founded_year' => 'foundedYear'] as $source => $field) {
+            $number = $data[$source] ?? null;
+            if (is_float($number) && is_finite($number) && $number < PHP_INT_MAX) $number = (int) round($number);
+            if (is_int($number) && $number > 0 && ($field !== 'foundedYear' || ($number >= 1000 && $number <= 9999))) $values[$field] = (string) $number;
+        }
         $phone = $this->result([], [$data['primary_phone']['sanitized_number'] ?? null, $data['phone'] ?? null], 'phone');
         return new Result($values ? 'match' : 'no_match', $values, hidden: $phone->values ? ['phone' => $phone->values] : []);
     }

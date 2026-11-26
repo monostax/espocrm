@@ -31,16 +31,22 @@ final class FieldApplication
         }
         GrantInput::identity($data['tenantId']); GrantInput::identity($data['id']);
         $fields = get_object_vars($data['fields']); $expected = get_object_vars($data['expected']);
-        if (!$fields || count($fields) > 10 || array_diff(array_keys($fields),array_keys($expected)) ||
+        if (!$fields || count($fields) > 16 || array_diff(array_keys($fields),array_keys($expected)) ||
             array_diff(array_keys($expected),array_keys($fields))) throw new InvalidArgumentException('Expected values must match selected fields.');
         foreach ($fields as $field => $value) {
+            $numeric = in_array($field,Access::NUMERIC_FIELDS,true);
             if (!is_string($value) || $value === '' || strlen($value) > 10000 ||
-                !(is_string($expected[$field]) || $expected[$field] === null)) throw new InvalidArgumentException('Scalar purchased values required.');
+                !(is_string($expected[$field]) || $expected[$field] === null || ($numeric && is_int($expected[$field])))) {
+                throw new InvalidArgumentException('Scalar purchased values required.');
+            }
         }
+        // Integer destinations receive the purchased digit string as an int (only purchased values pass the choice check).
+        $write = $fields;
+        foreach (Access::NUMERIC_FIELDS as $field) if (isset($write[$field])) $write[$field] = (int) $write[$field];
         if ($this->user->isApi() || $this->user->isPortal() || $this->user->isSystem()) throw new Forbidden('Human application required.');
         $actor = $this->access->actorId(); $pdo = $this->em->getPDO();
         if ($pdo->inTransaction()) throw new \LogicException('Field application must own its transaction.');
-        return $this->em->getTransactionManager()->run(function () use ($pdo,$data,$fields,$expected,$actor): array {
+        return $this->em->getTransactionManager()->run(function () use ($pdo,$data,$fields,$write,$expected,$actor): array {
             $tenant = $data['tenantId']; $id = $data['id'];
             if (!$this->em->getRDBRepository('User')->select(['id'])->where(['id' => $actor])->forUpdate()->findOne()) throw new Forbidden();
             $q = $pdo->prepare('SELECT id FROM tenant WHERE id=? AND deleted=FALSE FOR UPDATE'); $q->execute([$tenant]);
@@ -70,7 +76,7 @@ final class FieldApplication
                 if (!hash_equals($application['application_hash'],$hash) ||
                     (!hash_equals($application['applied_identity_hash'] ?? '',Quotes::hash($identity($target))) &&
                         !($data['source'] === 'field' && $identityMatches()))) throw new Conflict('Application retry or target identity changed.');
-                foreach ($fields as $field => $value) if ($target->get($field) !== $value) throw new Conflict('Applied field changed; replay cannot overwrite it.');
+                foreach ($write as $field => $value) if ($target->get($field) !== $value) throw new Conflict('Applied field changed; replay cannot overwrite it.');
                 $receipt = json_decode($application['application_receipt'],true,32,JSON_THROW_ON_ERROR);
                 if (($receipt['id'] ?? null) !== $id || ($receipt['tenantId'] ?? null) !== $tenant ||
                     ($receipt['targetId'] ?? null) !== $targetId || ($receipt['source'] ?? null) !== $data['source']) throw new Conflict('Application receipt binding differs.');
@@ -78,9 +84,9 @@ final class FieldApplication
             }
             if (!$identityMatches()) throw new Conflict('Record identity changed; application requires review.');
             foreach ($expected as $field => $value) if ($target->get($field) !== $value) throw new Conflict('A selected destination changed after review.');
-            $this->records->get($type)->update($targetId,(object) $fields);
+            $this->records->get($type)->update($targetId,(object) $write);
             $updated = $this->em->getEntityById($type,$targetId);
-            foreach ($fields as $field => $value) if ($updated->get($field) !== $value) throw new Conflict('CRM normalization changed the selected value.');
+            foreach ($write as $field => $value) if ($updated->get($field) !== $value) throw new Conflict('CRM normalization changed the selected value.');
             $receipt = ['id' => $id,'source' => $data['source'],'tenantId' => $tenant,'targetType' => $type,'targetId' => $targetId,
                 'fields' => array_keys($fields),'actorId' => $actor,'appliedAt' => $this->clock->now()];
             $pdo->prepare("UPDATE $table SET application_hash=?,application_receipt=?,applied_identity_hash=? WHERE tenant_id=? AND id=?")

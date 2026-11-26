@@ -143,10 +143,12 @@ class EnrichmentSuppliersTest extends TestCase
     {
         $supplier = $this->supplier(Apollo::class);
         $body = ['organization' => ['id' => 'company','linkedin_url' => 'https://www.linkedin.com/company/example','name' => 'Example',
-            'email' => 'not-a-documented-field@example.test','phone' => '+14155550164','website_url' => 'https://example.test']];
+            'email' => 'not-a-documented-field@example.test','phone' => '+14155550164','website_url' => 'https://example.test',
+            'estimated_num_employees' => 85,'annual_revenue' => 5200000.0,'founded_year' => 2007]];
         $this->responses[] = new Response(200,$body);
         $result = $supplier->lookup('Account','company',['linkedinUrl' => 'https://www.linkedin.com/company/example']);
-        $this->assertSame(['name' => 'Example','website' => 'https://example.test'],$result->values);
+        $this->assertSame(['name' => 'Example','website' => 'https://example.test',
+            'numberOfEmployees' => '85','annualRevenue' => '5200000','foundedYear' => '2007'],$result->values);
         $this->assertSame(['phone' => ['+14155550164']],$result->hidden);
         $this->assertSame('failed',$supplier->lookup('Account','email',['linkedinUrl' => 'https://www.linkedin.com/company/example'])->state);
         $this->responses[] = new Response(200,$body);

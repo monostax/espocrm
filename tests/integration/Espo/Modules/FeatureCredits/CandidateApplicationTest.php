@@ -115,7 +115,8 @@ class CandidateApplicationTest extends TestCase
             $registry = $this->createStub(\Espo\Modules\FeatureCredits\Enrichment\Providers\Registry::class); $registry->method('get')->willReturn($supplier);
             $execution = new \Espo\Modules\FeatureCredits\Enrichment\Execution($this->em,$lock,$actors,$registry,new FixedSettlement($funding),$crypt,$clock,
                 new \Espo\Modules\FeatureCredits\Enrichment\MobilePhones(),
-        new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners(new \Espo\Modules\FeatureCredits\Enrichment\Decisions()));
+        new \Espo\Modules\FeatureCredits\Enrichment\EmailOwners(new \Espo\Modules\FeatureCredits\Enrichment\Decisions()),
+                $this->createStub(\Espo\Modules\FeatureCredits\Enrichment\FoundResults::class));
             $execution->run($this->tenant,$quote['id']);
             $q = $this->em->getPDO()->prepare('SELECT id,product FROM enrichment_attempt WHERE quote_id=? AND purchased_at IS NOT NULL'); $q->execute([$quote['id']]);
             $receipts = [];
@@ -439,6 +440,34 @@ class CandidateApplicationTest extends TestCase
         $account = $this->em->getEntityById('Account',$this->account); $account->set('description','Manual description'); $this->em->saveEntity($account);
         try { $service->apply($input); $this->fail('Concurrent manual field overwritten.'); } catch (Conflict) {}
         $this->assertSame('Manual description',$this->em->getEntityById('Account',$this->account)->get('description'));
+    }
+
+    public function testCompanyFirmographicsApplyAsIntegersWithFreeReplay(): void
+    {
+        $values = ['numberOfEmployees' => '1600','annualRevenue' => '5200000000','foundedYear' => '2007'];
+        $purchase = $this->purchased($values,'company');
+        $input = (object) ['tenantId' => $this->tenant,'id' => $purchase['id'],'source' => 'field','fields' => (object) $values,
+            'expected' => (object) ['numberOfEmployees' => null,'annualRevenue' => null,'foundedYear' => null]];
+        $service = $this->service(\Espo\Modules\FeatureCredits\Enrichment\FieldApplication::class);
+        $receipt = $service->apply($input); $this->assertSame($receipt,$service->apply($input));
+        $account = $this->em->getEntityById('Account',$this->account);
+        $this->assertSame(1600,$account->get('numberOfEmployees'));
+        $this->assertSame(5200000000,$account->get('annualRevenue'));
+        $this->assertSame(2007,$account->get('foundedYear'));
+    }
+
+    public function testCompanyFirmographicsCompareIntegerCurrentValues(): void
+    {
+        $account = $this->em->getEntityById('Account',$this->account); $account->set('numberOfEmployees',40); $this->em->saveEntity($account);
+        $purchase = $this->purchased(['numberOfEmployees' => '85'],'company');
+        $input = (object) ['tenantId' => $this->tenant,'id' => $purchase['id'],'source' => 'field',
+            'fields' => (object) ['numberOfEmployees' => '85'],'expected' => (object) ['numberOfEmployees' => 12]];
+        $service = $this->service(\Espo\Modules\FeatureCredits\Enrichment\FieldApplication::class);
+        try { $service->apply($input); $this->fail('Stale integer destination overwritten.'); } catch (Conflict) {}
+        $this->assertSame(40,$this->em->getEntityById('Account',$this->account)->get('numberOfEmployees'));
+        $input->expected = (object) ['numberOfEmployees' => 40];
+        $service->apply($input);
+        $this->assertSame(85,$this->em->getEntityById('Account',$this->account)->get('numberOfEmployees'));
     }
 
     public function testOwnContactEmailApplicationUsesNormalRecordServiceAndFreeReplay(): void

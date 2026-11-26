@@ -16,6 +16,9 @@ use Espo\ORM\EntityManager;
 /** Purchase/read access is separate from field application/edit access. */
 class Access
 {
+    /** Integer CRM fields whose purchased values are stored as digit strings. */
+    public const NUMERIC_FIELDS = ['numberOfEmployees', 'annualRevenue', 'foundedYear'];
+
     public function __construct(private User $user, private Acl $acl,
         private UserTenantResolver $tenants, private EntityManager $entityManager) {}
 
@@ -180,7 +183,8 @@ class Access
             'phone' => ['phoneNumber'],
             // Normalized company bundle excludes separately purchased email/phone.
             'company' => ['name', 'website', 'industry', 'description', 'billingAddress',
-                'billingAddressStreet', 'billingAddressCity', 'billingAddressState', 'billingAddressCountry', 'billingAddressPostalCode'],
+                'billingAddressStreet', 'billingAddressCity', 'billingAddressState', 'billingAddressCountry', 'billingAddressPostalCode',
+                ...self::NUMERIC_FIELDS],
             default => throw new \InvalidArgumentException('Unsupported enrichment product.'),
         };
     }

@@ -21,6 +21,21 @@
             "maxLength": 18,
             "trim": true
         },
+        "numberOfEmployees": {
+            "type": "int",
+            "min": 0
+        },
+        "annualRevenue": {
+            "type": "int",
+            "min": 0,
+            "dbType": "bigint"
+        },
+        "foundedYear": {
+            "type": "int",
+            "min": 1000,
+            "max": 9999,
+            "disableFormatting": true
+        },
         "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" },
         "createdBy": {
             "view": "views/fields/user-with-avatar"
