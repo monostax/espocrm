@@ -222,27 +222,28 @@ class WhatsAppBusinessAccount
      * or null when the account is not a System User account (so the caller
      * falls back to GET /me/businesses).
      *
-     * Reads the `providerType` discriminator and the `metaBusinessId` stored
-     * when the System User token was set.
+     * Reads the `metaBusinessId` stored when the System User token was set.
+     * A System User token can also sit on a customer's own Meta app under a
+     * generic provider (Grupo Mousa), so the stored ID counts whatever the
+     * provider type: such a system user reaches its WABAs through a business
+     * role, and both /me edges return nothing for it.
      */
     private function getSystemUserBusinessId(Entity $oAuthAccount): ?string
     {
-        if ($oAuthAccount->get('providerType') !== 'meta-system-user') {
-            return null;
+        $businessId = trim((string) $oAuthAccount->get('metaBusinessId'));
+
+        if ($businessId !== '') {
+            return $businessId;
         }
 
-        $businessId = $oAuthAccount->get('metaBusinessId');
-
-        if (!is_string($businessId) || trim($businessId) === '') {
+        if ($oAuthAccount->get('providerType') === 'meta-system-user') {
             $this->log->warning(
                 "WhatsAppBusinessAccount: OAuthAccount {$oAuthAccount->getId()} is a System User " .
                 "account but has no metaBusinessId set; cannot discover WABAs."
             );
-
-            return null;
         }
 
-        return trim($businessId);
+        return null;
     }
 
     /**
