@@ -20,7 +20,7 @@ use Throwable;
  * Messages nobody asked for, so they stay few (Meta blocked 247 per-event alerts from this number in Jul–Aug 2026 with
  * 131049):
  *
- * - the day's cards (the user, 2026-11-19): one at each of `pushTimes` (08:00, 11:00, 15:00, workspace time zone),
+ * - the day's card (the user, 2026-11-26): one at each of `pushTimes` (just 08:00, workspace time zone),
  *   skipped when there is nothing; the digest template at the first time when `digestTemplate` is configured;
  * - reminders, when a card the person put off with "Me lembre mais tarde" comes due, if it is still a card;
  * - hot leads: a customer with buying intent waiting `hotLeadMinutes` on us while the person is away from Chatwoot,

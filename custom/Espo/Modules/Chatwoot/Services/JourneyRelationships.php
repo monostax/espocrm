@@ -318,6 +318,27 @@ class JourneyRelationships
         return $this->present($record, $tenant, $target);
     }
 
+    /** Deleting a cycle: JourneyRecord ACL (the journey's edit access) plus edit access to the record. */
+    private function canDelete(Entity $record, Entity $target): bool
+    {
+        return $this->acl->check($record, 'delete') && $this->acl->check($target, 'edit');
+    }
+
+    /**
+     * Deletes the cycle and its log (cascadeDelete), so the record can enroll in that journey again.
+     * A live cycle is exited first, which stops the engine and keeps the journey's counters right.
+     */
+    public function delete(Entity $tenant, Entity $target, string $id): object
+    {
+        $record = $this->record($tenant, $target, $id);
+        if (!$this->canDelete($record, $target)) throw new Forbidden();
+        if (in_array($record->get('status'), self::LIVE, true)) {
+            $record = $this->enrollment->exitRecord($id, $this->user->getId(), 'manual');
+        }
+        $this->em->removeEntity($record);
+        return (object) ['id' => $id];
+    }
+
     /** Ends the record's live enrollment in one journey, with unlink()'s checks. */
     public function exitJourney(Entity $tenant, Entity $target, string $journeyId): object
     {
@@ -367,7 +388,7 @@ class JourneyRelationships
             'canResume' => $record->get('status') === 'Paused' && !$record->get('replyPausedAt') &&
                 $journey?->get('status') === 'Active' && $this->canChangeStatus($record, $target),
             'canUnlink' => in_array($record->get('status'), self::LIVE, true) && $this->canChangeStatus($record, $target),
-            'canStream' => false, 'canDelete' => false,
+            'canStream' => false, 'canDelete' => $this->canDelete($record, $target),
         ];
     }
 

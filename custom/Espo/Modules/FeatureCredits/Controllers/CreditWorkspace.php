@@ -9,9 +9,9 @@ use Espo\Core\Api\{Request, Response};
 use Espo\Core\Exceptions\{BadRequest, Conflict, Forbidden};
 use Espo\Entities\User;
 use Espo\Modules\FeatureAiUsage\Services\Access;
-use Espo\Modules\FeatureCredits\Accounting\{AgreementModels, BalanceStatus, Clock, ExecutionRouting, GrantInput};
+use Espo\Modules\FeatureCredits\Accounting\{AgreementModels, BalanceStatus, Clock, ExecutionRouting, GrantInput, UsageMeter};
 use Espo\Modules\FeatureCredits\Pricing\AiCatalog;
-use Espo\Modules\FeatureCredits\Accounting\{OperationHistory, OperationHistoryQuery};
+use Espo\Modules\FeatureCredits\Accounting\{ConversationUsage, OperationHistory, OperationHistoryQuery};
 use Espo\ORM\Entity;
 use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\EntityManager;
@@ -51,6 +51,9 @@ class CreditWorkspace
         }
         $regime = $cutover && $cutover['cutover_at'] <= $this->clock->now() ? ExecutionRouting::UNIFIED : ExecutionRouting::LEGACY;
         $status = $this->balance->inspect($tenantId);
+        // Customers see this period's usage as a share, not the balance (decided 2026-11-26).
+        $usage = $regime === ExecutionRouting::UNIFIED && $status['walletExists'] ?
+            (new UsageMeter($this->em, $this->clock))->inspect($tenantId, $status) : null;
         return (object) [
             'accountId' => $accountId,
             'tenantId' => $tenantId,
@@ -58,6 +61,7 @@ class CreditWorkspace
             'canManage' => $canManage,
             'availableCredits' => $status['availableCredits'],
             'reservedCredits' => $status['reservedCredits'],
+            'usage' => $usage,
             'observedAt' => $status['observedAt'],
         ];
     }
@@ -85,7 +89,12 @@ class CreditWorkspace
         ];
     }
 
-    /** Original operation receipts only; no telemetry-based price or workflow-failure waiver. */
+    /**
+     * A conversation's AI use for its panel: its share of this period's credits (UsageMeter::period), how many AI
+     * interactions it had and the latest ten, by what they were, without amounts (decided 2026-11-26). Only the
+     * workspace's financial administrators read it; anyone else gets `canManage: false`, so attendants never see
+     * what a reply costs. Exact amounts stay in the financial reports.
+     */
     public function getActionConversation(Request $request, Response $response): object
     {
         $response->setHeader('Cache-Control', 'private, no-store');
@@ -95,6 +104,11 @@ class CreditWorkspace
             if (!is_string($params[$key] ?? null) || !preg_match('/\A[1-9][0-9]{0,14}\z/', $params[$key])) throw new BadRequest();
         }
         $account = $this->account($params['accountId']);
+        $tenantId = $account->get('tenantId');
+        $ids = $this->financialAccess->tenantIds();
+        if ($ids !== null && !in_array($tenantId, $ids, true)) {
+            return (object) ['accountId' => $params['accountId'], 'conversationId' => $params['conversationId'], 'canManage' => false];
+        }
         if (!$this->acl->checkScope('ChatwootConversation', 'read')) throw new Forbidden();
         $rows = iterator_to_array($this->em->getRDBRepository('ChatwootConversation')->where([
             'chatwootAccountId' => $account->getId(),
@@ -104,15 +118,23 @@ class CreditWorkspace
         $conversation = array_values($rows)[0];
         if ($conversation->get('chatwootAccountId') !== $account->getId() ||
             !$this->acl->check($conversation, 'read')) throw new Forbidden();
+        $status = $this->balance->inspect($tenantId);
+        $period = $status['walletExists'] ? (new UsageMeter($this->em, $this->clock))->period($tenantId, $status) : null;
+        $usage = (new ConversationUsage($this->em))->inspect($tenantId, $conversation->getId(), $period['startedAt'] ?? null);
         $history = (new OperationHistory($this->em, $this->clock))->inspect(
-            new OperationHistoryQuery($account->get('tenantId'), 10), $conversation->getId(),
+            new OperationHistoryQuery($tenantId, 10), $conversation->getId(),
         );
         return (object) [
-            'accountId' => $params['accountId'], 'conversationId' => $params['conversationId'],
+            'accountId' => $params['accountId'], 'conversationId' => $params['conversationId'], 'canManage' => true,
             'tenantId' => $history['tenantId'], 'observedAt' => $history['observedAt'],
+            // The period's start and the share in it; both null for a workspace without a wallet period.
+            'since' => $period['startedAt'] ?? null,
+            'share' => $period === null ? null : ConversationUsage::share($usage['usedCredits'], $period['periodCredits']),
+            'interactions' => $usage['interactions'],
+            // An Em dia analysis starts from a queued request; anything else is a run of the AI agent.
             'list' => array_map(static fn (array $row): array => [
                 'id' => $row['id'], 'state' => $row['state'] === 'admitted' ? 'pending' : $row['state'],
-                'settledCredits' => $row['settledCredits'], 'admittedAt' => $row['admittedAt'],
+                'kind' => $row['sourceRequest'] ? 'analysis' : 'agent', 'admittedAt' => $row['admittedAt'],
             ], $history['list']),
         ];
     }

@@ -254,7 +254,7 @@ class JourneyRelationshipsTest extends TestCase
     }
 
     /** @dataProvider foreignEnrollments */
-    public function testReadAndUnlinkRejectForeignEnrollment(array $attributes, string $action): void
+    public function testReadUnlinkAndDeleteRejectForeignEnrollment(array $attributes, string $action): void
     {
         $this->enrollment($attributes);
         $this->engine->expects($this->never())->method('exitRecord');
@@ -265,7 +265,7 @@ class JourneyRelationshipsTest extends TestCase
     public static function foreignEnrollments(): array
     {
         $cases = [];
-        foreach (['read', 'unlink'] as $action) {
+        foreach (['read', 'unlink', 'delete'] as $action) {
             foreach ([['tenantId' => 'tenant-b'], ['targetId' => 'another-record'], ['targetType' => 'Contact']] as $attributes) {
                 $cases[] = [$attributes, $action];
             }
@@ -431,6 +431,45 @@ class JourneyRelationshipsTest extends TestCase
         $this->engine->expects($this->never())->method('exitRecord');
         $this->expectException(Forbidden::class);
         $this->service->exitJourney($this->tenant, $this->target, 'journey-a');
+    }
+
+    /** @dataProvider deletePermissions */
+    public function testDeleteRequiresEnrollmentDeleteAndTargetEditAccess(string $permission): void
+    {
+        $this->enrollment(['status' => 'Failed']);
+        $this->denied = [$permission];
+        $this->em->expects($this->never())->method('removeEntity');
+        $this->engine->expects($this->never())->method('exitRecord');
+        self::assertFalse($this->service->read($this->tenant, $this->target, 'enrollment-a')->canDelete);
+        $this->expectException(Forbidden::class);
+        $this->service->delete($this->tenant, $this->target, 'enrollment-a');
+    }
+
+    public static function deletePermissions(): array
+    {
+        return [['Opportunity:edit'], ['JourneyRecord:delete']];
+    }
+
+    public function testDeleteRemovesEndedCycleWithoutExiting(): void
+    {
+        $record = $this->enrollment(['status' => 'Failed']);
+        self::assertTrue($this->service->read($this->tenant, $this->target, 'enrollment-a')->canDelete);
+        $this->engine->expects($this->never())->method('exitRecord');
+        $this->em->expects($this->once())->method('removeEntity')->with($record);
+        self::assertSame('enrollment-a', $this->service->delete($this->tenant, $this->target, 'enrollment-a')->id);
+    }
+
+    public function testDeleteExitsLiveCycleBeforeRemovingIt(): void
+    {
+        $this->enrollment(['status' => 'Paused']);
+        $exited = $this->entity('JourneyRecord', 'enrollment-a', ['status' => 'Exited']);
+        $calls = [];
+        $this->engine->expects($this->once())->method('exitRecord')->with('enrollment-a', 'operator-a', 'manual')
+            ->willReturnCallback(function () use (&$calls, $exited) { $calls[] = 'exit'; return $exited; });
+        $this->em->expects($this->once())->method('removeEntity')->with($exited)
+            ->willReturnCallback(function () use (&$calls) { $calls[] = 'remove'; });
+        $this->service->delete($this->tenant, $this->target, 'enrollment-a');
+        self::assertSame(['exit', 'remove'], $calls);
     }
 
     public function testControllerIgnoresSpoofedTenantTargetAndRunIdentity(): void

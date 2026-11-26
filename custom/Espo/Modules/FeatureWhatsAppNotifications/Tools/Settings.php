@@ -19,7 +19,8 @@ use Espo\Core\Utils\Config;
  *                        window an interactive cta_url (card image, invisible body, workspace footer); outside it the
  *                        cardTemplate takes {{1}} who, {{2}} how long and a URL button
  *                        https://chat.app.monostax.ai/app/accounts/{{1}} (monostax_emdia_card_button); default false
- *   pushTimes            when the day's cards go out, workspace time zone (the user, 2026-11-19: 08:00, 11:00, 15:00)
+ *   pushTimes            when the day's cards go out, workspace time zone (the user, 2026-11-26: one a day at 08:00;
+ *                        was 08:00, 11:00, 15:00 from 2026-11-19)
  *   digestTemplate       Meta template for the morning digest at the first push time; null sends a card instead
  *   templateLanguage     pt_BR
  *   hotLeadMinutes       minimum wait before a hot-lead alert (60)
@@ -34,7 +35,7 @@ use Espo\Core\Utils\Config;
 class Settings
 {
     public const DEFAULT_INBOX_ID = '6a67d0d1a74fd5632';
-    public const DEFAULT_PUSH_TIMES = ['08:00', '11:00', '15:00'];
+    public const DEFAULT_PUSH_TIMES = ['08:00'];
     public const DEFAULT_NUMBER = '+559140403376';
     /** Meta's Brazil rates from 2026-10-01, per delivered message (the user, 2026-11-12). */
     public const DEFAULT_RATES = ['marketing' => '0.3217', 'utility' => '0.035', 'authentication' => '0.035', 'service' => '0.035'];

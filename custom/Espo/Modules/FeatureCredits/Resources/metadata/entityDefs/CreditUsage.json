@@ -26,6 +26,7 @@
     "indexes": {
         "operationUnique": {"columns": ["tenantId", "operationType", "operationKey"], "unique": true},
         "tenantState": {"columns": ["tenantId", "state", "admittedAt"]},
-        "tenantAdmission": {"columns": ["tenantId", "admittedAt", "id"]}
+        "tenantAdmission": {"columns": ["tenantId", "admittedAt", "id"]},
+        "tenantSource": {"columns": ["tenantId", "sourceType", "sourceId", "admittedAt"]}
     }
 }

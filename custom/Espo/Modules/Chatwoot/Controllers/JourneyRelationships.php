@@ -101,6 +101,12 @@ class JourneyRelationships
         return $this->service->unlink($tenant, $target, (string) $request->getRouteParam('id'));
     }
 
+    public function deleteActionDelete(Request $request): object
+    {
+        [$tenant, $target] = $this->context($request);
+        return $this->service->delete($tenant, $target, (string) $request->getRouteParam('id'));
+    }
+
     public function getActionReplyReview(Request $request): object
     {
         [$tenant, $target] = $this->context($request);

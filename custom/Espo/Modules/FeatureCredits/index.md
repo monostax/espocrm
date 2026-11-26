@@ -512,6 +512,16 @@ Both-dialect tests verify operation-only/sub-quantum/half-up rounding, zero and 
 
 The service checks wallet/grant balance and hold totals, deleted projections, missing wallets with grants, and grant ranges, failing rather than presenting contradictory balances. Use `ConsistencyAudit` for broader ledger/request/allocation validation. A result describes one database snapshot, not a provider dispatch permission, configuration check, or promise of future admission. Agreement eligibility, tenant billing regime, authorization, and fresh financial locking remain responsibilities of the relevant adapters and mutation services. No public API is introduced.
 
+## Usage meter
+
+Customers see how much of this period's credits they have used, as a percentage, instead of a balance ticking down (decided 2026-11-26). `Accounting/UsageMeter::inspect(tenantId, balanceStatus)` returns `null` for a tenant without grants, otherwise `{usedRatio, periodStartedAt, renewsAt}`:
+
+- **Period start** (`periodStartedAt`): when the newest `subscription` or `migration` grant (monthly plan credits, trial or opening credits, a staff top-up) arrived, else the newest `purchase`. A renewal or trial therefore starts the meter at 0; a purchase does not.
+- **`usedRatio`**: four-decimal string from `0.0000` to `1.0000`. Used = credits settled by usage admitted since the period start plus credits held now (`reservedCredits`); the ratio is used ÷ (used + `availableCredits`, floored at 0). Buying credits lowers it, and it is `1.0000` when nothing is available (including when every credit expired).
+- **`renewsAt`**: the end of the newest monthly grant's billing period while its subscription is open and the end is still ahead; `null` for trial, migration and purchase periods and for cancelled subscriptions.
+
+`GET /CreditWorkspace` (any workspace member) carries it as `usage` for wallet workspaces on `unified-prepaid-v1`, `null` otherwise. Like the balance, it is presentation only, read in its own read-only repeatable-read transaction, and never an admission decision. The settled sum uses the `credit_usage` `tenantState` index.
+
 ## Verification
 
 From `components/crm/source/`, with PHP available:

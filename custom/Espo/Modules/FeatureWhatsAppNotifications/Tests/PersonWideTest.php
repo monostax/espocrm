@@ -308,10 +308,10 @@ class PersonWideTest extends TestCase
         $pushes->hotLeads($here);
     }
 
-    private function pushes(EntityManager $em, Workspaces $workspaces, ?Taps $taps = null): Pushes
+    private function pushes(EntityManager $em, Workspaces $workspaces, ?Taps $taps = null, array $times = Settings::DEFAULT_PUSH_TIMES): Pushes
     {
         $settings = $this->createMock(Settings::class);
-        $settings->method('pushTimes')->willReturn(Settings::DEFAULT_PUSH_TIMES);
+        $settings->method('pushTimes')->willReturn($times);
         $settings->method('hotLeadDailyCap')->willReturn(2);
         return new Pushes($em, $settings, $workspaces, $taps ?? $this->createMock(Taps::class), $this->createMock(Deck::class),
             $this->createMock(Cards::class), $this->createMock(Avisos::class), $this->createMock(Tokens::class),
@@ -395,7 +395,8 @@ class PersonWideTest extends TestCase
         $taps = $this->createMock(Taps::class);
         $taps->expects($this->once())->method('next')
             ->with($here, 'card', 'push:s1:2026-11-19 11:00', false, null, ['service:conv1', 'deals:deal1', 'service:conv5'])->willReturn(true);
-        $pushes = $this->pushes($em, $this->workspacesAt('2026-11-19 11:05'), $taps);
+        // Configured push times still work; the default is one a day at 08:00 (the user, 2026-11-26).
+        $pushes = $this->pushes($em, $this->workspacesAt('2026-11-19 11:05'), $taps, ['08:00', '11:00', '15:00']);
         $pushes->morning($here);
         $pushes->morning($here);
         $this->assertSame('2026-11-19 11:00', $here->get('lastPushSlot'));
@@ -504,17 +505,25 @@ class PersonWideTest extends TestCase
 
     public function testThePushTimeIsTheLatestReachedWithinTheHour(): void
     {
-        $at = fn (string $time) => Pushes::slot(new DateTimeImmutable("2026-11-19 {$time}", new DateTimeZone('America/Sao_Paulo')), Settings::DEFAULT_PUSH_TIMES);
+        $at = fn (string $time, array $times = Settings::DEFAULT_PUSH_TIMES) => Pushes::slot(new DateTimeImmutable("2026-11-19 {$time}", new DateTimeZone('America/Sao_Paulo')), $times);
+        // The default: one card a day at 08:00 (the user, 2026-11-26).
+        $this->assertSame(['08:00'], Settings::DEFAULT_PUSH_TIMES);
         $this->assertNull($at('07:59'));
         $this->assertSame('08:00', $at('08:00'));
         $this->assertSame('08:00', $at('09:00'));
         $this->assertNull($at('09:01'));
-        $this->assertSame('11:00', $at('11:30'));
-        $this->assertSame('15:00', $at('15:59'));
-        $this->assertNull($at('16:01'));
-        $this->assertSame('8h, 11h e 15h', Copy::times('pt_BR', Settings::DEFAULT_PUSH_TIMES));
+        $this->assertNull($at('11:30'));
+        $this->assertNull($at('15:59'));
+        // Several configured times: the latest one reached within the hour.
+        $three = ['08:00', '11:00', '15:00'];
+        $this->assertSame('11:00', $at('11:30', $three));
+        $this->assertSame('15:00', $at('15:59', $three));
+        $this->assertNull($at('16:01', $three));
+        $this->assertSame('8h', Copy::times('pt_BR', Settings::DEFAULT_PUSH_TIMES));
+        $this->assertSame('8:00', Copy::times('en_US', Settings::DEFAULT_PUSH_TIMES));
+        $this->assertSame('8h, 11h e 15h', Copy::times('pt_BR', $three));
         $this->assertSame('8h30', Copy::times('pt_BR', ['08:30']));
-        $this->assertSame('8:00, 11:00 and 15:00', Copy::times('en_US', Settings::DEFAULT_PUSH_TIMES));
+        $this->assertSame('8:00, 11:00 and 15:00', Copy::times('en_US', $three));
     }
 
     public function testNamesReadAsAList(): void
