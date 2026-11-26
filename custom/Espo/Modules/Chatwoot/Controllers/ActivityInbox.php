@@ -145,7 +145,10 @@ class ActivityInbox
     {
         $before = $request->getQueryParam('beforeNumber');
         if ($before !== null && (!ctype_digit((string) $before) || (int) $before < 1)) throw new BadRequest('Invalid cursor.');
-        return $this->discussion->stream($this->record($request, true), $this->preparator, $request->getQueryParam('rootId'), $before === null ? null : (int) $before);
+        $record = $this->record($request, true);
+        // A Task's Mural hides its pills (overdue, linked conversations' messages) like an Account's.
+        return $this->discussion->stream($record, $this->preparator, $request->getQueryParam('rootId'), $before === null ? null : (int) $before,
+            $record->getEntityType() === 'Task' && $request->getQueryParam('postsOnly') === 'true');
     }
 
     public function postActionPost(Request $request): object

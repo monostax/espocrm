@@ -9,6 +9,7 @@ use Espo\Core\InjectableFactory;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
+use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\Query\Part\Condition;
 use Espo\ORM\Query\Select;
 
@@ -18,7 +19,11 @@ class OpportunityEventAccess
     private array $conditions = [];
     private array $messageLinks = [];
 
-    public function __construct(private InjectableFactory $factory, private AclManager $aclManager) {}
+    public function __construct(
+        private InjectableFactory $factory,
+        private AclManager $aclManager,
+        private UserTenantResolver $tenants,
+    ) {}
 
     public function where(User $user): array
     {
@@ -61,7 +66,7 @@ class OpportunityEventAccess
     {
         $key = implode(':', [$user->getId(), $noteAlias, $parentType]);
         if (isset($this->messageLinks[$key])) return $this->messageLinks[$key];
-        $types = $parentType ? [$parentType] : array_keys(OpportunityStreamEvents::DISCUSSION_ROLLOUT);
+        $types = $parentType ? [$parentType] : array_keys(OpportunityStreamEvents::MESSAGE_ROLLOUT);
         $conditions = [['type!=' => OpportunityStreamEvents::MESSAGE_RECEIVED], ['parentType!=' => $types]];
         foreach ($types as $type) {
             if (!$this->aclManager->checkScope($user, $type, 'read')) continue;
@@ -69,7 +74,7 @@ class OpportunityEventAccess
             foreach (MuralConversationLinks::paths($type) as $path => $link) {
                 $access = $this->linkAccess($user, $type, $path);
                 if ($access === null) continue;
-                $pair = $link->where($access)->where([
+                $pair = $link->where($access)->where($this->viewerTenant($user, $type))->where([
                     'muralParent.id:' => "$noteAlias.parentId", 'muralConversation.id:' => "$noteAlias.relatedId",
                 ])->build();
                 $pairs[] = Condition::exists($pair)->getRaw();
@@ -79,6 +84,16 @@ class OpportunityEventAccess
         return $this->messageLinks[$key] = ['OR' => $conditions];
     }
 
+    /**
+     * A tenantless parent (Task) cannot bind the conversation's workspace to its own tenant, so it is
+     * bound to the viewer's tenants, as the Tenant filter does for records.
+     */
+    private function viewerTenant(User $user, string $type): array
+    {
+        if (MuralConversationLinks::tenanted($type) || $user->isEffectiveAdmin()) return [];
+        return ['muralWorkspace.tenantId' => $this->tenants->resolveTenantIds($user)];
+    }
+
     /** null denies this path; row predicates are applied inside its EXISTS. */
     private function linkAccess(User $user, string $type, string $path): ?array
     {
@@ -86,6 +101,10 @@ class OpportunityEventAccess
             return $this->aclManager->checkScope($user, 'RecordPredicate', 'read') &&
                 $this->aclManager->checkField($user, $type, 'name') &&
                 $this->aclManager->checkField($user, 'ChatwootConversation', 'name') ? [] : null;
+        }
+        if ($path === MuralConversationLinks::TASK_CONVERSATIONS) {
+            // The note's parent is the task and its related record the conversation; both are checked elsewhere.
+            return $this->readLink($user, 'Task', $path) && $this->readLink($user, 'ChatwootConversation', 'tasks') ? [] : null;
         }
         if (!$this->aclManager->checkScope($user, $path, 'read')) return null;
         if ($path === 'Contact') {

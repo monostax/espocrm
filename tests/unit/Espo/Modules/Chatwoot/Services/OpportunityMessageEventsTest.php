@@ -6,6 +6,7 @@ namespace tests\unit\Espo\Modules\Chatwoot\Services;
 
 use Espo\Core\ORM\Entity as CoreEntity;
 use Espo\Core\Utils\Config;
+use Espo\Core\Utils\Metadata;
 use Espo\Core\Utils\SystemUser;
 use Espo\Modules\Chatwoot\Jobs\SyncConversationsFromChatwoot;
 use Espo\Modules\Chatwoot\Services\OpportunityFollowupEvents;
@@ -31,6 +32,8 @@ class OpportunityMessageEventsTest extends TestCase
     private array $resolvedAccounts = [];
     private bool $companyLinked = false;
     private bool $initiativeLinked = false;
+    private bool $taskLinked = false;
+    private bool $taskFinished = false;
     private OpportunityMessageEvents $service;
     /** @var list<array{string, string}> Deal id and time of every reply reported to the follow-up events. */
     private array $replies = [];
@@ -44,6 +47,7 @@ class OpportunityMessageEventsTest extends TestCase
             OpportunityMessageEvents::STARTED_AT => '2026-09-06 00:00:00',
             OpportunityStreamEvents::ACCOUNT_STARTED_AT => '2026-09-06 12:00:00',
             OpportunityStreamEvents::DISCUSSION_ROLLOUT['Initiative'] => '2026-09-06 14:00:00',
+            OpportunityStreamEvents::TASK_MESSAGES_STARTED_AT => '2026-09-06 14:30:00',
         });
         $system = $this->createMock(SystemUser::class);
         $system->method('getId')->willReturn('system');
@@ -81,13 +85,17 @@ class OpportunityMessageEventsTest extends TestCase
         $opportunities->method('where')->with(['id' => 'opp'])->willReturn($locked);
 
         $parents = [];
-        foreach (['Account' => 'companyLinked', 'Initiative' => 'initiativeLinked'] as $type => $linked) {
+        foreach (['Account' => 'companyLinked', 'Initiative' => 'initiativeLinked', 'Task' => 'taskLinked'] as $type => $linked) {
             $parent = new EntityDouble(['id' => 'opp', 'tenantId' => 'tenant'], $type);
             $parents[$type] = $this->createMock(RDBRepository::class);
-            $parents[$type]->method('where')->willReturnCallback(function (array $where) use ($parent, $linked) {
+            $parents[$type]->method('where')->willReturnCallback(function (array $where) use ($parent, $linked, $type) {
                 $select = $this->createMock(RDBSelectBuilder::class);
                 if (isset($where['id=s'])) {
-                    $select->method('find')->willReturn(new EntityCollection($this->$linked ? [$parent] : []));
+                    // Only a Task is limited to open records, by the Tasks list's finished statuses.
+                    self::assertSame($type === 'Task' ? ['OR' => [['status!=' => ['Completed', 'Canceled']], ['status' => null]]] : [],
+                        array_diff_key($where, ['id=s' => true]));
+                    $open = $type !== 'Task' || !$this->taskFinished;
+                    $select->method('find')->willReturn(new EntityCollection($this->$linked && $open ? [$parent] : []));
                 } else {
                     self::assertSame(['id' => 'opp'], $where);
                     $select->method('forUpdate')->willReturnSelf();
@@ -135,7 +143,9 @@ class OpportunityMessageEventsTest extends TestCase
         $followups->method('customerReplied')->willReturnCallback(function (Entity $deal, string $at): void {
             $this->replies[] = [$deal->getEntityType() . '/' . $deal->getId(), $at];
         });
-        $this->service = new OpportunityMessageEvents($em, $config, new OpportunityStreamEvents($em, $system, $stream), $followups);
+        $metadata = $this->createMock(Metadata::class);
+        $metadata->method('get')->willReturn(null);
+        $this->service = new OpportunityMessageEvents($em, $config, new OpportunityStreamEvents($em, $system, $stream), $followups, $metadata);
     }
 
     private function payload(int $id = 1, array $values = []): object
@@ -193,21 +203,36 @@ class OpportunityMessageEventsTest extends TestCase
         self::assertSame([['Opportunity/opp', '2026-09-06 14:32:00']], $this->replies);
     }
 
-    public function testAccountAndInitiativeMessagesAreIndependentAndCorrectedEvenAfterUnlink(): void
+    public function testAccountInitiativeAndTaskMessagesAreIndependentAndCorrectedEvenAfterUnlink(): void
     {
         $this->companyLinked = true;
         $this->initiativeLinked = true;
+        $this->taskLinked = true;
+        // Each mural starts at its own rollout: 13:00 is before the Initiative's and the Task's.
         $this->service->recordWebhook($this->payload(1, ['created_at' => '2026-09-06T13:00:00Z']), 'crm-account');
         self::assertSame(['Opportunity', 'Account'], array_column($this->notes, 'parentType'));
         $this->service->recordWebhook($this->payload(2), 'crm-account');
         $this->service->recordWebhook($this->payload(2), 'crm-account');
-        self::assertSame(['Opportunity', 'Account', 'Opportunity', 'Account', 'Initiative'], array_column($this->notes, 'parentType'));
+        self::assertSame(['Opportunity', 'Account', 'Opportunity', 'Account', 'Initiative', 'Task'], array_column($this->notes, 'parentType'));
+        self::assertStringStartsWith('tm:2:', array_key_last($this->notes));
         $this->companyLinked = false;
         $this->initiativeLinked = false;
+        $this->taskLinked = false;
         $this->service->recordSyncedMessage(new EntityDouble([
             'chatwootMessageId' => 2, 'messageType' => 'incoming', 'isPrivate' => true,
         ]), $this->conversation);
         self::assertSame(['Opportunity', 'Account'], array_column($this->notes, 'parentType'));
+    }
+
+    public function testFinishedTasksGetNoNewMessages(): void
+    {
+        $this->taskLinked = true;
+        $this->taskFinished = true;
+        $this->service->recordWebhook($this->payload(), 'crm-account');
+        self::assertSame(['Opportunity'], array_column($this->notes, 'parentType'));
+        $this->taskFinished = false;
+        $this->service->recordWebhook($this->payload(2), 'crm-account');
+        self::assertSame(['Opportunity', 'Opportunity', 'Task'], array_column($this->notes, 'parentType'));
     }
 
     public function testPrivateOutgoingActivityAndHistoricalMessagesAreIgnored(): void

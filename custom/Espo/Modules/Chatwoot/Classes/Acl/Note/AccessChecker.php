@@ -67,7 +67,7 @@ class AccessChecker implements AccessEntityCREDChecker
             return true;
         }
         $parentType = $entity->get('parentType');
-        if (isset(OpportunityStreamEvents::DISCUSSION_ROLLOUT[$parentType]) && $entity->get('type') === OpportunityStreamEvents::MESSAGE_RECEIVED &&
+        if (isset(OpportunityStreamEvents::MESSAGE_ROLLOUT[$parentType]) && $entity->get('type') === OpportunityStreamEvents::MESSAGE_RECEIVED &&
             !$this->entityManager->getRDBRepository('Note')->where(['id' => $entity->getId()])
                 ->where($this->eventAccess->messageLinkWhere($user, parentType: $parentType))->findOne()) return false;
 

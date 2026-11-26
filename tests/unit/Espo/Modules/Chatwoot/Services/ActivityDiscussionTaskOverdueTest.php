@@ -21,7 +21,10 @@ use PDO;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 
-/** A task's Mural shows its own overdue event, unread only for the people it is addressed to. */
+/**
+ * A task's Mural shows its own overdue event, unread only for the people it is addressed to, and its
+ * linked conversations' messages (2026-11-26), unread for everyone who can see them.
+ */
 class ActivityDiscussionTaskOverdueTest extends TestCase
 {
     private PDO $pdo;
@@ -59,9 +62,15 @@ class ActivityDiscussionTaskOverdueTest extends TestCase
             new PostgresqlQueryComposer($this->pdo, $entities, $metadata)];
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn('me');
+        // Stand-ins for the conversation read ACL and the link that delivered the message.
+        $events = $this->createMock(OpportunityEventAccess::class);
+        $events->method('where')->willReturn(['relatedId!=' => 'hidden-chat']);
+        $events->method('messageLinkWhere')->willReturnCallback(function ($user, $alias, $type) {
+            self::assertSame(['note', 'Task'], [$alias, $type]);
+            return ['relatedId!=' => 'unlinked-chat'];
+        });
         $this->discussion = new ActivityDiscussion(
-            $this->createMock(EntityManager::class), $user, $this->createMock(Acl::class),
-            $this->createMock(OpportunityEventAccess::class),
+            $this->createMock(EntityManager::class), $user, $this->createMock(Acl::class), $events,
         );
 
         $overdue = OpportunityStreamEvents::ACTIVITY_OVERDUE;
@@ -71,8 +80,10 @@ class ActivityDiscussionTaskOverdueTest extends TestCase
             ['own-overdue', 'Task', 't1', 'Task', 't1', $overdue, 3, 'system', '["me","boss"]'],
             ['others-overdue', 'Task', 't1', 'Task', 't1', $overdue, 4, 'system', '["boss"]'],
             ['foreign-overdue', 'Task', 't1', 'Task', 't2', $overdue, 5, 'system', '["me"]'],
-            ['message', 'Task', 't1', 'ChatwootConversation', 'c1', OpportunityStreamEvents::MESSAGE_RECEIVED, 6, 'system', '["me"]'],
+            ['message', 'Task', 't1', 'ChatwootConversation', 'c1', OpportunityStreamEvents::MESSAGE_RECEIVED, 6, 'system', null],
             ['deal-overdue', 'Opportunity', 'o1', 'Task', 't1', $overdue, 7, 'system', null],
+            ['hidden-message', 'Task', 't1', 'ChatwootConversation', 'hidden-chat', OpportunityStreamEvents::MESSAGE_RECEIVED, 8, 'system', null],
+            ['unlinked-message', 'Task', 't1', 'ChatwootConversation', 'unlinked-chat', OpportunityStreamEvents::MESSAGE_RECEIVED, 9, 'system', null],
         ] as $row) {
             $this->pdo->prepare('INSERT INTO note (id, parent_type, parent_id, related_type, related_id, type, number, created_by_id,
                 opportunity_mention_user_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute($row);
@@ -96,21 +107,23 @@ class ActivityDiscussionTaskOverdueTest extends TestCase
         return $result;
     }
 
-    public function testTaskMuralShowsPostsAndOnlyItsOwnOverdueEvent(): void
+    public function testTaskMuralShowsPostsItsOwnOverdueEventAndVisibleLinkedMessages(): void
     {
-        self::assertSame(['post', 'mention', 'own-overdue', 'others-overdue'], $this->ids($this->discussion->entryWhere('Task')));
+        self::assertSame(['post', 'mention', 'own-overdue', 'others-overdue', 'message'], $this->ids($this->discussion->entryWhere('Task')));
         // Threads stay posts only.
         self::assertSame(['post', 'mention'], $this->ids($this->discussion->entryWhere('Task', 'root')));
     }
 
-    public function testOverdueEventIsUnreadOnlyForItsRecipients(): void
+    public function testOverdueEventIsUnreadOnlyForItsRecipientsAndMessagesForEveryone(): void
     {
         $counts = (new ReflectionMethod($this->discussion, 'countsAsUnreadWhere'))->invoke($this->discussion, 'Task');
-        self::assertSame(['mention', 'own-overdue'], $this->ids(
+        self::assertSame(['mention', 'own-overdue', 'message'], $this->ids(
             $this->discussion->entryWhere('Task'), $this->discussion->unreadWhere(), $counts,
         ));
         $this->pdo->exec("INSERT INTO activity_read_state (id, parent_type, parent_id, user_id, thread_key, last_seen_number)
             VALUES ('seen', 'Task', 't1', 'me', 'main', 3)");
+        self::assertSame(['message'], $this->ids($this->discussion->entryWhere('Task'), $this->discussion->unreadWhere(), $counts));
+        $this->pdo->exec("UPDATE activity_read_state SET last_seen_number = 6");
         self::assertSame([], $this->ids($this->discussion->entryWhere('Task'), $this->discussion->unreadWhere(), $counts));
     }
 

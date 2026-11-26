@@ -91,7 +91,10 @@ class TenantPredicatesSqlTest extends TestCase
             'AppointmentTeam' => ['appointmentId', 'teamId', 'deleted'],
         ];
         foreach (['Task', 'Meeting', 'Call'] as $activity) {
-            $tables[$activity] = ['id', 'tenantId', 'parentType', 'parentId', 'readable', 'deleted'];
+            // As in prod: only Call has a tenant column; task and meeting rows are tenant-scoped through ACL.
+            $tables[$activity] = $activity === 'Call'
+                ? ['id', 'tenantId', 'parentType', 'parentId', 'readable', 'deleted']
+                : ['id', 'parentType', 'parentId', 'status', 'readable', 'deleted'];
             $tables["ChatwootConversation$activity"] = ['chatwootConversationId', lcfirst($activity) . 'Id', 'deleted'];
         }
         $defs = [];
@@ -114,6 +117,8 @@ class TenantPredicatesSqlTest extends TestCase
             $defs['ChatwootConversation']['relations'][strtolower($activity) . 's'] = ['type' => 'manyMany', 'entity' => $activity,
                 'relationName' => "ChatwootConversation$activity", 'midKeys' => ['chatwootConversationId', lcfirst($activity) . 'Id']];
         }
+        $defs['Task']['relations']['chatwootConversations'] = ['type' => 'manyMany', 'entity' => 'ChatwootConversation',
+            'relationName' => 'ChatwootConversationTask', 'midKeys' => ['taskId', 'chatwootConversationId']];
         $provider = $this->createMock(MetadataDataProvider::class);
         $provider->method('get')->willReturn($defs);
         $metadata = new Metadata($provider);
@@ -219,7 +224,7 @@ class TenantPredicatesSqlTest extends TestCase
             return $filter;
         });
         $this->parents = new OpportunityAccess($this->em, $this->acl, $this->tenants, $factory, $filters);
-        $this->events = new OpportunityEventAccess($factory, $this->acl);
+        $this->events = new OpportunityEventAccess($factory, $this->acl, $this->tenants);
         $this->attachments = new OpportunityAttachmentAccess($this->em, $this->acl, $this->parents, $factory);
 
         foreach (['a', 'b', 'c'] as $tenant) {
@@ -284,6 +289,43 @@ class TenantPredicatesSqlTest extends TestCase
         $this->insert('ActivityReadState', ['id' => 'seen', 'parentType' => 'Account', 'parentId' => 'manual', 'userId' => 'agent', 'threadKey' => 'main', 'lastSeenNumber' => 101]);
         $this->pdo->exec("UPDATE record_relation SET deleted = 1 WHERE object_id = 'reverse'");
         $this->assertRows(['native'], $unread);
+    }
+
+    public function testTaskPillsRespectTheirConversationLinkAndSourceInStreamAndUnreadFilter(): void
+    {
+        $this->insert('ChatwootAccount', ['id' => 'workspace', 'tenantId' => 'tenant-a']);
+        $this->insert('ChatwootAccount', ['id' => 'foreign', 'tenantId' => 'tenant-b']);
+        foreach (['native', 'manual', 'reverse', 'hidden-chat', 'foreign', 'unlinked', 'suggested', 'overdue', 'others-overdue'] as $i => $id) {
+            $this->insert('Task', ['id' => "task-$id", 'readable' => 1]);
+            if (str_ends_with($id, 'overdue')) {
+                // A task's own overdue event stays unread only for the people it is addressed to.
+                $this->insertNote($id, $i + 100, ['parentType' => 'Task', 'parentId' => "task-$id", 'type' => 'ActivityOverdue',
+                    'relatedType' => 'Task', 'relatedId' => "task-$id", 'createdById' => 'system',
+                    'opportunityMentionUserIds' => $id === 'overdue' ? '["agent"]' : '["boss"]']);
+                continue;
+            }
+            $this->insert('ChatwootConversation', ['id' => "chat-$id", 'chatwootAccountId' => $id === 'foreign' ? 'foreign' : 'workspace',
+                'readable' => (int) ($id !== 'hidden-chat')]);
+            $this->insertNote($id, $i + 100, ['parentType' => 'Task', 'parentId' => "task-$id", 'type' => 'ChatwootMessageReceived',
+                'relatedType' => 'ChatwootConversation', 'relatedId' => "chat-$id", 'createdById' => 'system']);
+            if (in_array($id, ['native', 'hidden-chat', 'foreign'], true)) {
+                $this->insert('ChatwootConversationTask', ['chatwootConversationId' => "chat-$id", 'taskId' => "task-$id"]);
+            } elseif ($id !== 'unlinked') {
+                [$a, $b] = $id === 'reverse' ? ['object', 'subject'] : ['subject', 'object'];
+                $this->insert('RecordRelation', [$a . 'Type' => 'Task', $a . 'Id' => "task-$id", $b . 'Type' => 'ChatwootConversation',
+                    $b . 'Id' => "chat-$id", 'tenantId' => 'tenant-a', 'origin' => 'manual', 'status' => $id === 'suggested' ? $id : 'confirmed']);
+            }
+        }
+        $discussion = new \Espo\Modules\Chatwoot\Services\ActivityDiscussion($this->em, $this->user, $this->createMock(\Espo\Core\Acl::class), $this->events);
+        $this->assertRows(['manual', 'native', 'others-overdue', 'overdue', 'reverse'], SelectBuilder::create()->from('Note')->select('id')
+            ->where(['parentType' => 'Task'])->where($discussion->entryWhere('Task'))->order('id'));
+        $unread = SelectBuilder::create()->from('Task')->select('id')->where(['id*' => 'task-%'])->order('id');
+        $discussion->applyFilter($unread, 'Task', true);
+        $this->assertRows(['task-manual', 'task-native', 'task-overdue', 'task-reverse'], $unread);
+        $this->insert('ActivityReadState', ['id' => 'seen', 'parentType' => 'Task', 'parentId' => 'task-manual', 'userId' => 'agent',
+            'threadKey' => 'main', 'lastSeenNumber' => 101]);
+        $this->pdo->exec("UPDATE chatwoot_conversation_task SET deleted = 1 WHERE task_id = 'task-native'");
+        $this->assertRows(['task-overdue', 'task-reverse'], $unread);
     }
 
     public function testAppointmentNotesRequireTenantTeamAndRecordAccessBeforePagination(): void

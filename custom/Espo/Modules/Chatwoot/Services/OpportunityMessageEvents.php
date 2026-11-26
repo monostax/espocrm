@@ -7,6 +7,7 @@ namespace Espo\Modules\Chatwoot\Services;
 use DateTimeImmutable;
 use DateTimeZone;
 use Espo\Core\Utils\Config;
+use Espo\Core\Utils\Metadata;
 use Espo\Modules\Chatwoot\Tools\Stream\MuralConversationLinks;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -18,13 +19,14 @@ class OpportunityMessageEvents
 {
     public const TYPE = OpportunityStreamEvents::MESSAGE_RECEIVED;
     public const STARTED_AT = 'opportunityMessageEventsStartedAt';
-    private const KEY_PREFIX = ['Account' => 'am', 'Initiative' => 'im'];
+    private const KEY_PREFIX = ['Account' => 'am', 'Initiative' => 'im', 'Task' => 'tm'];
 
     public function __construct(
         private EntityManager $entityManager,
         private Config $config,
         private OpportunityStreamEvents $events,
         private OpportunityFollowupEvents $followups,
+        private Metadata $metadata,
     ) {}
 
     public function recordWebhook(object $payload, string $accountId): void
@@ -113,7 +115,8 @@ class OpportunityMessageEvents
         }
 
         foreach ($this->parents($conversation, $account, $occurredAt) as $parent) {
-            if ($parent->get('tenantId') !== $account->get('tenantId')) {
+            $tenanted = MuralConversationLinks::tenanted($parent->getEntityType());
+            if ($tenanted && $parent->get('tenantId') !== $account->get('tenantId')) {
                 continue;
             }
 
@@ -141,16 +144,28 @@ class OpportunityMessageEvents
     private function parents(Entity $conversation, Entity $workspace, string $occurredAt): iterable
     {
         yield from $this->entityManager->getRDBRepository('ChatwootConversation')->getRelation($conversation, 'opportunities')->find();
-        foreach (OpportunityStreamEvents::DISCUSSION_ROLLOUT as $type => $setting) {
+        foreach (OpportunityStreamEvents::MESSAGE_ROLLOUT as $type => $setting) {
             $startedAt = $this->config->get($setting);
             if (!$startedAt || $occurredAt < $startedAt) continue;
             $union = UnionBuilder::create();
+            // Every path joins the conversation's workspace, bound to the parent's tenant where the parent has one.
             foreach (MuralConversationLinks::paths($type) as $link) $union->query($link->where([
-                'muralParent.tenantId' => $workspace->get('tenantId'), 'muralConversation.id' => $conversation->getId(),
+                'muralWorkspace.tenantId' => $workspace->get('tenantId'), 'muralConversation.id' => $conversation->getId(),
             ])->build());
+            // Only open tasks: a finished task no longer turns unread when its customer writes (2026-11-26).
+            $open = $type === 'Task' ? ['OR' => [['status!=' => $this->finishedTaskStatuses()], ['status' => null]]] : [];
             yield from $this->entityManager->getRDBRepository($type)->where([
                 'id=s' => SelectBuilder::create()->fromQuery($union->build(), 'linkedParents')->select('id')->build(),
-            ])->find();
+            ] + $open)->find();
         }
+    }
+
+    /** The Tasks list's Finished filter: completed and canceled. */
+    private function finishedTaskStatuses(): array
+    {
+        return array_values(array_unique(array_merge(
+            $this->metadata->get(['scopes', 'Task', 'completedStatusList']) ?? ['Completed'],
+            $this->metadata->get(['scopes', 'Task', 'canceledStatusList']) ?? ['Canceled'],
+        )));
     }
 }

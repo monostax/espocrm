@@ -20,6 +20,12 @@ class OpportunityStreamEvents
     public const TYPES = ['Post', ...self::EVENT_TYPES];
     public const ACCOUNT_STARTED_AT = 'accountMuralEventsStartedAt';
     public const DISCUSSION_ROLLOUT = ['Account' => self::ACCOUNT_STARTED_AT, 'Initiative' => 'initiativeMuralEventsStartedAt'];
+    public const TASK_MESSAGES_STARTED_AT = 'taskMuralMessageEventsStartedAt';
+    /**
+     * Murals that receive their linked conversations' incoming messages. A Task gets them (2026-11-26)
+     * but not the overdue events of activities under it: only DISCUSSION_ROLLOUT parents do.
+     */
+    public const MESSAGE_ROLLOUT = self::DISCUSSION_ROLLOUT + ['Task' => self::TASK_MESSAGES_STARTED_AT];
 
     public function __construct(
         private EntityManager $entityManager,

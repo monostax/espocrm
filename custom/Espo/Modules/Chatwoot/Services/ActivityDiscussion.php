@@ -37,18 +37,26 @@ class ActivityDiscussion
     /** Apply before ordering, pagination, counts and cursor selection. Threads contain posts only. */
     public function entryWhere(string $type, ?string $root = null, string $alias = 'note'): array
     {
-        if ($root === null && in_array($type, self::SELF_OVERDUE_TYPES, true)) {
-            // Its own event only: reading the parent already grants reading the related record.
-            return ['OR' => [['type' => 'Post'], [
-                'type' => OpportunityStreamEvents::ACTIVITY_OVERDUE, 'relatedType' => $type, 'relatedId:' => "$alias.parentId",
-            ]]];
-        }
-        if (!isset(OpportunityStreamEvents::DISCUSSION_ROLLOUT[$type]) || $root !== null) return ['type' => 'Post'];
-        return [
+        if ($root !== null) return ['type' => 'Post'];
+        if (isset(OpportunityStreamEvents::DISCUSSION_ROLLOUT[$type])) return [
             'type' => OpportunityStreamEvents::TYPES,
             $this->eventAccess->where($this->user),
             $this->eventAccess->messageLinkWhere($this->user, $alias, $type),
         ];
+        $entries = [['type' => 'Post']];
+        if (in_array($type, self::SELF_OVERDUE_TYPES, true)) {
+            // Its own event only: reading the parent already grants reading the related record.
+            $entries[] = ['type' => OpportunityStreamEvents::ACTIVITY_OVERDUE, 'relatedType' => $type, 'relatedId:' => "$alias.parentId"];
+        }
+        if (isset(OpportunityStreamEvents::MESSAGE_ROLLOUT[$type])) {
+            // Its linked conversations' messages (2026-11-26), under the same conversation and link access as an Account's.
+            $entries[] = [
+                'type' => OpportunityStreamEvents::MESSAGE_RECEIVED,
+                $this->eventAccess->where($this->user),
+                $this->eventAccess->messageLinkWhere($this->user, $alias, $type),
+            ];
+        }
+        return count($entries) === 1 ? $entries[0] : ['OR' => $entries];
     }
 
     public function unreadWhere(string $alias = 'note'): array
@@ -94,7 +102,8 @@ class ActivityDiscussion
     /**
      * Incoming mural messages and posts or replies that @mention the viewer make a record unread; plain posts
      * never do. A task's own overdue event is addressed to its assignee, creator and collaborators through the
-     * same mention ids. AI sessions are the viewer's own chat with an agent, so every reply counts.
+     * same mention ids, and its linked conversations' messages count like an Account's (2026-11-26). AI
+     * sessions are the viewer's own chat with an agent, so every reply counts.
      * Per-thread summaries still count every unread reply.
      */
     private function countsAsUnreadWhere(string $type): array
@@ -102,6 +111,7 @@ class ActivityDiscussion
         return match ($type) {
             'AiSession' => [],
             'Account', 'Initiative' => ['OR' => [['type' => OpportunityStreamEvents::MESSAGE_RECEIVED], ['type' => 'Post'] + $this->mentionWhere()]],
+            'Task' => ['OR' => [['type' => OpportunityStreamEvents::MESSAGE_RECEIVED], $this->mentionWhere()]],
             default => $this->mentionWhere(),
         };
     }

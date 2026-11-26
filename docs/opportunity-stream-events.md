@@ -22,6 +22,27 @@ Its event occurs at creation (not before the activity existed), while the origin
 deadline remains in the Note data and deduplication key. Activities both created
 and due before activation remain excluded, even if an unrelated field is edited.
 
+## Other murals
+
+The same `ChatwootMessageReceived` Notes also go to the murals of other records
+linked to the conversation (`OpportunityStreamEvents::MESSAGE_ROLLOUT`, paths in
+`MuralConversationLinks`):
+
+- **Account**: conversations of its Contacts, plus manual relationship links.
+- **Initiative**: its relations, its Tasks/Meetings/Calls' conversations, plus
+  manual links.
+- **Task** (2026-11-26): the conversations attached to the task
+  (`chatwootConversationTask`), plus manual links. Open tasks only: a Completed
+  or Canceled task gets no new pills (reopening resumes them, without backfill).
+
+Each mural starts at its own rebuild-stamped key (`accountMuralEventsStartedAt`,
+`initiativeMuralEventsStartedAt`, `taskMuralMessageEventsStartedAt`), so older
+messages are never replayed. A viewer sees a pill only when they can read the
+conversation and the link that delivered it. On these murals an incoming message
+makes the record unread for everyone who can see it; posts only when they
+@mention the viewer. Accounts and Initiatives also get the `ActivityOverdue`
+events of activities under them; a Task gets only its own.
+
 ## Rollout
 
 1. Deploy the CRM changes and run the normal CRM rebuild (`php rebuild.php`)
