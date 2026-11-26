@@ -8,13 +8,13 @@ use Espo\Modules\FeatureCredits\Accounting\GrantInput;
 use InvalidArgumentException;
 use stdClass;
 
-/** A bulk enrichment request: one product with one set of settings over up to 500 records of one type. */
+/** A bulk enrichment request: one product with one set of settings over up to 500 records of one type (company data and sócios run as separate requests). */
 final class BatchInput
 {
     public const MAX_RECORDS = 500;
     public const MAX_PREVIEW = 50;
     private const PRODUCTS = ['Contact' => ['email' => ['email'], 'phone' => ['phone'], 'combined' => ['email', 'phone']],
-        'Account' => ['socios' => ['socios']]];
+        'Account' => ['company' => ['company'], 'socios' => ['socios']]];
 
     /** @var list<string> */
     public readonly array $targetIds;
@@ -45,11 +45,17 @@ final class BatchInput
         }
         $products = self::PRODUCTS[$data['targetType']][$data['product']];
         $settings = ['products' => $products, 'refresh' => true];
-        if ($data['product'] === 'socios') {
+        if ($data['targetType'] === 'Account') {
             if (array_key_exists('sources', $data)) throw new InvalidArgumentException('Sources apply to email/phone lookups.');
-            $count = $data['count'] ?? 10;
-            if (!is_int($count) || $count < 1 || $count > 50) throw new InvalidArgumentException('Partner limit must be 1 to 50.');
-            $settings['count'] = $count;
+            if ($data['product'] === 'socios') {
+                $count = $data['count'] ?? 10;
+                if (!is_int($count) || $count < 1 || $count > 50) throw new InvalidArgumentException('Partner limit must be 1 to 50.');
+                $settings['count'] = $count;
+            } else {
+                if (array_key_exists('count', $data)) throw new InvalidArgumentException('Count applies to partner searches.');
+                // Company data has one supplier; the explicit source keeps the per-record plan on the field lookup path.
+                $settings['sources'] = [array_search('apollo', SelectedProviders::SOURCES, true)];
+            }
         } else {
             if (array_key_exists('count', $data)) throw new InvalidArgumentException('Count applies to partner searches.');
             $settings['sources'] = SelectedProviders::normalize($data['sources'] ?? null);

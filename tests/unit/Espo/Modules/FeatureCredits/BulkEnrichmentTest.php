@@ -56,6 +56,10 @@ class BulkEnrichmentTest extends TestCase
         $this->assertSame(['products' => ['socios'], 'refresh' => true, 'count' => 10], $accounts->settings);
         $this->assertSame(['products' => ['socios'], 'refresh' => true, 'count' => 10, 'tenantId' => self::ID,
             'targetType' => 'Account', 'targetId' => 'x'], BatchInput::base(self::ID, 'Account', 'x', $accounts->settings));
+        // Company data has one supplier (Apollo, source 1).
+        $company = new BatchInput((object) ['tenantId' => self::ID, 'targetType' => 'Account', 'product' => 'company',
+            'targetIds' => [self::ID]]);
+        $this->assertSame(['products' => ['company'], 'refresh' => true, 'sources' => [1]], $company->settings);
     }
 
     public static function invalidInputs(): iterable
@@ -71,6 +75,9 @@ class BulkEnrichmentTest extends TestCase
         yield 'bad id' => [['targetIds' => ['x;drop']] + $ok];
         yield 'unexpected key' => [['requestKey' => 'k'] + $ok];
         yield 'partner limit' => [['targetType' => 'Account', 'product' => 'socios', 'count' => 51] + array_diff_key($ok, ['sources' => true])];
+        yield 'company data on contacts' => [['product' => 'company'] + array_diff_key($ok, ['sources' => true])];
+        yield 'sources on company data' => [['targetType' => 'Account', 'product' => 'company'] + $ok];
+        yield 'count on company data' => [['targetType' => 'Account', 'product' => 'company', 'count' => 3] + array_diff_key($ok, ['sources' => true])];
     }
 
     #[DataProvider('invalidInputs')]
@@ -114,6 +121,24 @@ class BulkEnrichmentTest extends TestCase
         $this->assertNull(BatchApplication::contactData(['name' => 'Maria'], ['available' => true, 'creationForm' => $form]));
     }
 
+    public function testCompanyDataFillsOnlyEmptyEditableFields(): void
+    {
+        $values = ['name' => 'ACME LTDA', 'website' => 'http://acme.com', 'industry' => 'software', 'description' => 'Makes things',
+            'numberOfEmployees' => '120', 'foundedYear' => '1999', 'billingAddressCity' => 'Recife'];
+        $current = ['name' => 'Acme', 'website' => '', 'industry' => 'software', 'description' => null,
+            'numberOfEmployees' => null, 'foundedYear' => 2001];
+        $editable = ['name', 'website', 'industry', 'numberOfEmployees', 'foundedYear', 'billingAddressCity'];
+        $this->assertSame([
+            'fields' => ['website' => 'http://acme.com', 'numberOfEmployees' => '120', 'billingAddressCity' => 'Recife'],
+            'expected' => ['website' => '', 'numberOfEmployees' => null, 'billingAddressCity' => null],
+            // Name and founding year differ and stay; the same industry is not "kept"; description is not editable.
+            'kept' => 2,
+        ], BatchApplication::emptyFields($values, $current, $editable));
+        // A found city never joins a street someone already typed.
+        $this->assertSame(['fields' => [], 'expected' => [], 'kept' => 1], BatchApplication::emptyFields(
+            ['billingAddressCity' => 'Recife'], ['billingAddressStreet' => 'Rua A, 1', 'billingAddressCity' => ''], ['billingAddressCity']));
+    }
+
     public function testUnansweredSearchesAreNotCompletedSearches(): void
     {
         $states = ['email' => ['failed', 'failed'], 'phone' => ['failed', 'matched']];
@@ -123,6 +148,7 @@ class BulkEnrichmentTest extends TestCase
             ['email' => ['waived'], 'phone' => ['skipped', 'failed']]));
         // A search that was never tried, and partner searches, are not supplier silence.
         $this->assertSame([], EnrichmentStatus::unanswered(['email', 'socios'], ['socios' => ['failed']]));
+        $this->assertSame(['company'], EnrichmentStatus::unanswered(['company'], ['company' => ['failed']]));
     }
 
     public function testRecordFailsOnlyWhenNoSearchWasAnswered(): void
@@ -185,5 +211,21 @@ class BulkEnrichmentTest extends TestCase
             (array) $result['totals']);
         $this->assertSame(['c4'], $result['reviewTargetIds']);
         $this->assertSame(4, $result['total']);
+    }
+
+    public function testProjectionCountsCompaniesWithFoundData(): void
+    {
+        $batch = ['id' => 'b', 'tenant_id' => 't', 'target_type' => 'Account', 'product' => 'company', 'state' => 'completed',
+            'pause_reason' => null, 'total' => '2', 'created_at' => '2026-11-26 10:00:00', 'completed_at' => '2026-11-26 10:01:00'];
+        $result = Batches::project($batch, [
+            ['target_id' => 'a1', 'state' => 'done', 'reason' => null, 'credits' => '1.0000',
+                'outcome' => '{"companyFound":1,"companiesFilled":1,"fieldsFilled":4,"fieldsKept":2,"needsReview":0}'],
+            ['target_id' => 'a2', 'state' => 'done', 'reason' => null, 'credits' => '0.0000',
+                'outcome' => '{"companyFound":0,"companiesFilled":0,"fieldsFilled":0,"fieldsKept":0,"needsReview":0}'],
+        ]);
+        $this->assertSame(1, $result['recordsFound']);
+        $this->assertSame(['companyFound' => 1, 'companiesFilled' => 1, 'fieldsFilled' => 4, 'fieldsKept' => 2, 'needsReview' => 0],
+            (array) $result['totals']);
+        $this->assertSame([], $result['reviewTargetIds']);
     }
 }

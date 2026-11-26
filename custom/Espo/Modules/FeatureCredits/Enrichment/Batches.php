@@ -178,7 +178,7 @@ final class Batches
     {
         if (!in_array($item['state'], ['done', 'failed'], true) || $item['outcome'] === null) return [];
         $list = json_decode($item['outcome'], true, 4, JSON_THROW_ON_ERROR)['unanswered'] ?? [];
-        return is_array($list) ? array_values(array_intersect(['email', 'phone'], $list)) : [];
+        return is_array($list) ? array_values(array_intersect(['email', 'phone', 'company'], $list)) : [];
     }
 
     /** @return array{maximum?: string, reason?: string, available?: object} */
@@ -228,7 +228,8 @@ final class Batches
             if ($item['credits'] !== null) $credits = $credits->plus(Amount::fromString($item['credits']));
             $outcome = $item['outcome'] === null ? [] : json_decode($item['outcome'], true, 4, JSON_THROW_ON_ERROR);
             foreach ($outcome as $key => $value) if (is_int($value)) $totals[$key] = ($totals[$key] ?? 0) + $value;
-            if (($outcome['emailsFound'] ?? 0) + ($outcome['phonesFound'] ?? 0) + ($outcome['sociosFound'] ?? 0) > 0) $found++;
+            if (($outcome['emailsFound'] ?? 0) + ($outcome['phonesFound'] ?? 0) + ($outcome['sociosFound'] ?? 0) +
+                ($outcome['companyFound'] ?? 0) > 0) $found++;
             if (self::unanswered($item)) $retryable++;
             if ($item['state'] === 'failed' && $item['reason'] === 'no_answer') $noAnswer++;
             // An unanswered search left nothing behind to review.

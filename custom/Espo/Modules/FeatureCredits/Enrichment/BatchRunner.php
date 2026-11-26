@@ -169,7 +169,7 @@ final class BatchRunner
         return $only === null ? $settings : ['products' => $only] + $settings;
     }
 
-    /** @return list<string> email/phone searches of the quote that ended without found or not-found */
+    /** @return list<string> email/phone/company searches of the quote that ended without found or not-found */
     private function unanswered(string $tenant, string $quoteId, array $products): array
     {
         $q = $this->em->getPDO()->prepare('SELECT product, state FROM enrichment_attempt WHERE quote_id=? AND tenant_id=? AND deleted=FALSE');
