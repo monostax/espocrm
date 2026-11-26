@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "aiCreditsAvailable": "Créditos disponíveis",
+        "aiCreditsUsed30Days": "Créditos de IA usados (30 dias)"
+    },
+    "tooltips": {
+        "aiCreditsAvailable": "Créditos que o workspace ainda pode gastar (IA e enriquecimento usam a mesma carteira): saldo menos os créditos reservados por chamadas em andamento. Créditos vencidos saem em até 5 minutos. Negativo = dívida. Vazio = fora da carteira de créditos.",
+        "aiCreditsUsed30Days": "Créditos liquidados por chamadas de IA nos últimos 30 dias. Vazio = fora da carteira de créditos."
+    }
+}

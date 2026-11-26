@@ -12,7 +12,8 @@
         "paidThrough": "Paid through",
         "signupJob": "Signup path",
         "signupConnect": "Connection picked on the site",
-        "signupAttribution": "Signup source"
+        "signupAttribution": "Signup source",
+        "workspaceStatus": "Status"
     },
     "options": {
         "plan": {
@@ -45,12 +46,24 @@
             "": "—",
             "api": "Meta official API",
             "qr": "QR Code"
+        },
+        "workspaceStatus": {
+            "": "—",
+            "onboarding": "Onboarding pending",
+            "trial": "On trial",
+            "active": "Paid",
+            "pastDue": "Payment overdue",
+            "frozenAfterTrial": "Frozen after trial",
+            "frozenUnpaid": "Frozen: unpaid",
+            "frozen": "Frozen manually",
+            "managed": "Managed"
         }
     },
     "tooltips": {
         "chatwootAccess": "What Chatwoot was last told: active, or frozen (no sending, no AI).",
         "signupJob": "What the person chose to do first on the site (monostax.ai/previa). Decides the first screen after connecting.",
-        "signupAttribution": "UTMs and ad click ids of the visit that brought the signup."
+        "signupAttribution": "UTMs and ad click ids of the visit that brought the signup.",
+        "workspaceStatus": "Where the workspace stands, from its plan, subscription and onboarding. Onboarding pending: no WhatsApp connected yet, or its history still importing. On trial: the 7 days are running. Paid: paid through a future date. Payment overdue: renewal unpaid, in the 3-day grace. Frozen after trial: the trial ended without a payment. Frozen: unpaid: a paid plan lapsed. Frozen manually: frozen by us, never on trial or a plan. Managed: not on self-service (direct contract or internal)."
     },
     "labels": {
         "Offboard workspace": "Offboard workspace",

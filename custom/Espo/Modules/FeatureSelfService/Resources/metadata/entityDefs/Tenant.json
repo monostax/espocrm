@@ -68,6 +68,40 @@
             "importDisabled": true,
             "customizationDisabled": true,
             "tooltip": true
+        },
+        "workspaceStatus": {
+            "type": "enum",
+            "options": ["", "onboarding", "trial", "active", "pastDue", "frozenAfterTrial", "frozenUnpaid", "frozen", "managed"],
+            "style": {
+                "onboarding": "info",
+                "trial": "primary",
+                "active": "success",
+                "pastDue": "warning",
+                "frozenAfterTrial": "danger",
+                "frozenUnpaid": "danger",
+                "frozen": "danger"
+            },
+            "displayAsLabel": true,
+            "notStorable": true,
+            "readOnly": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "tooltip": true,
+            "select": {
+                "select": "SWITCH:(OR:(IS_NULL:(plan), EQUAL:(plan, '')), 'managed', EQUAL:(subscriptionStatus, 'active'), 'active', EQUAL:(subscriptionStatus, 'pastDue'), 'pastDue', AND:(EQUAL:(subscriptionStatus, 'frozen'), IS_NOT_NULL:(paidThrough)), 'frozenUnpaid', AND:(EQUAL:(subscriptionStatus, 'frozen'), IS_NOT_NULL:(trialEndsAt)), 'frozenAfterTrial', EQUAL:(subscriptionStatus, 'frozen'), 'frozen', OR:(EQUAL:(onboardingStep, 'connectWhatsapp'), EQUAL:(onboardingStep, 'importHistory')), 'onboarding', EQUAL:(subscriptionStatus, 'trial'), 'trial', '')"
+            },
+            "order": {
+                "order": [["POSITION_IN_LIST:(workspaceStatus, 'onboarding', 'trial', 'active', 'pastDue', 'frozenAfterTrial', 'frozenUnpaid', 'frozen', 'managed')", "{direction}"]]
+            },
+            "where": {
+                "=": {"whereClause": {"COALESCE:(workspaceStatus, '')": "{value}"}},
+                "<>": {"whereClause": {"COALESCE:(workspaceStatus, '')!=": "{value}"}},
+                "IN": {"whereClause": {"COALESCE:(workspaceStatus, '')": "{value}"}},
+                "NOT IN": {"whereClause": {"COALESCE:(workspaceStatus, '')!=": "{value}"}},
+                "IS NULL": {"whereClause": {"COALESCE:(workspaceStatus, '')": ""}},
+                "IS NOT NULL": {"whereClause": {"COALESCE:(workspaceStatus, '')!=": ""}}
+            }
         }
     }
 }

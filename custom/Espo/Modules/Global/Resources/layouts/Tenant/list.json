@@ -1,19 +1,45 @@
 [
     {
         "name": "name",
-        "width": 30,
+        "width": 20,
         "link": true
     },
     {
+        "name": "workspaceStatus",
+        "width": 16
+    },
+    {
+        "name": "trialEndsAt"
+    },
+    {
+        "name": "paidThrough"
+    },
+    {
+        "name": "aiCreditsAvailable",
+        "align": "right"
+    },
+    {
+        "name": "aiCreditsUsed30Days",
+        "align": "right"
+    },
+    {
+        "name": "createdAt"
+    },
+    {
+        "name": "seats",
+        "align": "right",
+        "hidden": true
+    },
+    {
+        "name": "frozenAt",
+        "hidden": true
+    },
+    {
         "name": "slug",
-        "width": 20
+        "hidden": true
     },
     {
         "name": "baseUserTeam",
-        "width": 25
-    },
-    {
-        "name": "createdAt",
-        "width": 25
+        "hidden": true
     }
 ]

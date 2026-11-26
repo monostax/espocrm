@@ -1,0 +1,30 @@
+{
+    "fields": {
+        "aiCreditsAvailable": {
+            "type": "float",
+            "decimalPlaces": 0,
+            "notStorable": true,
+            "readOnly": true,
+            "orderDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "tooltip": true
+        },
+        "aiCreditsUsed30Days": {
+            "type": "float",
+            "decimalPlaces": 0,
+            "notStorable": true,
+            "readOnly": true,
+            "orderDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "massUpdateDisabled": true,
+            "importDisabled": true,
+            "customizationDisabled": true,
+            "tooltip": true
+        }
+    }
+}

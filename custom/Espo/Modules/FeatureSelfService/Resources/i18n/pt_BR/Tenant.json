@@ -12,7 +12,8 @@
         "paidThrough": "Pago até",
         "signupJob": "Caminho do cadastro",
         "signupConnect": "Conexão escolhida no site",
-        "signupAttribution": "Origem do cadastro"
+        "signupAttribution": "Origem do cadastro",
+        "workspaceStatus": "Situação"
     },
     "options": {
         "plan": {
@@ -45,12 +46,24 @@
             "": "—",
             "api": "API oficial da Meta",
             "qr": "QR Code"
+        },
+        "workspaceStatus": {
+            "": "—",
+            "onboarding": "Onboarding pendente",
+            "trial": "Em teste",
+            "active": "Pago",
+            "pastDue": "Pagamento atrasado",
+            "frozenAfterTrial": "Congelado após teste",
+            "frozenUnpaid": "Congelado: sem pagamento",
+            "frozen": "Congelado manualmente",
+            "managed": "Gerenciado"
         }
     },
     "tooltips": {
         "chatwootAccess": "O que o Chatwoot recebeu por último: ativo, ou congelado (sem envio e sem IA).",
         "signupJob": "O que a pessoa escolheu fazer primeiro no site (monostax.ai/previa). Decide a primeira tela depois de conectar.",
-        "signupAttribution": "UTMs e ids de clique do anúncio que trouxe o cadastro."
+        "signupAttribution": "UTMs e ids de clique do anúncio que trouxe o cadastro.",
+        "workspaceStatus": "Onde o workspace está, a partir do plano, da assinatura e do onboarding. Onboarding pendente: nenhum WhatsApp conectado ainda, ou o histórico ainda importando. Em teste: os 7 dias estão correndo. Pago: pago até uma data futura. Pagamento atrasado: renovação não paga, nos 3 dias de tolerância. Congelado após teste: o teste acabou sem pagamento. Congelado: sem pagamento: um plano pago venceu. Congelado manualmente: congelado por nós, sem teste nem plano. Gerenciado: fora do self-service (contrato direto ou interno)."
     },
     "labels": {
         "Offboard workspace": "Remover workspace",

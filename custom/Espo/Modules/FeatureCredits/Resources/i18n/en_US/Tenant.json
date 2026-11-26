@@ -1,0 +1,10 @@
+{
+    "fields": {
+        "aiCreditsAvailable": "Credits available",
+        "aiCreditsUsed30Days": "AI credits used (30 days)"
+    },
+    "tooltips": {
+        "aiCreditsAvailable": "Credits the workspace can still spend (AI and enrichment share the wallet): balance minus credits held by calls in flight. Expired credits leave within 5 minutes. Negative = debt. Empty = not on the credit wallet.",
+        "aiCreditsUsed30Days": "Credits settled by AI calls in the last 30 days. Empty = not on the credit wallet."
+    }
+}

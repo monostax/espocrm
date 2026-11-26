@@ -349,6 +349,13 @@ php command.php self-service first-read --tenant=<tenantId>   # run the first re
 
 `provision` and `run` also need the switch on and no pause. `offboard` does not.
 
+The Tenant list shows each workspace's **Situação** (`workspaceStatus`): onboarding pending, on trial, paid,
+payment overdue, frozen after trial, frozen unpaid, frozen manually, or managed (no plan). It is computed in SQL
+from `plan`, `subscriptionStatus`, `onboardingStep`, `trialEndsAt` and `paidThrough` (a `select` expression, never
+stored, so it cannot drift), sorts in lifecycle order and can be filtered. Its `where` definitions wrap the field in
+`COALESCE` so the ORM resolves it through the `select` expression instead of a column. The wallet columns beside
+it (credits available, AI credits used in 30 days) come from FeatureCredits' `WalletLoader`.
+
 ## Tests
 
 Unit: `tests/unit/Espo/Modules/FeatureSelfService` (policy, slugs, provisioning

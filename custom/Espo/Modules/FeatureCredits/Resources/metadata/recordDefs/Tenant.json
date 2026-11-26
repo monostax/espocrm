@@ -1,0 +1,6 @@
+{
+    "listLoaderClassNameList": [
+        "__APPEND__",
+        "Espo\\Modules\\FeatureCredits\\Classes\\FieldProcessing\\Tenant\\WalletLoader"
+    ]
+}
