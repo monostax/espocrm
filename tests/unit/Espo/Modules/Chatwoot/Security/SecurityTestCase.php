@@ -136,7 +136,7 @@ abstract class SecurityTestCase extends TestCase
         $this->portalOpportunityChecker = new PortalOpportunityChecker($portalDefault, $this->tenants);
         $baseNote = new \Espo\Classes\Acl\Note\AccessChecker($default, $this->acl, $this->em, $config);
         $this->createNoteChecker = fn () => new NoteChecker($baseNote, $this->acl, $this->em, $this->parents,
-            new \Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess($this->factory, $this->acl, $this->tenants));
+            new \Espo\Modules\Chatwoot\Tools\Stream\OpportunityEventAccess($this->factory, $this->acl));
         $this->portalNoteChecker = new PortalNoteChecker($portalDefault, $portalAcl, $this->em, $config, $this->parents);
         $this->attachmentChecker = new AttachmentChecker($default, $this->acl, $this->em, $this->attachments);
         $this->portalAttachmentChecker = new PortalAttachmentChecker($portalDefault, $portalAcl, $this->em, $this->attachments);

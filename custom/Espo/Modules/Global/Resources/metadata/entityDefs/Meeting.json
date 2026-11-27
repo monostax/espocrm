@@ -1,4 +1,18 @@
 {
-    "fields": { "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" } },
-    "links": { "tags": { "type": "hasMany", "entity": "CrmTag", "foreign": "meetings", "relationName": "crmTagMeeting" } }
+    "fields": {
+        "tags": { "type": "linkMultiple", "view": "global:views/fields/crm-tags", "loaderClassName": "Espo\\Modules\\Global\\Classes\\FieldProcessing\\CrmTagsLoader" },
+        "tenant": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/link"
+        }
+    },
+    "links": {
+        "tags": { "type": "hasMany", "entity": "CrmTag", "foreign": "meetings", "relationName": "crmTagMeeting" },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "meetings"
+        }
+    }
 }

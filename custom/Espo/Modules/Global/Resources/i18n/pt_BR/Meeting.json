@@ -1,0 +1,8 @@
+{
+    "fields": {
+        "tenant": "Ambiente"
+    },
+    "links": {
+        "tenant": "Ambiente"
+    }
+}

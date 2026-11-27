@@ -281,7 +281,7 @@ class OpportunityStreamQueriesTest extends TestCase
         $factory->expects($this->never())->method('createWith');
         $acl = $this->createMock(AclManager::class);
         $acl->method('checkScope')->willReturn(false);
-        $access = new OpportunityEventAccess($factory, $acl, $this->createMock(UserTenantResolver::class));
+        $access = new OpportunityEventAccess($factory, $acl);
         self::assertSame(['type!=' => OpportunityStreamEvents::EVENT_TYPES], $access->where($this->user));
     }
 

@@ -2,5 +2,11 @@
     "labels": {
         "Schedule Task": "Schedule Task",
         "Log Task": "Log Task"
+    },
+    "fields": {
+        "tenant": "Tenant"
+    },
+    "links": {
+        "tenant": "Tenant"
     }
 }

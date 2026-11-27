@@ -26,6 +26,9 @@ ActivityInbox contracts, recurrence, and existing account/viewer-scoped preferen
 - `/ActivityInbox` and `/ActivityInbox/counts` apply record ACL and the selected
    workspace before filtering, counting, and pagination. Task/Meeting/Appointment use tenant
   teams. Calls with a tenant use that tenant, with team scoping for legacy calls.
+- Task and Meeting carry `tenantId` (since 2026-11-27), filled from their teams on save like
+  Opportunity (`SyncTenantFromTeam`) and backfilled by `BackfillEntityTenants`. Teams remain the ACL;
+  jobs and Mural joins (overdue events, conversation links) bind to the tenant.
 - Record routes include both type and ID. IDs alone are not activity identities.
 - ActivityInbox list/counts/metadata are bounded to Task; CallInbox to Call; MeetingInbox
   to Meeting before counting or pagination. Incompatible type filters

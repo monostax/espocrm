@@ -11,6 +11,11 @@
             "type": "linkMultiple",
             "required": true,
             "view": "views/fields/teams"
+        },
+        "tenant": {
+            "type": "link",
+            "readOnly": true,
+            "view": "views/fields/link"
         }
     },
     "links": {
@@ -20,6 +25,11 @@
             "entity": "Team",
             "relationName": "entityTeam",
             "layoutRelationshipsDisabled": true
+        },
+        "tenant": {
+            "type": "belongsTo",
+            "entity": "Tenant",
+            "foreign": "tasks"
         }
     }
 }

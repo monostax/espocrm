@@ -115,8 +115,7 @@ class OpportunityMessageEvents
         }
 
         foreach ($this->parents($conversation, $account, $occurredAt) as $parent) {
-            $tenanted = MuralConversationLinks::tenanted($parent->getEntityType());
-            if ($tenanted && $parent->get('tenantId') !== $account->get('tenantId')) {
+            if ($parent->get('tenantId') !== $account->get('tenantId')) {
                 continue;
             }
 
@@ -148,7 +147,7 @@ class OpportunityMessageEvents
             $startedAt = $this->config->get($setting);
             if (!$startedAt || $occurredAt < $startedAt) continue;
             $union = UnionBuilder::create();
-            // Every path joins the conversation's workspace, bound to the parent's tenant where the parent has one.
+            // Every path joins the conversation's workspace, bound to the parent's tenant.
             foreach (MuralConversationLinks::paths($type) as $link) $union->query($link->where([
                 'muralWorkspace.tenantId' => $workspace->get('tenantId'), 'muralConversation.id' => $conversation->getId(),
             ])->build());

@@ -22,7 +22,8 @@ use Espo\ORM\EntityManager;
 use Throwable;
 
 /**
- * Backfill tenantId on Account / Lead / Opportunity / Funnel from team membership.
+ * Backfill tenantId on Account / Lead / Opportunity / Funnel / Task / Meeting from team membership.
+ * Task and Meeting gained the column on 2026-11-27; every prod row resolved to exactly one tenant.
  *
  * Mirrors BackfillContactTenant. Idempotent: only rows with null tenantId.
  * Funnel prefers the singular team field, then teams linkMultiple.
@@ -44,6 +45,8 @@ class BackfillEntityTenants implements RebuildAction
         'Lead' => ['lead', false],
         'Opportunity' => ['opportunity', false],
         'Funnel' => ['funnel', true],
+        'Task' => ['task', false],
+        'Meeting' => ['meeting', false],
     ];
 
     public function __construct(

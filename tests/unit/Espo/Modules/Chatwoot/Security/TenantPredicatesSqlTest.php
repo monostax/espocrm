@@ -91,10 +91,8 @@ class TenantPredicatesSqlTest extends TestCase
             'AppointmentTeam' => ['appointmentId', 'teamId', 'deleted'],
         ];
         foreach (['Task', 'Meeting', 'Call'] as $activity) {
-            // As in prod: only Call has a tenant column; task and meeting rows are tenant-scoped through ACL.
-            $tables[$activity] = $activity === 'Call'
-                ? ['id', 'tenantId', 'parentType', 'parentId', 'readable', 'deleted']
-                : ['id', 'parentType', 'parentId', 'status', 'readable', 'deleted'];
+            // Every activity carries its tenant (Task and Meeting since 2026-11-27); legacy calls may lack one.
+            $tables[$activity] = ['id', 'tenantId', 'parentType', 'parentId', 'status', 'readable', 'deleted'];
             $tables["ChatwootConversation$activity"] = ['chatwootConversationId', lcfirst($activity) . 'Id', 'deleted'];
         }
         $defs = [];
@@ -224,7 +222,7 @@ class TenantPredicatesSqlTest extends TestCase
             return $filter;
         });
         $this->parents = new OpportunityAccess($this->em, $this->acl, $this->tenants, $factory, $filters);
-        $this->events = new OpportunityEventAccess($factory, $this->acl, $this->tenants);
+        $this->events = new OpportunityEventAccess($factory, $this->acl);
         $this->attachments = new OpportunityAttachmentAccess($this->em, $this->acl, $this->parents, $factory);
 
         foreach (['a', 'b', 'c'] as $tenant) {
@@ -295,8 +293,10 @@ class TenantPredicatesSqlTest extends TestCase
     {
         $this->insert('ChatwootAccount', ['id' => 'workspace', 'tenantId' => 'tenant-a']);
         $this->insert('ChatwootAccount', ['id' => 'foreign', 'tenantId' => 'tenant-b']);
-        foreach (['native', 'manual', 'reverse', 'hidden-chat', 'foreign', 'unlinked', 'suggested', 'overdue', 'others-overdue'] as $i => $id) {
-            $this->insert('Task', ['id' => "task-$id", 'readable' => 1]);
+        foreach (['native', 'manual', 'reverse', 'hidden-chat', 'foreign', 'unlinked', 'suggested', 'overdue', 'others-overdue',
+            'other-tenant', 'other-tenant-manual'] as $i => $id) {
+            // A task in another tenant never takes a pill from this tenant's conversation, linked or not.
+            $this->insert('Task', ['id' => "task-$id", 'tenantId' => str_starts_with($id, 'other-tenant') ? 'tenant-b' : 'tenant-a', 'readable' => 1]);
             if (str_ends_with($id, 'overdue')) {
                 // A task's own overdue event stays unread only for the people it is addressed to.
                 $this->insertNote($id, $i + 100, ['parentType' => 'Task', 'parentId' => "task-$id", 'type' => 'ActivityOverdue',
@@ -308,7 +308,7 @@ class TenantPredicatesSqlTest extends TestCase
                 'readable' => (int) ($id !== 'hidden-chat')]);
             $this->insertNote($id, $i + 100, ['parentType' => 'Task', 'parentId' => "task-$id", 'type' => 'ChatwootMessageReceived',
                 'relatedType' => 'ChatwootConversation', 'relatedId' => "chat-$id", 'createdById' => 'system']);
-            if (in_array($id, ['native', 'hidden-chat', 'foreign'], true)) {
+            if (in_array($id, ['native', 'hidden-chat', 'foreign', 'other-tenant'], true)) {
                 $this->insert('ChatwootConversationTask', ['chatwootConversationId' => "chat-$id", 'taskId' => "task-$id"]);
             } elseif ($id !== 'unlinked') {
                 [$a, $b] = $id === 'reverse' ? ['object', 'subject'] : ['subject', 'object'];
@@ -383,7 +383,8 @@ class TenantPredicatesSqlTest extends TestCase
                     'initiativeId' => $id, 'tenantId' => 'tenant-a', 'readable' => (int) ($id === 'direct')]);
             } else {
                 $type = in_array($id, ['Meeting', 'Call'], true) ? $id : 'Task';
-                $this->insert($type, ['id' => $id, 'parentId' => $id, 'parentType' => 'Initiative', 'readable' => (int) ($id !== 'hidden-activity')]);
+                $this->insert($type, ['id' => $id, 'tenantId' => 'tenant-a', 'parentId' => $id, 'parentType' => 'Initiative',
+                    'readable' => (int) ($id !== 'hidden-activity')]);
                 $this->insert("ChatwootConversation$type", ['chatwootConversationId' => "chat-$id", lcfirst($type) . 'Id' => $id]);
             }
         }

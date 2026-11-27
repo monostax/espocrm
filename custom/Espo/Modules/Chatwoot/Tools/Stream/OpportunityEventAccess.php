@@ -9,7 +9,6 @@ use Espo\Core\InjectableFactory;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Services\OpportunityStreamEvents;
-use Espo\Modules\Global\Tools\Tenant\UserTenantResolver;
 use Espo\ORM\Query\Part\Condition;
 use Espo\ORM\Query\Select;
 
@@ -22,7 +21,6 @@ class OpportunityEventAccess
     public function __construct(
         private InjectableFactory $factory,
         private AclManager $aclManager,
-        private UserTenantResolver $tenants,
     ) {}
 
     public function where(User $user): array
@@ -74,7 +72,7 @@ class OpportunityEventAccess
             foreach (MuralConversationLinks::paths($type) as $path => $link) {
                 $access = $this->linkAccess($user, $type, $path);
                 if ($access === null) continue;
-                $pair = $link->where($access)->where($this->viewerTenant($user, $type))->where([
+                $pair = $link->where($access)->where([
                     'muralParent.id:' => "$noteAlias.parentId", 'muralConversation.id:' => "$noteAlias.relatedId",
                 ])->build();
                 $pairs[] = Condition::exists($pair)->getRaw();
@@ -82,16 +80,6 @@ class OpportunityEventAccess
             if ($pairs) $conditions[] = ['parentType' => $type, 'OR' => $pairs];
         }
         return $this->messageLinks[$key] = ['OR' => $conditions];
-    }
-
-    /**
-     * A tenantless parent (Task) cannot bind the conversation's workspace to its own tenant, so it is
-     * bound to the viewer's tenants, as the Tenant filter does for records.
-     */
-    private function viewerTenant(User $user, string $type): array
-    {
-        if (MuralConversationLinks::tenanted($type) || $user->isEffectiveAdmin()) return [];
-        return ['muralWorkspace.tenantId' => $this->tenants->resolveTenantIds($user)];
     }
 
     /** null denies this path; row predicates are applied inside its EXISTS. */

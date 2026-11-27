@@ -168,6 +168,16 @@
             "foreign": "tenant",
             "cascadeRemoval": true
         },
+        "tasks": {
+            "type": "hasMany",
+            "entity": "Task",
+            "foreign": "tenant"
+        },
+        "meetings": {
+            "type": "hasMany",
+            "entity": "Meeting",
+            "foreign": "tenant"
+        },
         "createdBy": {
             "type": "belongsTo",
             "entity": "User"

@@ -2,5 +2,11 @@
     "labels": {
         "Schedule Task": "Agendar Tarefa",
         "Log Task": "Logar Tarefa"
+    },
+    "fields": {
+        "tenant": "Ambiente"
+    },
+    "links": {
+        "tenant": "Ambiente"
     }
 }
