@@ -202,6 +202,37 @@ class Verdicts
         return array_diff($closedDeals, $known) !== [];
     }
 
+    /**
+     * A conversation's stored card that offers a deal while its contact already has an open deal in another of its
+     * conversations (ProposedDeals::covered): the offer goes (dropDeal). Updated in place, so the clock (basis, flips_at)
+     * and an action taken on the card stay.
+     *
+     * @param array{verdict: string, reason: ?string, card: ?array<string, mixed>} $stored
+     * @return array{verdict: string, reason: ?string, card: ?array<string, mixed>}
+     */
+    public function withoutDeal(string $id, string $revision, string $locale, string $evidenceScope, array $stored): array
+    {
+        ['verdict' => $verdict, 'card' => $card] = self::dropDeal((string) $stored['verdict'], $stored['card'] ?? null);
+        $this->em->getPDO()->prepare('UPDATE catch_up_verdict SET verdict = :verdict, card = :card WHERE deleted = 0 '
+            . 'AND conversation_id = :id AND revision = :revision AND locale = :locale AND evidence_scope = :scope')
+            ->execute(['verdict' => $verdict, 'card' => $card === null ? null : json_encode($card, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                'id' => $id, 'revision' => $revision, 'locale' => $locale, 'scope' => $evidenceScope]);
+        return ['verdict' => $verdict, 'reason' => $stored['reason'] ?? null, 'card' => $card];
+    }
+
+    /**
+     * A card without its deal offer: a found deal is nothing new (`none`), a reply card keeps its reply.
+     *
+     * @param ?array<string, mixed> $card
+     * @return array{verdict: string, card: ?array<string, mixed>}
+     */
+    public static function dropDeal(string $verdict, ?array $card): array
+    {
+        if ($verdict === 'new_deal') return ['verdict' => 'none', 'card' => null];
+        if (is_array($card)) unset($card['proposedDeal'], $card['closedDeals']);
+        return ['verdict' => $verdict, 'card' => $card];
+    }
+
     /** Someone acted on the subject's card: it leaves the deck and the counts until the subject moves, the clock included. */
     public function resolve(string $type, string $id, ?string $revision = null): void
     {

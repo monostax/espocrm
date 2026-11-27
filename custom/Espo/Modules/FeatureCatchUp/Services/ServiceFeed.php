@@ -60,6 +60,8 @@ class ServiceFeed
     private const RECENT_WAIT = self::WAITING . ' AND c.last_message_received_at >= UTC_TIMESTAMP() - INTERVAL ' . Feed::WAITING_FIRST_DAYS . ' DAY';
     /** The conversation's won and lost deals named in its facts (closedDeals). */
     private const CLOSED_DEALS = 3;
+    /** Conversations of one contact whose deals Em dia's deal checks read (contactConversationIds), newest activity first. */
+    private const CONTACT_CONVERSATIONS = 50;
 
     public function __construct(
         private EntityManager $em,
@@ -212,19 +214,22 @@ class ServiceFeed
     }
 
     /**
-     * The conversation's own deals, newest first, at most CLOSED_DEALS, and only those the reader may read. They are all
-     * won or lost: an open one makes the conversation a Negócios card. The analysis reads them (`facts.closedDeals`) so a
-     * purchase already registered isn't found again: the AI agent often wins a deal minutes after the customer confirms,
-     * and on 2026-11-11 11 of Instituto Ferraz Veloso's 21 found deals were deals it had already won.
+     * The won and lost deals of the conversation's contact (contactConversationIds), newest first, at most CLOSED_DEALS, and
+     * only those the reader may read. The analysis reads them (`facts.closedDeals`) so a purchase already registered isn't
+     * found again: the AI agent often wins a deal minutes after the customer confirms, and on 2026-11-11 11 of Instituto
+     * Ferraz Veloso's 21 found deals were deals it had already won. Only a deal's name, status, amount and dates are read,
+     * and only from deals the reader may open in the CRM; no other conversation's messages.
      *
      * @return list<Entity>
      */
     public function closedDeals(string $id, string $tenantId): array
     {
+        $ids = $this->contactConversationIds($id);
         $query = $this->em->getPDO()->prepare('SELECT DISTINCT o.id, o.created_at FROM chatwoot_conversation_opportunity r '
             . "JOIN opportunity o ON o.id = r.opportunity_id AND o.deleted = 0 AND o.status IN ('Won','Lost') "
-            . 'WHERE r.deleted = 0 AND r.chatwoot_conversation_id = ? AND o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 10');
-        $query->execute([$id, $tenantId]);
+            . 'WHERE r.deleted = 0 AND r.chatwoot_conversation_id IN (' . self::placeholders($ids) . ') AND o.tenant_id = ? '
+            . 'ORDER BY o.created_at DESC LIMIT 10');
+        $query->execute([...$ids, $tenantId]);
         $deals = [];
         foreach ($query->fetchAll(\PDO::FETCH_COLUMN) as $dealId) {
             $deal = $this->em->getEntityById('Opportunity', (string) $dealId);
@@ -233,6 +238,50 @@ class ServiceFeed
             if (count($deals) >= self::CLOSED_DEALS) break;
         }
         return $deals;
+    }
+
+    /**
+     * The open deals of the conversation's contact in this workspace (contactConversationIds), newest first, whoever may read
+     * them. Em dia proposes and creates no deal while one is open, as a conversation with its own open deal is a Negócios
+     * card instead; it only says whether one exists, and names one only to a reader who may read it (ProposedDeals::create).
+     *
+     * @return list<string>
+     */
+    public function contactOpenDeals(string $id, string $tenantId): array
+    {
+        $ids = $this->contactConversationIds($id);
+        $query = $this->em->getPDO()->prepare('SELECT DISTINCT o.id, o.created_at FROM chatwoot_conversation_opportunity r '
+            . "JOIN opportunity o ON o.id = r.opportunity_id AND o.deleted = 0 AND o.status NOT IN ('Won','Lost') "
+            . 'WHERE r.deleted = 0 AND r.chatwoot_conversation_id IN (' . self::placeholders($ids) . ') AND o.tenant_id = ? '
+            . 'ORDER BY o.created_at DESC LIMIT 10');
+        $query->execute([...$ids, $tenantId]);
+        return array_map('strval', $query->fetchAll(\PDO::FETCH_COLUMN));
+    }
+
+    /**
+     * The conversation and the workspace's other conversations with its contact: the same WhatsApp group or person in another
+     * inbox (each inbox is its own Chatwoot conversation), or the same CRM contact on another channel. Em dia's deal checks
+     * read the deals of all of them, so a deal registered in one inbox isn't found again in another: on 2026-11-27 Nowle's
+     * group, in two staff inboxes at Monostax, got a found deal in each. Lane routing (OPEN_DEAL_SQL) stays per
+     * conversation: a deal's card reads only its own conversations, so a sibling stays in Atendimento for its replies.
+     *
+     * @return non-empty-list<string>
+     */
+    public function contactConversationIds(string $id): array
+    {
+        $query = $this->em->getPDO()->prepare('SELECT s.id FROM chatwoot_conversation c JOIN chatwoot_conversation s '
+            . 'ON s.chatwoot_account_id = c.chatwoot_account_id AND s.deleted = 0 '
+            . 'AND (s.contact_id = c.contact_id OR s.chatwoot_contact_id = c.chatwoot_contact_id) '
+            . 'WHERE c.id = ? ORDER BY s.last_activity_at DESC LIMIT ' . self::CONTACT_CONVERSATIONS);
+        $query->execute([$id]);
+        $ids = array_map('strval', $query->fetchAll(\PDO::FETCH_COLUMN));
+        return in_array($id, $ids, true) ? $ids : [$id, ...$ids];
+    }
+
+    /** @param non-empty-list<string> $values */
+    private static function placeholders(array $values): string
+    {
+        return implode(',', array_fill(0, count($values), '?'));
     }
 
     /**

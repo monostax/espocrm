@@ -40,17 +40,30 @@ class ClosedDealsTest extends TestCase
         return $entity;
     }
 
-    /** @param array<string, array<string, mixed>> $deals */
-    private function feed(array $deals, array $hidden = []): ServiceFeed
+    /**
+     * @param array<string, array<string, mixed>> $deals
+     * @param list<string> $siblings the contact's conversations the sibling query finds (ServiceFeed::contactConversationIds)
+     */
+    private function feed(array $deals, array $hidden = [], array $siblings = ['conv']): ServiceFeed
     {
         $acl = $this->createMock(Acl::class);
         $acl->method('checkEntityRead')->willReturnCallback(fn (Entity $deal) => !in_array($deal->getId(), $hidden, true));
+        $conversations = $this->createMock(\PDOStatement::class);
+        $conversations->expects(self::once())->method('execute')->with(['conv'])->willReturn(true);
+        $conversations->method('fetchAll')->willReturn($siblings);
         $statement = $this->createMock(\PDOStatement::class);
-        $statement->expects(self::once())->method('execute')->with(['conv', 'tenant'])->willReturn(true);
+        $expected = in_array('conv', $siblings, true) ? $siblings : ['conv', ...$siblings];
+        $statement->expects(self::once())->method('execute')->with([...$expected, 'tenant'])->willReturn(true);
         $statement->method('fetchAll')->willReturn(array_keys($deals));
         $pdo = $this->createMock(\PDO::class);
-        $pdo->method('prepare')->willReturnCallback(function (string $sql) use ($statement) {
+        $pdo->method('prepare')->willReturnCallback(function (string $sql) use ($statement, $conversations, $expected) {
+            if (str_starts_with($sql, 'SELECT s.id FROM chatwoot_conversation c')) {
+                self::assertStringContainsString('s.chatwoot_account_id = c.chatwoot_account_id', $sql, 'only the same workspace');
+                return $conversations;
+            }
             self::assertStringContainsString("o.status IN ('Won','Lost')", $sql, 'an open deal makes the conversation a Negócios card');
+            self::assertStringContainsString('r.chatwoot_conversation_id IN (' . implode(',', array_fill(0, count($expected), '?')) . ')', $sql);
+            self::assertStringContainsString('o.tenant_id = ?', $sql);
             return $statement;
         });
         $em = $this->createMock(EntityManager::class);
@@ -80,6 +93,21 @@ class ClosedDealsTest extends TestCase
         self::assertSame(16, strlen($keys[0]));
         self::assertStringNotContainsString('won', implode('', $keys), 'a shared card never names a deal');
         self::assertNotSame($keys[0], ServiceFeed::dealKeys([$this->entity('won', ['status' => 'Lost'])])[0], 'a status change is a new key');
+    }
+
+    /** 2026-11-27: Nowle's group is two conversations (two staff inboxes); a deal won in one is the other's deal too. */
+    public function testTheClosedDealsOfTheContactsOtherConversationsCount(): void
+    {
+        $deals = ['won' => ['name' => 'Nowle (Trial)', 'status' => 'Won', 'createdAt' => '2026-09-16 14:21:35', 'closeDate' => '2026-11-16']];
+
+        $closed = $this->feed($deals, [], ['other-inbox', 'conv'])->closedDeals('conv', 'tenant');
+
+        self::assertSame(['won'], array_map(fn (Entity $deal) => $deal->getId(), $closed));
+    }
+
+    public function testTheConversationItselfIsReadEvenWhenTheSiblingQueryMissesIt(): void
+    {
+        self::assertSame([], $this->feed([], [], [])->closedDeals('conv', 'tenant'));
     }
 
     public function testTheAnalysisReadsTheClosedDealsOnlyWhenThereAreAny(): void

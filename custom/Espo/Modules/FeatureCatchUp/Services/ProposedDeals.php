@@ -72,11 +72,12 @@ class ProposedDeals
                 'chatwootAccountId' => $conversation->get('chatwootAccountId')])->forUpdate()->findOne();
             if (!$locked) throw new Forbidden();
             ConversationCycle::requireCurrent($locked);
-            if ($this->service->hasOpenDeal($id)) {
-                $deals = $this->em->getRDBRepository('Opportunity')->where(['tenantId' => $tenant->getId(),
-                    'chatwootConversations.id' => $id, 'status!=' => ['Won', 'Lost']])->join('chatwootConversations')->find();
-                foreach ($deals as $deal) {
-                    if ($this->acl->checkEntityRead($deal)) return ['existing' => true, 'id' => $deal->getId()];
+            // The contact's open deal, in this conversation or another of its inboxes: that one, never a second.
+            $open = $this->service->contactOpenDeals($id, (string) $tenant->getId());
+            if ($open) {
+                foreach ($open as $dealId) {
+                    $deal = $this->em->getEntityById('Opportunity', $dealId);
+                    if ($deal && $this->acl->checkEntityRead($deal)) return ['existing' => true, 'id' => $dealId];
                 }
                 return ['existing' => true];
             }
@@ -130,8 +131,8 @@ class ProposedDeals
     /**
      * Auto-creates the opportunity Em dia found in a conversation when the account uses `create` mode (the default).
      * Stamps `createdByAIAgent = true`, falls back to the funnel's first open stage if the proposed stage has required
-     * fields, and returns null (leaving the card as a suggestion) if the reader lacks permission, another open/closed
-     * deal already covers the conversation, or creation is refused.
+     * fields, and returns null (leaving the card as a suggestion) if the reader lacks permission, the contact already has
+     * an open deal in any of its conversations, a closed deal the card wasn't analysed with appeared, or creation is refused.
      *
      * @param array<string, mixed> $card
      * @param list<string> $closedDeals
@@ -160,7 +161,7 @@ class ProposedDeals
                 } catch (CardGone) {
                     return null;
                 }
-                if ($this->service->hasOpenDeal($conversationId)) return null;
+                if ($this->service->contactOpenDeals($conversationId, $tenantId)) return null;
                 if (Verdicts::missesClosedDeal($card, ServiceFeed::dealKeys($this->service->closedDeals($conversationId, $tenantId)))) {
                     return null;
                 }
@@ -233,6 +234,15 @@ class ProposedDeals
             'revision' => $revision,
             'closedKey' => $closedKey,
         ];
+    }
+
+    /**
+     * Whether the conversation's contact already has an open deal, here or in another of its conversations
+     * (ServiceFeed::contactOpenDeals): Em dia then proposes no deal for it (Summary).
+     */
+    public function covered(string $conversationId, string $tenantId): bool
+    {
+        return $this->service->contactOpenDeals($conversationId, $tenantId) !== [];
     }
 
     /**

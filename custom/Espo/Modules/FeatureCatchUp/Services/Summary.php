@@ -53,6 +53,12 @@ class Summary
             ? 'suggestion'
             : Rollout::DEFAULT_DEAL_MODE;
         if ($stored && !Verdicts::outdated($stored, $closedDeals)) {
+            // A deal offer stored before the contact's deal opened in another of its conversations loses the offer, in code.
+            if ($conversation && empty($stored['card']['createdDeal'])
+                && ($stored['verdict'] === 'new_deal' || is_array($stored['card']['proposedDeal'] ?? null))
+                && $this->proposedDeals->covered((string) $snapshot['id'], (string) $snapshot['tenantId'])) {
+                return ['status' => 'completed', 'cached' => true, ...$this->verdicts->withoutDeal($key[1], $key[2], $key[3], $key[4], $stored)];
+            }
             if ($conversation && $dealMode === 'create' && is_array($stored['card']['proposedDeal'] ?? null) && empty($stored['card']['createdDeal'])) {
                 $now = new DateTimeImmutable('@' . time());
                 $facts = is_array($snapshot['facts'] ?? null) ? $snapshot['facts'] : [];
@@ -91,6 +97,12 @@ class Summary
         // copy for the card it becomes.
         $basis = $loop && $verdict !== 'none' ? Loops::basis(Loops::open($record), $facts, $snapshot['quietSince'] ?? null) : null;
         $card = $verdict === 'none' || !$card ? null : self::card($card, $loop, $reason);
+        // The contact already has an open deal in another of its conversations (2026-11-27: Nowle's group, in two staff
+        // inboxes, got a deal from each): this one proposes none, as a conversation with its own open deal never does.
+        if ($conversation && ($verdict === 'new_deal' || is_array($card['proposedDeal'] ?? null))
+            && $this->proposedDeals->covered((string) $snapshot['id'], (string) $snapshot['tenantId'])) {
+            ['verdict' => $verdict, 'card' => $card] = Verdicts::dropDeal($verdict, $card);
+        }
         // A found deal keeps its funnel and stage only when they are ones the analysis was offered.
         if ($conversation && is_array($card['proposedDeal'] ?? null)) {
             $card['proposedDeal'] = $this->targets->sanitize((string) $snapshot['tenantId'], $card['proposedDeal']);
