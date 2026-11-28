@@ -56,7 +56,7 @@ final class Payments
             $creationId = $creation['id']; $tenant = $creation['tenant_id'];
         }
         $claim = $this->accounts->withTenantLock($tenant, function (PDO $pdo, string $now) use ($tenant, $creationId, $integration, $environment, $paymentId): array {
-            [$creation, $command, $accepted] = $this->original($pdo, $tenant, $creationId);
+            [$creation, $command, $accepted, $schedule] = $this->original($pdo, $tenant, $creationId);
             if ($creation['integration_id'] !== $integration || $creation['environment'] !== $environment) throw new Conflict('Original payment integration changed.');
             $q = $pdo->prepare("SELECT * FROM credit_billing_payment WHERE provider='asaas' AND integration_id=? AND external_hash=? FOR UPDATE");
             $q->execute([$integration, hash('sha256', $paymentId)]); $row = $q->fetch(PDO::FETCH_ASSOC);
@@ -78,16 +78,19 @@ final class Payments
             // A fresh attempt supersedes an interrupted/older read. Only the newest read can commit.
             $revision = (int) $row['revision'] + 1;
             $pdo->prepare('UPDATE credit_billing_payment SET revision=? WHERE id=?')->execute([$revision, $row['id']]);
-            return [$row, $revision, $command, $creation['external_id']];
+            return [$row, $revision, $command, $creation['external_id'], $schedule];
         });
-        [$payment, $revision, $command, $external] = $claim;
+        [$payment, $revision, $command, $external, $schedule] = $claim;
         $connection = $this->connections->get($integration);
         if ($connection->environment !== $environment) throw new Conflict('Original integration environment changed.');
         $response = $this->transport->send($connection, 'GET', '/payments/' . $paymentId);
         if ($response->status !== 200 || !is_array($response->data)) throw new ServiceUnavailable('Authoritative payment lookup is unresolved.');
-        $verified = PaymentVerification::verify($response->data, $paymentId, $command, $external);
+        $verified = PaymentVerification::verify($response->data, $paymentId, $command, $external, $schedule);
         return $this->walletLock->run($tenant, function (PDO $pdo, array $wallet, string $now) use ($payment, $revision, $verified, $tenant, $creationId): array {
-            [$creation, , $accepted] = $this->original($pdo, $tenant, $creationId);
+            [$creation, , $accepted, , $record] = $this->original($pdo, $tenant, $creationId);
+            // A renewal is funded by the terms in force for its period (plan changes, PlanTerms).
+            $terms = $verified['period'] === null ? $accepted['terms'] : PlanTerms::forPeriod($accepted['terms'], $record, $verified['period']['start']);
+            if (\Brick\Math\BigDecimal::of($terms['price'])->compareTo($verified['value']) !== 0) throw new Conflict('Plan terms changed during payment verification.');
             $q = $pdo->prepare('SELECT * FROM credit_billing_payment WHERE id=? FOR UPDATE'); $q->execute([$payment['id']]);
             $row = $q->fetch(PDO::FETCH_ASSOC); $this->verifyBinding($row);
             if ((int) $row['revision'] !== $revision) {
@@ -95,7 +98,7 @@ final class Payments
             }
             $identity = self::hash([$row['binding_hash'], $verified['customer'], $verified['subscription'], $verified['originalDueDate'], $verified['value'], $verified['period']]);
             if ($row['identity_hash'] !== null && $row['identity_hash'] !== $identity) throw new Conflict('Verified payment period or amount changed.');
-            $period = $this->period($pdo, $row, $accepted, $verified['period'], $now);
+            $period = $this->period($pdo, $row, $accepted, $terms['termsId'], $verified['period'], $now);
             $loss = $this->originalLoss($pdo, $row, $verified);
             $receipt = null; $reversal = null; $state = $verified['review'] ? 'review_required' : 'pending';
             if ($period['receipt'] !== null) {
@@ -136,7 +139,6 @@ final class Payments
                         $receipt = json_decode($period['receipt'], true, 32, JSON_THROW_ON_ERROR);
                         if (self::hash($receipt) !== $period['receipt_hash']) throw new Conflict('Inconsistent billing funding receipt.');
                     } else {
-                        $terms = $accepted['terms'];
                         $receipt = $terms['credits'] === '0.0000' ? ['grantId' => null, 'transactionId' => null, 'grantedCredits' => '0.0000', 'expiresAt' => $period['ends_at']] :
                             $this->funding->grantLocked($pdo, $wallet, $now, new GrantInput($tenant, $terms['operation'], 'billing:' . $period['id'],
                                 $terms['credits'], $period['starts_at'],
@@ -172,7 +174,7 @@ final class Payments
                 } else {
                     $q = $pdo->prepare('SELECT * FROM tenant_credit_balance WHERE id=?'); $q->execute([$wallet['id']]);
                     $reversal = FundingRefunds::reverseLocked($pdo, $q->fetch(PDO::FETCH_ASSOC), $now, $receipt['grantId'],
-                        FundingRefunds::credits($accepted['terms']['credits'], $verified['value'], $loss['value']),
+                        FundingRefunds::credits($terms['credits'], $verified['value'], $loss['value']),
                         ['paymentId' => $row['id'], 'periodId' => $period['id'], 'provider' => $row['provider'],
                             'integrationId' => $row['integration_id'], 'environment' => $row['environment'],
                             'externalPaymentId' => $row['external_id'], 'verificationRevision' => $revision, 'reversal' => $loss], $this->funding);
@@ -227,16 +229,17 @@ final class Payments
         if (!$parent || $parent['deleted'] || !in_array($parent['state'], ['pending', 'active', 'completed', 'cancelled'], true)) throw new Conflict('Original payment obligation is unavailable.');
         $accepted = $this->accounts->originalAcceptance($parent);
         if ($accepted['provider'] !== $row['provider'] || $accepted['integrationId'] !== $row['integration_id']) throw new Conflict('Original provider binding mismatch.');
-        return [$row, $command, $accepted];
+        $record = $row['kind'] === 'subscription' ? Subscriptions::record($parent, $row) : ['changes' => []];
+        return [$row, $command, $accepted, PlanTerms::schedule($record), $record];
     }
 
-    private function period(PDO $pdo, array $payment, array $accepted, ?array $bounds, string $now): array
+    private function period(PDO $pdo, array $payment, array $accepted, string $termsId, ?array $bounds, string $now): array
     {
         $key = $bounds === null ? 'purchase' : $bounds['start'];
         $q = $pdo->prepare('SELECT * FROM credit_billing_period WHERE obligation_id=? AND period_key=? FOR UPDATE');
         $q->execute([$payment['obligation_id'], $key]); $row = $q->fetch(PDO::FETCH_ASSOC);
         $binding = ['tenant_id' => $payment['tenant_id'], 'obligation_id' => $payment['obligation_id'], 'period_key' => $key,
-            'starts_at' => $bounds['start'] ?? $accepted['acceptedAt'], 'ends_at' => $bounds['end'] ?? null, 'terms_id' => $accepted['terms']['termsId']];
+            'starts_at' => $bounds['start'] ?? $accepted['acceptedAt'], 'ends_at' => $bounds['end'] ?? null, 'terms_id' => $termsId];
         if ($row) {
             if ($row['deleted'] || $row['binding_hash'] !== self::hash($binding) ||
                 self::hash(array_intersect_key($row, $binding)) !== self::hash($binding)) throw new Conflict('Original billing period is inconsistent.');

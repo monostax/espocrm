@@ -7,6 +7,7 @@ namespace Espo\Modules\FeatureCatchUp\Controllers;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Modules\FeatureCatchUp\Services\BusinessDescription;
 use Espo\Modules\FeatureCatchUp\Services\Settle;
 use stdClass;
 
@@ -16,7 +17,7 @@ use stdClass;
  */
 final class CatchUpSettle
 {
-    public function __construct(private Settle $settle) {}
+    public function __construct(private Settle $settle, private BusinessDescription $business) {}
 
     /**
      * A conversation has been quiet for the settle time (Hatchet `catch-up-settle`), or is in the window of an account that
@@ -37,6 +38,14 @@ final class CatchUpSettle
         }
         return (object) $this->settle->complete($input->lane, $input->id, $input->userId, (int) ($input->accountId ?? 0),
             $input->timeZone, $input->locale, $input->requestId);
+    }
+
+    /** The backend drafted an account's "Sobre a empresa" from its conversations (Hatchet `catch-up-business`). */
+    public function postActionBusiness(Request $request): object
+    {
+        $input = $this->verified($request);
+        if (!is_string($input->description ?? null)) throw new BadRequest('Invalid business description.');
+        return (object) $this->business->saveDraft((int) ($input->accountId ?? 0), $input->description);
     }
 
     private function verified(Request $request): stdClass

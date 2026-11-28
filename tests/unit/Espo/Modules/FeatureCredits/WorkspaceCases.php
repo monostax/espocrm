@@ -184,6 +184,10 @@ trait WorkspaceCases
             $this->now = '2026-10-11 00:00:00';
             $funding->grant($this->input('extra', '100'));
             $this->assertSame(['usedRatio' => '0.0206', 'periodStartedAt' => $trialStart, 'renewsAt' => null], $read('190.0000'));
+            // So does a staff top-up, though it is a migration grant: 4 of 294.
+            $funding->grant(new GrantInput('tenant', 'migration', 'manual-tenant-1-2026-10-11-000000', '100',
+                $this->now, null, (object) ['reason' => 'manual_topup']));
+            $this->assertSame(['usedRatio' => '0.0136', 'periodStartedAt' => $trialStart, 'renewsAt' => null], $read('290.0000'));
             $this->assertSame('1.0000', $read('0.0000')['usedRatio'], 'Nothing left is 100%.');
             $this->assertSame('1.0000', $read('-2.0000', '1.0000')['usedRatio']);
 

@@ -12,13 +12,23 @@ use Espo\Modules\FeatureCredits\Billing\MonthlyPeriod;
 /** Only authoritative GET data enters here. Webhook status/value are never payment authority. */
 final class PaymentVerification
 {
-    public static function verify(array $data, string $id, Command $original, string $externalId): array
+    /**
+     * @param list<array{from: string, value: string}> $schedule A plan subscription's changed prices (PlanTerms::schedule):
+     *     a renewal whose period starts at or after `from` is charged `value` instead of the original price.
+     */
+    public static function verify(array $data, string $id, Command $original, string $externalId, array $schedule = []): array
     {
         $body = $original->body;
+        $value = $body['value'];
+        if ($original->kind === 'subscription' && $schedule && is_string($data['originalDueDate'] ?? null)) {
+            try { $start = MonthlyPeriod::forDueDate($body['nextDueDate'], $data['originalDueDate'])['start']; }
+            catch (\InvalidArgumentException) { $start = null; } // Refused below with the period checks.
+            foreach ($schedule as $entry) if ($start !== null && $entry['from'] <= $start) $value = $entry['value'];
+        }
         if (($data['object'] ?? null) !== 'payment' || ($data['id'] ?? null) !== $id ||
             ($data['customer'] ?? null) !== $body['customer'] || !empty($data['installment']) ||
-            !self::money($data['value'] ?? null, $body['value']) ||
-            (isset($data['originalValue']) && !self::money($data['originalValue'], $body['value']))) {
+            !self::money($data['value'] ?? null, $value) ||
+            (isset($data['originalValue']) && !self::money($data['originalValue'], $value))) {
             throw new Conflict('Authoritative payment does not match original commercial terms.');
         }
         $method = $data['billingType'] ?? null;
@@ -46,7 +56,7 @@ final class PaymentVerification
         if (!is_string($status) || !preg_match('/^[A-Z_]{1,64}$/D', $status) || !is_bool($data['deleted'] ?? null)) {
             throw new Conflict('Incomplete authoritative payment status.');
         }
-        $won = self::wonDispute($data, $body['value']);
+        $won = self::wonDispute($data, $value);
         $review = $data['deleted'] || !empty($data['refunds']) || (!empty($data['chargeback']) && !$won) || !empty($data['split']) ||
             !in_array($status, ['PENDING', 'AWAITING_RISK_ANALYSIS', 'AUTHORIZED', 'CONFIRMED', 'RECEIVED', 'OVERDUE', 'DUNNING_REQUESTED'], true);
         foreach (['discount', 'fine', 'interest'] as $adjustment) {
@@ -57,15 +67,15 @@ final class PaymentVerification
         $paid = !$review && ($status === 'RECEIVED' || ($status === 'CONFIRMED' && in_array($method, ['BOLETO', 'CREDIT_CARD'], true)));
         // PIX CONFIRMED is precautionary review, not the PIX RECEIVED settlement signal.
         if ($method === 'PIX' && $status === 'CONFIRMED') $review = true;
-        $refund = self::partialRefund($data, $body['value']);
+        $refund = self::partialRefund($data, $value);
         if ($refund !== null) {
             $paid = $status === 'RECEIVED' || ($status === 'CONFIRMED' && in_array($method, ['BOLETO', 'CREDIT_CARD'], true));
             $review = !$paid;
         }
         return ['paymentId' => $id, 'customer' => $body['customer'], 'subscription' => $data['subscription'] ?? null,
-            'originalDueDate' => $due, 'value' => $body['value'], 'billingType' => $method, 'status' => $status,
+            'originalDueDate' => $due, 'value' => $value, 'billingType' => $method, 'status' => $status,
             'period' => $period, 'paid' => $paid, 'review' => $review,
-            'fullReversal' => self::fullReversal($data, $body['value']), 'refund' => $refund];
+            'fullReversal' => self::fullReversal($data, $value), 'refund' => $refund];
     }
 
     private static function wonDispute(array $data, string $value): bool

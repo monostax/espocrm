@@ -17,7 +17,9 @@ use Throwable;
  * 2026-11-26). Presentation only: never an admission or dispatch permission.
  *
  * The period starts when the newest monthly (subscription) or trial/opening
- * (migration) grant arrived, else the newest purchase. Used = credits settled
+ * (migration) grant arrived, else the newest purchase. A staff top-up (a
+ * migration grant keyed `manual-…`) adds room to the current period like a
+ * purchase instead of starting one (2026-11-27). Used = credits settled
  * since then plus credits held right now; the share is used ÷ (used +
  * available), so it is 0 after a renewal, a purchase lowers it, and it reaches
  * 1 when nothing is left to start an AI call with.
@@ -25,6 +27,8 @@ use Throwable;
 final class UsageMeter
 {
     private const ALLOWANCES = ['subscription', 'migration'];
+    /** Source-key prefix of operator top-ups (manual-<tenant>-<n>-<Y-m-d-His>), see index.md § Usage meter. */
+    private const TOP_UP_PREFIX = 'manual-';
     private const CLOSED_OBLIGATIONS = ['completed', 'cancelled', 'failed'];
 
     public function __construct(private EntityManager $entityManager, private Clock $clock) {}
@@ -76,8 +80,9 @@ final class UsageMeter
             $allowances = "'" . implode("','", self::ALLOWANCES) . "'";
             $query = $pdo->prepare("SELECT source_type, source_key, created_at FROM credit_grant
                 WHERE tenant_id = ? AND deleted = FALSE
-                ORDER BY CASE WHEN source_type IN ($allowances) THEN 0 ELSE 1 END, created_at DESC, id DESC LIMIT 1");
-            $query->execute([$tenantId]);
+                ORDER BY CASE WHEN source_type IN ($allowances) AND source_key NOT LIKE ? THEN 0 ELSE 1 END,
+                    created_at DESC, id DESC LIMIT 1");
+            $query->execute([$tenantId, self::TOP_UP_PREFIX . '%']);
             $grant = $query->fetch(PDO::FETCH_ASSOC);
             if ($grant === false) {
                 $pdo->commit();

@@ -240,7 +240,10 @@ class Summary
             'policy' => array_intersect_key($snapshot['catchUpPolicy'], array_flip(['enabled', 'instance', 'accountId', 'dailyLimit'])),
         ];
         // A conversation may become a deal: the funnels and stages the reader may put it in (DealTargets).
-        if (($snapshot['type'] ?? null) === 'conversation') $payload['funnels'] = $this->targets->forPrompt((string) $snapshot['tenantId']);
+        if (($snapshot['type'] ?? null) === 'conversation') {
+            $payload['funnels'] = $this->targets->forPrompt((string) $snapshot['tenantId']);
+            if (is_array($snapshot['business'] ?? null)) $payload['business'] = $snapshot['business'];
+        }
         if ($requestId !== null) $payload['requestId'] = $requestId;
         // Not part of the analysis: what the backend sends back when it finishes (Settle::complete).
         if ($notify !== null) $payload['notify'] = $notify;

@@ -40,10 +40,12 @@ class Rollout
         if (($remote['status'] ?? '') !== 'active' || ($settings['enabled'] ?? false) !== true) throw new Forbidden('Catch Up is not enabled for this account.');
         $limit = $settings['dailyLimit'] ?? self::DEFAULT_DAILY_LIMIT;
         $dealMode = ($settings['dealMode'] ?? null) === 'suggestion' ? 'suggestion' : self::DEFAULT_DEAL_MODE;
+        $business = is_string($settings['businessDescription'] ?? null)
+            ? trim(mb_substr(trim($settings['businessDescription']), 0, BusinessDescription::MAX_LENGTH)) : '';
         if (empty($settings['instance'])) throw new Forbidden();
         return ['enabled' => true, 'instance' => rtrim($settings['instance'], '/'), 'accountId' => (string) $account->get('chatwootAccountId'),
             'dailyLimit' => is_int($limit) ? min(self::MAX_DAILY_LIMIT, max(0, $limit)) : self::DEFAULT_DAILY_LIMIT,
-            'dealMode' => $dealMode];
+            'dealMode' => $dealMode, 'businessDescription' => $business !== '' ? $business : null];
     }
 
     public function forTenant(string $tenantId): array

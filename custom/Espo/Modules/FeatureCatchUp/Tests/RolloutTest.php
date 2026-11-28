@@ -52,7 +52,7 @@ class RolloutTest extends TestCase
         $policy = $this->check(['status' => 'active', 'catch_up' => [
             'enabled' => true, 'instance' => 'https://chat.example.test/', 'dailyLimit' => 9999,
         ]]);
-        self::assertSame(['enabled' => true, 'instance' => 'https://chat.example.test', 'accountId' => '9', 'dailyLimit' => 2000, 'dealMode' => 'create'], $policy);
+        self::assertSame(['enabled' => true, 'instance' => 'https://chat.example.test', 'accountId' => '9', 'dailyLimit' => 2000, 'dealMode' => 'create', 'businessDescription' => null], $policy);
     }
 
     public function testDealModeHonoursSuggestionAndDefaultsToCreate(): void
@@ -66,5 +66,18 @@ class RolloutTest extends TestCase
             'enabled' => true, 'instance' => 'https://chat.example.test', 'dealMode' => 'bogus',
         ]]);
         self::assertSame('create', $fallback['dealMode']);
+    }
+
+    public function testBusinessDescriptionIsPassedOnTrimmedAndBlankIsNull(): void
+    {
+        $described = $this->check(['status' => 'active', 'catch_up' => [
+            'enabled' => true, 'instance' => 'https://chat.example.test', 'businessDescription' => "  Fotografia de gestantes.  ",
+        ]]);
+        self::assertSame('Fotografia de gestantes.', $described['businessDescription']);
+
+        $blank = $this->check(['status' => 'active', 'catch_up' => [
+            'enabled' => true, 'instance' => 'https://chat.example.test', 'businessDescription' => '   ',
+        ]]);
+        self::assertNull($blank['businessDescription']);
     }
 }

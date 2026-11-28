@@ -13,6 +13,7 @@ namespace Espo\Modules\FeatureSelfService\Tools\Workspace;
 
 use Espo\Core\Utils\Log;
 use Espo\Modules\Chatwoot\Services\ChatwootApiClient;
+use Espo\Modules\FeatureCredits\Billing\PlanTerms;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
 use Throwable;
@@ -128,20 +129,25 @@ class WorkspaceAccess
     private function paidPlan(string $tenantId): ?array
     {
         $query = $this->entityManager->getPDO()->prepare(
-            "SELECT o.terms_snapshot, MAX(p.ends_at) AS paid_through
+            "SELECT o.terms_snapshot, o.subscription_record, MAX(p.starts_at) AS paid_from, MAX(p.ends_at) AS paid_through
              FROM credit_billing_obligation o
              JOIN credit_billing_period p ON p.obligation_id = o.id AND p.paid_payment_id IS NOT NULL AND p.ends_at IS NOT NULL
              WHERE o.tenant_id = ? AND o.deleted = FALSE AND o.operation = 'subscription'
-             GROUP BY o.id, o.terms_snapshot
+             GROUP BY o.id, o.terms_snapshot, o.subscription_record
              ORDER BY paid_through DESC"
         );
         $query->execute([$tenantId]);
 
         foreach ($query->fetchAll(\PDO::FETCH_ASSOC) as $row) {
-            $seats = json_decode((string) $row['terms_snapshot'], true)['seats'] ?? null;
+            $terms = json_decode((string) $row['terms_snapshot'], true);
+            $seats = $terms['seats'] ?? null;
 
             if (isset($seats['plan'], $seats['quantity'])) {
-                return ['plan' => $seats['plan'], 'seats' => (int) $seats['quantity'], 'paidThrough' => (string) $row['paid_through']];
+                // The seats of the paid period, with attendants added during it (PlanTerms).
+                $level = PlanTerms::level($terms, PlanTerms::record($row['subscription_record']),
+                    (string) $row['paid_from'], (string) $row['paid_through']);
+
+                return ['plan' => $seats['plan'], 'seats' => $level['seats'], 'paidThrough' => (string) $row['paid_through']];
             }
         }
 

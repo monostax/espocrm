@@ -10,6 +10,7 @@
     {"route": "/CatchUpBatch/status", "method": "post", "params": {"controller": "CatchUp", "action": "batchStatus"}},
     {"route": "/CatchUpSettle", "method": "post", "noAuth": true, "params": {"controller": "CatchUpSettle", "action": "start"}},
     {"route": "/CatchUpSettle/complete", "method": "post", "noAuth": true, "params": {"controller": "CatchUpSettle", "action": "complete"}},
+    {"route": "/CatchUpSettle/business", "method": "post", "noAuth": true, "params": {"controller": "CatchUpSettle", "action": "business"}},
     {"route": "/CatchUp/:id/close", "method": "post", "params": {"controller": "CatchUp", "action": "close", "id": ":id"}},
     {"route": "/CatchUp/:id/resolvedElsewhere", "method": "post", "params": {"controller": "CatchUp", "action": "resolvedElsewhere", "id": ":id"}},
     {"route": "/CatchUpSnooze", "method": "post", "params": {"controller": "CatchUp", "action": "snooze"}},

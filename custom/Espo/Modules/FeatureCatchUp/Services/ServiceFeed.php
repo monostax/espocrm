@@ -159,6 +159,8 @@ class ServiceFeed
         $result = [
             ...$candidate,
             'tenantId' => $tenant->getId(), 'catchUpPolicy' => $policy,
+            // Who the business is, so a found deal is one of its own sales (BusinessDescription).
+            'business' => ['name' => (string) $tenant->get('name'), 'description' => $policy['businessDescription'] ?? null],
             'revision' => $revision, 'evidenceScope' => $scope, 'evidence' => $evidence, 'participants' => $participants,
             // When the conversation went quiet, so the stored verdict can be picked again as time passes (Loops::basis).
             'quietSince' => $conversation->get('lastActivityAt'),

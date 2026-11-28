@@ -189,17 +189,21 @@ Contracts:
 
 ## Plan and checkout
 
-One plan since 2026-11-11 (`gtm/07-pricing-positioning.md`): R$249 per
-attendant with 250 credits each, plus optional monthly credits in 1.000-credit
-steps at R$499 per 1.000. Catalog
-`FeatureCredits/Resources/billing/self-service-2026-11-v2.json` (unpublished):
-21 seat offers of plan `monostax` with `seats.includedCredits`, the zero step
-costing nothing on top of the attendants; extra credits at R$599 per 1.000;
-Ferraz Veloso's private offer.
+One plan since 2026-11-11 (`gtm/07-pricing-positioning.md`): R$289 per
+attendant (since 2026-11-20, catalog `self-service-2026-11-v3`) with 250 credits
+each, plus monthly credits in 1.000-credit steps at R$499 per 1.000. Decided
+2026-11-28: the checkout sells the zero step too, so a trial can subscribe to
+attendants only; the credits page (`GET /SelfService/plans?from=credits`) and
+plan changes start at `PlanOffers::UPGRADE_MIN_CREDITS` (1.000), except that a
+plan renewing with less keeps it while it changes attendants. 21 seat offers
+of plan `monostax` with `seats.includedCredits`; Ferraz Veloso's private offer.
+One-off credit top-ups are not sold (decided 2026-11-27): customers change the
+plan instead.
 
-- `GET /SelfService/plans?accountId=` (`PlanOffers`, `PlanRecommendation`):
-  the plan, the credit steps (labelled in conversations at ~6.5 credits each,
-  rounded down to 25) and the preselection: the people answering in
+- `GET /SelfService/plans?accountId=[&from=credits]` (`PlanOffers`,
+  `PlanRecommendation`): the plan, the credit steps (from 1.000 with
+  `from=credits`; labelled in conversations at ~6.5 credits each, rounded down
+  to 25) and the preselection: the people answering in
   Chatwoot, and the smallest step that, with their included credits, covers
   the trial's AI conversations scaled to a month. `canPurchase` authorizes the
   plan form independently of the administrative `canManage` capability.
@@ -218,26 +222,39 @@ Ferraz Veloso's private offer.
   the Chatwoot domain must be registered in the Asaas account first.
 - `GET /SelfService/subscription?accountId=` (`PlanSubscription`): the plan
   subscription for Settings › Planos & Assinatura (attendants, credits, price,
-  paid-through date, state) and whether the viewer may manage billing.
+  paid-through date, state: what the workspace has in its paid period), `next`
+  (what renews, when a decrease waits for the renewal), `change` (a plan change
+  waiting for its payment or being applied) and whether the viewer may manage
+  billing. Applies a plan change whose difference was just paid.
 - `POST /SelfService/subscription/cancel {accountId}` (tenant administrators):
   cancels the active subscription with Asaas. Nothing more is charged; access
   follows paid periods, so it stays until the paid period ends, then the usual
   grace. `GET /SelfService/workspace` adds `subscriptionCancelled` so the
   banner says when the workspace pauses instead of asking to pay.
-- `GET /SelfService/credits?accountId=` and `POST /SelfService/credits/checkout
-  {accountId, package, payer?}` (`ExtraCredits`): extra credits bought from
-  Chatwoot's credits page, from the catalog's BRL packages (R$599 per 1.000;
-  they never expire and are spent after the month's credits). Only workspaces
-  on the credit wallet (an effective `tenant_credit_cutover`) and billing
-  administrators. A one-off Asaas charge (`UNDEFINED`: Pix, card or boleto)
-  with a readable description and, with `selfServiceCheckoutReturnEnabled`, a
-  return to `/credits?tab=topups&paid=1`. The payer is the workspace's Asaas
-  customer from its first checkout; the first purchase asks for one. Buying the
-  same package while its invoice is open continues that invoice.
-  `lastPurchase` tells the page when the credits are in. Needs the provider's
-  `purchase` operation (gitops `crmBillingAsaasProductionPurchasesEnabled`).
-- Not built yet: changing attendants or credits on a live subscription (Asaas
-  subscription updates), Pix Automático, agent and channel limits.
+- `GET /SelfService/subscription/change?accountId=` and `POST
+  /SelfService/subscription/change {accountId, seats, credits}` (`PlanChange`,
+  billing administrators): change the attendants and monthly credits of an
+  active plan whose current period is paid (`RENEWAL_PENDING` otherwise).
+  Increases take effect now and are paid now on a one-off Asaas charge
+  (`UNDEFINED`, the plan's payer, return to `/settings/plan?changed=1`): a
+  credit step costs its full monthly price and brings all its credits at once;
+  an attendant costs its price for the time left in the paid period and brings
+  that share of its 250 credits, so adding attendants and removing them again
+  gains nothing. The difference is a private purchase
+  (`Accounts::acceptPrivate`, terms derived on the server, never a client
+  amount); its credits never expire, like any purchase. Below R$5,00 the
+  charge is R$5,00 (Asaas's minimum). Decreases charge nothing and wait for the
+  renewal; nothing is refunded. Choosing the same plan again continues its open
+  invoice; another choice replaces a change not applied yet.
+- A change is queued on the subscription record (`Subscriptions::requestChange`)
+  and applied once its difference is paid (`applyChanges`, from every plan read
+  and the `ApplyWorkspaceAccess` job): Asaas gets the new price on the same card
+  subscription (`POST /subscriptions/{id}` with `updatePendingPayments`), and the
+  new terms apply from the next unpaid period (`FeatureCredits\Billing\PlanTerms`).
+  Renewals are verified against, and fund, the terms in force for their period;
+  an already-seen unpaid renewal moves to the new terms. Seats (roster, Tenant
+  `seats`) count attendants added during the paid period at once.
+- Not built yet: Pix Automático, agent and channel limits.
 
 ## Workspace agent
 

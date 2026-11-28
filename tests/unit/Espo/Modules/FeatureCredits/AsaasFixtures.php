@@ -41,6 +41,16 @@ final class AsaasTestTransport extends Transport
     {
         $this->calls[] = [$connection->id, $connection->environment, $method, $path, $json, $query];
         if ($this->onSend) ($this->onSend)();
+        if ($method === 'POST' && preg_match('#^/subscriptions/(sub_[a-zA-Z0-9_-]+)$#D', $path, $match)) {
+            // A subscription update (plan change): the new price applies to its next charges.
+            $body = Json::decode($json);
+            foreach ($this->objects as $key => $object) if ($object['id'] === $match[1]) {
+                $object = array_intersect_key($body, array_flip(['value', 'description'])) + $object;
+                $this->objects[$key] = $object;
+                return $this->mode === 'lost' ? new Response(0, null) : new Response(200, $object + ['status' => 'ACTIVE']);
+            }
+            return new Response(404, null);
+        }
         if ($method === 'POST') {
             $body = Json::decode($json);
             $prefix = match ($path) { '/customers' => 'cus_', '/payments' => 'pay_', '/subscriptions' => 'sub_' };

@@ -18,15 +18,22 @@ use Espo\Modules\FeatureCredits\Billing\OfferTerms;
 /**
  * The self-service plan in the current billing catalog (one plan since
  * 2026-11-11, gtm/07): a price per attendant, credits included per attendant,
- * and optional monthly credits in 1.000-credit steps. Each step is a monthly
- * seat offer of plan `monostax`: `seats.unitPrice` is the attendant price,
+ * and monthly credits in 1.000-credit steps. Each step is a monthly seat offer
+ * of plan `monostax`: `seats.unitPrice` is the attendant price,
  * `seats.includedCredits` the credits each attendant brings, the offer price
  * the step's price and the product credits the step's credits (the zero step
  * costs nothing on top of the attendants). All in BRL for Brazil.
+ *
+ * Who may pick which steps (decided 2026-11-28): the checkout sells every step,
+ * zero included, so a trial can subscribe to attendants only; the credits page
+ * and plan changes sell at least UPGRADE_MIN_CREDITS.
  */
 class PlanOffers
 {
     public const PLAN = 'monostax';
+
+    /** The smallest step the credits page and plan changes sell (the checkout sells zero too). */
+    public const UPGRADE_MIN_CREDITS = 1000;
 
     /** Every attendant brings one WhatsApp and one Instagram. */
     public const WHATSAPP_PER_SEAT = 1;
@@ -38,19 +45,20 @@ class PlanOffers
     public function __construct(private Catalog $catalog) {}
 
     /**
+     * @param int $minCredits The smallest step listed.
      * @return array{catalogId: string, currency: string,
      *     plan: array{key: string, seatPrice: string, includedCredits: int, includedConversations: int,
      *         minSeats: int, maxSeats: int, whatsappPerSeat: int, instagramPerSeat: int},
      *     credits: list<array{key: string, credits: int, price: string, conversations: int}>}
      * @throws ServiceUnavailable
      */
-    public function list(string $tenantId): array
+    public function list(string $tenantId, int $minCredits = 0): array
     {
         $catalog = $this->catalog->current();
         $plan = null;
         $steps = [];
 
-        foreach ($this->offers($tenantId) as $terms) {
+        foreach ($this->offers($tenantId, $minCredits) as $terms) {
             $included = (int) round((float) $terms->seats['includedCredits']);
             $plan ??= [
                 'key' => self::PLAN,
@@ -72,7 +80,7 @@ class PlanOffers
             ];
         }
 
-        if ($plan === null || !isset($steps['0'])) {
+        if ($plan === null) {
             throw new ServiceUnavailable('The self-service plan is not in the billing catalog.');
         }
 
@@ -86,10 +94,10 @@ class PlanOffers
         ];
     }
 
-    /** The catalog offer for a monthly-credits step ('0', '1000', …). */
-    public function find(string $tenantId, string $credits): ?OfferTerms
+    /** The catalog offer for a monthly-credits step ('0', '1000', …), if at least $minCredits. */
+    public function find(string $tenantId, string $credits, int $minCredits = 0): ?OfferTerms
     {
-        foreach ($this->offers($tenantId) as $terms) {
+        foreach ($this->offers($tenantId, $minCredits) as $terms) {
             if ((string) (int) round((float) $terms->credits) === $credits) {
                 return $terms;
             }
@@ -107,14 +115,14 @@ class PlanOffers
     /**
      * @return list<OfferTerms>
      */
-    private function offers(string $tenantId): array
+    private function offers(string $tenantId, int $minCredits): array
     {
         $offers = [];
 
         foreach ($this->catalog->current()->offers as $terms) {
             if ($terms->seats !== null && $terms->seats['plan'] === self::PLAN && isset($terms->seats['includedCredits']) &&
                 $terms->currency === 'BRL' && in_array('BR', $terms->countries, true) &&
-                $terms->availableToTenant($tenantId)) {
+                (int) round((float) $terms->credits) >= $minCredits && $terms->availableToTenant($tenantId)) {
                 $offers[] = $terms;
             }
         }

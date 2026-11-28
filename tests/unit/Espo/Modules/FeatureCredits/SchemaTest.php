@@ -52,8 +52,8 @@ trait SchemaFixture
         $data = [];
         foreach (['entityDefs', 'scopes', 'recordDefs'] as $category) {
             foreach (glob(self::ROOT . "$category/*.json") as $path) {
-                // Role, Contact and Account extend core entities; they are not credit accounting tables.
-                if ($category === 'entityDefs' && in_array(basename($path), ['Role.json', 'Contact.json', 'Account.json'], true)) continue;
+                // Role, Contact, Account and Tenant extend core entities; they are not credit accounting tables.
+                if ($category === 'entityDefs' && in_array(basename($path), ['Role.json', 'Contact.json', 'Account.json', 'Tenant.json'], true)) continue;
                 $data[$category][basename($path, '.json')] = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
             }
         }

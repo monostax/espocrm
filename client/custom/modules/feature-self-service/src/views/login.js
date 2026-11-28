@@ -1020,7 +1020,7 @@ export default class extends LoginView {
         xhr.errorIsHandled = true;
         Espo.Ui.notify(false);
 
-        const code = (xhr.responseJSON || {}).code || 'GENERIC';
+        const code = this.selfServiceErrorCode(xhr);
         const translated = this.translate(code, 'selfServiceErrors', 'Global');
         const message = translated === code ? this.translate('GENERIC', 'selfServiceErrors', 'Global') : translated;
 
@@ -1046,6 +1046,18 @@ export default class extends LoginView {
 
         line.textContent = message;
         line.hidden = false;
+    }
+
+    /**
+     * The SelfService API's `{"code": …}` body. Espo.Ajax rejects with a bare XMLHttpRequest
+     * (no jQuery `responseJSON`), so it is read from the response text.
+     */
+    selfServiceErrorCode(xhr) {
+        try {
+            return (xhr.responseJSON || JSON.parse(xhr.responseText || '{}')).code || 'GENERIC';
+        } catch (e) {
+            return 'GENERIC';
+        }
     }
 
     selfServiceSave(state) {

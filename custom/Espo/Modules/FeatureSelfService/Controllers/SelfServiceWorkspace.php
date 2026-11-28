@@ -24,8 +24,7 @@ use Espo\Entities\User;
 use Espo\Modules\Chatwoot\Jobs\SyncInboxesFromChatwoot;
 use Espo\Modules\Chatwoot\Services\WahaInboxAdoption;
 use Espo\Modules\FeatureAiUsage\Services\Access as BillingAccess;
-use Espo\Modules\FeatureCredits\Billing\Providers as BillingProviders;
-use Espo\Modules\FeatureSelfService\Tools\Plans\ExtraCredits;
+use Espo\Modules\FeatureSelfService\Tools\Plans\PlanChange;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanCheckout;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanOffers;
 use Espo\Modules\FeatureSelfService\Tools\Plans\PlanRecommendation;
@@ -235,9 +234,12 @@ class SelfServiceWorkspace
     public function getActionPlans(Request $request): object
     {
         [$account, $tenant] = $this->resolve($request->getQueryParam('accountId'));
+        // The trial's checkout may pick no monthly credits (attendants only);
+        // from the credits page (?from=credits) it starts at the upgrade minimum.
+        $minCredits = $request->getQueryParam('from') === 'credits' ? PlanOffers::UPGRADE_MIN_CREDITS : 0;
 
         try {
-            $offer = $this->injectableFactory->create(PlanOffers::class)->list((string) $tenant->getId());
+            $offer = $this->injectableFactory->create(PlanOffers::class)->list((string) $tenant->getId(), $minCredits);
         } catch (ServiceUnavailable) {
             throw ServiceUnavailable::createWithBody('PLANS_UNAVAILABLE', $this->code('PLANS_UNAVAILABLE'));
         }
@@ -303,6 +305,8 @@ class SelfServiceWorkspace
     {
         [, $tenant] = $this->resolve($request->getQueryParam('accountId'));
         $tenantId = (string) $tenant->getId();
+        // A plan change whose difference was just paid applies here (the page polls after the payment page).
+        $this->injectableFactory->create(PlanChange::class)->settle($tenantId);
 
         return (object) ($this->injectableFactory->create(PlanSubscription::class)->read($tenantId)
             + ['canManage' => $this->canManageBilling($tenantId),
@@ -341,52 +345,40 @@ class SelfServiceWorkspace
         }
     }
 
-    public function getActionCredits(Request $request): object
+    /** What the "Alterar plano" screen needs (PlanChange::offer); applies a paid change on the way. */
+    public function getActionSubscriptionChange(Request $request): object
     {
         [, $tenant] = $this->resolve($request->getQueryParam('accountId'));
         $tenantId = (string) $tenant->getId();
-        $extra = $this->injectableFactory->create(ExtraCredits::class);
-        $integration = $this->injectableFactory->create(BillingProviders::class)->capability('asaas')?->integrationId;
+        $this->injectableFactory->create(BillingAccess::class)->assertTenant($tenantId);
 
-        return (object) ($extra->offers($tenantId) + [
-            'canManage' => $this->canManageBilling($tenantId),
-            'payerRequired' => !$extra->hasPayer($tenantId, $integration),
-            'payer' => ['name' => (string) $tenant->get('name'), 'email' => (string) $this->user->get('emailAddress')],
-        ]);
+        return (object) $this->injectableFactory->create(PlanChange::class)->offer($tenantId, (string) $this->user->getId());
     }
 
-    public function postActionCreditsCheckout(Request $request): object
+    /** Changes the attendants and monthly credits of the active plan; returns the invoice of what is paid now, if any. */
+    public function postActionSubscriptionChange(Request $request): object
     {
         $body = $request->getParsedBody();
         [$account, $tenant] = $this->resolve($body->accountId ?? null);
         $tenantId = (string) $tenant->getId();
         $this->injectableFactory->create(BillingAccess::class)->assertTenant($tenantId);
 
-        $payer = $body->payer ?? null;
-
-        if (!is_string($body->package ?? null) || ($payer !== null && (!is_object($payer) ||
-            !is_string($payer->name ?? null) || !is_string($payer->cpfCnpj ?? null) || !is_string($payer->email ?? null)))) {
+        if (!is_int($body->seats ?? null) || !is_string($body->credits ?? null)) {
             throw BadRequest::createWithBody('INVALID_REQUEST', $this->code('INVALID_REQUEST'));
         }
 
         try {
-            return (object) $this->injectableFactory->create(ExtraCredits::class)->start(
-                $tenantId, (string) $this->user->getId(), $body->package,
-                $payer === null ? null : [
-                    'name' => trim($payer->name), 'cpfCnpj' => preg_replace('/\D/', '', $payer->cpfCnpj), 'email' => trim($payer->email),
-                ],
-                $this->returnUrl($account, '/credits?tab=topups&paid=1')
+            return (object) $this->injectableFactory->create(PlanChange::class)->start(
+                $tenantId, (string) $this->user->getId(), $body->seats, $body->credits,
+                $this->returnUrl($account, '/settings/plan?changed=1')
             );
         } catch (InvalidArgumentException $e) {
-            $code = match (true) {
-                $e->getMessage() === 'PAYER_REQUIRED' => 'PAYER_REQUIRED',
-                str_contains($e->getMessage(), 'CPF/CNPJ') => 'INVALID_DOCUMENT',
-                default => 'INVALID_REQUEST',
-            };
+            $code = $e->getMessage() === 'NO_CHANGE' ? 'NO_CHANGE' : 'INVALID_REQUEST';
 
             throw BadRequest::createWithBody($code, $this->code($code));
         } catch (Conflict $e) {
-            $code = in_array($e->getMessage(), ['WALLET_REQUIRED', 'PAYER_CHANGED'], true) ? $e->getMessage() : 'CREDITS_UNAVAILABLE';
+            $code = in_array($e->getMessage(), ['NO_ACTIVE_SUBSCRIPTION', 'RENEWAL_PENDING', 'SEAT_ACCESS_PENDING',
+                'SEATS_BELOW_ENABLED_USERS', 'PAYER_REQUIRED'], true) ? $e->getMessage() : 'CHANGE_UNAVAILABLE';
 
             throw Conflict::createWithBody($code, $this->code($code));
         } catch (ServiceUnavailable) {

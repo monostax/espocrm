@@ -7,10 +7,10 @@ namespace tests\unit\Espo\Modules\FeatureCredits;
 use Doctrine\DBAL\Platforms\{MySQL80Platform, PostgreSQLPlatform};
 use Espo\Core\Exceptions\Conflict;
 use Espo\Core\Utils\{Config, Crypt};
-use Espo\Modules\FeatureCredits\Accounting\Clock;
-use Espo\Modules\FeatureCredits\Billing\{Accounts, Catalog, Checkout, Creation, CreationStore, Subscriptions};
+use Espo\Modules\FeatureCredits\Accounting\{Clock, Funding, WalletLock};
+use Espo\Modules\FeatureCredits\Billing\{Accounts, Catalog, Checkout, Creation, CreationStore, Payments, Subscriptions};
 use Espo\Modules\FeatureCredits\Billing\Asaas\{Adapter, Connection, Response};
-use Espo\Modules\FeatureSelfService\Tools\Plans\{ExtraCredits, PlanCheckout, PlanOffers, PlanSubscription};
+use Espo\Modules\FeatureSelfService\Tools\Plans\{PlanChange, PlanCheckout, PlanOffers, PlanSubscription, SeatRoster};
 use Espo\ORM\EntityManager;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -25,7 +25,9 @@ require_once __DIR__ . '/AsaasFixtures.php';
  * FeatureSelfService's plan checkout on the real billing engine (both
  * dialects, fake Asaas): attendants × price + monthly credits as one card
  * subscription, the credits each attendant brings, the hosted invoice, safe
- * retries, and replacing an unpaid checkout.
+ * retries, and replacing an unpaid checkout. Then changing the paid plan:
+ * increases paid now on a one-off invoice, decreases at the renewal, and the
+ * renewal charged and funded at the new price.
  */
 final class SelfServicePlanCheckoutDatabaseTest extends TestCase
 {
@@ -73,6 +75,7 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
         $this->database($dialect, function (PDO $pdo): void {
             [$checkout, $transport] = $this->prepare($pdo);
 
+            // Attendants only: the trial's checkout sells the zero step.
             $checkout->start('tenant', 'owner', 1, '0', self::payer(), 'https://chat.example.test/app/accounts/61/settings/plan?paid=1');
 
             $subscription = $transport->posted('/subscriptions')[0];
@@ -100,7 +103,7 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
 
             $this->assertSame(['state' => 'active', 'seats' => 3, 'seatPrice' => '249.00', 'monthlyCredits' => 2000,
                 'includedCredits' => 750, 'totalCredits' => 2750, 'price' => '1745.00', 'currency' => 'BRL',
-                'paidThrough' => '2026-11-13 03:00:00'], $plan->read('tenant')['subscription']);
+                'paidThrough' => '2026-11-13 03:00:00', 'next' => null, 'change' => null], $plan->read('tenant')['subscription']);
             $this->assertFalse($plan->isCancelled('tenant'));
 
             $read = $plan->cancel('tenant', 'owner');
@@ -116,53 +119,120 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
     }
 
     #[DataProvider('dialects')]
-    public function testExtraCreditsAreSoldToWalletWorkspacesAsOneOffCharges(string $dialect): void
+    public function testMoreAttendantsAndCreditsArePaidNowAndRenewAtTheNewPrice(string $dialect): void
     {
         $this->database($dialect, function (PDO $pdo): void {
-            [, $transport, $engine, , , , $extra] = $this->prepare($pdo);
-            $this->assertFalse($extra->offers('tenant')['wallet']);
+            [$checkout, $transport, , , $manager, $subscriptions, $payments, $change] = $this->prepare($pdo);
+            $plan = new PlanSubscription($manager, $subscriptions);
+            // 2 × 249 + 499, paid for 13 Oct → 13 Nov (31 days).
+            $this->paidPlan($pdo, $checkout, $transport, $payments, 2, '1000', '997.00');
+            $subscription = $this->external($pdo, 'subscription');
 
-            try {
-                $extra->start('tenant', 'owner', '50', self::payer());
-                $this->fail('A workspace off the wallet bought credits it would never spend.');
-            } catch (Conflict $e) {
-                $this->assertSame('WALLET_REQUIRED', $e->getMessage());
-            }
+            $this->now = '2026-10-28 03:00:00';
+            $offer = $change->offer('tenant');
+            $this->assertSame(['seats' => 2, 'credits' => 1000, 'basePrice' => '499.00'], $offer['current']);
+            $this->assertSame([16 * 86400, 31 * 86400], [$offer['period']['remaining'], $offer['period']['length']]);
 
-            $pdo->exec("INSERT INTO tenant_credit_cutover (id, tenant_id, cutover_at, input_hash, evidence, created_at, deleted)
-                VALUES ('cutover0000000001', 'tenant', '2026-10-12 00:00:00', '" . str_repeat('a', 64) . "', '{}', '2026-10-12 00:00:00', FALSE)");
-            $offers = $extra->offers('tenant');
-            $this->assertTrue($offers['wallet']);
-            $this->assertSame([['key' => '50', 'credits' => 50, 'price' => '25.00', 'conversations' => 0]], $offers['packages']);
-            $this->assertNull($offers['lastPurchase']);
-            $this->assertFalse($extra->hasPayer('tenant', 'test-asaas'));
+            $result = $change->start('tenant', 'owner', 3, '2000');
 
-            try {
-                $extra->start('tenant', 'owner', '50', null);
-                $this->fail('The first purchase started without a payer.');
-            } catch (\InvalidArgumentException $e) {
-                $this->assertSame('PAYER_REQUIRED', $e->getMessage());
-            }
-
-            $result = $extra->start('tenant', 'owner', '50', self::payer(), 'https://chat.example.test/app/accounts/61/credits?tab=topups&paid=1');
             $this->assertSame('pending', $result['state']);
-            $payments = $transport->posted('/payments');
-            $this->assertCount(1, $payments);
-            $this->assertSame('25.00', $payments[0]['value']);
-            $this->assertSame('UNDEFINED', $payments[0]['billingType'], 'One-off: the payer picks Pix, card or boleto.');
-            $this->assertSame('Créditos extras Monostax: 50 créditos de IA, sem validade', $payments[0]['description']);
-            $this->assertSame(['successUrl' => 'https://chat.example.test/app/accounts/61/credits?tab=topups&paid=1', 'autoRedirect' => true],
-                $payments[0]['callback']);
-            $this->assertSame('purchase', $engine->read('tenant', $result['obligationId'])['acceptance']['terms']['operation']);
-
-            $again = $extra->start('tenant', 'owner', '50', null, 'https://chat.example.test/app/accounts/61/credits?tab=topups&paid=1');
-            $this->assertSame($result['obligationId'], $again['obligationId'], 'The open invoice is continued.');
+            $this->assertStringStartsWith('https://sandbox.asaas.com/i/', $result['paymentUrl']);
+            $charge = $transport->posted('/payments')[0];
+            $this->assertSame('627.52', $charge['value'], 'The 1.000-credit step in full (499) and one attendant for 16 of 31 days (128,52).');
+            $this->assertSame('UNDEFINED', $charge['billingType']);
+            $this->assertSame('Mudança de plano Monostax: 1.129 créditos de IA agora. A partir da renovação: '
+                . 'Plano Monostax: 3 atendentes, 2.750 créditos de IA por mês', $charge['description']);
+            $this->assertSame('awaiting_payment', $change->offer('tenant')['pending']['state']);
+            $this->assertSame($result, $change->start('tenant', 'owner', 3, '2000'), 'A retry continues the same invoice.');
             $this->assertCount(1, $transport->posted('/payments'));
-            $this->assertTrue($extra->hasPayer('tenant', 'test-asaas'));
-            $this->assertSame(['state' => 'pending', 'credits' => 50], $extra->offers('tenant')['lastPurchase']);
+            $this->assertSame([], $transport->posted('/subscriptions/' . $subscription), 'Nothing changes before it is paid.');
+            $this->assertSame(2, $plan->read('tenant')['subscription']['seats']);
 
-            $this->expectException(\InvalidArgumentException::class);
-            $extra->start('tenant', 'owner', '7000', null);
+            $this->assertSame('funded', $this->payCharge($pdo, $transport, $payments, '627.52', '2026-10-28')['state']);
+            $this->assertSame('1129.0322', $pdo->query("SELECT granted_credits FROM credit_grant WHERE source_type = 'purchase'")->fetchColumn());
+            $change->settle('tenant');
+
+            $update = $transport->posted('/subscriptions/' . $subscription);
+            $this->assertCount(1, $update);
+            $this->assertSame('1745.00', $update[0]['value'], '3 × 249 + 998 from the renewal.');
+            $this->assertTrue($update[0]['updatePendingPayments']);
+            $read = $plan->read('tenant')['subscription'];
+            $this->assertSame([3, 2000, 2750, '1745.00', null, null],
+                [$read['seats'], $read['monthlyCredits'], $read['totalCredits'], $read['price'], $read['next'], $read['change']]);
+            $this->assertNull($change->offer('tenant')['pending']);
+
+            $this->now = '2026-11-14 00:00:00';
+            $renewal = $this->paySubscription($pdo, $transport, $payments, 'pay_renewal', '2026-11-13', '1745.00');
+            $this->assertSame('funded', $renewal['state']);
+            $this->assertSame('2750.0000', $renewal['funding']['grantedCredits'], 'The renewal funds the new monthly credits.');
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testFewerAttendantsOrCreditsWaitForTheRenewalAndChargeNothingNow(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo): void {
+            [$checkout, $transport, , , $manager, $subscriptions, $payments, $change] = $this->prepare($pdo);
+            $plan = new PlanSubscription($manager, $subscriptions);
+            $this->paidPlan($pdo, $checkout, $transport, $payments, 3, '2000', '1745.00');
+            $subscription = $this->external($pdo, 'subscription');
+
+            $this->now = '2026-10-28 03:00:00';
+            $this->assertSame(['1000', '2000'], array_column($change->offer('tenant')['credits'], 'key'), 'A change starts at 1.000.');
+            try {
+                $change->start('tenant', 'owner', 2, '0');
+                $this->fail('A plan change went below the 1.000-credit minimum.');
+            } catch (\InvalidArgumentException $e) {
+                $this->assertSame('Unknown monthly credits.', $e->getMessage());
+            }
+            $this->assertSame(['state' => 'scheduled', 'paymentUrl' => null], $change->start('tenant', 'owner', 2, '1000'));
+
+            $this->assertSame([], $transport->posted('/payments'), 'A decrease charges nothing now.');
+            $this->assertSame('997.00', $transport->posted('/subscriptions/' . $subscription)[0]['value']);
+            $read = $plan->read('tenant')['subscription'];
+            $this->assertSame([3, 2000, '1745.00'], [$read['seats'], $read['monthlyCredits'], $read['price']], 'Kept until the renewal.');
+            $this->assertSame(['seats' => 2, 'seatPrice' => '249.00', 'monthlyCredits' => 1000, 'includedCredits' => 500,
+                'totalCredits' => 1500, 'price' => '997.00', 'from' => '2026-11-13 03:00:00'], $read['next']);
+
+            try {
+                $change->start('tenant', 'owner', 2, '1000');
+                $this->fail('The renewing plan was changed to itself.');
+            } catch (\InvalidArgumentException $e) {
+                $this->assertSame('NO_CHANGE', $e->getMessage());
+            }
+
+            $this->now = '2026-11-14 00:00:00';
+            try {
+                $this->paySubscription($pdo, $transport, $payments, 'pay_old_price', '2026-11-13', '1745.00');
+                $this->fail('The renewal was accepted at the old price.');
+            } catch (Conflict) {
+                $this->addToAssertionCount(1);
+            }
+            $renewal = $this->paySubscription($pdo, $transport, $payments, 'pay_renewal', '2026-11-13', '997.00');
+            $this->assertSame('1500.0000', $renewal['funding']['grantedCredits']);
+            $this->assertSame([2, 1000, null], [$plan->read('tenant')['subscription']['seats'],
+                $plan->read('tenant')['subscription']['monthlyCredits'], $plan->read('tenant')['subscription']['next']]);
+        });
+    }
+
+    #[DataProvider('dialects')]
+    public function testAnAttendantsOnlyPlanKeepsItsZeroCreditsWhileItAddsAttendants(string $dialect): void
+    {
+        $this->database($dialect, function (PDO $pdo): void {
+            [$checkout, $transport, , , , , $payments, $change] = $this->prepare($pdo);
+            $this->paidPlan($pdo, $checkout, $transport, $payments, 1, '0', '249.00');
+
+            $this->now = '2026-10-28 03:00:00';
+            $offer = $change->offer('tenant');
+            $this->assertSame(['0', '1000', '2000'], array_column($offer['credits'], 'key'), 'Its zero, then from 1.000.');
+            $this->assertSame(0, $offer['current']['credits']);
+
+            $change->start('tenant', 'owner', 2, '0');
+
+            $charge = $transport->posted('/payments')[0];
+            $this->assertSame('128.52', $charge['value'], 'One attendant for 16 of 31 days, no credit step.');
+            $this->assertSame('Mudança de plano Monostax: 129 créditos de IA agora. A partir da renovação: '
+                . 'Plano Monostax: 2 atendentes, 500 créditos de IA por mês', $charge['description']);
         });
     }
 
@@ -173,13 +243,13 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
             [$checkout, $transport, $engine] = $this->prepare($pdo);
             $first = $checkout->start('tenant', 'owner', 3, '2000', self::payer());
 
-            $second = $checkout->start('tenant', 'owner', 5, '0', self::payer());
+            $second = $checkout->start('tenant', 'owner', 5, '1000', self::payer());
 
             $this->assertNotSame($first['obligationId'], $second['obligationId']);
             $this->assertSame('cancelled', $engine->read('tenant', $first['obligationId'])['state']);
             $this->assertCount(1, array_filter($transport->calls, static fn ($call) => $call[2] === 'DELETE'));
             $subscriptions = $transport->posted('/subscriptions');
-            $this->assertSame('1245.00', $subscriptions[1]['value'], '5 × 249, no monthly credits on top.');
+            $this->assertSame('1744.00', $subscriptions[1]['value'], '5 × 249 + 499.');
             $this->assertCount(1, $transport->posted('/customers'), 'The payer is reused.');
         });
     }
@@ -190,7 +260,8 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
         $this->database($dialect, function (PDO $pdo): void {
             [$checkout, , , $pdoCheck] = $this->prepare($pdo);
 
-            foreach ([[0, '2000'], [3, '500'], [3, '30000'], [1001, '0']] as [$seats, $credits]) {
+            // Off the steps, above the catalog, out of the seat range.
+            foreach ([[0, '2000'], [3, '500'], [3, '30000'], [1001, '1000']] as [$seats, $credits]) {
                 try {
                     $checkout->start('tenant', 'owner', $seats, $credits, self::payer());
                     $this->fail("{$seats}/{$credits} started a checkout.");
@@ -203,13 +274,52 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
             $pdoCheck->exec("UPDATE credit_billing_obligation SET state = 'active' WHERE id = '{$paid['obligationId']}'");
             $this->expectException(Conflict::class);
             $this->expectExceptionMessage('ALREADY_SUBSCRIBED');
-            $checkout->start('tenant', 'owner', 2, '0', self::payer());
+            $checkout->start('tenant', 'owner', 2, '1000', self::payer());
         });
     }
 
     private static function payer(): array
     {
         return ['name' => 'Clínica Sol Ltda', 'cpfCnpj' => '52998224725', 'email' => 'financeiro@example.test'];
+    }
+
+    /** A checkout whose first month (13 Oct → 13 Nov) is paid. */
+    private function paidPlan(PDO $pdo, PlanCheckout $checkout, PlanTestTransport $transport, Payments $payments, int $seats,
+        string $credits, string $price): void
+    {
+        $checkout->start('tenant', 'owner', $seats, $credits, self::payer());
+        $this->now = '2026-10-20 12:00:00';
+        $this->assertSame('funded', $this->paySubscription($pdo, $transport, $payments, 'pay_first', '2026-10-13', $price)['state']);
+    }
+
+    private function paySubscription(PDO $pdo, PlanTestTransport $transport, Payments $payments, string $id, string $due, string $value): array
+    {
+        $transport->payments[$id] = ['object' => 'payment', 'id' => $id, 'customer' => $this->external($pdo, 'customer'),
+            'subscription' => $this->external($pdo, 'subscription'), 'value' => $value, 'originalValue' => $value,
+            'billingType' => 'CREDIT_CARD', 'dueDate' => $due, 'originalDueDate' => $due, 'deleted' => false, 'status' => 'CONFIRMED'];
+
+        return $payments->reconcile('test-asaas', 'sandbox', $id);
+    }
+
+    /** Pays the newest one-off charge (a plan change's difference) by Pix. */
+    private function payCharge(PDO $pdo, PlanTestTransport $transport, Payments $payments, string $value, string $due): array
+    {
+        $charge = $pdo->query("SELECT external_id, external_reference FROM credit_billing_creation
+            WHERE kind = 'payment' AND state = 'bound' ORDER BY created_at DESC")->fetch(PDO::FETCH_ASSOC);
+        $transport->payments[$charge['external_id']] = ['object' => 'payment', 'id' => $charge['external_id'],
+            'customer' => $this->external($pdo, 'customer'), 'value' => $value, 'originalValue' => $value, 'billingType' => 'PIX',
+            'dueDate' => $due, 'originalDueDate' => $due, 'externalReference' => $charge['external_reference'],
+            'deleted' => false, 'status' => 'RECEIVED'];
+
+        return $payments->reconcile('test-asaas', 'sandbox', $charge['external_id']);
+    }
+
+    private function external(PDO $pdo, string $kind): string
+    {
+        $query = $pdo->prepare("SELECT external_id FROM credit_billing_creation WHERE kind = ? AND state = 'bound'");
+        $query->execute([$kind]);
+
+        return (string) $query->fetchColumn();
     }
 
     private function prepare(PDO $pdo): array
@@ -243,11 +353,15 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
         $engine = new Checkout($accounts, $store, $connections, $transport);
         $subscriptions = new Subscriptions($accounts, $store, $connections, $transport);
         $creation = new Creation($store, new Adapter($transport));
-        $checkout = new PlanCheckout($accounts, $engine, $creation, $subscriptions, new PlanOffers($catalog),
-            $this->createStub(\Espo\Modules\FeatureSelfService\Tools\Plans\SeatRoster::class));
-        $extra = new ExtraCredits($accounts, $catalog, $engine, $creation, $manager, $clock);
+        $roster = $this->createStub(SeatRoster::class);
+        $roster->method('read')->willReturn(['users' => [], 'enabledUsers' => 1, 'minimumSeats' => 1, 'pending' => false, 'paidSeats' => 0]);
+        $checkout = new PlanCheckout($accounts, $engine, $creation, $subscriptions, new PlanOffers($catalog), $roster);
+        $lock = new WalletLock($manager, $clock);
+        $payments = new Payments($manager, $accounts, $store, $connections, $transport, $lock, new Funding($lock));
+        $change = new PlanChange($manager, $accounts, $engine, $creation, $subscriptions, new PlanOffers($catalog), $roster, $clock,
+            $this->createStub(\Espo\Core\Utils\Log::class));
 
-        return [$checkout, $transport, $engine, $pdo, $manager, $subscriptions, $extra];
+        return [$checkout, $transport, $engine, $pdo, $manager, $subscriptions, $payments, $change];
     }
 
     private function database(string $dialect, callable $test): void
@@ -273,6 +387,8 @@ final class SelfServicePlanCheckoutDatabaseTest extends TestCase
 final class PlanTestTransport extends \Espo\Modules\FeatureCredits\Billing\Asaas\Transport
 {
     public array $calls = [];
+    /** Payments as Asaas returns them once paid, by id. */
+    public array $payments = [];
     private AsaasTestTransport $inner;
 
     public function __construct()
@@ -293,6 +409,10 @@ final class PlanTestTransport extends \Espo\Modules\FeatureCredits\Billing\Asaas
     public function send(Connection $connection, string $method, string $path, ?string $json = null, array $query = []): Response
     {
         $this->calls[] = [$connection->id, $connection->environment, $method, $path, $json, $query];
+
+        if ($method === 'GET' && isset($this->payments[substr($path, strlen('/payments/'))]) && str_starts_with($path, '/payments/')) {
+            return new Response(200, $this->payments[substr($path, strlen('/payments/'))]);
+        }
 
         if ($method === 'GET' && (($path === '/payments' && isset($query['subscription'])) || str_starts_with($path, '/payments/pay_first_'))) {
             $subscriptionId = $query['subscription'] ?? substr($path, strlen('/payments/pay_first_'));

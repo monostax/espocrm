@@ -19,7 +19,8 @@ use Espo\ORM\EntityManager;
  *  - attendants: the people answering in Chatwoot (no AI, concierge or Monostax staff);
  *  - monthly credits: the smallest step that, with the attendants' included
  *    credits, covers the AI conversations of the trial scaled to a month
- *    (none when the included credits are enough or there is too little to go by).
+ *    (the smallest step listed when that is enough or there is too little to
+ *    go by: zero at checkout, 1.000 from the credits page).
  */
 class PlanRecommendation
 {
@@ -29,7 +30,7 @@ class PlanRecommendation
 
     /**
      * @param array{includedCredits: int} $plan
-     * @param list<array{key: string, credits: int}> $steps Smallest first; the first is the zero step.
+     * @param list<array{key: string, credits: int}> $steps Smallest first.
      * @return array{seats: int, credits: string, attendants: int, trialConversations: ?int}
      */
     public function recommend(Entity $tenant, Entity $account, array $plan, array $steps): array

@@ -12,6 +12,7 @@ use Espo\Core\Utils\Log;
 use Espo\Modules\FeatureCatchUp\Controllers\CatchUpSettle;
 use Espo\Modules\FeatureCatchUp\Services\Feed;
 use Espo\Modules\FeatureCatchUp\Services\ServiceFeed;
+use Espo\Modules\FeatureCatchUp\Services\BusinessDescription;
 use Espo\Modules\FeatureCatchUp\Services\Settle;
 use Espo\Modules\FeatureCatchUp\Services\Summary;
 use Espo\Modules\FeatureCredits\Enrichment\ActorScope;
@@ -230,7 +231,7 @@ class SettleTest extends TestCase
         putenv('CATCH_UP_BACKEND_SECRET=test-secret');
         $settle = $this->createMock(Settle::class);
         $settle->expects(self::once())->method('start')->with(12, 2775)->willReturn(['subjects' => []]);
-        $controller = new CatchUpSettle($settle);
+        $controller = new CatchUpSettle($settle, $this->createMock(BusinessDescription::class));
         $body = '{"accountId":12,"conversationId":2775}';
 
         $controller->postActionStart($this->signed($body, 'catch-up-settle-v1.', time()));

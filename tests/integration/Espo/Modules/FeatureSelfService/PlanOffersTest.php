@@ -102,5 +102,17 @@ class PlanOffersTest extends TestCase
         self::assertSame('0', $offer->recommendation['credits'], 'No AI used yet: the included credits are enough.');
         self::assertGreaterThanOrEqual(1, $offer->recommendation['seats']);
         self::assertSame("plans-{$suffix}@example.test", $offer->payer['email']);
+
+        // From the credits page the steps start at 1.000.
+        $fromCredits = $this->createMock(Request::class);
+        $fromCredits->method('getQueryParam')->willReturnCallback(fn (string $name) => match ($name) {
+            'accountId' => (string) $account->get('chatwootAccountId'),
+            'from' => 'credits',
+            default => null,
+        });
+        $offer = $controller->getActionPlans($fromCredits);
+        self::assertCount(20, $offer->credits, '1.000 to 20.000.');
+        self::assertSame(['1000', '499.00', 150], [$offer->credits[0]['key'], $offer->credits[0]['price'], $offer->credits[0]['conversations']]);
+        self::assertSame('1000', $offer->recommendation['credits'], 'No AI used yet: the smallest step listed.');
     }
 }

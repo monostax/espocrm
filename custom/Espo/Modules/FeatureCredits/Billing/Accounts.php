@@ -125,9 +125,7 @@ final class Accounts
                     }
                 }
             }
-            $eligibility = $this->eligibility($account, $obligations, $terms);
-            if (!$eligibility['eligible']) throw new Conflict($eligibility['blockedReason']);
-            if ($account['effective_provider'] !== $eligibility['effectiveProvider']) throw new Conflict('Billing assignment is inconsistent.');
+            $eligibility = $this->eligible($account, $obligations, $terms);
             if ($terms->operation === 'subscription') {
                 foreach ($obligations as $obligation) {
                     $accepted = $this->acceptanceReceipt($obligation)['terms'];
@@ -136,23 +134,68 @@ final class Accounts
                     }
                 }
             }
-            $id = RecordId::generate();
-            $row = [
-                'id' => $id, 'tenant_id' => $tenantId, 'request_key' => $key, 'input_hash' => $hash,
-                'provider' => $eligibility['effectiveProvider'], 'integration_id' => $eligibility['integrationId'],
-                'catalog_id' => $catalogId, 'terms_id' => $terms->termsId, 'terms_snapshot' => json_encode($terms, JSON_THROW_ON_ERROR),
-                'operation' => $terms->operation, 'billing_country' => $account['billing_country'], 'assignment_revision' => $revision,
-                'state' => 'accepted', 'created_at' => $now, 'created_by_id' => $actor,
-            ];
-            $row['acceptance_hash'] = $this->acceptanceHash($row, $this->acceptanceReceipt($row, false));
-            $pdo->prepare('INSERT INTO credit_billing_obligation
-                (id, tenant_id, request_key, input_hash, provider, integration_id, catalog_id, terms_id, terms_snapshot,
-                 operation, billing_country, assignment_revision, state, created_at, created_by_id, acceptance_hash)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute(array_values($row));
+            $receipt = $this->persistAcceptance($pdo, $account, $eligibility, $terms, $tenantId, $key, $hash, $catalogId, $revision, $actor, $now);
             // Catch scheduled catalog cutover during acceptance with a fresh locking selection.
             if ($this->catalog->currentForAcceptance()->id !== $catalogId) throw new Conflict('Commercial catalog changed during acceptance.');
-            return $this->acceptanceReceipt($row);
+            return $receipt;
         });
+    }
+
+    /**
+     * Accepts a one-off purchase whose terms the server derived for this tenant
+     * alone (the difference of a plan change, PlanTerms): private terms, never a
+     * client amount, with the same eligibility, routing and binding as catalog
+     * acceptances. Every replay is dispatch-denied.
+     */
+    public function acceptPrivate(string $tenantId, string $key, int $revision, string $catalogId, OfferTerms $terms, string $actor): array
+    {
+        $this->command($key, $revision, $actor);
+        if (!preg_match('/^[a-f0-9]{64}$/D', $catalogId)) throw new InvalidArgumentException('Exact catalog reference is required.');
+        if ($terms->tenantId !== $tenantId || $terms->operation !== 'purchase' || $terms->seats !== null) {
+            throw new InvalidArgumentException('Private terms are a one-off purchase of this tenant.');
+        }
+        $hash = $this->hash(['billing-acceptance-v3', $tenantId, $key, $revision, $catalogId, $terms->jsonSerialize(), $actor]);
+        return $this->locked($tenantId, function (PDO $pdo, string $now) use ($tenantId, $key, $revision, $catalogId, $terms, $actor, $hash): array {
+            $q = $pdo->prepare('SELECT * FROM credit_billing_obligation WHERE tenant_id=? AND request_key=?');
+            $q->execute([$tenantId, $key]);
+            if ($existing = $q->fetch(PDO::FETCH_ASSOC)) {
+                if ($existing['deleted'] || $existing['input_hash'] !== $hash) throw new Conflict('Billing request identity already has different terms.');
+                return $this->acceptanceReceipt($existing);
+            }
+            $account = $this->account($pdo, $tenantId);
+            $obligations = $this->obligations($pdo, $account);
+            $this->revision($account, $revision);
+            return $this->persistAcceptance($pdo, $account, $this->eligible($account, $obligations, $terms), $terms, $tenantId, $key,
+                $hash, $catalogId, $revision, $actor, $now);
+        });
+    }
+
+    /** Eligibility of new terms, refusing what the current routing does not allow. */
+    private function eligible(array $account, array $obligations, OfferTerms $terms): array
+    {
+        $eligibility = $this->eligibility($account, $obligations, $terms);
+        if (!$eligibility['eligible']) throw new Conflict($eligibility['blockedReason']);
+        if ($account['effective_provider'] !== $eligibility['effectiveProvider']) throw new Conflict('Billing assignment is inconsistent.');
+        return $eligibility;
+    }
+
+    private function persistAcceptance(PDO $pdo, array $account, array $eligibility, OfferTerms $terms, string $tenantId, string $key,
+        string $hash, string $catalogId, int $revision, string $actor, string $now): array
+    {
+        $id = RecordId::generate();
+        $row = [
+            'id' => $id, 'tenant_id' => $tenantId, 'request_key' => $key, 'input_hash' => $hash,
+            'provider' => $eligibility['effectiveProvider'], 'integration_id' => $eligibility['integrationId'],
+            'catalog_id' => $catalogId, 'terms_id' => $terms->termsId, 'terms_snapshot' => json_encode($terms, JSON_THROW_ON_ERROR),
+            'operation' => $terms->operation, 'billing_country' => $account['billing_country'], 'assignment_revision' => $revision,
+            'state' => 'accepted', 'created_at' => $now, 'created_by_id' => $actor,
+        ];
+        $row['acceptance_hash'] = $this->acceptanceHash($row, $this->acceptanceReceipt($row, false));
+        $pdo->prepare('INSERT INTO credit_billing_obligation
+            (id, tenant_id, request_key, input_hash, provider, integration_id, catalog_id, terms_id, terms_snapshot,
+             operation, billing_country, assignment_revision, state, created_at, created_by_id, acceptance_hash)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute(array_values($row));
+        return $this->acceptanceReceipt($row);
     }
 
     /** Safe local cancellation only while no provider-creation claim exists. */
